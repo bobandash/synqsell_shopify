@@ -1,6 +1,26 @@
-# This file stores configurations for your Shopify app.
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
+client_id = "c2ff24913d6d89792234763f0830c676"
+name = "SynqSell"
+handle = "synqsell"
+application_url = "https://wma-distance-sunshine-numerical.trycloudflare.com"
+embedded = true
+
+[build]
+automatically_update_urls_on_dev = true
+dev_store_url = "quickstart-3fe7f8c3.myshopify.com"
+include_config_on_deploy = true
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
 scopes = "write_products"
+
+[auth]
+redirect_urls = [
+  "https://wma-distance-sunshine-numerical.trycloudflare.com/auth/callback",
+  "https://wma-distance-sunshine-numerical.trycloudflare.com/auth/shopify/callback",
+  "https://wma-distance-sunshine-numerical.trycloudflare.com/api/auth/callback"
+]
 
 [webhooks]
 api_version = "2024-07"
@@ -8,3 +28,6 @@ api_version = "2024-07"
   [[webhooks.subscriptions]]
   topics = [ "app/uninstalled" ]
   uri = "/webhooks"
+
+[pos]
+embedded = false
