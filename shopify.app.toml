@@ -3,7 +3,7 @@
 client_id = "c2ff24913d6d89792234763f0830c676"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://wma-distance-sunshine-numerical.trycloudflare.com"
+application_url = "https://learners-allows-rome-engineers.trycloudflare.com"
 embedded = true
 
 [build]
@@ -13,20 +13,33 @@ include_config_on_deploy = true
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "write_products"
+scopes = "
+  read_products,
+  write_products, 
+  read_third_party_fulfillment_orders, 
+  write_third_party_fulfillment_orders, 
+  read_inventory, 
+  write_inventory, 
+  write_fulfillments
+"
 
 [auth]
 redirect_urls = [
-  "https://wma-distance-sunshine-numerical.trycloudflare.com/auth/callback",
-  "https://wma-distance-sunshine-numerical.trycloudflare.com/auth/shopify/callback",
-  "https://wma-distance-sunshine-numerical.trycloudflare.com/api/auth/callback"
+  "https://learners-allows-rome-engineers.trycloudflare.com/auth/callback",
+  "https://learners-allows-rome-engineers.trycloudflare.com/auth/shopify/callback",
+  "https://learners-allows-rome-engineers.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]
 api_version = "2024-07"
 
   [[webhooks.subscriptions]]
-  topics = [ "app/uninstalled" ]
+  topics = [ 
+    "app/uninstalled",
+    "fulfillment_events/create",
+    "fulfillment_events/delete",
+    "fulfillment_orders/cancelled"
+  ]
   uri = "/webhooks"
 
 [pos]
