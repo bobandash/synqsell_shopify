@@ -3,7 +3,7 @@
 client_id = "c2ff24913d6d89792234763f0830c676"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://learners-allows-rome-engineers.trycloudflare.com"
+application_url = "https://disciplinary-latina-chemicals-cigarettes.trycloudflare.com"
 embedded = true
 
 [build]
@@ -13,30 +13,20 @@ include_config_on_deploy = true
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = """
-  read_products,
-  write_products, 
-  read_third_party_fulfillment_orders, 
-  write_third_party_fulfillment_orders, 
-  read_inventory, 
-  write_inventory, 
-  write_fulfillments
-"""
+scopes = "read_inventory,read_products,read_third_party_fulfillment_orders,write_fulfillments,write_inventory,write_products,write_third_party_fulfillment_orders"
 
 [auth]
 redirect_urls = [
-  "https://learners-allows-rome-engineers.trycloudflare.com/auth/callback",
-  "https://learners-allows-rome-engineers.trycloudflare.com/auth/shopify/callback",
-  "https://learners-allows-rome-engineers.trycloudflare.com/api/auth/callback"
+  "https://disciplinary-latina-chemicals-cigarettes.trycloudflare.com/auth/callback",
+  "https://disciplinary-latina-chemicals-cigarettes.trycloudflare.com/auth/shopify/callback",
+  "https://disciplinary-latina-chemicals-cigarettes.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]
 api_version = "2024-07"
 
   [[webhooks.subscriptions]]
-  topics = [ 
-    "app/uninstalled"
-  ]
+  topics = [ "app/uninstalled" ]
   uri = "/webhooks"
 
 [pos]
