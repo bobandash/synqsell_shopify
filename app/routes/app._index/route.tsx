@@ -9,15 +9,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   return null;
 };
 
-// retailer checklist
-// type Props = {
-//   header: string;
-//   subHeader?: string;
-//   isItemCompleted: boolean;
-//   isActive: boolean;
-//   button?: ButtonProps;
-// };
-
 export default function Index() {
   // TODO: Decide how to fetch this information
   const retailerChecklist: ChecklistProps = {

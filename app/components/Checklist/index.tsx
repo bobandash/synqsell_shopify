@@ -74,9 +74,11 @@ const Checklist: FC<Props> = (props) => {
           </InlineStack>
         </BlockStack>
         <Divider />
-        {tasks.map((task) => (
-          <CheckListItem key={task.id} task={task} />
-        ))}
+        <BlockStack gap="100">
+          {tasks.map((task) => (
+            <CheckListItem key={task.id} task={task} />
+          ))}
+        </BlockStack>
       </BlockStack>
     </Card>
   );
