@@ -18,6 +18,9 @@
     "graphql-codegen": "graphql-codegen",
     "vite": "vite"
   },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
   "type": "module",
   "engines": {
     "node": "^18.20 || ^20.10 || >=21.0.0"
@@ -38,6 +41,7 @@
     "prisma": "^5.11.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "ts-node": "^10.9.2",
     "vite-tsconfig-paths": "^4.3.1"
   },
   "devDependencies": {
@@ -50,6 +54,7 @@
     "eslint": "^8.42.0",
     "eslint-config-prettier": "^9.1.0",
     "prettier": "^3.2.4",
+    "tsx": "^4.16.2",
     "typescript": "^5.2.2",
     "vite": "^5.1.3"
   },

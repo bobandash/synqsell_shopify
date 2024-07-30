@@ -38,16 +38,16 @@ model FulfillmentService {
 }
 
 model ChecklistTable {
-  id             String          @id
+  id             String          @id @default(uuid())
   position       Int
   header         String
-  subHeader      String?
+  subheader      String?
   isHidden       Boolean
   checklistItems ChecklistItem[]
 }
 
 model ChecklistItem {
-  id               String            @id
+  id               String            @id @default(uuid())
   key              String            @unique
   ChecklistTable   ChecklistTable    @relation(fields: [checklistTableId], references: [id])
   checklistTableId String
@@ -59,7 +59,7 @@ model ChecklistItem {
 }
 
 model ChecklistStatus {
-  id              String        @id
+  id              String        @id @default(uuid())
   shop            String
   ChecklistItem   ChecklistItem @relation(fields: [checklistItemId], references: [id])
   checklistItemId String

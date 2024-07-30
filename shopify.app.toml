@@ -3,7 +3,7 @@
 client_id = "c2ff24913d6d89792234763f0830c676"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://installation-specifications-lifetime-facility.trycloudflare.com"
+application_url = "https://pin-carmen-fighting-crack.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read_inventory,read_products,read_third_party_fulfillment_orders,write
 
 [auth]
 redirect_urls = [
-  "https://installation-specifications-lifetime-facility.trycloudflare.com/auth/callback",
-  "https://installation-specifications-lifetime-facility.trycloudflare.com/auth/shopify/callback",
-  "https://installation-specifications-lifetime-facility.trycloudflare.com/api/auth/callback"
+  "https://pin-carmen-fighting-crack.trycloudflare.com/auth/callback",
+  "https://pin-carmen-fighting-crack.trycloudflare.com/auth/shopify/callback",
+  "https://pin-carmen-fighting-crack.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]
