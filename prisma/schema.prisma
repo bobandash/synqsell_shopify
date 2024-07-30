@@ -36,3 +36,32 @@ model FulfillmentService {
   id   String @id
   shop String
 }
+
+model ChecklistTable {
+  id             String          @id
+  position       Int
+  header         String
+  subHeader      String?
+  isHidden       Boolean
+  checklistItems ChecklistItem[]
+}
+
+model ChecklistItem {
+  id               String            @id
+  key              String            @unique
+  ChecklistTable   ChecklistTable    @relation(fields: [checklistTableId], references: [id])
+  checklistTableId String
+  position         Int
+  header           String
+  subheader        String?
+  buttonText       String?
+  checklistStatus  ChecklistStatus[]
+}
+
+model ChecklistStatus {
+  id              String        @id
+  shop            String
+  ChecklistItem   ChecklistItem @relation(fields: [checklistItemId], references: [id])
+  checklistItemId String
+  isCompleted     Boolean
+}
