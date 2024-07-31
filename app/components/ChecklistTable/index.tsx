@@ -36,13 +36,22 @@ export type ChecklistItemProps = {
   };
 };
 
+export type toggleActiveChecklistItemProps = (
+  checklistItemIndex: number,
+  tableIndex: number,
+) => void;
+
 type Props = {
   checklist: ChecklistTableProps;
+  tableIndex: number;
+  toggleActiveChecklistItem: toggleActiveChecklistItemProps;
 };
 
 const ChecklistTable: FC<Props> = (props) => {
   const {
     checklist: { header, subheader, checklistItems },
+    tableIndex,
+    toggleActiveChecklistItem,
   } = props;
   const numTasks = checklistItems.length;
   const numTasksCompleted = checklistItems.filter(
@@ -78,8 +87,14 @@ const ChecklistTable: FC<Props> = (props) => {
         </BlockStack>
         <Divider />
         <BlockStack gap="100">
-          {checklistItems.map((item) => (
-            <CheckListItem key={item.id} task={item} />
+          {checklistItems.map((item, index) => (
+            <CheckListItem
+              key={item.id}
+              task={item}
+              tableIndex={tableIndex}
+              checklistIndex={index}
+              toggleActiveChecklistItem={toggleActiveChecklistItem}
+            />
           ))}
         </BlockStack>
       </BlockStack>
