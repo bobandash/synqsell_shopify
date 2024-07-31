@@ -77,7 +77,41 @@ async function getTablesAndStatuses(shop: string) {
         },
       },
     });
-    return tables;
+
+    // Get the tables to the necessary format
+    const transformedTables = tables.map((table) => {
+      let activeIndex = table.checklistItems.findIndex(
+        ({ checklistStatus }) => {
+          return checklistStatus.length > 0 && !checklistStatus[0].isCompleted;
+        },
+      );
+      activeIndex = activeIndex === -1 ? 0 : activeIndex;
+      return {
+        ...table,
+        checklistItems: table.checklistItems.map(
+          ({ checklistStatus, ...item }, index) => {
+            const isCompleted =
+              checklistStatus.length > 0
+                ? checklistStatus[0].isCompleted
+                : false;
+            const isActive = activeIndex === index;
+            return {
+              ...item,
+              isCompleted,
+              ...(item.buttonText !== null && {
+                button: {
+                  content: item.buttonText,
+                  action: null,
+                },
+              }),
+              isActive,
+            };
+          },
+        ),
+      };
+    });
+
+    return transformedTables;
   } catch (error) {
     logger.error(error);
     throw new Error("failed to get tables and statuses");

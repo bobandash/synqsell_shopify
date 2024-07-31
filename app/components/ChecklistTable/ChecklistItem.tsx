@@ -2,15 +2,15 @@ import { BlockStack, Icon, Text, Box, Button } from "@shopify/polaris";
 import styles from "./styles.module.css";
 import { CheckCircleIcon } from "@shopify/polaris-icons";
 import { type FC } from "react";
-import { type Task } from ".";
 import { IncompleteCircle } from "~/assets";
+import { type ChecklistItemProps } from ".";
 type ContainerProps = {
   isActive: boolean;
   children: React.ReactNode;
 };
 
-type ChecklistItemProps = {
-  task: Task;
+type Props = {
+  task: ChecklistItemProps;
 };
 
 const Container: FC<ContainerProps> = ({ isActive, children }) => {
@@ -39,16 +39,16 @@ const Container: FC<ContainerProps> = ({ isActive, children }) => {
   );
 };
 
-export const CheckListItem: FC<ChecklistItemProps> = (props) => {
+export const CheckListItem: FC<Props> = (props) => {
   const { task } = props;
-  const { header, subheader, isItemCompleted, isActive } = task;
+  const { header, subheader, isCompleted, isActive } = task;
 
   return (
     <Container isActive={isActive}>
       <BlockStack gap={"200"}>
         <div className={styles["icon-grid"]}>
           <div className={styles.checkmark}>
-            {isItemCompleted ? (
+            {isCompleted ? (
               <Icon source={CheckCircleIcon} />
             ) : (
               <img

@@ -12,38 +12,41 @@ import styles from "./styles.module.css";
 import { type FC } from "react";
 import { CheckListItem } from "./ChecklistItem";
 
-// shared types
-export type ChecklistProps = {
+export type ChecklistTableProps = {
+  id: string;
+  position: number;
   header: string;
-  subheader?: string;
-  tasks: Task[];
+  subheader: string;
+  isHidden: boolean;
+  checklistItems: ChecklistItemProps[];
 };
 
-export type Task = {
-  id: number;
+export type ChecklistItemProps = {
   header: string;
-  subheader?: string;
-  isItemCompleted: boolean;
+  subheader: string | null;
+  isCompleted: boolean;
   isActive: boolean;
-  button?: ButtonProps;
-};
-
-export type ButtonProps = {
-  content: string;
-  action: () => void;
+  id: string;
+  key: string;
+  checklistTableId: string;
+  position: number;
+  button?: {
+    content: string;
+    action: null;
+  };
 };
 
 type Props = {
-  checklist: ChecklistProps;
+  checklist: ChecklistTableProps;
 };
 
-const Checklist: FC<Props> = (props) => {
+const ChecklistTable: FC<Props> = (props) => {
   const {
-    checklist: { header, subheader, tasks },
+    checklist: { header, subheader, checklistItems },
   } = props;
-  const numTasks = tasks.length;
-  const numTasksCompleted = tasks.filter(
-    (task) => task.isItemCompleted === true,
+  const numTasks = checklistItems.length;
+  const numTasksCompleted = checklistItems.filter(
+    (task) => task.isCompleted === true,
   ).length;
   const progress = (numTasksCompleted / numTasks) * 100;
 
@@ -75,8 +78,8 @@ const Checklist: FC<Props> = (props) => {
         </BlockStack>
         <Divider />
         <BlockStack gap="100">
-          {tasks.map((task) => (
-            <CheckListItem key={task.id} task={task} />
+          {checklistItems.map((item) => (
+            <CheckListItem key={item.id} task={item} />
           ))}
         </BlockStack>
       </BlockStack>
@@ -84,4 +87,4 @@ const Checklist: FC<Props> = (props) => {
   );
 };
 
-export default Checklist;
+export default ChecklistTable;
