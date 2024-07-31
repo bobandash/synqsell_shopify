@@ -8,8 +8,8 @@ import {
   getTablesAndStatuses,
 } from "~/models/checklistTable";
 import { useLoaderData } from "@remix-run/react";
-import type { ChecklistTableProps } from "~/components/ChecklistTable";
-import ChecklistTable from "~/components/ChecklistTable";
+import type { ChecklistTableProps } from "~/routes/app._index/_components/ChecklistTable";
+import ChecklistTable from "~/routes/app._index/_components/ChecklistTable";
 import { useCallback, useState } from "react";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
