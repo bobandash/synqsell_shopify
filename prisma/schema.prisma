@@ -3,7 +3,7 @@
 // https://www.prisma.io/docs/orm/reference/prisma-schema-reference#string
 
 // Common commands: 
-// npx prisma migrate dev --name
+// npx prisma migrate dev
 
 generator client {
   provider = "prisma-client-js"
@@ -37,12 +37,18 @@ model FulfillmentService {
   shop String
 }
 
+model UserPreference {
+  id             String   @id @default(uuid())
+  shop           String
+  tableIdsHidden String[]
+}
+
 model ChecklistTable {
   id             String          @id @default(uuid())
   position       Int
   header         String
   subheader      String?
-  isHidden       Boolean
+  isHidden       Boolean // TODO: delete in the future, this should be in UserPreference
   checklistItems ChecklistItem[]
 }
 
