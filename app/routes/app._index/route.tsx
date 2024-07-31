@@ -3,14 +3,25 @@ import { Page, Layout, BlockStack } from "@shopify/polaris";
 import { authenticate } from "~/shopify.server";
 import { type LoaderFunctionArgs } from "@remix-run/node";
 import Checklist, { type ChecklistProps } from "~/components/Checklist";
+import {
+  createMissingChecklistStatuses,
+  getMissingChecklistIds,
+  getTablesAndStatuses,
+} from "~/models/checklistTable";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  await authenticate.admin(request);
-  return null;
+  const { session } = await authenticate.admin(request);
+  const { shop } = session;
+  const missingChecklistIds = await getMissingChecklistIds(shop);
+  if (missingChecklistIds) {
+    await createMissingChecklistStatuses(missingChecklistIds, shop);
+  }
+  const tables = await getTablesAndStatuses(shop);
+  console.log(tables);
+  return tables;
 };
 
 export default function Index() {
-  // TODO: Decide how to fetch this information
   const retailerChecklist: ChecklistProps = {
     header: "Retailer Setup Guide",
     subheader:

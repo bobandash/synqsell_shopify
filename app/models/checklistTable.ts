@@ -53,4 +53,39 @@ async function getMissingChecklistIds(shop: string) {
   }
 }
 
-export { createMissingChecklistStatuses, getMissingChecklistIds };
+async function getTablesAndStatuses(shop: string) {
+  try {
+    const tables = await db.checklistTable.findMany({
+      orderBy: {
+        position: "asc",
+      },
+      include: {
+        checklistItems: {
+          orderBy: {
+            position: "asc",
+          },
+          include: {
+            checklistStatus: {
+              where: {
+                shop: shop,
+              },
+              select: {
+                isCompleted: true,
+              },
+            },
+          },
+        },
+      },
+    });
+    return tables;
+  } catch (error) {
+    logger.error(error);
+    throw new Error("failed to get tables and statuses");
+  }
+}
+
+export {
+  createMissingChecklistStatuses,
+  getMissingChecklistIds,
+  getTablesAndStatuses,
+};
