@@ -1,6 +1,22 @@
 import db from "../db.server";
 import logger from "logger";
 
+async function hasChecklistTable(id: string) {
+  try {
+    const table = await db.checklistTable.findFirst({
+      where: {
+        id: id,
+      },
+    });
+    if (!table) {
+      return false;
+    }
+    return true;
+  } catch {
+    throw new Error("Failed to retrieve checklist table.");
+  }
+}
+
 async function createMissingChecklistStatuses(
   missingChecklistIds: string[],
   shop: string,
@@ -122,4 +138,5 @@ export {
   createMissingChecklistStatuses,
   getMissingChecklistIds,
   getTablesAndStatuses,
+  hasChecklistTable,
 };

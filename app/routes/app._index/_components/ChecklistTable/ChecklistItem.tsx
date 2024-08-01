@@ -20,7 +20,11 @@ export const CheckListItem: FC<Props> = (props) => {
     <div
       role="group"
       className={` ${styles["checklist-item"]} ${isActive ? `${styles["focused"]}` : `${styles["unfocused"]}`} `}
-      onClick={() => toggleActiveChecklistItem(checklistIndex, tableIndex)}
+      onClick={() => {
+        if (!isActive) {
+          toggleActiveChecklistItem(checklistIndex, tableIndex);
+        }
+      }}
     >
       <Box paddingBlock={"200"} paddingInline={"100"}>
         <BlockStack gap={"200"}>

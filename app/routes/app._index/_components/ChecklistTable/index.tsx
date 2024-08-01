@@ -11,6 +11,7 @@ import { ChevronUpIcon } from "@shopify/polaris-icons";
 import styles from "./styles.module.css";
 import { type FC } from "react";
 import { CheckListItem } from "./ChecklistItem";
+import { useFetcher } from "@remix-run/react";
 
 export type ChecklistTableProps = {
   id: string;
@@ -53,6 +54,7 @@ const ChecklistTable: FC<Props> = (props) => {
     tableIndex,
     toggleActiveChecklistItem,
   } = props;
+  const fetcher = useFetcher();
   const numTasks = checklistItems.length;
   const numTasksCompleted = checklistItems.filter(
     (task) => task.isCompleted === true,
@@ -67,11 +69,19 @@ const ChecklistTable: FC<Props> = (props) => {
             <Text as="h2" variant="headingMd" fontWeight="semibold">
               {header}
             </Text>
-            <Button
-              icon={ChevronUpIcon}
-              accessibilityLabel="Hide CheckList"
-              variant="tertiary"
-            ></Button>
+            <fetcher.Form method="patch">
+              <input
+                type="hidden"
+                name="intent"
+                value="toggle_checklist_visibility"
+              />
+
+              <Button
+                icon={ChevronUpIcon}
+                accessibilityLabel="toggle-checklist-table-visibility"
+                variant="tertiary"
+              ></Button>
+            </fetcher.Form>
           </InlineStack>
           <Text as="p" variant="bodyMd">
             {subheader}

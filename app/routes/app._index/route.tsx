@@ -1,26 +1,65 @@
 import { Page, Layout, BlockStack } from "@shopify/polaris";
 
 import { authenticate } from "~/shopify.server";
-import { json, type LoaderFunctionArgs } from "@remix-run/node";
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import {
   createMissingChecklistStatuses,
   getMissingChecklistIds,
   getTablesAndStatuses,
 } from "~/models/checklistTable";
-import { useLoaderData } from "@remix-run/react";
+import { json, useLoaderData } from "@remix-run/react";
 import type { ChecklistTableProps } from "~/routes/app._index/_components/ChecklistTable";
 import ChecklistTable from "~/routes/app._index/_components/ChecklistTable";
 import { useCallback, useState } from "react";
+import { toggleChecklistVisibilitySchema } from "./schemas/checklistSchema";
+import {
+  createUserPreferences,
+  hasUserPreferences,
+  toggleChecklistVisibility,
+} from "~/models/userPreferences";
+import { type InferType } from "yup";
+
+type toggleChecklistVisibilityData = InferType<
+  typeof toggleChecklistVisibilitySchema
+>;
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
+  // TODO: research generic error handlers in remix; I'm pretty sure this goes to the generic error handler if it fails
   const { session } = await authenticate.admin(request);
   const { shop } = session;
+  const userPreferencesExist = await hasUserPreferences(shop);
   const missingChecklistIds = await getMissingChecklistIds(shop);
   if (missingChecklistIds) {
     await createMissingChecklistStatuses(missingChecklistIds, shop);
   }
+  if (!userPreferencesExist) {
+    await createUserPreferences(shop);
+  }
   const tables = await getTablesAndStatuses(shop);
   return json(tables);
+};
+
+export const action = async ({ request }: ActionFunctionArgs) => {
+  const { session } = await authenticate.admin(request);
+  const { shop } = session;
+  let formData = await request.formData();
+  const intent = formData.get("intent");
+
+  // TODO: research generic error handlers in remix; I'm pretty sure this goes to the generic error handler if it fails
+  switch (intent) {
+    case "toggle_checklist_visibility":
+      const data = {
+        intent: intent,
+        tableId: formData.get("tableId"),
+      };
+      const isValid = await toggleChecklistVisibilitySchema.isValid(data);
+      if (isValid) {
+        const { tableId } = data as toggleChecklistVisibilityData;
+        const newPreferences = toggleChecklistVisibility(shop, tableId);
+        return newPreferences;
+      }
+      break;
+  }
 };
 
 export default function Index() {
@@ -38,7 +77,7 @@ export default function Index() {
         return;
       }
 
-      // optimistically render tables
+      // render UI updates to table
       setTables((prev) => {
         const updatedTables = [...prev];
         const checklistItems = updatedTables[tableIndex].checklistItems;
