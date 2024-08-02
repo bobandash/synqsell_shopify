@@ -1,7 +1,7 @@
 import db from "../db.server";
 import logger from "logger";
 import { getUserPreferences } from "./userPreferences";
-
+import type { TransformedChecklistTableData } from "./types";
 async function hasChecklistTable(id: string): Promise<Boolean> {
   try {
     const table = await db.checklistTable.findFirst({
@@ -21,7 +21,7 @@ async function hasChecklistTable(id: string): Promise<Boolean> {
 async function createMissingChecklistStatuses(
   missingChecklistIds: string[],
   shop: string,
-) {
+): Promise<undefined> {
   const missingStatusData = missingChecklistIds.map((id) => ({
     shop: shop,
     checklistItemId: id,
@@ -29,17 +29,17 @@ async function createMissingChecklistStatuses(
   }));
 
   try {
-    const checklistStatus = await db.checklistStatus.createMany({
+    await db.checklistStatus.createMany({
       data: missingStatusData,
     });
-    return checklistStatus;
+    return;
   } catch (error) {
     logger.error(error);
     throw new Error("Failed to create missing checklist statuses");
   }
 }
 
-async function getMissingChecklistIds(shop: string) {
+async function getMissingChecklistIds(shop: string): Promise<string[]> {
   try {
     const currentChecklistItems = await db.checklistStatus.findMany({
       where: {
@@ -70,7 +70,9 @@ async function getMissingChecklistIds(shop: string) {
   }
 }
 
-async function getTablesAndStatuses(shop: string) {
+async function getTablesAndStatuses(
+  shop: string,
+): Promise<TransformedChecklistTableData[]> {
   try {
     const userPreferences = await getUserPreferences(shop);
     const { tableIdsHidden } = userPreferences;
@@ -114,7 +116,7 @@ async function getTablesAndStatuses(shop: string) {
         ...table,
         isHidden: isHidden,
         checklistItems: table.checklistItems.map(
-          ({ checklistStatus, ...item }, index) => {
+          ({ checklistStatus, buttonText, ...item }, index) => {
             const isCompleted =
               checklistStatus.length > 0
                 ? checklistStatus[0].isCompleted
@@ -123,9 +125,9 @@ async function getTablesAndStatuses(shop: string) {
             return {
               ...item,
               isCompleted,
-              ...(item.buttonText !== null && {
+              ...(buttonText !== null && {
                 button: {
-                  content: item.buttonText,
+                  content: buttonText,
                   action: null,
                 },
               }),
@@ -135,6 +137,7 @@ async function getTablesAndStatuses(shop: string) {
         ),
       };
     });
+    console.log(transformedTables);
     return transformedTables;
   } catch (error) {
     logger.error(error);

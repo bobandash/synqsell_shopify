@@ -13,30 +13,7 @@ import type { FormEvent, FC } from "react";
 import { CheckListItem } from "./ChecklistItem";
 import { useFetcher } from "@remix-run/react";
 import { INTENTS, FETCHER_KEYS } from "../../constants";
-
-export type ChecklistTableProps = {
-  id: string;
-  position: number;
-  header: string;
-  subheader: string;
-  isHidden: boolean;
-  checklistItems: ChecklistItemProps[];
-};
-
-export type ChecklistItemProps = {
-  header: string;
-  subheader: string | null;
-  isCompleted: boolean;
-  isActive: boolean;
-  id: string;
-  key: string;
-  checklistTableId: string;
-  position: number;
-  button?: {
-    content: string;
-    action: null;
-  };
-};
+import type { TransformedChecklistTableData } from "~/models/types";
 
 export type toggleActiveChecklistItemProps = (
   checklistItemIndex: number,
@@ -44,7 +21,7 @@ export type toggleActiveChecklistItemProps = (
 ) => void;
 
 type Props = {
-  table: ChecklistTableProps;
+  table: TransformedChecklistTableData;
   tableIndex: number;
   toggleActiveChecklistItem: toggleActiveChecklistItemProps;
 };

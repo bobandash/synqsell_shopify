@@ -3,10 +3,11 @@ import styles from "./styles.module.css";
 import { CheckCircleIcon } from "@shopify/polaris-icons";
 import { type FC } from "react";
 import { IncompleteCircle } from "~/assets";
-import type { toggleActiveChecklistItemProps, ChecklistItemProps } from ".";
+import type { TransformedChecklistItemData } from "~/models/types";
+import type { toggleActiveChecklistItemProps } from ".";
 
 type Props = {
-  task: ChecklistItemProps;
+  task: TransformedChecklistItemData;
   tableIndex: number;
   checklistIndex: number;
   toggleActiveChecklistItem: toggleActiveChecklistItemProps;

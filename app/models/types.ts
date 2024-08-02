@@ -1,5 +1,52 @@
-export type UserPreference = {
+export type UserPreferenceData = {
   id: string;
   shop: string;
   tableIdsHidden: string[];
+};
+
+export type ChecklistTableData = {
+  id: string;
+  position: number;
+  header: string;
+  subheader: string | null;
+  checklistItems: ChecklistItemData[];
+};
+
+export type ChecklistItemData = {
+  header: string;
+  subheader?: string | null;
+  isCompleted: boolean;
+  isActive: boolean;
+  id: string;
+  key: string;
+  checklistTableId: string;
+  position: number;
+  buttonText: String;
+};
+
+export type ChecklistStatusData = {
+  id: string;
+  shop: string;
+  checklistItemId: string;
+  isCompleted: string;
+};
+export type TransformedChecklistTableData = {
+  id: string;
+  position: number;
+  header: string;
+  subheader: string | null;
+  isHidden: boolean;
+  checklistItems: TransformedChecklistItemData[];
+};
+
+export type TransformedChecklistItemData = {
+  id: string;
+  key: string;
+  checklistTableId: string;
+  position: number;
+  header: string;
+  subheader: string | null;
+  isCompleted: boolean;
+  button?: { content: string; action: null };
+  isActive: boolean;
 };
