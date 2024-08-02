@@ -12,12 +12,12 @@ import type { ChecklistTableProps } from "~/routes/app._index/_components/Checkl
 import ChecklistTable from "~/routes/app._index/_components/ChecklistTable";
 import { useCallback, useEffect, useState } from "react";
 import { toggleChecklistVisibilitySchema } from "./schemas/checklistSchema";
-import type { UserPreference } from "~/models/userPreferences";
 import {
   createUserPreferences,
   hasUserPreferences,
   toggleChecklistVisibility,
 } from "~/models/userPreferences";
+import type { UserPreference } from "~/models/types";
 import { type InferType } from "yup";
 import logger from "logger";
 import { INTENTS, FETCHER_KEYS } from "./constants";
@@ -48,7 +48,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const { shop } = session;
     let formData = await request.formData();
     const intent = formData.get("intent");
-    // TODO: research generic error handlers in remix; I'm pretty sure this goes to the generic error handler if it fails
     switch (intent) {
       case INTENTS.TOGGLE_CHECKLIST_VISIBILITY:
         const data = {
