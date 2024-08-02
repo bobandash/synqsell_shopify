@@ -7,11 +7,12 @@ import {
   ProgressBar,
   Divider,
 } from "@shopify/polaris";
-import { ChevronUpIcon } from "@shopify/polaris-icons";
+import { ChevronUpIcon, ChevronDownIcon } from "@shopify/polaris-icons";
 import styles from "./styles.module.css";
-import { type FC } from "react";
+import type { FormEvent, FC } from "react";
 import { CheckListItem } from "./ChecklistItem";
 import { useFetcher } from "@remix-run/react";
+import { INTENTS, FETCHER_KEYS } from "../../constants";
 
 export type ChecklistTableProps = {
   id: string;
@@ -43,23 +44,31 @@ export type toggleActiveChecklistItemProps = (
 ) => void;
 
 type Props = {
-  checklist: ChecklistTableProps;
+  table: ChecklistTableProps;
   tableIndex: number;
   toggleActiveChecklistItem: toggleActiveChecklistItemProps;
 };
 
 const ChecklistTable: FC<Props> = (props) => {
-  const {
-    checklist: { header, subheader, checklistItems },
-    tableIndex,
-    toggleActiveChecklistItem,
-  } = props;
-  const fetcher = useFetcher();
+  const fetcher = useFetcher({ key: FETCHER_KEYS.TOGGLE_CHECKLIST_VISIBILITY });
+  const { table, tableIndex, toggleActiveChecklistItem } = props;
+  const { id, header, subheader, checklistItems, isHidden } = table;
+
   const numTasks = checklistItems.length;
   const numTasksCompleted = checklistItems.filter(
     (task) => task.isCompleted === true,
   ).length;
   const progress = (numTasksCompleted / numTasks) * 100;
+
+  const handleSubmitToggleVisibility = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (fetcher.state !== "idle") {
+      return;
+    }
+    let formData = new FormData(event.currentTarget);
+    // TODO: add yup validation to this
+    fetcher.submit(formData, { method: "patch" });
+  };
 
   return (
     <Card>
@@ -69,18 +78,22 @@ const ChecklistTable: FC<Props> = (props) => {
             <Text as="h2" variant="headingMd" fontWeight="semibold">
               {header}
             </Text>
-            <fetcher.Form method="patch">
+            <fetcher.Form
+              method="patch"
+              onSubmit={handleSubmitToggleVisibility}
+            >
               <input
                 type="hidden"
                 name="intent"
-                value="toggle_checklist_visibility"
+                value={INTENTS.TOGGLE_CHECKLIST_VISIBILITY}
               />
-
+              <input type="hidden" name="tableId" value={id} />
               <Button
-                icon={ChevronUpIcon}
+                icon={isHidden ? ChevronDownIcon : ChevronUpIcon}
                 accessibilityLabel="toggle-checklist-table-visibility"
                 variant="tertiary"
-              ></Button>
+                submit={true}
+              />
             </fetcher.Form>
           </InlineStack>
           <Text as="p" variant="bodyMd">
@@ -95,18 +108,22 @@ const ChecklistTable: FC<Props> = (props) => {
             </div>
           </InlineStack>
         </BlockStack>
-        <Divider />
-        <BlockStack gap="100">
-          {checklistItems.map((item, index) => (
-            <CheckListItem
-              key={item.id}
-              task={item}
-              tableIndex={tableIndex}
-              checklistIndex={index}
-              toggleActiveChecklistItem={toggleActiveChecklistItem}
-            />
-          ))}
-        </BlockStack>
+        {!isHidden && (
+          <>
+            <Divider />
+            <BlockStack gap="100">
+              {checklistItems.map((item, index) => (
+                <CheckListItem
+                  key={item.id}
+                  task={item}
+                  tableIndex={tableIndex}
+                  checklistIndex={index}
+                  toggleActiveChecklistItem={toggleActiveChecklistItem}
+                />
+              ))}
+            </BlockStack>
+          </>
+        )}
       </BlockStack>
     </Card>
   );

@@ -12,7 +12,6 @@ async function main() {
         header: "Retailer Setup Guide",
         subheader:
           "Follow the steps below to import products from suppliers on our platform.",
-        isHidden: false,
         checklistItems: {
           create: [
             {
@@ -57,7 +56,6 @@ async function main() {
         header: "Supplier Setup Guide",
         subheader:
           "Follow the steps below to become a supplier on our platform.",
-        isHidden: false,
         checklistItems: {
           create: [
             {

@@ -3,7 +3,7 @@
 client_id = "c2ff24913d6d89792234763f0830c676"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://epa-sacramento-vb-doors.trycloudflare.com"
+application_url = "https://hydraulic-happened-term-robust.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read_inventory,read_products,read_third_party_fulfillment_orders,write
 
 [auth]
 redirect_urls = [
-  "https://epa-sacramento-vb-doors.trycloudflare.com/auth/callback",
-  "https://epa-sacramento-vb-doors.trycloudflare.com/auth/shopify/callback",
-  "https://epa-sacramento-vb-doors.trycloudflare.com/api/auth/callback"
+  "https://hydraulic-happened-term-robust.trycloudflare.com/auth/callback",
+  "https://hydraulic-happened-term-robust.trycloudflare.com/auth/shopify/callback",
+  "https://hydraulic-happened-term-robust.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]

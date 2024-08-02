@@ -48,7 +48,6 @@ model ChecklistTable {
   position       Int
   header         String
   subheader      String?
-  isHidden       Boolean // TODO: delete in the future, this should be in UserPreference
   checklistItems ChecklistItem[]
 }
 

@@ -1,7 +1,8 @@
 import db from "../db.server";
 import logger from "logger";
+import { getUserPreferences } from "./userPreferences";
 
-async function hasChecklistTable(id: string) {
+async function hasChecklistTable(id: string): Promise<Boolean> {
   try {
     const table = await db.checklistTable.findFirst({
       where: {
@@ -71,6 +72,8 @@ async function getMissingChecklistIds(shop: string) {
 
 async function getTablesAndStatuses(shop: string) {
   try {
+    const userPreferences = await getUserPreferences(shop);
+    const { tableIdsHidden } = userPreferences;
     const tables = await db.checklistTable.findMany({
       orderBy: {
         position: "asc",
@@ -96,14 +99,20 @@ async function getTablesAndStatuses(shop: string) {
 
     // Get the tables to the necessary format
     const transformedTables = tables.map((table) => {
+      // activeIndex for which checklist item to display
       let activeIndex = table.checklistItems.findIndex(
         ({ checklistStatus }) => {
           return checklistStatus.length > 0 && !checklistStatus[0].isCompleted;
         },
       );
       activeIndex = activeIndex === -1 ? 0 : activeIndex;
+
+      // check whether or not the table is hidden in user preferences
+      const isHidden = tableIdsHidden.includes(table.id);
+
       return {
         ...table,
+        isHidden: isHidden,
         checklistItems: table.checklistItems.map(
           ({ checklistStatus, ...item }, index) => {
             const isCompleted =
@@ -126,7 +135,6 @@ async function getTablesAndStatuses(shop: string) {
         ),
       };
     });
-
     return transformedTables;
   } catch (error) {
     logger.error(error);

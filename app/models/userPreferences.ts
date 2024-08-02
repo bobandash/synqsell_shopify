@@ -1,6 +1,12 @@
 import db from "../db.server";
 import { hasChecklistTable } from "./checklistTable";
 
+type UserPreference = {
+  id: string;
+  shop: string;
+  tableIdsHidden: string[];
+};
+
 // function to add or remove table ID from user preferences depending on if it's hidden over visible
 async function hasUserPreferences(shop: string) {
   try {
@@ -34,7 +40,7 @@ async function getUserPreferences(shop: string) {
   }
 }
 
-async function createUserPreferences(shop: string) {
+async function createUserPreferences(shop: string): Promise<UserPreference> {
   try {
     const newUserPreference = await db.userPreference.create({
       data: {
@@ -48,7 +54,10 @@ async function createUserPreferences(shop: string) {
   }
 }
 
-async function toggleChecklistVisibility(shop: string, tableId: string) {
+async function toggleChecklistVisibility(
+  shop: string,
+  tableId: string,
+): Promise<UserPreference> {
   try {
     // error validation
     const checklistTableExists = await hasChecklistTable(tableId);
@@ -87,6 +96,7 @@ async function toggleChecklistVisibility(shop: string, tableId: string) {
 }
 
 export {
+  type UserPreference,
   hasUserPreferences,
   getUserPreferences,
   createUserPreferences,

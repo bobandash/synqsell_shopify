@@ -7,17 +7,20 @@ import {
   getMissingChecklistIds,
   getTablesAndStatuses,
 } from "~/models/checklistTable";
-import { json, useLoaderData } from "@remix-run/react";
+import { json, useFetcher, useLoaderData } from "@remix-run/react";
 import type { ChecklistTableProps } from "~/routes/app._index/_components/ChecklistTable";
 import ChecklistTable from "~/routes/app._index/_components/ChecklistTable";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toggleChecklistVisibilitySchema } from "./schemas/checklistSchema";
+import type { UserPreference } from "~/models/userPreferences";
 import {
   createUserPreferences,
   hasUserPreferences,
   toggleChecklistVisibility,
 } from "~/models/userPreferences";
 import { type InferType } from "yup";
+import logger from "logger";
+import { INTENTS, FETCHER_KEYS } from "./constants";
 
 type toggleChecklistVisibilityData = InferType<
   typeof toggleChecklistVisibilitySchema
@@ -40,33 +43,55 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
-  const { shop } = session;
-  let formData = await request.formData();
-  const intent = formData.get("intent");
-
-  // TODO: research generic error handlers in remix; I'm pretty sure this goes to the generic error handler if it fails
-  switch (intent) {
-    case "toggle_checklist_visibility":
-      const data = {
-        intent: intent,
-        tableId: formData.get("tableId"),
-      };
-      const isValid = await toggleChecklistVisibilitySchema.isValid(data);
-      if (isValid) {
+  try {
+    const { session } = await authenticate.admin(request);
+    const { shop } = session;
+    let formData = await request.formData();
+    const intent = formData.get("intent");
+    // TODO: research generic error handlers in remix; I'm pretty sure this goes to the generic error handler if it fails
+    switch (intent) {
+      case INTENTS.TOGGLE_CHECKLIST_VISIBILITY:
+        const data = {
+          intent: intent,
+          tableId: formData.get("tableId"),
+        };
+        await toggleChecklistVisibilitySchema.validate(data);
         const { tableId } = data as toggleChecklistVisibilityData;
-        const newPreferences = toggleChecklistVisibility(shop, tableId);
-        return newPreferences;
-      }
-      break;
+        const newPreferences = await toggleChecklistVisibility(shop, tableId);
+        return json(newPreferences);
+    }
+  } catch (error) {
+    logger.error(error);
   }
+
+  return null;
 };
 
 export default function Index() {
   const tablesData = useLoaderData<typeof loader>() as ChecklistTableProps[];
   const [tables, setTables] = useState<ChecklistTableProps[]>(tablesData);
-
   // on client side, this wil refresh if user refreshes page
+  const checklistVisibilityFetcher = useFetcher({
+    key: FETCHER_KEYS.TOGGLE_CHECKLIST_VISIBILITY,
+  });
+
+  const updateTableVisibility = useCallback((tableIdsHidden: String[]) => {
+    setTables((prev) =>
+      prev.map((table) => ({
+        ...table,
+        isHidden: tableIdsHidden.includes(table.id),
+      })),
+    );
+  }, []);
+
+  useEffect(() => {
+    const data = checklistVisibilityFetcher.data;
+    if (data) {
+      const userPreference = data as UserPreference;
+      updateTableVisibility(userPreference.tableIdsHidden);
+    }
+  }, [checklistVisibilityFetcher.data, updateTableVisibility]);
+
   const toggleActiveChecklistItem = useCallback(
     (checklistItemIndex: number, tableIndex: number) => {
       const activeChecklistItemIndex = tables[
@@ -109,7 +134,7 @@ export default function Index() {
               {tables.map((table, index) => (
                 <ChecklistTable
                   key={table.id}
-                  checklist={table}
+                  table={table}
                   tableIndex={index}
                   toggleActiveChecklistItem={toggleActiveChecklistItem}
                 />
