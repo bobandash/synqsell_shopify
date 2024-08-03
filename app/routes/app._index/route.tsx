@@ -7,8 +7,13 @@ import {
   getMissingChecklistIds,
   getTablesAndStatuses,
 } from "~/models/checklistTable";
-import { json, useFetcher, useLoaderData } from "@remix-run/react";
-import type { ChecklistTableProps } from "~/routes/app._index/_components/ChecklistTable";
+import {
+  isRouteErrorResponse,
+  json,
+  useFetcher,
+  useLoaderData,
+  useRouteError,
+} from "@remix-run/react";
 import ChecklistTable from "~/routes/app._index/_components/ChecklistTable";
 import { useCallback, useEffect, useState } from "react";
 import { toggleChecklistVisibilitySchema } from "./schemas/checklistSchema";
@@ -17,29 +22,38 @@ import {
   hasUserPreferences,
   toggleChecklistVisibility,
 } from "~/models/userPreferences";
-import type { UserPreference } from "~/models/types";
+import type {
+  TransformedChecklistTableData,
+  UserPreferenceData,
+} from "~/models/types";
 import { type InferType } from "yup";
 import logger from "logger";
 import { INTENTS, FETCHER_KEYS } from "./constants";
+import throwError from "~/util/throwError";
 
 type toggleChecklistVisibilityData = InferType<
   typeof toggleChecklistVisibilitySchema
 >;
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  // TODO: research generic error handlers in remix; I'm pretty sure this goes to the generic error handler if it fails
-  const { session } = await authenticate.admin(request);
-  const { shop } = session;
-  const userPreferencesExist = await hasUserPreferences(shop);
-  const missingChecklistIds = await getMissingChecklistIds(shop);
-  if (missingChecklistIds) {
-    await createMissingChecklistStatuses(missingChecklistIds, shop);
+  try {
+    const { session } = await authenticate.admin(request);
+    const { shop } = session;
+    const userPreferencesExist = await hasUserPreferences(shop);
+    const missingChecklistIds = await getMissingChecklistIds(shop);
+    if (missingChecklistIds) {
+      await createMissingChecklistStatuses(missingChecklistIds, shop);
+    }
+    if (!userPreferencesExist) {
+      await createUserPreferences(shop);
+    }
+    const tables = await getTablesAndStatuses(shop);
+    return json(tables, {
+      status: 200,
+    });
+  } catch (error) {
+    throwError(error, "index");
   }
-  if (!userPreferencesExist) {
-    await createUserPreferences(shop);
-  }
-  const tables = await getTablesAndStatuses(shop);
-  return json(tables);
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -66,9 +80,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   return null;
 };
 
-export default function Index() {
-  const tablesData = useLoaderData<typeof loader>() as ChecklistTableProps[];
-  const [tables, setTables] = useState<ChecklistTableProps[]>(tablesData);
+function Index() {
+  const tablesData = useLoaderData<
+    typeof loader
+  >() as TransformedChecklistTableData[];
+  const [tables, setTables] =
+    useState<TransformedChecklistTableData[]>(tablesData);
   // on client side, this wil refresh if user refreshes page
   const checklistVisibilityFetcher = useFetcher({
     key: FETCHER_KEYS.TOGGLE_CHECKLIST_VISIBILITY,
@@ -86,7 +103,7 @@ export default function Index() {
   useEffect(() => {
     const data = checklistVisibilityFetcher.data;
     if (data) {
-      const userPreference = data as UserPreference;
+      const userPreference = data as UserPreferenceData;
       updateTableVisibility(userPreference.tableIdsHidden);
     }
   }, [checklistVisibilityFetcher.data, updateTableVisibility]);
@@ -130,14 +147,15 @@ export default function Index() {
         <Layout>
           <Layout.Section>
             <BlockStack gap={"200"}>
-              {tables.map((table, index) => (
-                <ChecklistTable
-                  key={table.id}
-                  table={table}
-                  tableIndex={index}
-                  toggleActiveChecklistItem={toggleActiveChecklistItem}
-                />
-              ))}
+              {tables &&
+                tables.map((table, index) => (
+                  <ChecklistTable
+                    key={table.id}
+                    table={table}
+                    tableIndex={index}
+                    toggleActiveChecklistItem={toggleActiveChecklistItem}
+                  />
+                ))}
             </BlockStack>
           </Layout.Section>
         </Layout>
@@ -145,3 +163,31 @@ export default function Index() {
     </Page>
   );
 }
+
+export function ErrorBoundary() {
+  const error = useRouteError();
+
+  if (isRouteErrorResponse(error)) {
+    return (
+      <div>
+        <h1>
+          {error.status} {error.statusText}
+        </h1>
+        <p>{error.data}</p>
+      </div>
+    );
+  } else if (error instanceof Error) {
+    return (
+      <div>
+        <h1>Error</h1>
+        <p>{error.message}</p>
+        <p>The stack trace is:</p>
+        <pre>{error.stack}</pre>
+      </div>
+    );
+  } else {
+    return <h1>Unknown Error</h1>;
+  }
+}
+
+export default Index;

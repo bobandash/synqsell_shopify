@@ -2,7 +2,9 @@ import db from "../db.server";
 import logger from "logger";
 import { getUserPreferences } from "./userPreferences";
 import type { TransformedChecklistTableData } from "./types";
-async function hasChecklistTable(id: string): Promise<Boolean> {
+import createError from "http-errors";
+
+async function hasChecklistTable(id: string): Promise<boolean> {
   try {
     const table = await db.checklistTable.findFirst({
       where: {
@@ -14,7 +16,9 @@ async function hasChecklistTable(id: string): Promise<Boolean> {
     }
     return true;
   } catch {
-    throw new Error("Failed to retrieve checklist table.");
+    throw new createError.InternalServerError(
+      "Failed to retrieve checklist table.",
+    );
   }
 }
 
@@ -137,7 +141,6 @@ async function getTablesAndStatuses(
         ),
       };
     });
-    console.log(transformedTables);
     return transformedTables;
   } catch (error) {
     logger.error(error);

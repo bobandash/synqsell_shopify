@@ -1,6 +1,7 @@
 import db from "../db.server";
 import { hasChecklistTable } from "./checklistTable";
 import type { UserPreferenceData } from "./types";
+import createError from "http-errors";
 
 // function to add or remove table ID from user preferences depending on if it's hidden over visible
 async function hasUserPreferences(shop: string): Promise<Boolean> {
@@ -15,7 +16,9 @@ async function hasUserPreferences(shop: string): Promise<Boolean> {
     }
     return true;
   } catch (error) {
-    throw new Error("Failed to retrieve user preferences.");
+    throw new createError.InternalServerError(
+      "Failed to retrieve checklist table.",
+    );
   }
 }
 
