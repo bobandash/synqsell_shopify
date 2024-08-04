@@ -1,8 +1,16 @@
 import { json } from "@remix-run/node";
 import createHttpError from "http-errors";
+import { ValidationError } from "yup";
 import logger from "logger";
 
 function throwError(error: unknown, route: string) {
+  if (error instanceof ValidationError) {
+    logger.error(`Validation Error: ${error.message}`);
+    throw json(error.message, {
+      status: 400,
+    });
+  }
+
   if (error instanceof createHttpError.HttpError) {
     logger.error(`HTTP Error: ${error.message}`);
     throw json(error.message, {

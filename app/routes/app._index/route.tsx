@@ -12,28 +12,30 @@ import {
   json,
   useFetcher,
   useLoaderData,
+  useLocation,
   useRouteError,
 } from "@remix-run/react";
-import ChecklistTable from "~/routes/app._index/_components/ChecklistTable";
-import { useCallback, useEffect, useState } from "react";
-import { toggleChecklistVisibilitySchema } from "./schemas/checklistSchema";
+import ChecklistTable from "~/routes/app._index/components/ChecklistTable";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   createUserPreferences,
   hasUserPreferences,
-  toggleChecklistVisibility,
 } from "~/models/userPreferences";
 import type {
   TransformedChecklistTableData,
   UserPreferenceData,
 } from "~/models/types";
-import { type InferType } from "yup";
 import logger from "logger";
 import { INTENTS, FETCHER_KEYS } from "./constants";
 import throwError from "~/util/throwError";
-
-type toggleChecklistVisibilityData = InferType<
-  typeof toggleChecklistVisibilitySchema
->;
+import { useAppBridge } from "@shopify/app-bridge-react";
+import getChecklistBtnFunction from "./util/checklistBtnFunctions";
+import { RetailerModal } from "./components/Modals";
+import {
+  getStartedRetailerAction,
+  toggleChecklistVisibilityAction,
+} from "./actions/routeActions";
+import { convertFormDataToObject } from "~/util";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
@@ -58,20 +60,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   try {
-    const { session } = await authenticate.admin(request);
+    const { session, admin } = await authenticate.admin(request);
     const { shop } = session;
     let formData = await request.formData();
     const intent = formData.get("intent");
+    const formDataObject = convertFormDataToObject(formData);
     switch (intent) {
       case INTENTS.TOGGLE_CHECKLIST_VISIBILITY:
-        const data = {
-          intent: intent,
-          tableId: formData.get("tableId"),
-        };
-        await toggleChecklistVisibilitySchema.validate(data);
-        const { tableId } = data as toggleChecklistVisibilityData;
-        const newPreferences = await toggleChecklistVisibility(shop, tableId);
-        return json(newPreferences);
+        return toggleChecklistVisibilityAction(formDataObject, shop);
+      case INTENTS.RETAILER_GET_STARTED:
+        return getStartedRetailerAction(admin.graphql, formDataObject, shop);
     }
   } catch (error) {
     logger.error(error);
@@ -84,11 +82,15 @@ function Index() {
   const tablesData = useLoaderData<
     typeof loader
   >() as TransformedChecklistTableData[];
+  const shopify = useAppBridge();
   const [tables, setTables] =
     useState<TransformedChecklistTableData[]>(tablesData);
-  // on client side, this wil refresh if user refreshes page
+
   const checklistVisibilityFetcher = useFetcher({
     key: FETCHER_KEYS.TOGGLE_CHECKLIST_VISIBILITY,
+  });
+  const becomeRetailerFetcher = useFetcher({
+    key: FETCHER_KEYS.RETAILER_GET_STARTED,
   });
 
   const updateTableVisibility = useCallback((tableIdsHidden: String[]) => {
@@ -100,6 +102,26 @@ function Index() {
     );
   }, []);
 
+  const transformedTablesData = useMemo(() => {
+    return tablesData.map((table) => ({
+      ...table,
+      checklistItems: table.checklistItems.map(({ key, button, ...rest }) => ({
+        key,
+        ...rest,
+        button: button
+          ? {
+              content: button.content,
+              action: getChecklistBtnFunction(key, shopify),
+            }
+          : undefined,
+      })),
+    }));
+  }, [tablesData, shopify]);
+
+  useEffect(() => {
+    setTables(transformedTablesData);
+  }, [transformedTablesData]);
+
   useEffect(() => {
     const data = checklistVisibilityFetcher.data;
     if (data) {
@@ -107,6 +129,10 @@ function Index() {
       updateTableVisibility(userPreference.tableIdsHidden);
     }
   }, [checklistVisibilityFetcher.data, updateTableVisibility]);
+
+  useEffect(() => {
+    // TODO: add functionality
+  }, [checklistVisibilityFetcher.data]);
 
   const toggleActiveChecklistItem = useCallback(
     (checklistItemIndex: number, tableIndex: number) => {
@@ -141,11 +167,14 @@ function Index() {
     [tables],
   );
 
+  // Each button should have a specific action depending on the checklist item key
+
   return (
     <Page title="SynqSell" subtitle="Where Brand Partnerships Flourish">
       <BlockStack gap="500">
         <Layout>
           <Layout.Section>
+            <RetailerModal />
             <BlockStack gap={"200"}>
               {tables &&
                 tables.map((table, index) => (

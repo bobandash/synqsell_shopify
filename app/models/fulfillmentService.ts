@@ -1,8 +1,6 @@
+import type { GraphQL } from "~/types";
 import db from "../db.server";
-import { type GraphQLClient } from "node_modules/@shopify/shopify-app-remix/dist/ts/server/clients/types";
-import { type AdminOperations } from "node_modules/@shopify/admin-api-client/dist/ts/graphql/types";
-
-type GraphQL = GraphQLClient<AdminOperations>;
+import createHttpError from "http-errors";
 
 // Fulfillment services are designed for retailers to import products from suppliers
 // https://shopify.dev/docs/apps/build/orders-fulfillment/fulfillment-service-apps
@@ -14,7 +12,6 @@ export async function getFulfillmentService(shop: string, graphql: GraphQL) {
       shop,
     },
   });
-
   if (!fulfillmentService) {
     return null;
   }
@@ -22,43 +19,59 @@ export async function getFulfillmentService(shop: string, graphql: GraphQL) {
   return await supplementFulfillmentService(fulfillmentService.id, graphql);
 }
 
-// TODO: Figure out retries and error handling
 export async function createFulfillmentService(shop: string, graphql: GraphQL) {
-  const response = await graphql(
-    `
-      mutation fulfillmentServiceCreate(
-        $name: String!
-        $callbackUrl: URL!
-        $trackingSupport: Boolean!
-      ) {
-        fulfillmentServiceCreate(
-          name: $name
-          callbackUrl: $callbackUrl
-          trackingSupport: $trackingSupport
+  try {
+    const response = await graphql(
+      `
+        mutation fulfillmentServiceCreate(
+          $name: String!
+          $callbackUrl: URL!
+          $trackingSupport: Boolean!
         ) {
-          fulfillmentService {
-            id
-            serviceName
-            callbackUrl
-            trackingSupport
-          }
-          userErrors {
-            field
-            message
+          fulfillmentServiceCreate(
+            name: $name
+            callbackUrl: $callbackUrl
+            trackingSupport: $trackingSupport
+          ) {
+            fulfillmentService {
+              id
+              serviceName
+              callbackUrl
+              trackingSupport
+            }
+            userErrors {
+              field
+              message
+            }
           }
         }
-      }
-    `,
-    {
-      variables: {
-        name: "SynqSell",
-        callbackUrl: "https://smth.synqsell.com", // placeholder value
-        trackingSupport: true,
+      `,
+      {
+        variables: {
+          name: "SynqSell",
+          callbackUrl: "https://smth.synqsell.com", // placeholder value
+          trackingSupport: true,
+        },
       },
-    },
-  );
+    );
 
-  return response;
+    const { data } = await response.json();
+    const fulfillmentServiceCreate = data?.fulfillmentServiceCreate;
+    if (!fulfillmentServiceCreate) {
+      throw new createHttpError.BadRequest(
+        "Could not create fulfillment service on Shopify",
+      );
+    }
+
+    const { userErrors, fulfillmentService } = fulfillmentServiceCreate;
+
+    if (userErrors) {
+      const errorMessages = userErrors.map((error) => {
+        return error.message;
+      });
+      throw new createHttpError.BadRequest(errorMessages.join(" "));
+    }
+  } catch {}
 }
 
 async function supplementFulfillmentService(id: string, graphql: GraphQL) {
@@ -76,9 +89,9 @@ async function supplementFulfillmentService(id: string, graphql: GraphQL) {
     },
   );
 
-  const {
-    data: { fulfillmentService },
-  } = await response.json();
+  const { data } = await response.json();
+  const { fulfillmentService } = data;
+
   return {
     id: fulfillmentService.id,
     name: fulfillmentService.serviceName,

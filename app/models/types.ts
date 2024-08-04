@@ -39,6 +39,7 @@ export type TransformedChecklistTableData = {
   checklistItems: TransformedChecklistItemData[];
 };
 
+type BtnAction = null | (() => void);
 export type TransformedChecklistItemData = {
   id: string;
   key: string;
@@ -47,6 +48,6 @@ export type TransformedChecklistItemData = {
   header: string;
   subheader: string | null;
   isCompleted: boolean;
-  button?: { content: string; action: null };
+  button?: { content: string; action: BtnAction };
   isActive: boolean;
 };

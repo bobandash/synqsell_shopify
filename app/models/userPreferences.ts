@@ -30,11 +30,15 @@ async function getUserPreferences(shop: string): Promise<UserPreferenceData> {
       },
     });
     if (!userPreferences) {
-      throw new Error("No user preferences found for this shop.");
+      throw new createError.NotFound(
+        "No user preferences found for this shop.",
+      );
     }
     return userPreferences;
   } catch (error) {
-    throw new Error(`Failed to retrieve user preferences.`);
+    throw new createError.InternalServerError(
+      `Failed to retrieve user preferences.`,
+    );
   }
 }
 
@@ -50,7 +54,9 @@ async function createUserPreferences(
     });
     return newUserPreference;
   } catch (error) {
-    throw new Error("Failed to create user preferences");
+    throw new createError.InternalServerError(
+      "Failed to create user preferences",
+    );
   }
 }
 
@@ -70,7 +76,7 @@ async function toggleChecklistVisibility(
       if (!userPreferenceExists) {
         errors.push("This shop does not have user preferences.");
       }
-      throw new Error(errors.join(" "));
+      throw new createError.BadRequest(errors.join(" "));
     }
 
     const currentUserPreference = await getUserPreferences(shop);
@@ -91,7 +97,9 @@ async function toggleChecklistVisibility(
 
     return newUserPreferences;
   } catch {
-    throw new Error("Failed to update checklist visibility.");
+    throw new createError.InternalServerError(
+      "Failed to update checklist visibility.",
+    );
   }
 }
 
