@@ -1,6 +1,6 @@
 import type { GraphQL } from "~/types";
 import db from "../db.server";
-import * as createHttpError from "http-errors";
+import createHttpError from "http-errors";
 
 // Fulfillment services are designed for retailers to import products from suppliers
 // https://shopify.dev/docs/apps/build/orders-fulfillment/fulfillment-service-apps
@@ -87,7 +87,7 @@ async function createFulfillmentServiceShopify(shop: string, graphql: GraphQL) {
   }
 }
 
-async function deleteFulfillmentService(
+export async function deleteFulfillmentService(
   shop: string,
   id: string,
   graphql: GraphQL,
@@ -122,7 +122,6 @@ async function deleteFulfillmentService(
       throw new createHttpError.BadRequest(errorMessages.join(" "));
     }
 
-    // Case: successfully deleted
     return { id };
   } catch (error) {
     if (createHttpError.isHttpError(error)) {

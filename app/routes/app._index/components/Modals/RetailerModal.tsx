@@ -1,9 +1,13 @@
 import { Modal, TitleBar } from "@shopify/app-bridge-react";
 import { FETCHER_KEYS, INTENTS, MODALS } from "../../constants";
 import { useFetcher } from "@remix-run/react";
-import { useEffect, useRef } from "react";
+import { type FC, useEffect, useRef } from "react";
 
-const RetailerModal = () => {
+type Props = {
+  checklistItemId: string;
+};
+
+const RetailerModal: FC<Props> = ({ checklistItemId }) => {
   const fetcher = useFetcher({ key: FETCHER_KEYS.RETAILER_GET_STARTED });
   const formRef = useRef<HTMLFormElement>(null);
   const handleSubmitForm = () => {
@@ -28,6 +32,7 @@ const RetailerModal = () => {
           name="intent"
           value={INTENTS.RETAILER_GET_STARTED}
         />
+        <input type="hidden" name="checklistItemId" value={checklistItemId} />
       </fetcher.Form>
       <TitleBar title="Become a retailer on SynqSell">
         <button>Cancel</button>

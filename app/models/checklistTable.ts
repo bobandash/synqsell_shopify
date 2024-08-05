@@ -1,7 +1,7 @@
 import db from "../db.server";
 import { getUserPreferences } from "./userPreferences";
 import type { TransformedChecklistTableData } from "./types";
-import * as createHttpError from "http-errors";
+import createHttpError from "http-errors";
 async function hasChecklistTable(id: string): Promise<boolean> {
   try {
     const table = await db.checklistTable.findFirst({

@@ -8,4 +8,5 @@ export const toggleChecklistVisibilitySchema = object({
 
 export const getStartedRetailerSchema = object({
   intent: string().oneOf([INTENTS.RETAILER_GET_STARTED]),
+  checklistItemId: string().required(),
 });

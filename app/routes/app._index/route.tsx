@@ -25,16 +25,16 @@ import type {
   UserPreferenceData,
 } from "~/models/types";
 import logger from "logger";
-import { INTENTS, FETCHER_KEYS } from "./constants";
+import { INTENTS, FETCHER_KEYS, CHECKLIST_ITEM_KEYS } from "./constants";
 import throwError from "~/util/throwError";
 import { useAppBridge } from "@shopify/app-bridge-react";
-import getChecklistBtnFunction from "./util/checklistBtnFunctions";
 import { RetailerModal } from "./components/Modals";
 import {
   getStartedRetailerAction,
   toggleChecklistVisibilityAction,
 } from "./actions/routeActions";
 import { convertFormDataToObject } from "~/util";
+import { getChecklistBtnFunction, getChecklistItemId } from "./util";
 
 // TODO: Fix logger information when receive best logging practices
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -86,6 +86,10 @@ function Index() {
   const shopify = useAppBridge();
   const [tables, setTables] =
     useState<TransformedChecklistTableData[]>(tablesData);
+  const retailerGetStartedId = getChecklistItemId(
+    CHECKLIST_ITEM_KEYS.RETAILER_GET_STARTED,
+    tables,
+  );
 
   const checklistVisibilityFetcher = useFetcher({
     key: FETCHER_KEYS.TOGGLE_CHECKLIST_VISIBILITY,
@@ -131,6 +135,11 @@ function Index() {
     }
   }, [checklistVisibilityFetcher.data, updateTableVisibility]);
 
+  // optimistic render updating checklist action completed
+  useEffect(() => {
+    const data = becomeRetailerFetcher.data;
+  }, [becomeRetailerFetcher.data]);
+
   useEffect(() => {
     // TODO: add functionality
   }, [checklistVisibilityFetcher.data]);
@@ -175,7 +184,7 @@ function Index() {
       <BlockStack gap="500">
         <Layout>
           <Layout.Section>
-            <RetailerModal />
+            <RetailerModal checklistItemId={retailerGetStartedId} />
             <BlockStack gap={"200"}>
               {tables &&
                 tables.map((table, index) => (

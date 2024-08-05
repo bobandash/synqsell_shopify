@@ -1,6 +1,8 @@
 import { prismaMock } from "../../singleton";
 import { hasChecklistTable } from "../checklistTable";
 
+// TODO: there's a discrepancy between the commonJS and ES6 that allows tests to work with import * as createHttpError
+
 describe("hasChecklistTable", () => {
   it("should return true if table exists", async () => {
     const id = "test";

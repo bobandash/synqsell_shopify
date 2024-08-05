@@ -8,14 +8,22 @@ import { type InferType } from "yup";
 import { throwError } from "~/util";
 import {
   createFulfillmentService,
+  deleteFulfillmentService,
   getFulfillmentService,
 } from "~/models/fulfillmentService";
 import type { FormDataObject, GraphQL } from "~/types";
 import { StatusCodes } from "http-status-codes";
+import {
+  getChecklistStatus,
+  markCheckListStatusCompleted,
+} from "~/models/checklistStatus";
+import createHttpError from "http-errors";
 
 type toggleChecklistVisibilityData = InferType<
   typeof toggleChecklistVisibilitySchema
 >;
+
+type getRetailerData = InferType<typeof getStartedRetailerSchema>;
 
 export async function toggleChecklistVisibilityAction(
   formDataObject: Record<string, any>,
@@ -41,19 +49,73 @@ export async function getStartedRetailerAction(
 ) {
   try {
     await getStartedRetailerSchema.validate(formDataObject);
-    const fulfillmentService = await getFulfillmentService(shop, graphql);
-    if (!fulfillmentService) {
+    const { checklistItemId } = formDataObject as unknown as getRetailerData;
+    const [checklistStatus, fulfillmentService] = await Promise.all([
+      getChecklistStatus(shop, checklistItemId),
+      getFulfillmentService(shop, graphql),
+    ]);
+
+    if (fulfillmentService && checklistStatus.isCompleted) {
+      return json(
+        { fulfillmentService, checklistStatus },
+        {
+          status: StatusCodes.OK,
+        },
+      );
+    }
+
+    if (!fulfillmentService && checklistStatus.isCompleted) {
       const newFulfillmentService = await createFulfillmentService(
         shop,
         graphql,
       );
-      return json(newFulfillmentService, {
-        status: StatusCodes.CREATED,
-      });
+      return json(
+        { checklistStatus, newFulfillmentService },
+        {
+          status: StatusCodes.CREATED,
+        },
+      );
     }
-    return json(fulfillmentService, {
-      status: StatusCodes.OK,
-    });
+
+    if (fulfillmentService && !checklistStatus.isCompleted) {
+      const newChecklistStatus = await markCheckListStatusCompleted(
+        checklistStatus.id,
+      );
+      return json(
+        { newChecklistStatus, fulfillmentService },
+        {
+          status: StatusCodes.CREATED,
+        },
+      );
+    }
+
+    // main case, both fulfillment service and check list status do not exist
+    let newFulfillmentService;
+    try {
+      newFulfillmentService = await createFulfillmentService(shop, graphql);
+      const newChecklistStatus = await markCheckListStatusCompleted(
+        checklistStatus.id,
+      );
+      return json(
+        { newFulfillmentService, newChecklistStatus },
+        { status: StatusCodes.CREATED },
+      );
+    } catch {
+      // rollback if fulfillment service was created
+      try {
+        if (newFulfillmentService) {
+          await deleteFulfillmentService(
+            shop,
+            newFulfillmentService.id,
+            graphql,
+          );
+        }
+      } catch {
+        throw new createHttpError.InternalServerError(
+          `getStartedRetailerAction (shop: ${shop}): Failed to rollback fulfillment service creation.`,
+        );
+      }
+    }
   } catch (error) {
     throwError(error, "index");
   }
