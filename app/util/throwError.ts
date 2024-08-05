@@ -1,5 +1,5 @@
 import { json } from "@remix-run/node";
-import createHttpError from "http-errors";
+import * as createHttpError from "http-errors";
 import { ValidationError } from "yup";
 import logger from "logger";
 
