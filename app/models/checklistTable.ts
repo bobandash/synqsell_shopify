@@ -1,8 +1,7 @@
 import db from "../db.server";
 import { getUserPreferences } from "./userPreferences";
 import type { TransformedChecklistTableData } from "./types";
-import { InternalServerError } from "http-errors";
-
+import * as createHttpError from "http-errors";
 async function hasChecklistTable(id: string): Promise<boolean> {
   try {
     const table = await db.checklistTable.findFirst({
@@ -15,7 +14,9 @@ async function hasChecklistTable(id: string): Promise<boolean> {
     }
     return true;
   } catch {
-    throw new InternalServerError("Failed to retrieve checklist table.");
+    throw new createHttpError.InternalServerError(
+      "Failed to retrieve checklist table.",
+    );
   }
 }
 
@@ -35,10 +36,9 @@ async function createMissingChecklistStatuses(
     });
     return;
   } catch (error) {
-    // throw new createError.InternalServerError(
-    //   "Failed to create missing checklist statuses",
-    // );
-    throw new Error("test");
+    throw new createHttpError.InternalServerError(
+      "Failed to create missing checklist statuses",
+    );
   }
 }
 
@@ -68,7 +68,9 @@ async function getMissingChecklistIds(shop: string): Promise<string[]> {
     );
     return missingChecklistIds;
   } catch (error) {
-    throw new InternalServerError("Failed to get missing check list ids");
+    throw new createHttpError.InternalServerError(
+      "Failed to get missing check list ids",
+    );
   }
 }
 
@@ -141,7 +143,9 @@ async function getTablesAndStatuses(
     });
     return transformedTables;
   } catch (error) {
-    throw new InternalServerError("Failed to retrieve tables and statuses");
+    throw new createHttpError.InternalServerError(
+      "Failed to retrieve tables and statuses",
+    );
   }
 }
 

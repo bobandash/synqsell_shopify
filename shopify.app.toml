@@ -3,7 +3,7 @@
 client_id = "c2ff24913d6d89792234763f0830c676"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://blogs-mad-minute-ntsc.trycloudflare.com"
+application_url = "https://buffer-signals-glenn-dense.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read_inventory,read_products,read_third_party_fulfillment_orders,write
 
 [auth]
 redirect_urls = [
-  "https://blogs-mad-minute-ntsc.trycloudflare.com/auth/callback",
-  "https://blogs-mad-minute-ntsc.trycloudflare.com/auth/shopify/callback",
-  "https://blogs-mad-minute-ntsc.trycloudflare.com/api/auth/callback"
+  "https://buffer-signals-glenn-dense.trycloudflare.com/auth/callback",
+  "https://buffer-signals-glenn-dense.trycloudflare.com/auth/shopify/callback",
+  "https://buffer-signals-glenn-dense.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]

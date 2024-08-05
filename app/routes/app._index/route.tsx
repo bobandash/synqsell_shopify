@@ -12,7 +12,6 @@ import {
   json,
   useFetcher,
   useLoaderData,
-  useLocation,
   useRouteError,
 } from "@remix-run/react";
 import ChecklistTable from "~/routes/app._index/components/ChecklistTable";
@@ -37,6 +36,7 @@ import {
 } from "./actions/routeActions";
 import { convertFormDataToObject } from "~/util";
 
+// TODO: Fix logger information when receive best logging practices
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
     const { session } = await authenticate.admin(request);
@@ -48,6 +48,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }
     if (!userPreferencesExist) {
       await createUserPreferences(shop);
+      logger.info("Successfully created user preferences");
     }
     const tables = await getTablesAndStatuses(shop);
     return json(tables, {
