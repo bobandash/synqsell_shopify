@@ -22,7 +22,12 @@ import {
 } from "~/models/userPreferences";
 import type { TransformedChecklistTableData } from "~/models/types";
 import logger from "logger";
-import { INTENTS, FETCHER_KEYS, CHECKLIST_ITEM_KEYS } from "./constants";
+import {
+  INTENTS,
+  FETCHER_KEYS,
+  CHECKLIST_ITEM_KEYS,
+  MODALS,
+} from "./constants";
 import throwError from "~/util/throwError";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { RetailerModal } from "./components/Modals";
@@ -156,7 +161,8 @@ function Index() {
     [],
   );
 
-  // optimistic render actions
+  // render ui changes when form is completed
+  // may need to decide whether or not to use formData to optimistically render UI in the future
   useEffect(() => {
     const data = checklistVisibilityFetcher.data;
     if (data) {
@@ -170,8 +176,9 @@ function Index() {
     if (data) {
       const becomeRetailerData = data as GetStartedRetailerActionData;
       updateChecklistStatus(becomeRetailerData);
+      shopify.modal.hide(MODALS.BECOME_RETAILER);
     }
-  }, [becomeRetailerFetcher.data, updateChecklistStatus]);
+  }, [becomeRetailerFetcher.data, updateChecklistStatus, shopify.modal]);
 
   const toggleActiveChecklistItem = useCallback(
     (checklistItemIndex: number, tableIndex: number) => {
@@ -211,7 +218,10 @@ function Index() {
       <BlockStack gap="500">
         <Layout>
           <Layout.Section>
-            <RetailerModal checklistItemId={retailerGetStartedId} />
+            <RetailerModal
+              checklistItemId={retailerGetStartedId}
+              shopify={shopify}
+            />
             <BlockStack gap={"200"}>
               {tables &&
                 tables.map((table, index) => (

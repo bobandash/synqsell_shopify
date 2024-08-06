@@ -1,20 +1,25 @@
 import { Modal, TitleBar } from "@shopify/app-bridge-react";
+import type { ShopifyGlobal } from "@shopify/app-bridge-react";
 import { FETCHER_KEYS, INTENTS, MODALS } from "../../constants";
 import { useFetcher } from "@remix-run/react";
-import { type FC, useRef } from "react";
+import { type FC, useCallback, useRef } from "react";
 
 type Props = {
   checklistItemId: string | null;
+  shopify: ShopifyGlobal;
 };
 
-const RetailerModal: FC<Props> = ({ checklistItemId }) => {
+const RetailerModal: FC<Props> = ({ checklistItemId, shopify }) => {
   const fetcher = useFetcher({ key: FETCHER_KEYS.RETAILER_GET_STARTED });
   const formRef = useRef<HTMLFormElement>(null);
-  const handleSubmitForm = () => {
+  const handleSubmitForm = useCallback(() => {
     if (formRef.current) {
       formRef.current.requestSubmit();
     }
-  };
+  }, []);
+  const hideModal = useCallback(() => {
+    shopify.modal.hide(MODALS.BECOME_RETAILER);
+  }, [shopify.modal]);
 
   if (!checklistItemId) {
     return;
@@ -35,7 +40,7 @@ const RetailerModal: FC<Props> = ({ checklistItemId }) => {
         <input type="hidden" name="checklistItemId" value={checklistItemId} />
       </fetcher.Form>
       <TitleBar title="Become a retailer on SynqSell">
-        <button>Cancel</button>
+        <button onClick={hideModal}>Cancel</button>
         <button variant={"primary"} onClick={handleSubmitForm}>
           Join SynqSell
         </button>
