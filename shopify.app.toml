@@ -3,7 +3,7 @@
 client_id = "c2ff24913d6d89792234763f0830c676"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://fails-reputation-stating-league.trycloudflare.com"
+application_url = "https://situation-mw-expiration-swim.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read_inventory,read_products,read_third_party_fulfillment_orders,write
 
 [auth]
 redirect_urls = [
-  "https://fails-reputation-stating-league.trycloudflare.com/auth/callback",
-  "https://fails-reputation-stating-league.trycloudflare.com/auth/shopify/callback",
-  "https://fails-reputation-stating-league.trycloudflare.com/api/auth/callback"
+  "https://situation-mw-expiration-swim.trycloudflare.com/auth/callback",
+  "https://situation-mw-expiration-swim.trycloudflare.com/auth/shopify/callback",
+  "https://situation-mw-expiration-swim.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]

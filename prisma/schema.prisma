@@ -74,3 +74,19 @@ model ChecklistStatus {
   checklistItemId String
   isCompleted     Boolean
 }
+
+model Role {
+  id   String @id @default(uuid())
+  name String
+  shop String
+}
+
+model Profile {
+  id              String @id @default(uuid())
+  name            String
+  email           String
+  logo            String
+  biography       String
+  desiredProducts String
+  shop            String
+}

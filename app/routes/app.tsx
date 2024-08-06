@@ -5,28 +5,55 @@ import { boundary } from "@shopify/shopify-app-remix/server";
 import { AppProvider } from "@shopify/shopify-app-remix/react";
 import { NavMenu } from "@shopify/app-bridge-react";
 import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
-
 import { authenticate } from "../shopify.server";
+import { getRoles } from "~/models/roles";
+import { throwError } from "~/util";
+import { ROLES } from "~/constants";
+import { useState } from "react";
+import { RoleProvider } from "~/context/RoleProvider";
 
 export const links = () => [{ rel: "stylesheet", href: polarisStyles }];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  await authenticate.admin(request);
-  return json({ apiKey: process.env.SHOPIFY_API_KEY || "" });
+  try {
+    const { session } = await authenticate.admin(request);
+    const { shop } = session;
+    const roles = await getRoles(shop);
+    return json({ apiKey: process.env.SHOPIFY_API_KEY || "", roles });
+  } catch (error) {
+    throwError(error, "app root");
+  }
 };
 
 export default function App() {
-  const { apiKey } = useLoaderData<typeof loader>();
+  const { apiKey, roles: initalRoles } = useLoaderData<typeof loader>();
+  const [roles, setRoles] = useState(new Set(initalRoles));
+  const isSupplier = roles.has(ROLES.RETAILER);
+  const isRetailer = roles.has(ROLES.SUPPLIER);
 
   return (
     <AppProvider isEmbeddedApp apiKey={apiKey}>
-      <NavMenu>
-        <Link to="/app" rel="home">
-          Home
-        </Link>
-        <Link to="/app/additional">Additional page</Link>
-      </NavMenu>
-      <Outlet />
+      <RoleProvider roles={roles} setRoles={setRoles}>
+        <NavMenu>
+          <Link to="/app" rel="home">
+            Home
+          </Link>
+          {isSupplier && (
+            <Link to="/app/retailer-network">Retailer Network</Link>
+          )}
+          {isRetailer && (
+            <Link to="/app/supplier-network">Supplier Network</Link>
+          )}
+          {isSupplier && <Link to="/app/price-list">Price Lists</Link>}
+          {(isSupplier || isRetailer) && (
+            <>
+              <Link to="/app/partnerships">Partnerships</Link>
+              <Link to="/app/settings">Settings</Link>
+            </>
+          )}
+        </NavMenu>
+        <Outlet />
+      </RoleProvider>
     </AppProvider>
   );
 }

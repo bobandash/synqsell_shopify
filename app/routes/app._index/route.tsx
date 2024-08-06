@@ -171,6 +171,8 @@ function Index() {
     }
   }, [checklistVisibilityFetcher.data, updateTableVisibility]);
 
+  // !!! TODO: For some reason, I'm receiving this error for putting it in a useEffect
+  // !!! remix │ {"level":"\u001b[31merror\u001b[39m","message":"shopify.modal can't be used in a server environment. You likely need to move this code into an Effect.","timestamp":"2024-08-06T18:48:58.309Z"}
   useEffect(() => {
     const data = becomeRetailerFetcher.data;
     if (data) {
