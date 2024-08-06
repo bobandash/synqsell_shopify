@@ -178,7 +178,7 @@ function Index() {
       updateChecklistStatus(becomeRetailerData);
       shopify.modal.hide(MODALS.BECOME_RETAILER);
     }
-  }, [becomeRetailerFetcher.data, updateChecklistStatus, shopify.modal]);
+  }, [becomeRetailerFetcher.data, updateChecklistStatus, shopify]);
 
   const toggleActiveChecklistItem = useCallback(
     (checklistItemIndex: number, tableIndex: number) => {

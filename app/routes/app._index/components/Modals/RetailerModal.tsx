@@ -19,7 +19,7 @@ const RetailerModal: FC<Props> = ({ checklistItemId, shopify }) => {
   }, []);
   const hideModal = useCallback(() => {
     shopify.modal.hide(MODALS.BECOME_RETAILER);
-  }, [shopify.modal]);
+  }, [shopify]);
 
   if (!checklistItemId) {
     return;
