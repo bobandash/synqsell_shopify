@@ -26,14 +26,14 @@ import { INTENTS, FETCHER_KEYS, CHECKLIST_ITEM_KEYS } from "./constants";
 import throwError from "~/util/throwError";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { RetailerModal } from "./components/Modals";
-import {
-  getStartedRetailerAction,
-  toggleChecklistVisibilityAction,
-} from "./actions/routeActions";
 import type {
-  GetStartedRetailerActionData,
   ToggleChecklistVisibilityActionData,
-} from "./actions/routeActions";
+  GetStartedRetailerActionData,
+} from "./actions";
+import {
+  toggleChecklistVisibilityAction,
+  getStartedRetailerAction,
+} from "./actions";
 import { convertFormDataToObject } from "~/util";
 import { getChecklistBtnFunction, getChecklistItemId } from "./util";
 
