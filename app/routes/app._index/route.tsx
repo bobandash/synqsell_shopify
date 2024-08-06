@@ -20,10 +20,7 @@ import {
   createUserPreferences,
   hasUserPreferences,
 } from "~/models/userPreferences";
-import type {
-  TransformedChecklistTableData,
-  UserPreferenceData,
-} from "~/models/types";
+import type { TransformedChecklistTableData } from "~/models/types";
 import logger from "logger";
 import { INTENTS, FETCHER_KEYS, CHECKLIST_ITEM_KEYS } from "./constants";
 import throwError from "~/util/throwError";
@@ -32,6 +29,10 @@ import { RetailerModal } from "./components/Modals";
 import {
   getStartedRetailerAction,
   toggleChecklistVisibilityAction,
+} from "./actions/routeActions";
+import type {
+  GetStartedRetailerActionData,
+  ToggleChecklistVisibilityActionData,
 } from "./actions/routeActions";
 import { convertFormDataToObject } from "~/util";
 import { getChecklistBtnFunction, getChecklistItemId } from "./util";
@@ -91,21 +92,13 @@ function Index() {
     tables,
   );
 
+  // fetchers to get data from actions w/out refreshing the page
   const checklistVisibilityFetcher = useFetcher({
     key: FETCHER_KEYS.TOGGLE_CHECKLIST_VISIBILITY,
   });
   const becomeRetailerFetcher = useFetcher({
     key: FETCHER_KEYS.RETAILER_GET_STARTED,
   });
-
-  const updateTableVisibility = useCallback((tableIdsHidden: String[]) => {
-    setTables((prev) =>
-      prev.map((table) => ({
-        ...table,
-        isHidden: tableIdsHidden.includes(table.id),
-      })),
-    );
-  }, []);
 
   const transformedTablesData = useMemo(() => {
     return tablesData.map((table) => ({
@@ -127,22 +120,58 @@ function Index() {
     setTables(transformedTablesData);
   }, [transformedTablesData]);
 
+  // helper functions to optimistically render actions
+  const updateTableVisibility = useCallback((tableIdsHidden: String[]) => {
+    setTables((prev) =>
+      prev.map((table) => ({
+        ...table,
+        isHidden: tableIdsHidden.includes(table.id),
+      })),
+    );
+  }, []);
+
+  const updateChecklistStatus = useCallback(
+    (becomeRetailerData: GetStartedRetailerActionData) => {
+      const { checklistStatus } = becomeRetailerData;
+      setTables((prev) =>
+        prev.map(({ checklistItems, ...table }) => {
+          const updatedChecklistItems = checklistItems.map((item) => {
+            const isUpdatedChecklistItem =
+              item.id === checklistStatus.checklistItemId;
+            return {
+              ...item,
+              isCompleted: isUpdatedChecklistItem
+                ? checklistStatus.isCompleted
+                : item.isCompleted,
+            };
+          });
+
+          return {
+            ...table,
+            checklistItems: updatedChecklistItems,
+          };
+        }),
+      );
+    },
+    [],
+  );
+
+  // optimistic render actions
   useEffect(() => {
     const data = checklistVisibilityFetcher.data;
     if (data) {
-      const userPreference = data as UserPreferenceData;
+      const userPreference = data as ToggleChecklistVisibilityActionData;
       updateTableVisibility(userPreference.tableIdsHidden);
     }
   }, [checklistVisibilityFetcher.data, updateTableVisibility]);
 
-  // optimistic render updating checklist action completed
   useEffect(() => {
     const data = becomeRetailerFetcher.data;
-  }, [becomeRetailerFetcher.data]);
-
-  useEffect(() => {
-    // TODO: add functionality
-  }, [checklistVisibilityFetcher.data]);
+    if (data) {
+      const becomeRetailerData = data as GetStartedRetailerActionData;
+      updateChecklistStatus(becomeRetailerData);
+    }
+  }, [becomeRetailerFetcher.data, updateChecklistStatus]);
 
   const toggleActiveChecklistItem = useCallback(
     (checklistItemIndex: number, tableIndex: number) => {

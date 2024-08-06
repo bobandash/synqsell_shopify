@@ -1,4 +1,5 @@
 import { json } from "@remix-run/node";
+import type { TypedResponse } from "@remix-run/node";
 import {
   getStartedRetailerSchema,
   toggleChecklistVisibilitySchema,
@@ -11,13 +12,16 @@ import {
   deleteFulfillmentService,
   getFulfillmentService,
 } from "~/models/fulfillmentService";
+import type { FulfillmentServiceProps } from "~/models/fulfillmentService";
 import type { FormDataObject, GraphQL } from "~/types";
 import { StatusCodes } from "http-status-codes";
 import {
   getChecklistStatus,
   markCheckListStatusCompleted,
 } from "~/models/checklistStatus";
+import type { ChecklistStatusProps } from "~/models/checklistStatus";
 import createHttpError from "http-errors";
+import type { UserPreferenceData } from "~/models/types";
 
 type toggleChecklistVisibilityData = InferType<
   typeof toggleChecklistVisibilitySchema
@@ -25,10 +29,19 @@ type toggleChecklistVisibilityData = InferType<
 
 type getRetailerData = InferType<typeof getStartedRetailerSchema>;
 
+// Types for the data functions
+export type GetStartedRetailerActionData = {
+  fulfillmentService: FulfillmentServiceProps;
+  checklistStatus: ChecklistStatusProps;
+};
+
+export type ToggleChecklistVisibilityActionData = UserPreferenceData;
+
+// action functions in index tab
 export async function toggleChecklistVisibilityAction(
   formDataObject: Record<string, any>,
   shop: string,
-) {
+): Promise<TypedResponse<ToggleChecklistVisibilityActionData> | undefined> {
   try {
     await toggleChecklistVisibilitySchema.validate(formDataObject);
     const { tableId } =
@@ -46,7 +59,7 @@ export async function getStartedRetailerAction(
   graphql: GraphQL,
   formDataObject: FormDataObject,
   shop: string,
-) {
+): Promise<TypedResponse<GetStartedRetailerActionData> | undefined> {
   try {
     await getStartedRetailerSchema.validate(formDataObject);
     const { checklistItemId } = formDataObject as unknown as getRetailerData;
@@ -70,7 +83,7 @@ export async function getStartedRetailerAction(
         graphql,
       );
       return json(
-        { checklistStatus, newFulfillmentService },
+        { fulfillmentService: { ...newFulfillmentService }, checklistStatus },
         {
           status: StatusCodes.CREATED,
         },
@@ -82,7 +95,7 @@ export async function getStartedRetailerAction(
         checklistStatus.id,
       );
       return json(
-        { newChecklistStatus, fulfillmentService },
+        { fulfillmentService, checklistStatus: { ...newChecklistStatus } },
         {
           status: StatusCodes.CREATED,
         },
@@ -97,7 +110,10 @@ export async function getStartedRetailerAction(
         checklistStatus.id,
       );
       return json(
-        { newFulfillmentService, newChecklistStatus },
+        {
+          fulfillmentService: { ...newFulfillmentService },
+          checklistStatus: { ...newChecklistStatus },
+        },
         { status: StatusCodes.CREATED },
       );
     } catch {

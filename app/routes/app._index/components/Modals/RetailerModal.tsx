@@ -1,10 +1,10 @@
 import { Modal, TitleBar } from "@shopify/app-bridge-react";
 import { FETCHER_KEYS, INTENTS, MODALS } from "../../constants";
 import { useFetcher } from "@remix-run/react";
-import { type FC, useEffect, useRef } from "react";
+import { type FC, useRef } from "react";
 
 type Props = {
-  checklistItemId: string;
+  checklistItemId: string | null;
 };
 
 const RetailerModal: FC<Props> = ({ checklistItemId }) => {
@@ -16,9 +16,9 @@ const RetailerModal: FC<Props> = ({ checklistItemId }) => {
     }
   };
 
-  useEffect(() => {
-    console.log(fetcher.data);
-  }, [fetcher.data]);
+  if (!checklistItemId) {
+    return;
+  }
 
   return (
     <Modal id={MODALS.BECOME_RETAILER}>

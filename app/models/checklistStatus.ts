@@ -1,6 +1,13 @@
 import db from "../db.server";
 import createHttpError from "http-errors";
 
+export type ChecklistStatusProps = {
+  id: string;
+  shop: string;
+  isCompleted: boolean;
+  checklistItemId: string;
+};
+
 export async function getChecklistStatus(
   shop: string,
   checklistItemId: string,
@@ -25,7 +32,9 @@ export async function getChecklistStatus(
   }
 }
 
-export async function markCheckListStatusCompleted(id: string) {
+export async function markCheckListStatusCompleted(
+  id: string,
+): Promise<ChecklistStatusProps> {
   try {
     const data = await db.checklistStatus.update({
       where: {

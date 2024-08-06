@@ -6,17 +6,32 @@ import createHttpError from "http-errors";
 // https://shopify.dev/docs/apps/build/orders-fulfillment/fulfillment-service-apps
 // https://shopify.dev/docs/api/admin-graphql/2024-04/mutations/fulfillmentServiceCreate
 
-export async function getFulfillmentService(shop: string, graphql: GraphQL) {
-  const fulfillmentService = await db.fulfillmentService.findFirst({
-    where: {
-      shop,
-    },
-  });
-  if (!fulfillmentService) {
-    return null;
-  }
+export type FulfillmentServiceProps = {
+  id: string;
+  name: string;
+};
 
-  return await supplementFulfillmentService(fulfillmentService.id, graphql);
+export async function getFulfillmentService(shop: string, graphql: GraphQL) {
+  try {
+    const fulfillmentService = await db.fulfillmentService.findFirst({
+      where: {
+        shop,
+      },
+    });
+    if (!fulfillmentService) {
+      return null;
+    }
+
+    return await supplementFulfillmentService(fulfillmentService.id, graphql);
+  } catch (error) {
+    if (createHttpError.isHttpError(error)) {
+      throw error;
+    }
+
+    throw new createHttpError.InternalServerError(
+      `createFulfillmentService (id: ${shop}): Failed to get fulfillment service fulfillment service.`,
+    );
+  }
 }
 
 // Functions for creating fulfillment service (in Shopify and database)
@@ -150,7 +165,10 @@ async function createFulfillmentServiceDatabase(shop: string, id: string) {
   }
 }
 
-export async function createFulfillmentService(shop: string, graphql: GraphQL) {
+export async function createFulfillmentService(
+  shop: string,
+  graphql: GraphQL,
+): Promise<FulfillmentServiceProps> {
   let fulfillmentServiceShopify;
   try {
     fulfillmentServiceShopify = await createFulfillmentServiceShopify(
@@ -160,7 +178,7 @@ export async function createFulfillmentService(shop: string, graphql: GraphQL) {
     await createFulfillmentServiceDatabase(shop, fulfillmentServiceShopify.id);
     return fulfillmentServiceShopify;
   } catch (error) {
-    // rollback mechanism if graphql query succeeds but db operatoin fails
+    // rollback mechanism if graphql query succeeds but db operation fails
     if (fulfillmentServiceShopify) {
       try {
         await deleteFulfillmentService(

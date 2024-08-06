@@ -30,6 +30,7 @@ export type ChecklistStatusData = {
   checklistItemId: string;
   isCompleted: string;
 };
+
 export type TransformedChecklistTableData = {
   id: string;
   position: number;

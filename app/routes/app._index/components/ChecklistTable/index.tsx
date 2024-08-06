@@ -42,7 +42,7 @@ const ChecklistTable: FC<Props> = (props) => {
       return;
     }
     let formData = new FormData(event.currentTarget);
-    // TODO: add yup validation to this
+    // TODO: add yup validation / client-side validation to this
     fetcher.submit(formData, { method: "patch" });
   };
 
