@@ -64,7 +64,7 @@ async function createFulfillmentServiceShopify(shop: string, graphql: GraphQL) {
       `,
       {
         variables: {
-          name: "SynqSell",
+          name: "SyncSell",
           callbackUrl: "https://smth.synqsell.com", // placeholder value
           trackingSupport: true,
         },

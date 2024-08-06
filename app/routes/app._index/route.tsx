@@ -206,8 +206,6 @@ function Index() {
     [tables],
   );
 
-  // Each button should have a specific action depending on the checklist item key
-
   return (
     <Page title="SynqSell" subtitle="Where Brand Partnerships Flourish">
       <BlockStack gap="500">

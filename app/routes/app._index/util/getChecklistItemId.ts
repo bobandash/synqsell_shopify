@@ -18,7 +18,7 @@ function getChecklistItemId(
   }
 
   tables.forEach((table) => {
-    let checklistItem = table.checklistItems.find((item) => (item.key = key));
+    let checklistItem = table.checklistItems.find((item) => item.key === key);
     if (checklistItem) {
       id = checklistItem.id;
     }
