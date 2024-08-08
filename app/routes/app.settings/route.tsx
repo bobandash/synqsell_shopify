@@ -7,12 +7,13 @@ import {
   Form,
   Layout,
   Page,
+  PageActions,
   Text,
   TextField,
 } from "@shopify/polaris";
 import { ROLES } from "~/constants";
 import { useRoleContext } from "~/context/RoleProvider";
-
+import styles from "./styles.module.css";
 const Settings = () => {
   const { roles } = useRoleContext();
   const isRetailer = roles.has(ROLES.RETAILER);
@@ -61,8 +62,8 @@ const Settings = () => {
                     }
                   />
                   <Box>
-                    <div>
-                      <Button variant={"primary"}>Save</Button>
+                    <div className={styles["center-right"]}>
+                      <Button variant={"primary"}>Preview</Button>
                     </div>
                   </Box>
                 </BlockStack>
@@ -128,6 +129,7 @@ const Settings = () => {
           </Layout.AnnotatedSection>
         </Layout>
       </Box>
+      <PageActions primaryAction={{ content: "Save" }} />
     </Page>
   );
 };
