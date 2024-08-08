@@ -25,14 +25,14 @@ const Settings = () => {
       primaryAction={<Button variant="primary">Save</Button>}
     >
       <Box paddingBlockEnd={"400"}>
-        <Layout>
-          <Layout.AnnotatedSection
-            id="profile"
-            title="Profile"
-            description="Your profile is what is displayed on the retailer and supplier network for brands to view."
-          >
-            <Card>
-              <Form onSubmit={() => {}}>
+        <Form onSubmit={() => {}}>
+          <Layout>
+            <Layout.AnnotatedSection
+              id="profile"
+              title="Profile"
+              description="Your profile is what is displayed on the retailer and supplier network for brands to view."
+            >
+              <Card>
                 <BlockStack gap={"200"}>
                   <TextField
                     label="Store name:"
@@ -67,16 +67,14 @@ const Settings = () => {
                     </div>
                   </Box>
                 </BlockStack>
-              </Form>
-            </Card>
-          </Layout.AnnotatedSection>
-          <Layout.AnnotatedSection
-            id="profile_visibility"
-            title="Profile Visibility"
-            description="Decide whether or not to show/hide your brand on our networks."
-          >
-            <Card>
-              <Form onSubmit={() => {}}>
+              </Card>
+            </Layout.AnnotatedSection>
+            <Layout.AnnotatedSection
+              id="profile_visibility"
+              title="Profile Visibility"
+              description="Decide whether or not to show/hide your brand on our networks."
+            >
+              <Card>
                 <BlockStack gap={"200"}>
                   <Checkbox
                     label="Visible on retailer network."
@@ -87,16 +85,14 @@ const Settings = () => {
                     checked={true}
                   />
                 </BlockStack>
-              </Form>
-            </Card>
-          </Layout.AnnotatedSection>
-          <Layout.AnnotatedSection
-            id="notifications"
-            title="Notifications"
-            description="Choose which notifications to receive to your inbox."
-          >
-            <Card>
-              <Form onSubmit={() => {}}>
+              </Card>
+            </Layout.AnnotatedSection>
+            <Layout.AnnotatedSection
+              id="notifications"
+              title="Notifications"
+              description="Choose which notifications to receive to your inbox."
+            >
+              <Card>
                 <BlockStack gap={"200"}>
                   <Text as="h2" variant="bodyMd">
                     General Notifications
@@ -124,10 +120,10 @@ const Settings = () => {
                     checked={true}
                   />
                 </BlockStack>
-              </Form>
-            </Card>
-          </Layout.AnnotatedSection>
-        </Layout>
+              </Card>
+            </Layout.AnnotatedSection>
+          </Layout>
+        </Form>
       </Box>
       <PageActions primaryAction={{ content: "Save" }} />
     </Page>
