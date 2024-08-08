@@ -32,8 +32,9 @@ export async function getChecklistStatus(
   }
 }
 
-export async function markCheckListStatusCompleted(
+export async function markCheckListStatus(
   id: string,
+  isCompleted: boolean,
 ): Promise<ChecklistStatusProps> {
   try {
     const data = await db.checklistStatus.update({
@@ -41,7 +42,7 @@ export async function markCheckListStatusCompleted(
         id,
       },
       data: {
-        isCompleted: true,
+        isCompleted: isCompleted,
       },
     });
     return data;

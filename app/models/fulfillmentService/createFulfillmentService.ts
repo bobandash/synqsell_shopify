@@ -1,7 +1,9 @@
 import type { GraphQL } from "~/types";
-import db from "../db.server";
+import db from "../../db.server";
 import createHttpError from "http-errors";
-
+import { getLogCombinedMessage, getLogContext, errorHandler } from "~/util";
+import logger from "logger";
+import { deleteFulfillmentServiceShopify } from "./deleteFulfillmentService";
 // Fulfillment services are designed for retailers to import products from suppliers
 // https://shopify.dev/docs/apps/build/orders-fulfillment/fulfillment-service-apps
 // https://shopify.dev/docs/api/admin-graphql/2024-04/mutations/fulfillmentServiceCreate
@@ -21,20 +23,18 @@ export async function getFulfillmentService(shop: string, graphql: GraphQL) {
     if (!fulfillmentService) {
       return null;
     }
-
     return await supplementFulfillmentService(fulfillmentService.id, graphql);
   } catch (error) {
-    if (createHttpError.isHttpError(error)) {
-      throw error;
-    }
-
-    throw new createHttpError.InternalServerError(
-      `createFulfillmentService (id: ${shop}): Failed to get fulfillment service fulfillment service.`,
+    const context = getLogContext(getFulfillmentService, shop, graphql);
+    throw errorHandler(
+      error,
+      context,
+      "Failed to retrieve fulfillment service.",
     );
   }
 }
 
-// Functions for creating fulfillment service (in Shopify and database)
+// Helper functions for creating fulfillment service (in Shopify and database)
 async function createFulfillmentServiceShopify(shop: string, graphql: GraphQL) {
   try {
     const response = await graphql(
@@ -73,15 +73,21 @@ async function createFulfillmentServiceShopify(shop: string, graphql: GraphQL) {
 
     const { data } = await response.json();
     const fulfillmentServiceCreate = data?.fulfillmentServiceCreate;
+
     if (
       !fulfillmentServiceCreate ||
       !fulfillmentServiceCreate.fulfillmentService
     ) {
       const errorMessages = fulfillmentServiceCreate?.userErrors?.map(
         (error) => error.message,
-      ) || [
-        `createFulfillmentServiceShopify (shop: ${shop}): Failed to create fulfillment service on Shopify.`,
-      ];
+      ) || [`Failed to create fulfillment service on Shopify.`];
+      const logMessage = getLogCombinedMessage(
+        createFulfillmentServiceShopify,
+        errorMessages.join(" "),
+        shop,
+        graphql,
+      );
+      logger.error(logMessage);
       throw new createHttpError.BadRequest(errorMessages.join(" "));
     }
 
@@ -92,59 +98,15 @@ async function createFulfillmentServiceShopify(shop: string, graphql: GraphQL) {
       name: fulfillmentService.serviceName,
     };
   } catch (error) {
-    if (createHttpError.isHttpError(error)) {
-      throw error;
-    }
-
-    throw new createHttpError.InternalServerError(
-      `createFulfillmentServiceShopify (shop: ${shop}): Failed to retrieve checklist table.`,
+    const context = getLogContext(
+      createFulfillmentServiceShopify,
+      shop,
+      graphql,
     );
-  }
-}
-
-export async function deleteFulfillmentService(
-  shop: string,
-  id: string,
-  graphql: GraphQL,
-) {
-  try {
-    const response = await graphql(
-      `
-        mutation fulfillmentServiceDelete($id: ID!) {
-          fulfillmentServiceDelete(id: $id) {
-            deletedId
-            userErrors {
-              field
-              message
-            }
-          }
-        }
-      `,
-      {
-        variables: {
-          id: id,
-        },
-      },
-    );
-    const { data } = await response.json();
-    const fulfillmentServiceDelete = data?.fulfillmentServiceDelete;
-    if (!fulfillmentServiceDelete || !fulfillmentServiceDelete.deletedId) {
-      const errorMessages = fulfillmentServiceDelete?.userErrors?.map(
-        (error) => error.message,
-      ) || [
-        `deleteFulfillmentService (shop: ${shop}, id: ${id}): Failed to delete fulfillment service.`,
-      ];
-      throw new createHttpError.BadRequest(errorMessages.join(" "));
-    }
-
-    return { id };
-  } catch (error) {
-    if (createHttpError.isHttpError(error)) {
-      throw error;
-    }
-
-    throw new createHttpError.InternalServerError(
-      `deleteFulfillmentService (shop: ${shop}, id: ${id}): Failed to delete fulfillment service.`,
+    throw errorHandler(
+      error,
+      context,
+      "Failed to create fulfillment service in Shopify.",
     );
   }
 }
@@ -158,9 +120,12 @@ async function createFulfillmentServiceDatabase(shop: string, id: string) {
       },
     });
     return fulfillmentService;
-  } catch {
-    throw new createHttpError.InternalServerError(
-      `createFulfillmentServiceDatabase (shop: ${shop} id: ${id}): Failed to create fulfillment service table.`,
+  } catch (error) {
+    const context = getLogContext(createFulfillmentServiceDatabase, shop, id);
+    throw errorHandler(
+      error,
+      context,
+      "Failed to create fulfillment service in database",
     );
   }
 }
@@ -179,27 +144,34 @@ export async function createFulfillmentService(
     return fulfillmentServiceShopify;
   } catch (error) {
     // rollback mechanism if graphql query succeeds but db operation fails
-    if (fulfillmentServiceShopify) {
-      try {
-        await deleteFulfillmentService(
-          shop,
-          fulfillmentServiceShopify.id,
-          graphql,
-        );
-      } catch {
-        throw new createHttpError.InternalServerError(
-          `createFulfillmentService (shop: ${shop} fulfillmentServiceId: ${fulfillmentServiceShopify.id}): Failed to create fulfillment service table.`,
-        );
-      }
+    const context = getLogContext(createFulfillmentService, shop, graphql);
+    if (!fulfillmentServiceShopify) {
+      throw errorHandler(
+        error,
+        context,
+        "Failed to create fulfillment services",
+      );
     }
-
-    if (createHttpError.isHttpError(error)) {
-      throw error;
+    // !!! Add Retry Logic
+    try {
+      await deleteFulfillmentServiceShopify(
+        shop,
+        fulfillmentServiceShopify.id,
+        graphql,
+      );
+    } catch {
+      const logMessage = getLogCombinedMessage(
+        createFulfillmentService,
+        `Failed deleting fulfillment service ${fulfillmentServiceShopify.id} during rollback`,
+        shop,
+        graphql,
+      );
+      logger.error(logMessage);
+      throw new createHttpError.InternalServerError(
+        "Failed to delete new fulfillment service. Please contact support.",
+      );
     }
-
-    throw new createHttpError.InternalServerError(
-      `createFulfillmentService (shop: ${shop}): Failed to create fulfillment service.`,
-    );
+    throw errorHandler(error, context, "Failed to create fulfillment services");
   }
 }
 

@@ -38,7 +38,7 @@ model Session {
 
 model FulfillmentService {
   id   String @id @default(uuid())
-  shop String
+  shop String @unique
 }
 
 model UserPreference {

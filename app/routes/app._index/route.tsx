@@ -28,7 +28,6 @@ import {
   CHECKLIST_ITEM_KEYS,
   MODALS,
 } from "./constants";
-import throwError from "~/util/throwError";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { RetailerModal } from "./components/Modals";
 import type {
@@ -39,7 +38,7 @@ import {
   toggleChecklistVisibilityAction,
   getStartedRetailerAction,
 } from "./actions";
-import { convertFormDataToObject } from "~/util";
+import { convertFormDataToObject, throwJsonError } from "~/util";
 import { getChecklistBtnFunction, getChecklistItemId } from "./util";
 
 // TODO: Fix logger information when receive best logging practices
@@ -61,7 +60,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       status: 200,
     });
   } catch (error) {
-    throwError(error, "index");
+    throwJsonError(error, "index");
   }
 };
 

@@ -7,16 +7,18 @@ import {
   createFulfillmentService,
   deleteFulfillmentService,
   getFulfillmentService,
-} from "~/models/fulfillmentService";
-import type { FulfillmentServiceProps } from "~/models/fulfillmentService";
+} from "~/models/fulfillmentService/createFulfillmentService";
+import type { FulfillmentServiceProps } from "~/models/fulfillmentService/createFulfillmentService";
 import type { FormDataObject, GraphQL } from "~/types";
 import { StatusCodes } from "http-status-codes";
 import {
   getChecklistStatus,
-  markCheckListStatusCompleted,
+  markCheckListStatus,
 } from "~/models/checklistStatus";
 import type { ChecklistStatusProps } from "~/models/checklistStatus";
 import createHttpError from "http-errors";
+import { addRole, deleteRole, getRole, type RoleProps } from "~/models/roles";
+import { ROLES } from "~/constants";
 
 type getRetailerData = InferType<typeof getStartedRetailerSchema>;
 
@@ -34,35 +36,23 @@ export async function getStartedRetailerAction(
   try {
     await getStartedRetailerSchema.validate(formDataObject);
     const { checklistItemId } = formDataObject as unknown as getRetailerData;
-    const [checklistStatus, fulfillmentService] = await Promise.all([
-      getChecklistStatus(shop, checklistItemId),
-      getFulfillmentService(shop, graphql),
-    ]);
+    const [checklistStatus, fulfillmentService, retailerRole] =
+      await Promise.all([
+        getChecklistStatus(shop, checklistItemId),
+        getFulfillmentService(shop, graphql),
+        getRole(shop, ROLES.RETAILER),
+      ]);
 
-    if (fulfillmentService && checklistStatus.isCompleted) {
-      return handleBothCompleted(fulfillmentService, checklistStatus);
+    if (fulfillmentService && checklistStatus.isCompleted && retailerRole) {
+      return handleCompleted(fulfillmentService, checklistStatus, retailerRole);
     }
 
-    if (!fulfillmentService && checklistStatus.isCompleted) {
-      return await handleOnlyChecklistStatusCompleted(
-        shop,
-        graphql,
-        checklistStatus,
-      );
-    }
-
-    if (fulfillmentService && !checklistStatus.isCompleted) {
-      return await handleOnlyFulfillmentServiceCreated(
-        fulfillmentService,
-        checklistStatus,
-      );
-    }
-
-    // main case, fulfillment service does not exist and checklist status is incomplete
-    return await handleCreateBothFulfillmentServiceAndChecklistStatus(
+    return await handleCreateMissingFields(
+      fulfillmentService,
+      checklistStatus,
+      retailerRole,
       shop,
       graphql,
-      checklistStatus,
     );
   } catch (error) {
     throwError(error, "index");
@@ -70,84 +60,70 @@ export async function getStartedRetailerAction(
 }
 
 // Helper functions for getStartedRetailerAction
-function handleBothCompleted(
+
+// Do nothing if all these fields already exist
+function handleCompleted(
   fulfillmentService: FulfillmentServiceProps,
   checklistStatus: ChecklistStatusProps,
+  retailerRole: RoleProps,
 ) {
   return json(
-    { fulfillmentService, checklistStatus },
+    { fulfillmentService, checklistStatus, role: { ...retailerRole } },
     {
       status: StatusCodes.OK,
     },
   );
 }
 
-async function handleOnlyChecklistStatusCompleted(
+// Either all these fields should be created or none should be created
+// TODO: Refactor error handling
+async function handleCreateMissingFields(
+  fulfillmentService: FulfillmentServiceProps | null,
+  checklistStatus: ChecklistStatusProps,
+  retailerRole: RoleProps | null,
   shop: string,
   graphql: GraphQL,
-  checklistStatus: ChecklistStatusProps,
 ) {
+  let newFulfillmentService = fulfillmentService;
+  let newChecklistStatus = checklistStatus;
+  let newRole = retailerRole;
   try {
-    const newFulfillmentService = await createFulfillmentService(shop, graphql);
-    return json(
-      { fulfillmentService: { ...newFulfillmentService }, checklistStatus },
-      {
-        status: StatusCodes.CREATED,
-      },
-    );
-  } catch (error) {
-    throw error;
-  }
-}
-
-async function handleOnlyFulfillmentServiceCreated(
-  fulfillmentService: FulfillmentServiceProps,
-  checklistStatus: ChecklistStatusProps,
-) {
-  try {
-    const newChecklistStatus = await markCheckListStatusCompleted(
-      checklistStatus.id,
-    );
-    return json(
-      { fulfillmentService, checklistStatus: { ...newChecklistStatus } },
-      {
-        status: StatusCodes.CREATED,
-      },
-    );
-  } catch (error) {
-    throw error;
-  }
-}
-
-async function handleCreateBothFulfillmentServiceAndChecklistStatus(
-  shop: string,
-  graphql: GraphQL,
-  checklistStatus: ChecklistStatusProps,
-) {
-  let newFulfillmentService;
-  try {
-    newFulfillmentService = await createFulfillmentService(shop, graphql);
-    const newChecklistStatus = await markCheckListStatusCompleted(
-      checklistStatus.id,
-    );
+    if (!newFulfillmentService) {
+      newFulfillmentService = await createFulfillmentService(shop, graphql);
+    }
+    if (!newChecklistStatus.isCompleted) {
+      newChecklistStatus = await markCheckListStatus(checklistStatus.id, true);
+    }
+    if (!newRole) {
+      newRole = await addRole(shop, ROLES.RETAILER);
+    }
     return json(
       {
         fulfillmentService: { ...newFulfillmentService },
         checklistStatus: { ...newChecklistStatus },
+        role: { ...newRole },
       },
-      { status: StatusCodes.CREATED },
+      {
+        status: StatusCodes.CREATED,
+      },
     );
   } catch (error) {
-    // rollback if fulfillment service was created
+    // attempt to rollback all missing fields if any actions failed
     try {
       if (newFulfillmentService) {
         await deleteFulfillmentService(shop, newFulfillmentService.id, graphql);
       }
-      throw error;
+      if (newChecklistStatus.isCompleted) {
+        await markCheckListStatus(newChecklistStatus.id, false);
+      }
+      if (newRole) {
+        await deleteRole(newRole.id);
+      }
+      throwError(error, "getStartedRetailerAction");
     } catch (error) {
       if (createHttpError.isHttpError(error)) throw error;
       throw new createHttpError.InternalServerError(
-        `getStartedRetailerAction (shop: ${shop}): Failed to rollback fulfillment service creation.`,
+        `handleCreateMissingFields (shop: ${shop}): Failed to rollback fulfillment service creation.`,
       );
     }
   }
