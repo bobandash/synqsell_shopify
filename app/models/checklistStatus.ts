@@ -48,6 +48,27 @@ export async function getChecklistStatus(
   }
 }
 
+export async function isValidChecklistStatus(id: string) {
+  try {
+    const checklistStatus = await db.checklistStatus.findFirst({
+      where: {
+        id,
+      },
+    });
+    if (checklistStatus) {
+      return true;
+    }
+    return false;
+  } catch (error) {
+    const context = getLogContext(isValidChecklistStatus, id);
+    throw errorHandler(
+      error,
+      context,
+      "Failed to check if checklist status is valid",
+    );
+  }
+}
+
 export async function markCheckListStatus(
   id: string,
   isCompleted: boolean,

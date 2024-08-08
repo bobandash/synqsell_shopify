@@ -7,7 +7,18 @@ type Props = {
   setRoles: Dispatch<SetStateAction<Set<string>>>;
 };
 
-const RoleContext = createContext({});
+type Role = string;
+interface RoleContextType {
+  roles: Set<Role>;
+  setRoles: React.Dispatch<React.SetStateAction<Set<Role>>>;
+  addRole: (role: Role) => void;
+}
+
+const RoleContext = createContext<RoleContextType>({
+  roles: new Set(),
+  setRoles: () => {},
+  addRole: (role: string) => {},
+});
 
 export const RoleProvider: FC<Props> = ({ children, roles, setRoles }) => {
   function addRole(role: string) {

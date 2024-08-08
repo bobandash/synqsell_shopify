@@ -15,6 +15,14 @@ export type RoleProps = {
   sessionId: string;
 };
 
+export async function isValidRole(role: string) {
+  const validRoles = new Set(convertObjectValuesToArr(ROLES));
+  if (!validRoles.has(role)) {
+    return false;
+  }
+  return true;
+}
+
 export async function getRoles(sessionId: string) {
   try {
     const data = await db.role.findMany({
@@ -58,8 +66,7 @@ export async function hasRole(sessionId: string, role: string) {
 }
 
 async function validateAddRole(sessionId: string, role: string) {
-  const validRoles = new Set(convertObjectValuesToArr(ROLES));
-  if (!validRoles.has(role)) {
+  if (!isValidRole) {
     const logMessage = getLogCombinedMessage(
       validateAddRole,
       `Role ${role} is invalid.`,

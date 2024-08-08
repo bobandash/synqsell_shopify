@@ -16,16 +16,20 @@ import {
   markCheckListStatus,
 } from "~/models/checklistStatus";
 import type { ChecklistStatusProps } from "~/models/checklistStatus";
-import { addRole, deleteRole, getRole, type RoleProps } from "~/models/roles";
+import { addRole, getRole, type RoleProps } from "~/models/roles";
 import { ROLES } from "~/constants";
+import { createRoleAndCompleteChecklistItem } from "~/models/transactions";
 
 type getRetailerData = InferType<typeof getStartedRetailerSchema>;
 
 // Types for the data functions
-export type GetStartedRetailerActionData = {
+export interface GetStartedRetailerActionData {
   fulfillmentService: FulfillmentServiceProps;
   checklistStatus: ChecklistStatusProps;
-};
+  role: RoleProps;
+}
+
+// Guard check for fetcher data
 
 export async function getStartedRetailerAction(
   graphql: GraphQL,
@@ -75,7 +79,6 @@ function handleCompleted(
 }
 
 // Either all these fields should be created or none should be created
-// TODO: Refactor error handling
 async function handleCreateMissingFields(
   fulfillmentService: FulfillmentServiceProps | null,
   checklistStatus: ChecklistStatusProps,
@@ -94,11 +97,26 @@ async function handleCreateMissingFields(
       );
     }
     if (!newChecklistStatus.isCompleted) {
-      newChecklistStatus = await markCheckListStatus(checklistStatus.id, true);
-    }
-    if (!newRole) {
+      // Primary Case: both isCompleted and roles are missing, use a prisma transaction to guarantee rollback
+      if (!newRole) {
+        const newRoleAndChecklistStatus =
+          await createRoleAndCompleteChecklistItem(
+            sessionId,
+            ROLES.RETAILER,
+            checklistStatus.id,
+          );
+        newRole = newRoleAndChecklistStatus.role;
+        newChecklistStatus = newRoleAndChecklistStatus.checklistStatus;
+      } else {
+        newChecklistStatus = await markCheckListStatus(
+          checklistStatus.id,
+          true,
+        );
+      }
+    } else if (!newRole) {
       newRole = await addRole(sessionId, ROLES.RETAILER);
     }
+
     return json(
       {
         fulfillmentService: { ...newFulfillmentService },
@@ -119,20 +137,10 @@ async function handleCreateMissingFields(
           graphql,
         );
       }
-      if (newChecklistStatus.isCompleted) {
-        await markCheckListStatus(newChecklistStatus.id, false);
-      }
-      if (newRole) {
-        await deleteRole(newRole.id);
-      }
       throw getJSONError(error, "getStartedRetailerAction");
     } catch (error) {
       // TODO: fix error handling
       throw getJSONError(error, "getStartedRetailerAction");
-      // if (createHttpError.isHttpError(error)) throw error;
-      // throw new createHttpError.InternalServerError(
-      //   `handleCreateMissingFields: Failed to rollback fulfillment service creation.`,
-      // );
     }
   }
 }

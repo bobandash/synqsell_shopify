@@ -40,6 +40,7 @@ import {
 } from "./actions";
 import { convertFormDataToObject, getJSONError } from "~/util";
 import { getChecklistBtnFunction, getChecklistItemId } from "./util";
+import { useRoleContext } from "~/context/RoleProvider";
 
 // TODO: Fix logger information when receive best logging practices
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -98,6 +99,7 @@ function Index() {
     CHECKLIST_ITEM_KEYS.RETAILER_GET_STARTED,
     tables,
   );
+  const { addRole } = useRoleContext();
 
   // fetchers to get data from actions w/out refreshing the page
   const checklistVisibilityFetcher = useFetcher({
@@ -178,11 +180,13 @@ function Index() {
   useEffect(() => {
     const data = becomeRetailerFetcher.data;
     if (data) {
-      const becomeRetailerData = data as GetStartedRetailerActionData;
+      const becomeRetailerData =
+        data as unknown as GetStartedRetailerActionData;
       updateChecklistStatus(becomeRetailerData);
+      addRole(becomeRetailerData.role.name);
       shopify.modal.hide(MODALS.BECOME_RETAILER);
     }
-  }, [becomeRetailerFetcher.data, updateChecklistStatus, shopify]);
+  }, [becomeRetailerFetcher.data, updateChecklistStatus, shopify, addRole]);
 
   const toggleActiveChecklistItem = useCallback(
     (checklistItemIndex: number, tableIndex: number) => {
