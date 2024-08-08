@@ -3,7 +3,7 @@ import * as createHttpError from "http-errors";
 import { ValidationError } from "yup";
 import logger from "logger";
 
-function throwError(error: unknown, route: string) {
+function throwJSONError(error: unknown, route: string) {
   if (error instanceof ValidationError) {
     logger.error(`Validation Error: ${error.message}`);
     throw json(error.message, {
@@ -12,14 +12,12 @@ function throwError(error: unknown, route: string) {
   }
 
   if (error instanceof createHttpError.HttpError) {
-    logger.error(`HTTP Error: ${error.message}`);
     throw json(error.message, {
       status: error.statusCode,
     });
   }
 
   if (error instanceof Error) {
-    logger.error(`Error: ${error.message}`);
     throw json(error.message, {
       status: 500,
     });
@@ -31,4 +29,4 @@ function throwError(error: unknown, route: string) {
   });
 }
 
-export default throwError;
+export default throwJSONError;
