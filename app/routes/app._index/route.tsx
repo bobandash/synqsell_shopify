@@ -12,6 +12,7 @@ import {
   json,
   useFetcher,
   useLoaderData,
+  useNavigate,
   useRouteError,
 } from "@remix-run/react";
 import ChecklistTable from "~/routes/app._index/components/ChecklistTable";
@@ -100,7 +101,7 @@ function Index() {
     tables,
   );
   const { addRole } = useRoleContext();
-
+  const navigate = useNavigate();
   // fetchers to get data from actions w/out refreshing the page
   const checklistVisibilityFetcher = useFetcher({
     key: FETCHER_KEYS.TOGGLE_CHECKLIST_VISIBILITY,
@@ -118,12 +119,12 @@ function Index() {
         button: button
           ? {
               content: button.content,
-              action: getChecklistBtnFunction(key, shopify),
+              action: getChecklistBtnFunction(key, shopify, navigate),
             }
           : undefined,
       })),
     }));
-  }, [tablesData, shopify]);
+  }, [tablesData, shopify, navigate]);
 
   useEffect(() => {
     setTables(transformedTablesData);
