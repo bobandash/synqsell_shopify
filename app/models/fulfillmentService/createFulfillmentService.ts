@@ -46,7 +46,7 @@ async function createFulfillmentServiceShopify(
       `,
       {
         variables: {
-          name: "SyncSell",
+          name: "Synqsells",
           callbackUrl: "https://smth.synqsell.com", // placeholder value
           trackingSupport: true,
         },

@@ -17,7 +17,8 @@ export async function getFulfillmentService(
     if (!fulfillmentService) {
       return null;
     }
-    return await supplementFulfillmentService(fulfillmentService.id, graphql);
+    const { fulfillmentServiceId } = fulfillmentService;
+    return await supplementFulfillmentService(fulfillmentServiceId, graphql);
   } catch (error) {
     const context = getLogContext(getFulfillmentService, sessionId, graphql);
     throw errorHandler(
@@ -28,7 +29,11 @@ export async function getFulfillmentService(
   }
 }
 
-async function supplementFulfillmentService(id: string, graphql: GraphQL) {
+// TODO: These two services have to be synced together
+async function supplementFulfillmentService(
+  fulfillmentServiceId: string,
+  graphql: GraphQL,
+) {
   try {
     const response = await graphql(
       `
@@ -40,7 +45,7 @@ async function supplementFulfillmentService(id: string, graphql: GraphQL) {
         }
       `,
       {
-        variables: { id: id },
+        variables: { id: fulfillmentServiceId },
       },
     );
 
@@ -48,11 +53,12 @@ async function supplementFulfillmentService(id: string, graphql: GraphQL) {
     if (!data || !data.fulfillmentService) {
       const logMessage = getLogCombinedMessage(
         supplementFulfillmentService,
-        `Could not fetch fulfillment service given id ${id}`,
-        id,
+        `Could not fetch fulfillment service given id ${fulfillmentServiceId}`,
+        fulfillmentServiceId,
         graphql,
       );
       logger.error(logMessage);
+      //!!! TODO: Maybe need to delete the fulfillment service from db, need to google
       throw new createHttpError.BadRequest(
         `Could not retrieve fulfillment service. Please contact support.`,
       );
@@ -65,7 +71,11 @@ async function supplementFulfillmentService(id: string, graphql: GraphQL) {
       name: fulfillmentService.serviceName,
     };
   } catch (error) {
-    const context = getLogContext(supplementFulfillmentService, id, graphql);
+    const context = getLogContext(
+      supplementFulfillmentService,
+      fulfillmentServiceId,
+      graphql,
+    );
     throw errorHandler(
       error,
       context,
