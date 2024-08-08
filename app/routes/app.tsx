@@ -7,21 +7,21 @@ import { NavMenu } from "@shopify/app-bridge-react";
 import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
 import { authenticate } from "../shopify.server";
 import { getRoles } from "~/models/roles";
-import { throwError } from "~/util";
 import { ROLES } from "~/constants";
 import { useState } from "react";
 import { RoleProvider } from "~/context/RoleProvider";
+import { getJSONError } from "~/util";
 
 export const links = () => [{ rel: "stylesheet", href: polarisStyles }];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
     const { session } = await authenticate.admin(request);
-    const { shop } = session;
-    const roles = await getRoles(shop);
+    const { id: sessionId } = session;
+    const roles = await getRoles(sessionId);
     return json({ apiKey: process.env.SHOPIFY_API_KEY || "", roles });
   } catch (error) {
-    throwError(error, "app root");
+    throw getJSONError(error, "app root");
   }
 };
 

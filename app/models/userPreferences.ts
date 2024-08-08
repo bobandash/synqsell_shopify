@@ -1,14 +1,16 @@
+import { errorHandler, getLogCombinedMessage, getLogContext } from "~/util";
 import db from "../db.server";
 import { hasChecklistTable } from "./checklistTable";
 import type { UserPreferenceData } from "./types";
-import createError from "http-errors";
+import createHttpError from "http-errors";
+import logger from "logger";
 
 // function to add or remove table ID from user preferences depending on if it's hidden over visible
-async function hasUserPreferences(shop: string): Promise<Boolean> {
+async function hasUserPreferences(sessionId: string): Promise<Boolean> {
   try {
     const userPreferences = await db.userPreference.findFirst({
       where: {
-        shop: shop,
+        sessionId: sessionId,
       },
     });
     if (!userPreferences) {
@@ -16,58 +18,98 @@ async function hasUserPreferences(shop: string): Promise<Boolean> {
     }
     return true;
   } catch (error) {
-    throw new createError.InternalServerError(
-      "Failed to retrieve checklist table.",
+    const context = getLogContext(hasUserPreferences, sessionId);
+    throw errorHandler(
+      error,
+      context,
+      "Failed to check if user preferences exist. Please try again later.",
     );
   }
 }
 
-async function getUserPreferences(shop: string): Promise<UserPreferenceData> {
+async function getUserPreferences(
+  sessionId: string,
+): Promise<UserPreferenceData> {
   try {
     const userPreferences = await db.userPreference.findFirst({
       where: {
-        shop: shop,
+        sessionId: sessionId,
       },
     });
     if (!userPreferences) {
-      throw new createError.NotFound(
-        "No user preferences found for this shop.",
+      const logMessage = getLogCombinedMessage(
+        getUserPreferences,
+        `User has no user preferences.`,
+        sessionId,
+      );
+      logger.error(logMessage);
+      throw new createHttpError.NotFound(
+        `User has no user preferences. Please contact support.`,
       );
     }
     return userPreferences;
   } catch (error) {
-    throw new createError.InternalServerError(
-      `Failed to retrieve user preferences.`,
+    const context = getLogContext(getUserPreferences, sessionId);
+    throw errorHandler(
+      error,
+      context,
+      "Failed to retrieve user preferences. Please try again later.",
+    );
+  }
+}
+
+async function validateCreateUserPreferences(sessionId: string) {
+  try {
+    if (await hasUserPreferences(sessionId)) {
+      const logMessage = getLogCombinedMessage(
+        validateCreateUserPreferences,
+        `User preferences already exists for user.`,
+        sessionId,
+      );
+      logger.error(logMessage);
+      throw new createHttpError.BadRequest(
+        `User preferences already exists for user. Please contact support.`,
+      );
+    }
+  } catch (error) {
+    const context = getLogContext(validateCreateUserPreferences, sessionId);
+    throw errorHandler(
+      error,
+      context,
+      "User preferences already exists for user. Please contact support.",
     );
   }
 }
 
 async function createUserPreferences(
-  shop: string,
+  sessionId: string,
 ): Promise<UserPreferenceData> {
   try {
+    await validateCreateUserPreferences(sessionId);
     const newUserPreference = await db.userPreference.create({
       data: {
-        shop: shop,
+        sessionId: sessionId,
         tableIdsHidden: [],
       },
     });
     return newUserPreference;
   } catch (error) {
-    throw new createError.InternalServerError(
-      "Failed to create user preferences",
+    const context = getLogContext(createUserPreferences, sessionId);
+    throw errorHandler(
+      error,
+      context,
+      "Could not create user preferences. Please contact support.",
     );
   }
 }
 
-async function toggleChecklistVisibility(
-  shop: string,
+async function validateToggleChecklistVisibility(
+  sessionId: string,
   tableId: string,
-): Promise<UserPreferenceData> {
+) {
   try {
-    // error validation
     const checklistTableExists = await hasChecklistTable(tableId);
-    const userPreferenceExists = await hasUserPreferences(shop);
+    const userPreferenceExists = await hasUserPreferences(sessionId);
     if (!checklistTableExists || !userPreferenceExists) {
       const errors = [];
       if (!checklistTableExists) {
@@ -76,10 +118,36 @@ async function toggleChecklistVisibility(
       if (!userPreferenceExists) {
         errors.push("This shop does not have user preferences.");
       }
-      throw new createError.BadRequest(errors.join(" "));
+      const logMessage = getLogCombinedMessage(
+        validateToggleChecklistVisibility,
+        `User has no user preferences.`,
+        sessionId,
+        tableId,
+      );
+      logger.error(logMessage);
+      throw new createHttpError.BadRequest(errors.join(" "));
     }
+  } catch (error) {
+    const context = getLogContext(
+      validateToggleChecklistVisibility,
+      sessionId,
+      tableId,
+    );
+    throw errorHandler(
+      error,
+      context,
+      "Something went wrong with the checklist table. Please try again later.",
+    );
+  }
+}
 
-    const currentUserPreference = await getUserPreferences(shop);
+async function toggleChecklistVisibility(
+  sessionId: string,
+  tableId: string,
+): Promise<UserPreferenceData> {
+  try {
+    await validateToggleChecklistVisibility(sessionId, tableId);
+    const currentUserPreference = await getUserPreferences(sessionId);
     // Update user preferences, toggle visibility if doesn't exist
     const { tableIdsHidden, id: userPreferenceId } = currentUserPreference;
     const newTableIdsHidden = tableIdsHidden.filter((id) => id !== tableId);
@@ -94,11 +162,17 @@ async function toggleChecklistVisibility(
         tableIdsHidden: newTableIdsHidden,
       },
     });
-
     return newUserPreferences;
-  } catch {
-    throw new createError.InternalServerError(
-      "Failed to update checklist visibility.",
+  } catch (error) {
+    const context = getLogContext(
+      toggleChecklistVisibility,
+      sessionId,
+      tableId,
+    );
+    throw errorHandler(
+      error,
+      context,
+      "Failed to update checklist visibility. Please try again later.",
     );
   }
 }

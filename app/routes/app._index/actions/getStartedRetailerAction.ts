@@ -2,12 +2,12 @@ import { json } from "@remix-run/node";
 import type { TypedResponse } from "@remix-run/node";
 import { getStartedRetailerSchema } from "../schemas/actionSchemas";
 import { type InferType } from "yup";
-import { throwError } from "~/util";
+import { getJSONError } from "~/util";
 import {
   createFulfillmentService,
   deleteFulfillmentService,
   getFulfillmentService,
-} from "~/models/fulfillmentService/createFulfillmentService";
+} from "~/models/fulfillmentService";
 import type { FulfillmentServiceProps } from "~/models/fulfillmentService/createFulfillmentService";
 import type { FormDataObject, GraphQL } from "~/types";
 import { StatusCodes } from "http-status-codes";
@@ -16,7 +16,6 @@ import {
   markCheckListStatus,
 } from "~/models/checklistStatus";
 import type { ChecklistStatusProps } from "~/models/checklistStatus";
-import createHttpError from "http-errors";
 import { addRole, deleteRole, getRole, type RoleProps } from "~/models/roles";
 import { ROLES } from "~/constants";
 
@@ -31,16 +30,16 @@ export type GetStartedRetailerActionData = {
 export async function getStartedRetailerAction(
   graphql: GraphQL,
   formDataObject: FormDataObject,
-  shop: string,
+  sessionId: string,
 ): Promise<TypedResponse<GetStartedRetailerActionData> | undefined> {
   try {
     await getStartedRetailerSchema.validate(formDataObject);
     const { checklistItemId } = formDataObject as unknown as getRetailerData;
     const [checklistStatus, fulfillmentService, retailerRole] =
       await Promise.all([
-        getChecklistStatus(shop, checklistItemId),
-        getFulfillmentService(shop, graphql),
-        getRole(shop, ROLES.RETAILER),
+        getChecklistStatus(sessionId, checklistItemId),
+        getFulfillmentService(sessionId, graphql),
+        getRole(sessionId, ROLES.RETAILER),
       ]);
 
     if (fulfillmentService && checklistStatus.isCompleted && retailerRole) {
@@ -51,11 +50,11 @@ export async function getStartedRetailerAction(
       fulfillmentService,
       checklistStatus,
       retailerRole,
-      shop,
+      sessionId,
       graphql,
     );
   } catch (error) {
-    throwError(error, "index");
+    throw getJSONError(error, "index");
   }
 }
 
@@ -81,7 +80,7 @@ async function handleCreateMissingFields(
   fulfillmentService: FulfillmentServiceProps | null,
   checklistStatus: ChecklistStatusProps,
   retailerRole: RoleProps | null,
-  shop: string,
+  sessionId: string,
   graphql: GraphQL,
 ) {
   let newFulfillmentService = fulfillmentService;
@@ -89,13 +88,16 @@ async function handleCreateMissingFields(
   let newRole = retailerRole;
   try {
     if (!newFulfillmentService) {
-      newFulfillmentService = await createFulfillmentService(shop, graphql);
+      newFulfillmentService = await createFulfillmentService(
+        sessionId,
+        graphql,
+      );
     }
     if (!newChecklistStatus.isCompleted) {
       newChecklistStatus = await markCheckListStatus(checklistStatus.id, true);
     }
     if (!newRole) {
-      newRole = await addRole(shop, ROLES.RETAILER);
+      newRole = await addRole(sessionId, ROLES.RETAILER);
     }
     return json(
       {
@@ -111,7 +113,11 @@ async function handleCreateMissingFields(
     // attempt to rollback all missing fields if any actions failed
     try {
       if (newFulfillmentService) {
-        await deleteFulfillmentService(shop, newFulfillmentService.id, graphql);
+        await deleteFulfillmentService(
+          sessionId,
+          newFulfillmentService.id,
+          graphql,
+        );
       }
       if (newChecklistStatus.isCompleted) {
         await markCheckListStatus(newChecklistStatus.id, false);
@@ -119,12 +125,14 @@ async function handleCreateMissingFields(
       if (newRole) {
         await deleteRole(newRole.id);
       }
-      throwError(error, "getStartedRetailerAction");
+      throw getJSONError(error, "getStartedRetailerAction");
     } catch (error) {
-      if (createHttpError.isHttpError(error)) throw error;
-      throw new createHttpError.InternalServerError(
-        `handleCreateMissingFields (shop: ${shop}): Failed to rollback fulfillment service creation.`,
-      );
+      // TODO: fix error handling
+      throw getJSONError(error, "getStartedRetailerAction");
+      // if (createHttpError.isHttpError(error)) throw error;
+      // throw new createHttpError.InternalServerError(
+      //   `handleCreateMissingFields: Failed to rollback fulfillment service creation.`,
+      // );
     }
   }
 }

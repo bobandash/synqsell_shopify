@@ -38,44 +38,47 @@ import {
   toggleChecklistVisibilityAction,
   getStartedRetailerAction,
 } from "./actions";
-import { convertFormDataToObject, throwJsonError } from "~/util";
+import { convertFormDataToObject, getJSONError } from "~/util";
 import { getChecklistBtnFunction, getChecklistItemId } from "./util";
 
 // TODO: Fix logger information when receive best logging practices
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
     const { session } = await authenticate.admin(request);
-    const { shop } = session;
-    const userPreferencesExist = await hasUserPreferences(shop);
-    const missingChecklistIds = await getMissingChecklistIds(shop);
+    const { id: sessionId } = session;
+    const userPreferencesExist = await hasUserPreferences(sessionId);
+    const missingChecklistIds = await getMissingChecklistIds(sessionId);
     if (missingChecklistIds) {
-      await createMissingChecklistStatuses(missingChecklistIds, shop);
+      await createMissingChecklistStatuses(missingChecklistIds, sessionId);
     }
     if (!userPreferencesExist) {
-      await createUserPreferences(shop);
-      logger.info("Successfully created user preferences");
+      await createUserPreferences(sessionId);
     }
-    const tables = await getTablesAndStatuses(shop);
+    const tables = await getTablesAndStatuses(sessionId);
     return json(tables, {
       status: 200,
     });
   } catch (error) {
-    throwJsonError(error, "index");
+    throw getJSONError(error, "index");
   }
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   try {
     const { session, admin } = await authenticate.admin(request);
-    const { shop } = session;
+    const { id: sessionId } = session;
     let formData = await request.formData();
     const intent = formData.get("intent");
     const formDataObject = convertFormDataToObject(formData);
     switch (intent) {
       case INTENTS.TOGGLE_CHECKLIST_VISIBILITY:
-        return toggleChecklistVisibilityAction(formDataObject, shop);
+        return toggleChecklistVisibilityAction(formDataObject, sessionId);
       case INTENTS.RETAILER_GET_STARTED:
-        return getStartedRetailerAction(admin.graphql, formDataObject, shop);
+        return getStartedRetailerAction(
+          admin.graphql,
+          formDataObject,
+          sessionId,
+        );
     }
   } catch (error) {
     logger.error(error);

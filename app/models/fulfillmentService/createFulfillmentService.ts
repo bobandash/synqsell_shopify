@@ -13,29 +13,11 @@ export type FulfillmentServiceProps = {
   name: string;
 };
 
-export async function getFulfillmentService(shop: string, graphql: GraphQL) {
-  try {
-    const fulfillmentService = await db.fulfillmentService.findFirst({
-      where: {
-        shop,
-      },
-    });
-    if (!fulfillmentService) {
-      return null;
-    }
-    return await supplementFulfillmentService(fulfillmentService.id, graphql);
-  } catch (error) {
-    const context = getLogContext(getFulfillmentService, shop, graphql);
-    throw errorHandler(
-      error,
-      context,
-      "Failed to retrieve fulfillment service.",
-    );
-  }
-}
-
 // Helper functions for creating fulfillment service (in Shopify and database)
-async function createFulfillmentServiceShopify(shop: string, graphql: GraphQL) {
+async function createFulfillmentServiceShopify(
+  sessionId: string,
+  graphql: GraphQL,
+) {
   try {
     const response = await graphql(
       `
@@ -84,7 +66,7 @@ async function createFulfillmentServiceShopify(shop: string, graphql: GraphQL) {
       const logMessage = getLogCombinedMessage(
         createFulfillmentServiceShopify,
         errorMessages.join(" "),
-        shop,
+        sessionId,
         graphql,
       );
       logger.error(logMessage);
@@ -100,7 +82,7 @@ async function createFulfillmentServiceShopify(shop: string, graphql: GraphQL) {
   } catch (error) {
     const context = getLogContext(
       createFulfillmentServiceShopify,
-      shop,
+      sessionId,
       graphql,
     );
     throw errorHandler(
@@ -111,40 +93,51 @@ async function createFulfillmentServiceShopify(shop: string, graphql: GraphQL) {
   }
 }
 
-async function createFulfillmentServiceDatabase(shop: string, id: string) {
+async function createFulfillmentServiceDatabase(
+  sessionId: string,
+  fulfillmentServiceId: string,
+) {
   try {
     const fulfillmentService = await db.fulfillmentService.create({
       data: {
-        shop: shop,
-        id: id,
+        sessionId,
+        fulfillmentServiceId,
       },
     });
     return fulfillmentService;
   } catch (error) {
-    const context = getLogContext(createFulfillmentServiceDatabase, shop, id);
+    const context = getLogContext(
+      createFulfillmentServiceDatabase,
+      sessionId,
+      fulfillmentServiceId,
+    );
     throw errorHandler(
       error,
       context,
-      "Failed to create fulfillment service in database",
+      "Failed to create fulfillment service in database. Please try again later.",
     );
   }
 }
 
+// !!! Add Retry Logic
 export async function createFulfillmentService(
-  shop: string,
+  sessionId: string,
   graphql: GraphQL,
 ): Promise<FulfillmentServiceProps> {
   let fulfillmentServiceShopify;
   try {
     fulfillmentServiceShopify = await createFulfillmentServiceShopify(
-      shop,
+      sessionId,
       graphql,
     );
-    await createFulfillmentServiceDatabase(shop, fulfillmentServiceShopify.id);
+    await createFulfillmentServiceDatabase(
+      sessionId,
+      fulfillmentServiceShopify.id,
+    );
     return fulfillmentServiceShopify;
   } catch (error) {
     // rollback mechanism if graphql query succeeds but db operation fails
-    const context = getLogContext(createFulfillmentService, shop, graphql);
+    const context = getLogContext(createFulfillmentService, sessionId, graphql);
     if (!fulfillmentServiceShopify) {
       throw errorHandler(
         error,
@@ -152,10 +145,9 @@ export async function createFulfillmentService(
         "Failed to create fulfillment services",
       );
     }
-    // !!! Add Retry Logic
+
     try {
       await deleteFulfillmentServiceShopify(
-        shop,
         fulfillmentServiceShopify.id,
         graphql,
       );
@@ -163,7 +155,7 @@ export async function createFulfillmentService(
       const logMessage = getLogCombinedMessage(
         createFulfillmentService,
         `Failed deleting fulfillment service ${fulfillmentServiceShopify.id} during rollback`,
-        shop,
+        sessionId,
         graphql,
       );
       logger.error(logMessage);
@@ -172,44 +164,5 @@ export async function createFulfillmentService(
       );
     }
     throw errorHandler(error, context, "Failed to create fulfillment services");
-  }
-}
-
-async function supplementFulfillmentService(id: string, graphql: GraphQL) {
-  try {
-    const response = await graphql(
-      `
-        query supplementFulfillmentServiceQuery($id: ID!) {
-          fulfillmentService(id: $id) {
-            id
-            serviceName
-          }
-        }
-      `,
-      {
-        variables: { id: id },
-      },
-    );
-
-    const { data } = await response.json();
-    if (!data || !data.fulfillmentService) {
-      throw new createHttpError.BadRequest(
-        `supplementFulfillmentService (id: ${id}): Could not fetch fulfillment service given id.`,
-      );
-    }
-
-    const { fulfillmentService } = data;
-
-    return {
-      id: fulfillmentService.id,
-      name: fulfillmentService.serviceName,
-    };
-  } catch (error) {
-    if (createHttpError.isHttpError(error)) {
-      throw error;
-    }
-    throw new createHttpError.InternalServerError(
-      `createFulfillmentService (id: ${id}): Failed to query fulfillment service.`,
-    );
   }
 }

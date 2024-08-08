@@ -25,7 +25,6 @@ export async function deleteFulfillmentServiceDatabase(id: string) {
 }
 
 export async function deleteFulfillmentServiceShopify(
-  shop: string,
   id: string,
   graphql: GraphQL,
 ) {
@@ -57,7 +56,6 @@ export async function deleteFulfillmentServiceShopify(
       const logMessage = getLogCombinedMessage(
         deleteFulfillmentServiceShopify,
         errorMessages.join(" "),
-        shop,
         id,
         graphql,
       );
@@ -67,12 +65,7 @@ export async function deleteFulfillmentServiceShopify(
 
     return true;
   } catch (error) {
-    const context = getLogContext(
-      deleteFulfillmentServiceShopify,
-      shop,
-      id,
-      graphql,
-    );
+    const context = getLogContext(deleteFulfillmentServiceShopify, id, graphql);
     throw errorHandler(
       error,
       context,
@@ -81,20 +74,58 @@ export async function deleteFulfillmentServiceShopify(
   }
 }
 
+async function rollbackDeleteFulfillmentService(
+  id: string,
+  sessionId: string,
+  graphql: GraphQL,
+) {
+  try {
+    const newFulfillmentService = await createFulfillmentService(
+      sessionId,
+      graphql,
+    );
+    db.fulfillmentService.update({
+      where: {
+        id: id,
+      },
+      data: {
+        fulfillmentServiceId: newFulfillmentService.id,
+      },
+    });
+  } catch (error) {
+    const logMessage = getLogCombinedMessage(
+      deleteFulfillmentService,
+      `Failed re-creating fulfillment service during rollback.`,
+      sessionId,
+      id,
+      graphql,
+    );
+    logger.error(logMessage);
+    throw new createHttpError.InternalServerError(
+      "Failed re-creating fulfillment service. Please contact support.",
+    );
+  }
+}
+
 export async function deleteFulfillmentService(
-  shop: string,
+  sessionId: string,
   id: string,
   graphql: GraphQL,
 ) {
   let deletedShopifyFulfillmentService = false;
   try {
-    await deleteFulfillmentServiceShopify(shop, id, graphql);
+    await deleteFulfillmentServiceShopify(id, graphql);
     deletedShopifyFulfillmentService = true;
     await deleteFulfillmentServiceDatabase(id);
     return true;
   } catch (error) {
     // rollback if failed to delete
-    const context = getLogContext(deleteFulfillmentService, shop, id, graphql);
+    const context = getLogContext(
+      deleteFulfillmentService,
+      sessionId,
+      id,
+      graphql,
+    );
     if (!deletedShopifyFulfillmentService) {
       throw errorHandler(
         error,
@@ -102,65 +133,8 @@ export async function deleteFulfillmentService(
         "Failed to delete fulfillment services",
       );
     }
-
-    try {
-      const newFulfillmentService = await createFulfillmentService(
-        shop,
-        graphql,
-      );
-      db.fulfillmentService.update({
-        where: {
-          shop: shop,
-        },
-        data: {
-          id: newFulfillmentService.id,
-        },
-      });
-    } catch (error) {
-      const logMessage = getLogCombinedMessage(
-        deleteFulfillmentService,
-        `Failed re-creating fulfillment service during rollback.`,
-        shop,
-        id,
-        graphql,
-      );
-      logger.error(logMessage);
-      throw new createHttpError.InternalServerError(
-        "Failed to re-create fulfillment service. Please contact support.",
-      );
-    }
-
-    throw errorHandler(error, context, "Failed to delete fulfillment services");
+    // !!! TODO: maybe add retry to rollback as well as last resort
+    await rollbackDeleteFulfillmentService(id, sessionId, graphql);
+    throw errorHandler(error, context, "Failed to delete fulfillment service.");
   }
 }
-
-//     const context = getLogContext(createFulfillmentService, shop, graphql);
-//     if (!fulfillmentServiceShopify) {
-//       throw errorHandler(
-//         error,
-//         context,
-//         "Failed to create fulfillment services",
-//       );
-//     }
-//     // !!! Add Retry Logic
-//     try {
-//       await deleteFulfillmentServiceShopify(
-//         shop,
-//         fulfillmentServiceShopify.id,
-//         graphql,
-//       );
-//     } catch {
-//       const logMessage = getLogCombinedMessage(
-//         createFulfillmentService,
-//         `Failed deleting fulfillment service ${fulfillmentServiceShopify.id} during rollback`,
-//         shop,
-//         graphql,
-//       );
-//       logger.error(logMessage);
-//       throw new createHttpError.InternalServerError(
-//         "Failed to delete new fulfillment service. Please contact support.",
-//       );
-//     }
-//     throw errorHandler(error, context, "Failed to create fulfillment services");
-//   }
-// }

@@ -1,7 +1,7 @@
 import db from "../db.server";
 import { getUserPreferences } from "./userPreferences";
 import type { TransformedChecklistTableData } from "./types";
-import createHttpError from "http-errors";
+import { errorHandler, getLogContext } from "~/util";
 async function hasChecklistTable(id: string): Promise<boolean> {
   try {
     const table = await db.checklistTable.findFirst({
@@ -13,19 +13,22 @@ async function hasChecklistTable(id: string): Promise<boolean> {
       return false;
     }
     return true;
-  } catch {
-    throw new createHttpError.InternalServerError(
-      "Failed to retrieve checklist table.",
+  } catch (error) {
+    const context = getLogContext(hasChecklistTable, id);
+    throw errorHandler(
+      error,
+      context,
+      "Failed to retrieve checklist table. Please try again later",
     );
   }
 }
 
 async function createMissingChecklistStatuses(
   missingChecklistIds: string[],
-  shop: string,
+  sessionId: string,
 ): Promise<undefined> {
   const missingStatusData = missingChecklistIds.map((id) => ({
-    shop: shop,
+    sessionId: sessionId,
     checklistItemId: id,
     isCompleted: false,
   }));
@@ -36,17 +39,24 @@ async function createMissingChecklistStatuses(
     });
     return;
   } catch (error) {
-    throw new createHttpError.InternalServerError(
+    const context = getLogContext(
+      createMissingChecklistStatuses,
+      missingChecklistIds,
+      sessionId,
+    );
+    throw errorHandler(
+      error,
+      context,
       "Failed to create missing checklist statuses",
     );
   }
 }
 
-async function getMissingChecklistIds(shop: string): Promise<string[]> {
+async function getMissingChecklistIds(sessionId: string): Promise<string[]> {
   try {
     const currentChecklistItems = await db.checklistStatus.findMany({
       where: {
-        shop: shop,
+        sessionId: sessionId,
       },
       select: {
         checklistItemId: true,
@@ -68,17 +78,20 @@ async function getMissingChecklistIds(shop: string): Promise<string[]> {
     );
     return missingChecklistIds;
   } catch (error) {
-    throw new createHttpError.InternalServerError(
-      "Failed to get missing check list ids",
+    const context = getLogContext(getMissingChecklistIds, sessionId);
+    throw errorHandler(
+      error,
+      context,
+      "Failed to retrieve missing check list ids",
     );
   }
 }
 
 async function getTablesAndStatuses(
-  shop: string,
+  sessionId: string,
 ): Promise<TransformedChecklistTableData[]> {
   try {
-    const userPreferences = await getUserPreferences(shop);
+    const userPreferences = await getUserPreferences(sessionId);
     const { tableIdsHidden } = userPreferences;
     const tables = await db.checklistTable.findMany({
       orderBy: {
@@ -92,7 +105,7 @@ async function getTablesAndStatuses(
           include: {
             checklistStatus: {
               where: {
-                shop: shop,
+                sessionId: sessionId,
               },
               select: {
                 isCompleted: true,
@@ -143,7 +156,10 @@ async function getTablesAndStatuses(
     });
     return transformedTables;
   } catch (error) {
-    throw new createHttpError.InternalServerError(
+    const context = getLogContext(getTablesAndStatuses, sessionId);
+    throw errorHandler(
+      error,
+      context,
       "Failed to retrieve tables and statuses",
     );
   }

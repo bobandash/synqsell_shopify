@@ -46,7 +46,7 @@ export function getParamsOfInterest(
     // Do not want to include any PII in the log warn
     for (let i = 0; i < paramValues.length; i++) {
       if (
-        paramNames[i] === "shop" ||
+        paramNames[i] === "sessionId" ||
         paramNames[i] === "name" ||
         paramNames[i] === "id"
       ) {

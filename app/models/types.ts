@@ -1,6 +1,6 @@
 export type UserPreferenceData = {
   id: string;
-  shop: string;
+  sessionId: string;
   tableIdsHidden: string[];
 };
 
@@ -26,7 +26,7 @@ export type ChecklistItemData = {
 
 export type ChecklistStatusData = {
   id: string;
-  shop: string;
+  sessionId: string;
   checklistItemId: string;
   isCompleted: string;
 };

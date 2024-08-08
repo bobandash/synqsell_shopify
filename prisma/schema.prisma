@@ -19,32 +19,40 @@ datasource db {
 // does not expire until the user removes the application
 // Before deployment, refactor so that all the database items are connected to the session instead of having its own shop field
 model Session {
-  id            String    @id
-  shop          String
-  state         String
-  isOnline      Boolean   @default(false)
-  scope         String?
-  expires       DateTime? @db.Timestamp
-  accessToken   String
-  userId        BigInt?
-  firstName     String?
-  lastName      String?
-  email         String?
-  accountOwner  Boolean   @default(false)
-  locale        String?
-  collaborator  Boolean?  @default(false)
-  emailVerified Boolean?  @default(false)
+  id                 String              @id
+  shop               String
+  state              String
+  isOnline           Boolean             @default(false)
+  scope              String?
+  expires            DateTime?           @db.Timestamp
+  accessToken        String
+  userId             BigInt?
+  firstName          String?
+  lastName           String?
+  email              String?
+  accountOwner       Boolean             @default(false)
+  locale             String?
+  collaborator       Boolean?            @default(false)
+  emailVerified      Boolean?            @default(false)
+  Role               Role[]
+  Profile            Profile?
+  ChecklistStatus    ChecklistStatus[]
+  UserPreference     UserPreference?
+  FulfillmentService FulfillmentService?
 }
 
 model FulfillmentService {
-  id   String @id @default(uuid())
-  shop String @unique
+  id                   String  @id @default(uuid())
+  fulfillmentServiceId String
+  Session              Session @relation(fields: [sessionId], references: [id])
+  sessionId            String  @unique
 }
 
 model UserPreference {
   id             String   @id @default(uuid())
-  shop           String
+  session        Session  @relation(fields: [sessionId], references: [id])
   tableIdsHidden String[]
+  sessionId      String   @unique
 }
 
 model ChecklistTable {
@@ -69,24 +77,27 @@ model ChecklistItem {
 
 model ChecklistStatus {
   id              String        @id @default(uuid())
-  shop            String
+  Session         Session       @relation(fields: [sessionId], references: [id])
+  sessionId       String
   ChecklistItem   ChecklistItem @relation(fields: [checklistItemId], references: [id])
   checklistItemId String
   isCompleted     Boolean
 }
 
 model Role {
-  id   String @id @default(uuid())
-  name String
-  shop String
+  id        String  @id @default(uuid())
+  name      String
+  Session   Session @relation(fields: [sessionId], references: [id])
+  sessionId String
 }
 
 model Profile {
-  id              String @id @default(uuid())
+  id              String  @id @default(uuid())
   name            String
   email           String
   logo            String
   biography       String
   desiredProducts String
-  shop            String
+  Session         Session @relation(fields: [sessionId], references: [id])
+  sessionId       String  @unique
 }

@@ -25,7 +25,7 @@ describe("getParamNames", () => {
 });
 
 describe("getParamsOfInterest", () => {
-  test("returns empty if contains no shop, name, id", () => {
+  test("returns empty if contains no sessionId, name, id", () => {
     const functionOneParamNames = ["a", "b", "c", "d"];
     const functionOneArguments = ["hello", "1", "2", "3"];
     const paramsOfInterest = getParamsOfInterest(
@@ -36,7 +36,7 @@ describe("getParamsOfInterest", () => {
   });
 
   test("returns empty if array lengths are not equal", () => {
-    const functionOneParamNames = ["shop", "name", "test", "poke"];
+    const functionOneParamNames = ["sessionId", "name", "test", "poke"];
     const functionOneArguments = ["hello", "1", "2"];
     const paramsOfInterest = getParamsOfInterest(
       functionOneArguments,
@@ -45,25 +45,25 @@ describe("getParamsOfInterest", () => {
     expect(paramsOfInterest).toEqual("");
   });
 
-  test("returns shop, name if contains shop, name, and a random field not id", () => {
-    const functionOneParamNames = ["shop", "name", "test"];
+  test("returns sessionId, name if contains shop, name, and a random field not id", () => {
+    const functionOneParamNames = ["sessionId", "name", "test"];
     const functionOneArguments = ["hello", "1", "2"];
     const paramsOfInterest = getParamsOfInterest(
       functionOneArguments,
       functionOneParamNames,
     );
-    expect(paramsOfInterest).toEqual("(shop: hello, name: 1)");
+    expect(paramsOfInterest).toEqual("(sessionId: hello, name: 1)");
   });
 
-  test("returns shop, name, and id if contains these fields are in all arguments", () => {
-    const functionOneNames = ["shop", "name", "id"];
+  test("returns sessionId, name, and id if contains these fields are in all arguments", () => {
+    const functionOneNames = ["sessionId", "name", "id"];
     const functionOneValues = ["a", "b", "c"];
 
     const paramsOfInterest = getParamsOfInterest(
       functionOneValues,
       functionOneNames,
     );
-    expect(paramsOfInterest).toEqual("(shop: a, name: b, id: c)");
+    expect(paramsOfInterest).toEqual("(sessionId: a, name: b, id: c)");
   });
 });
 
@@ -84,19 +84,19 @@ describe("getLogContext", () => {
 
   test("returns formatted string when params of interest are present", () => {
     // Arrange
-    const mockFunc = (shop: string, name: string, id: string) => {};
+    const mockFunc = (sessionId: string, name: string, id: string) => {};
     const mockArgs: [string, string, string] = [
-      "shopValue",
+      "sessionIdValue",
       "nameValue",
       "idValue",
     ];
     getParamNamesSpy.mockReturnValue(["shop", "name", "id"]);
     getParamsOfInterestSpy.mockReturnValue(
-      "(shop: shopValue, name: nameValue, id: idValue)",
+      "(sessionId: sessionIdValue, name: nameValue, id: idValue)",
     );
     const result = getLogContext(mockFunc, ...mockArgs);
     expect(result).toBe(
-      "mockFunc (shop: shopValue, name: nameValue, id: idValue):",
+      "mockFunc (sessionId: sessionIdValue, name: nameValue, id: idValue):",
     );
   });
 });
