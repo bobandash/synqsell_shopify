@@ -21,11 +21,12 @@ type ProfileDefaultsProps = {
 
 export async function hasProfile(sessionId: string) {
   try {
-    const profile = db.profile.findFirst({
+    const profile = await db.profile.findFirst({
       where: {
         sessionId,
       },
     });
+
     if (!profile) {
       return false;
     }
@@ -38,7 +39,7 @@ export async function hasProfile(sessionId: string) {
 
 export async function getProfile(sessionId: string) {
   try {
-    const profile = db.profile.findFirst({
+    const profile = await db.profile.findFirst({
       where: {
         sessionId,
       },
@@ -96,7 +97,7 @@ export async function createProfileDatabase(
 ) {
   try {
     const { name, contactEmail, description } = profileDefaults;
-    const newProfile = db.profile.create({
+    const newProfile = await db.profile.create({
       data: {
         sessionId,
         name,
@@ -114,7 +115,7 @@ export async function createProfileDatabase(
     throw errorHandler(
       error,
       context,
-      "Failed to  create profile in database. Please try again later.",
+      "Failed to create profile in database. Please try again later.",
     );
   }
 }
@@ -136,6 +137,10 @@ export async function createProfile(sessionId: string, graphql: GraphQL) {
     }
   } catch (error) {
     const context = getLogContext(createProfile, sessionId, graphql);
-    throw errorHandler(error, context, "Failed to retrieve create profile");
+    throw errorHandler(
+      error,
+      context,
+      "Failed to create profile. Please contact support.",
+    );
   }
 }

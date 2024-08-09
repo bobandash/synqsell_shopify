@@ -26,7 +26,7 @@ async function hasChecklistTable(id: string): Promise<boolean> {
 async function createMissingChecklistStatuses(
   missingChecklistIds: string[],
   sessionId: string,
-): Promise<undefined> {
+) {
   const missingStatusData = missingChecklistIds.map((id) => ({
     sessionId: sessionId,
     checklistItemId: id,
@@ -34,10 +34,10 @@ async function createMissingChecklistStatuses(
   }));
 
   try {
-    await db.checklistStatus.createMany({
+    const missingChecklistStatuses = await db.checklistStatus.createMany({
       data: missingStatusData,
     });
-    return;
+    return missingChecklistStatuses;
   } catch (error) {
     const context = getLogContext(
       createMissingChecklistStatuses,
