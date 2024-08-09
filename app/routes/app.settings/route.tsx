@@ -16,31 +16,61 @@ import { useRoleContext } from "~/context/RoleProvider";
 import styles from "./styles.module.css";
 import { json, type LoaderFunctionArgs } from "@remix-run/node";
 import { authenticate } from "~/shopify.server";
-import { useForm, useField } from "@shopify/react-form";
+import { useForm, useField, notEmpty } from "@shopify/react-form";
+import {
+  getOrCreateProfile,
+  hasProfile,
+  type ProfileProps,
+} from "~/models/profile";
+import { getJSONError } from "~/util";
+import { useLoaderData } from "@remix-run/react";
+import { isEmail } from "./util/customValidation";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
-    const { session } = await authenticate.admin(request);
+    const { session, admin } = await authenticate.admin(request);
     const { id: sessionId } = session;
-    return json("test");
-  } catch (error) {}
+    const hasExistingProfile = await hasProfile(sessionId);
+    const profile = await getOrCreateProfile(sessionId, admin.graphql);
+    return json(profile, {
+      status: hasExistingProfile ? 200 : 201,
+    });
+  } catch (error) {
+    throw getJSONError(error, "settings");
+  }
 };
 
-// model Profile {
-//     id              String  @id @default(uuid())
-//     name            String
-//     email           String
-//     logo            String
-//     biography       String
-//     desiredProducts String
-//     Session         Session @relation(fields: [sessionId], references: [id])
-//     sessionId       String  @unique
-//   }
-
 const Settings = () => {
+  const profileData = useLoaderData<typeof loader>() as ProfileProps;
   const { roles } = useRoleContext();
   const isRetailer = roles.has(ROLES.RETAILER);
   const isSupplier = roles.has(ROLES.SUPPLIER);
+
+  console.log(profileData);
+
+  const { fields } = useForm({
+    fields: {
+      name: useField({
+        value: profileData.name,
+        validates: [notEmpty("Store name is required")],
+      }),
+      email: useField({
+        value: profileData.email,
+        validates: [
+          notEmpty("Contact email is required"),
+          isEmail("Contact email is not a valid email"),
+        ],
+      }),
+      biography: useField({
+        value: profileData.biography || "",
+        validates: [notEmpty("Store bio cannot be empty")],
+      }),
+      desiredProducts: useField({
+        value: profileData.desiredProducts || "",
+        validates: [],
+      }),
+    },
+  });
 
   return (
     <Page
@@ -59,30 +89,29 @@ const Settings = () => {
                 <BlockStack gap={"200"}>
                   <TextField
                     label="Store name:"
-                    value={"SynqSell"}
                     autoComplete="off"
+                    {...fields.name}
                   />
                   <TextField
                     label="Contact Email:"
-                    type="email"
-                    value={"info@synqsell.com"}
                     autoComplete="email"
+                    {...fields.email}
                   />
                   <TextField
                     label="Store Bio:"
-                    value={""}
                     multiline={4}
                     autoComplete="off"
                     placeholder="Tell us a little bit about your brand and the products you sell."
+                    {...fields.biography}
                   />
                   <TextField
                     label="Products You’re Searching For:"
-                    value={""}
                     multiline={4}
                     autoComplete="off"
                     placeholder={
                       "If you plan to use Synqsell as a retailer, let suppliers know what products you're searching for!"
                     }
+                    {...fields.desiredProducts}
                   />
                   <Box>
                     <div className={styles["center-right"]}>

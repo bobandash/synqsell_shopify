@@ -19,6 +19,16 @@ type ProfileDefaultsProps = {
   description: string;
 };
 
+export type ProfileProps = {
+  id: string;
+  name: string;
+  email: string;
+  logo: string | null;
+  biography: string | null;
+  desiredProducts: string | null;
+  sessionId: string;
+};
+
 export async function hasProfile(sessionId: string) {
   try {
     const profile = await db.profile.findFirst({
@@ -68,6 +78,7 @@ async function getProfileDefaultsShopify(sessionId: string, graphql: GraphQL) {
     `);
     const { data } = await response.json();
     if (!data) {
+      // TODO:
       throw new Error("test");
     }
     const { shop } = data;
@@ -120,23 +131,17 @@ export async function createProfileDatabase(
   }
 }
 
-export async function createProfile(sessionId: string, graphql: GraphQL) {
+export async function getOrCreateProfile(sessionId: string, graphql: GraphQL) {
   try {
-    if (!(await hasProfile(sessionId))) {
-      const profileDefaults = await getProfileDefaultsShopify(
-        sessionId,
-        graphql,
-      );
-      const newProfile = await createProfileDatabase(
-        sessionId,
-        profileDefaults,
-      );
-      return newProfile;
-    } else {
-      return null;
+    const existingProfile = await getProfile(sessionId);
+    if (existingProfile) {
+      return existingProfile;
     }
+    const profileDefaults = await getProfileDefaultsShopify(sessionId, graphql);
+    const newProfile = await createProfileDatabase(sessionId, profileDefaults);
+    return newProfile;
   } catch (error) {
-    const context = getLogContext(createProfile, sessionId, graphql);
+    const context = getLogContext(getOrCreateProfile, sessionId, graphql);
     throw errorHandler(
       error,
       context,

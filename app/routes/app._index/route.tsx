@@ -42,20 +42,31 @@ import {
 import { convertFormDataToObject, getJSONError } from "~/util";
 import { getChecklistBtnFunction, getChecklistItemId } from "./util";
 import { useRoleContext } from "~/context/RoleProvider";
+import { getOrCreateProfile, hasProfile } from "~/models/profile";
 
-// TODO: Fix logger information when receive best logging practices
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
-    const { session } = await authenticate.admin(request);
+    const { session, admin } = await authenticate.admin(request);
     const { id: sessionId } = session;
-    const userPreferencesExist = await hasUserPreferences(sessionId);
-    const missingChecklistIds = await getMissingChecklistIds(sessionId);
-    if (missingChecklistIds) {
-      await createMissingChecklistStatuses(missingChecklistIds, sessionId);
-    }
+    const [userPreferencesExist, profileExists, missingChecklistIds] =
+      await Promise.all([
+        hasUserPreferences(sessionId),
+        hasProfile(sessionId),
+        getMissingChecklistIds(sessionId),
+      ]);
+
     if (!userPreferencesExist) {
       await createUserPreferences(sessionId);
     }
+
+    if (!profileExists) {
+      await getOrCreateProfile(sessionId, admin.graphql);
+    }
+
+    if (missingChecklistIds) {
+      await createMissingChecklistStatuses(missingChecklistIds, sessionId);
+    }
+
     const tables = await getTablesAndStatuses(sessionId);
     return json(tables, {
       status: 200,
