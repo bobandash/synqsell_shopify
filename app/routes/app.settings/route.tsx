@@ -14,6 +14,29 @@ import {
 import { ROLES } from "~/constants";
 import { useRoleContext } from "~/context/RoleProvider";
 import styles from "./styles.module.css";
+import { json, type LoaderFunctionArgs } from "@remix-run/node";
+import { authenticate } from "~/shopify.server";
+import { useForm, useField } from "@shopify/react-form";
+
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  try {
+    const { session } = await authenticate.admin(request);
+    const { id: sessionId } = session;
+    return json("test");
+  } catch (error) {}
+};
+
+// model Profile {
+//     id              String  @id @default(uuid())
+//     name            String
+//     email           String
+//     logo            String
+//     biography       String
+//     desiredProducts String
+//     Session         Session @relation(fields: [sessionId], references: [id])
+//     sessionId       String  @unique
+//   }
+
 const Settings = () => {
   const { roles } = useRoleContext();
   const isRetailer = roles.has(ROLES.RETAILER);
@@ -70,55 +93,52 @@ const Settings = () => {
               </Card>
             </Layout.AnnotatedSection>
             <Layout.AnnotatedSection
-              id="profile_visibility"
-              title="Profile Visibility"
-              description="Decide whether or not to show/hide your brand on our networks."
+              id="notifications"
+              title="Preferences"
+              description="Decide your profile visibility and notification settings."
             >
               <Card>
                 <BlockStack gap={"200"}>
+                  <Text as="h2" variant="headingSm">
+                    Profile Visibility
+                  </Text>
                   <Checkbox
                     label="Visible on retailer network."
                     checked={true}
                   />
-                  <Checkbox
-                    label="Visible on supplier network (must at least have a general price list)."
-                    checked={true}
-                  />
-                </BlockStack>
-              </Card>
-            </Layout.AnnotatedSection>
-            <Layout.AnnotatedSection
-              id="notifications"
-              title="Notifications"
-              description="Choose which notifications to receive to your inbox."
-            >
-              <Card>
-                <BlockStack gap={"200"}>
-                  <Text as="h2" variant="bodyMd">
+                  {isSupplier && (
+                    <Checkbox
+                      label="Visible on supplier network (must at least have a general price list)."
+                      checked={true}
+                    />
+                  )}
+                  <Text as="h2" variant="headingSm">
                     General Notifications
                   </Text>
-                  <Checkbox
-                    label="New incoming partnership requests."
-                    checked={true}
-                  />
-                  <Text as="h2" variant="bodyMd">
-                    Retailer Notifications
-                  </Text>
-                  <Checkbox
-                    label="Updates to partnered suppliers, such as price changes and new products."
-                    checked={true}
-                  />
-                  <Checkbox
-                    label="New suppliers that joined SynqSell you might be interested in."
-                    checked={true}
-                  />
-                  <Text as="h2" variant="bodyMd">
-                    Supplier Notifications
-                  </Text>
-                  <Checkbox
-                    label="New retailers that join SynqSell that you may be interested in partnering with."
-                    checked={true}
-                  />
+
+                  {isRetailer && (
+                    <>
+                      <Checkbox
+                        label="New incoming partnership requests."
+                        checked={true}
+                      />
+                      <Checkbox
+                        label="Updates to partnered suppliers, such as price changes and new products."
+                        checked={true}
+                      />
+                      <Checkbox
+                        label="New suppliers that joined SynqSell you might be interested in."
+                        checked={true}
+                      />
+                    </>
+                  )}
+
+                  {isSupplier && (
+                    <Checkbox
+                      label="New retailers that join SynqSell that you may be interested in partnering with."
+                      checked={true}
+                    />
+                  )}
                 </BlockStack>
               </Card>
             </Layout.AnnotatedSection>

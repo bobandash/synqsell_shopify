@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "Profile" ALTER COLUMN "logo" DROP NOT NULL,
+ALTER COLUMN "biography" DROP NOT NULL,
+ALTER COLUMN "desiredProducts" DROP NOT NULL;

@@ -95,9 +95,9 @@ model Profile {
   id              String  @id @default(uuid())
   name            String
   email           String
-  logo            String
-  biography       String
-  desiredProducts String
+  logo            String?
+  biography       String?
+  desiredProducts String?
   Session         Session @relation(fields: [sessionId], references: [id])
   sessionId       String  @unique
 }

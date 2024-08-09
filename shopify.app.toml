@@ -3,7 +3,7 @@
 client_id = "c2ff24913d6d89792234763f0830c676"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://instruction-exp-removable-bottles.trycloudflare.com"
+application_url = "https://time-sensor-cooper-unless.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read_inventory,read_products,read_third_party_fulfillment_orders,write
 
 [auth]
 redirect_urls = [
-  "https://instruction-exp-removable-bottles.trycloudflare.com/auth/callback",
-  "https://instruction-exp-removable-bottles.trycloudflare.com/auth/shopify/callback",
-  "https://instruction-exp-removable-bottles.trycloudflare.com/api/auth/callback"
+  "https://time-sensor-cooper-unless.trycloudflare.com/auth/callback",
+  "https://time-sensor-cooper-unless.trycloudflare.com/auth/shopify/callback",
+  "https://time-sensor-cooper-unless.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]
