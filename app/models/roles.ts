@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import db from "../db.server";
 import createHttpError from "http-errors";
 import logger from "logger";
@@ -9,11 +10,20 @@ import {
   getLogContext,
 } from "~/util";
 
-export type RoleProps = {
+interface SharedRoleProps {
   id: string;
   name: string;
   sessionId: string;
-};
+  isVisibleInNetwork: boolean;
+}
+
+export interface RoleProps extends SharedRoleProps {
+  createdAt: Date;
+}
+
+export interface RolePropsJSON extends SharedRoleProps {
+  createdAt: string;
+}
 
 export async function isValidRole(role: string) {
   const validRoles = new Set(convertObjectValuesToArr(ROLES));
@@ -25,12 +35,11 @@ export async function isValidRole(role: string) {
 
 export async function getRoles(sessionId: string) {
   try {
-    const data = await db.role.findMany({
+    const roles = await db.role.findMany({
       where: {
         sessionId,
       },
     });
-    const roles = data.map(({ name }) => name);
     return roles;
   } catch (error) {
     const context = getLogContext(getRoles, sessionId);
@@ -155,6 +164,44 @@ export async function getRole(sessionId: string, role: string) {
       error,
       context,
       "Failed to get role. Please try again later",
+    );
+  }
+}
+
+// should not update if role doesn't exist
+export async function updateRoleVisibilityTx(
+  tx: Prisma.TransactionClient,
+  sessionId: string,
+  role: string,
+  isVisibleInNetwork: boolean,
+) {
+  try {
+    const currentRole = await getRole(sessionId, role);
+    if (!currentRole) {
+      return null;
+    }
+    const { id } = currentRole;
+    const updatedRole = await tx.role.update({
+      where: {
+        id,
+      },
+      data: {
+        isVisibleInNetwork,
+      },
+    });
+    return updatedRole;
+  } catch (error) {
+    const context = getLogContext(
+      updateRoleVisibilityTx,
+      tx,
+      sessionId,
+      role,
+      isVisibleInNetwork,
+    );
+    throw errorHandler(
+      error,
+      context,
+      "Failed to update role. Please try again later",
     );
   }
 }

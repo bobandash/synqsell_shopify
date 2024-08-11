@@ -19,14 +19,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const { session } = await authenticate.admin(request);
     const { id: sessionId } = session;
     const roles = await getRoles(sessionId);
-    return json({ apiKey: process.env.SHOPIFY_API_KEY || "", roles });
+    const roleNames = roles.map((role) => role.name);
+    return json({ apiKey: process.env.SHOPIFY_API_KEY || "", roleNames });
   } catch (error) {
     throw getJSONError(error, "app root");
   }
 };
 
 export default function App() {
-  const { apiKey, roles: initalRoles } = useLoaderData<typeof loader>();
+  const { apiKey, roleNames: initalRoles } = useLoaderData<typeof loader>();
   const [roles, setRoles] = useState(new Set(initalRoles));
   const isSupplier = roles.has(ROLES.RETAILER);
   const isRetailer = roles.has(ROLES.SUPPLIER);

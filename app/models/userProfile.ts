@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import db from "~/db.server";
 import type { GraphQL } from "~/types";
 import { errorHandler, getLogContext } from "~/util";
@@ -29,9 +30,17 @@ export type ProfileProps = {
   sessionId: string;
 };
 
+type ProfileUpdateProps = {
+  name?: string;
+  email?: string;
+  logo?: string;
+  biography?: string;
+  productsWant?: string;
+};
+
 export async function hasProfile(sessionId: string) {
   try {
-    const profile = await db.profile.findFirst({
+    const profile = await db.userProfile.findFirst({
       where: {
         sessionId,
       },
@@ -49,7 +58,7 @@ export async function hasProfile(sessionId: string) {
 
 export async function getProfile(sessionId: string) {
   try {
-    const profile = await db.profile.findFirst({
+    const profile = await db.userProfile.findFirst({
       where: {
         sessionId,
       },
@@ -108,7 +117,7 @@ export async function createProfileDatabase(
 ) {
   try {
     const { name, contactEmail, description } = profileDefaults;
-    const newProfile = await db.profile.create({
+    const newProfile = await db.userProfile.create({
       data: {
         sessionId,
         name,
@@ -146,6 +155,36 @@ export async function getOrCreateProfile(sessionId: string, graphql: GraphQL) {
       error,
       context,
       "Failed to create profile. Please contact support.",
+    );
+  }
+}
+
+export async function updateUserProfileTx(
+  tx: Prisma.TransactionClient,
+  sessionId: string,
+  newProfileValues: ProfileUpdateProps,
+) {
+  try {
+    const updatedProfile = await tx.userProfile.update({
+      where: {
+        sessionId,
+      },
+      data: {
+        ...newProfileValues,
+      },
+    });
+    return updatedProfile;
+  } catch (error) {
+    const context = getLogContext(
+      updateUserProfileTx,
+      tx,
+      sessionId,
+      newProfileValues,
+    );
+    throw errorHandler(
+      error,
+      context,
+      "Failed to update profile. Please contact support.",
     );
   }
 }

@@ -42,7 +42,7 @@ import {
 import { convertFormDataToObject, getJSONError } from "~/util";
 import { getChecklistBtnFunction, getChecklistItemId } from "./util";
 import { useRoleContext } from "~/context/RoleProvider";
-import { getOrCreateProfile, hasProfile } from "~/models/profile";
+import { getOrCreateProfile, hasProfile } from "~/models/userProfile";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {

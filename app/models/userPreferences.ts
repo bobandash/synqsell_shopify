@@ -6,7 +6,7 @@ import createHttpError from "http-errors";
 import logger from "logger";
 
 // function to add or remove table ID from user preferences depending on if it's hidden over visible
-async function hasUserPreferences(sessionId: string): Promise<Boolean> {
+export async function hasUserPreferences(sessionId: string): Promise<Boolean> {
   try {
     const userPreferences = await db.userPreference.findFirst({
       where: {
@@ -27,7 +27,7 @@ async function hasUserPreferences(sessionId: string): Promise<Boolean> {
   }
 }
 
-async function getUserPreferences(
+export async function getUserPreferences(
   sessionId: string,
 ): Promise<UserPreferenceData> {
   try {
@@ -81,7 +81,7 @@ async function validateCreateUserPreferences(sessionId: string) {
   }
 }
 
-async function createUserPreferences(
+export async function createUserPreferences(
   sessionId: string,
 ): Promise<UserPreferenceData> {
   try {
@@ -103,7 +103,7 @@ async function createUserPreferences(
   }
 }
 
-async function validateToggleChecklistVisibility(
+export async function validateToggleChecklistVisibility(
   sessionId: string,
   tableId: string,
 ) {
@@ -141,7 +141,7 @@ async function validateToggleChecklistVisibility(
   }
 }
 
-async function toggleChecklistVisibility(
+export async function toggleChecklistVisibility(
   sessionId: string,
   tableId: string,
 ): Promise<UserPreferenceData> {
@@ -176,10 +176,3 @@ async function toggleChecklistVisibility(
     );
   }
 }
-
-export {
-  hasUserPreferences,
-  getUserPreferences,
-  createUserPreferences,
-  toggleChecklistVisibility,
-};

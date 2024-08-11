@@ -5,50 +5,131 @@ import {
   Card,
   Checkbox,
   Form,
+  FormLayout,
   Layout,
   Page,
-  PageActions,
   Text,
   TextField,
 } from "@shopify/polaris";
 import { ROLES } from "~/constants";
 import { useRoleContext } from "~/context/RoleProvider";
-import styles from "./styles.module.css";
-import { json, type LoaderFunctionArgs } from "@remix-run/node";
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
+import { json } from "@remix-run/node";
 import { authenticate } from "~/shopify.server";
-import { useForm, useField, notEmpty } from "@shopify/react-form";
+import {
+  useForm,
+  useField,
+  notEmpty,
+  asChoiceField,
+} from "@shopify/react-form";
 import {
   getOrCreateProfile,
   hasProfile,
   type ProfileProps,
-} from "~/models/profile";
-import { getJSONError } from "~/util";
-import { useLoaderData } from "@remix-run/react";
+} from "~/models/userProfile";
+import { convertFormDataToObject, getJSONError } from "~/util";
+import { useLoaderData, useLocation } from "@remix-run/react";
 import { isEmail } from "./util/customValidation";
+import logger from "logger";
+import styles from "./styles.module.css";
+import { useAppBridge } from "@shopify/app-bridge-react";
+import { getRoles, type RolePropsJSON } from "~/models/roles";
+import { useCallback } from "react";
+import { updateSettings } from "~/models/transactions";
+
+type FormDataProps = {
+  name: string;
+  email: string;
+  biography: string;
+  desiredProducts: string;
+  isVisibleRetailerNetwork: boolean;
+  isVisibleSupplierNetwork: boolean;
+};
+
+type FormDataObjProps = {
+  data: string;
+};
+
+type LoaderDataProps = {
+  profile: ProfileProps;
+  roles: RolePropsJSON[];
+};
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
     const { session, admin } = await authenticate.admin(request);
     const { id: sessionId } = session;
     const hasExistingProfile = await hasProfile(sessionId);
-    const profile = await getOrCreateProfile(sessionId, admin.graphql);
-    return json(profile, {
-      status: hasExistingProfile ? 200 : 201,
-    });
+    const [profile, roles] = await Promise.all([
+      getOrCreateProfile(sessionId, admin.graphql),
+      getRoles(sessionId),
+    ]);
+    return json(
+      { profile, roles },
+      {
+        status: hasExistingProfile ? 200 : 201,
+      },
+    );
   } catch (error) {
     throw getJSONError(error, "settings");
   }
 };
 
+export const action = async ({ request }: ActionFunctionArgs) => {
+  try {
+    const { session } = await authenticate.admin(request);
+    const { id: sessionId } = session;
+    const formData = await request.formData();
+    const formDataObject = convertFormDataToObject(
+      formData,
+    ) as unknown as FormDataObjProps;
+    const jsonData: FormDataProps = JSON.parse(formDataObject.data);
+
+    const { name, email, biography, desiredProducts } = jsonData;
+    const { isVisibleRetailerNetwork, isVisibleSupplierNetwork } = jsonData;
+    const profileObj = {
+      name,
+      email,
+      biography,
+      desiredProducts,
+    };
+    const visibilityObj = {
+      isVisibleRetailerNetwork,
+      isVisibleSupplierNetwork,
+    };
+
+    await updateSettings(sessionId, profileObj, visibilityObj);
+    return json("successfully saved");
+  } catch (error) {
+    if (error instanceof Error) {
+      logger.error(error.message);
+    }
+  }
+
+  return null;
+};
+
 const Settings = () => {
-  const profileData = useLoaderData<typeof loader>() as ProfileProps;
+  const loaderData = useLoaderData<typeof loader>() as LoaderDataProps;
+  const { profile: profileData, roles: rolesData } = loaderData;
   const { roles } = useRoleContext();
   const isRetailer = roles.has(ROLES.RETAILER);
   const isSupplier = roles.has(ROLES.SUPPLIER);
+  const location = useLocation();
+  const shopify = useAppBridge();
 
-  console.log(profileData);
+  const isVisibleInNetwork = useCallback(
+    (role: string, rolesData: RolePropsJSON[]) => {
+      const isVisible =
+        rolesData.findIndex(
+          (roleData) => roleData.name === role && roleData.isVisibleInNetwork,
+        ) >= 0;
+      return isVisible;
+    },
+    [],
+  );
 
-  const { fields } = useForm({
+  const { fields, submit } = useForm({
     fields: {
       name: useField({
         value: profileData.name,
@@ -65,20 +146,42 @@ const Settings = () => {
         value: profileData.biography || "",
         validates: [notEmpty("Store bio cannot be empty")],
       }),
-      desiredProducts: useField({
-        value: profileData.desiredProducts || "",
-        validates: [],
-      }),
+      desiredProducts: useField(profileData.desiredProducts || ""),
+      isVisibleRetailerNetwork: useField(
+        isVisibleInNetwork(ROLES.RETAILER, rolesData),
+      ),
+      isVisibleSupplierNetwork: useField(
+        isVisibleInNetwork(ROLES.SUPPLIER, rolesData),
+      ),
+    },
+    onSubmit: async (fieldValues) => {
+      try {
+        const formData = new FormData();
+        formData.append("data", JSON.stringify(fieldValues));
+        await fetch(location.pathname, {
+          body: formData,
+          method: "post",
+        });
+        shopify.toast.show("Settings successfully saved");
+        return { status: "success" };
+      } catch {
+        shopify.toast.show("Something went wrong. Please try again.");
+        return { status: "success" };
+      }
     },
   });
 
   return (
-    <Page
-      title="Settings"
-      primaryAction={<Button variant="primary">Save</Button>}
-    >
-      <Box paddingBlockEnd={"400"}>
-        <Form onSubmit={() => {}}>
+    <Form method="post" onSubmit={submit} action={location.pathname}>
+      <Page
+        title="Settings"
+        primaryAction={
+          <Button submit variant="primary">
+            Save
+          </Button>
+        }
+      >
+        <Box paddingBlockEnd={"400"}>
           <Layout>
             <Layout.AnnotatedSection
               id="profile"
@@ -86,7 +189,7 @@ const Settings = () => {
               description="Your profile is what is displayed on the retailer and supplier network for brands to view."
             >
               <Card>
-                <BlockStack gap={"200"}>
+                <FormLayout>
                   <TextField
                     label="Store name:"
                     autoComplete="off"
@@ -113,38 +216,36 @@ const Settings = () => {
                     }
                     {...fields.desiredProducts}
                   />
-                  <Box>
-                    <div className={styles["center-right"]}>
-                      <Button variant={"primary"}>Preview</Button>
-                    </div>
-                  </Box>
-                </BlockStack>
+                </FormLayout>
               </Card>
             </Layout.AnnotatedSection>
             <Layout.AnnotatedSection
               id="notifications"
               title="Preferences"
-              description="Decide your profile visibility and notification settings."
+              description="Decide your profile visibility."
             >
               <Card>
                 <BlockStack gap={"200"}>
                   <Text as="h2" variant="headingSm">
                     Profile Visibility
                   </Text>
-                  <Checkbox
-                    label="Visible on retailer network."
-                    checked={true}
-                  />
+                  {isRetailer && (
+                    <Checkbox
+                      label="Visible on retailer network."
+                      {...asChoiceField(fields.isVisibleRetailerNetwork)}
+                    />
+                  )}
+
                   {isSupplier && (
                     <Checkbox
                       label="Visible on supplier network (must at least have a general price list)."
                       checked={true}
                     />
                   )}
-                  <Text as="h2" variant="headingSm">
-                    General Notifications
+                  {/* // !!! TODO: add email preferences, not important for MVP */}
+                  {/* <Text as="h2" variant="headingSm">
+                    Email Notifications
                   </Text>
-
                   {isRetailer && (
                     <>
                       <Checkbox
@@ -167,15 +268,19 @@ const Settings = () => {
                       label="New retailers that join SynqSell that you may be interested in partnering with."
                       checked={true}
                     />
-                  )}
+                  )} */}
                 </BlockStack>
               </Card>
             </Layout.AnnotatedSection>
           </Layout>
-        </Form>
-      </Box>
-      <PageActions primaryAction={{ content: "Save" }} />
-    </Page>
+        </Box>
+        <div className={styles["center-right"]}>
+          <Button submit variant="primary">
+            Save
+          </Button>
+        </div>
+      </Page>
+    </Form>
   );
 };
 
