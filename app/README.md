@@ -23,3 +23,10 @@ https://lucid.app/lucidchart/323a5447-790f-476f-8e8d-3cc7d767a6a0/edit?from_inte
 
 Format to adopt for logs and errors
 FunctionName shop ${shop} message
+
+Consistency:
+Get methods - throw error if doesn't exist
+Has methods - return true or false if doesn't exist
+
+questions I had throughout the process:
+early termination w/ get through throwing errors or returning json responses?

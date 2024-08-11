@@ -23,12 +23,7 @@ import {
 } from "~/models/userPreferences";
 import type { TransformedChecklistTableData } from "~/models/types";
 import logger from "logger";
-import {
-  INTENTS,
-  FETCHER_KEYS,
-  CHECKLIST_ITEM_KEYS,
-  MODALS,
-} from "./constants";
+import { INTENTS, FETCHER_KEYS, MODALS } from "./constants";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { RetailerModal } from "./components/Modals";
 import type {
@@ -43,6 +38,7 @@ import { convertFormDataToObject, getJSONError } from "~/util";
 import { getChecklistBtnFunction, getChecklistItemId } from "./util";
 import { useRoleContext } from "~/context/RoleProvider";
 import { getOrCreateProfile, hasProfile } from "~/models/userProfile";
+import { CHECKLIST_ITEM_KEYS } from "~/constants";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {

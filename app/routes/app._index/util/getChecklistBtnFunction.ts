@@ -1,6 +1,7 @@
 import { type ShopifyGlobal } from "@shopify/app-bridge-react";
-import { CHECKLIST_ITEM_KEYS, MODALS } from "../constants";
+import { MODALS } from "../constants";
 import { type NavigateFunction } from "@remix-run/react";
+import { CHECKLIST_ITEM_KEYS } from "~/constants";
 
 type BtnAction = null | (() => void);
 

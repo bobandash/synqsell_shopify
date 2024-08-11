@@ -63,6 +63,7 @@ export async function hasRole(sessionId: string, role: string) {
     if (result) {
       return true;
     }
+
     return false;
   } catch (error) {
     const context = getLogContext(hasRole, sessionId, role);
@@ -70,6 +71,37 @@ export async function hasRole(sessionId: string, role: string) {
       error,
       context,
       "Failed to check if user has roles in database. Please try again later.",
+    );
+  }
+}
+
+export async function getRole(sessionId: string, role: string) {
+  try {
+    const currentRole = await db.role.findFirst({
+      where: {
+        sessionId: sessionId,
+        name: role,
+      },
+    });
+    if (!currentRole) {
+      const logMessage = getLogCombinedMessage(
+        getRole,
+        `Role does not exist in session.`,
+        sessionId,
+        role,
+      );
+      logger.error(logMessage);
+      throw new createHttpError.BadRequest(
+        `Role doesn't exist for user. Please contact support.`,
+      );
+    }
+    return currentRole;
+  } catch (error) {
+    const context = getLogContext(getRole, sessionId, role);
+    throw errorHandler(
+      error,
+      context,
+      "Failed to get role. Please try again later",
     );
   }
 }
@@ -149,25 +181,6 @@ export async function deleteRole(id: string) {
   }
 }
 
-export async function getRole(sessionId: string, role: string) {
-  try {
-    const currentRole = db.role.findFirst({
-      where: {
-        sessionId: sessionId,
-        name: role,
-      },
-    });
-    return currentRole;
-  } catch (error) {
-    const context = getLogContext(getRole, sessionId, role);
-    throw errorHandler(
-      error,
-      context,
-      "Failed to get role. Please try again later",
-    );
-  }
-}
-
 // should not update if role doesn't exist
 export async function updateRoleVisibilityTx(
   tx: Prisma.TransactionClient,
@@ -177,11 +190,8 @@ export async function updateRoleVisibilityTx(
 ) {
   try {
     const currentRole = await getRole(sessionId, role);
-    if (!currentRole) {
-      return null;
-    }
     const { id } = currentRole;
-    const updatedRole = await tx.role.update({
+    await tx.role.update({
       where: {
         id,
       },
@@ -189,7 +199,6 @@ export async function updateRoleVisibilityTx(
         isVisibleInNetwork,
       },
     });
-    return updatedRole;
   } catch (error) {
     const context = getLogContext(
       updateRoleVisibilityTx,

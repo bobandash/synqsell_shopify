@@ -79,12 +79,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   try {
     const { session } = await authenticate.admin(request);
     const { id: sessionId } = session;
+
+    // extract all important data
     const formData = await request.formData();
     const formDataObject = convertFormDataToObject(
       formData,
     ) as unknown as FormDataObjProps;
     const jsonData: FormDataProps = JSON.parse(formDataObject.data);
-
     const { name, email, biography, desiredProducts } = jsonData;
     const { isVisibleRetailerNetwork, isVisibleSupplierNetwork } = jsonData;
     const profileObj = {
@@ -103,6 +104,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   } catch (error) {
     if (error instanceof Error) {
       logger.error(error.message);
+      throw getJSONError(error, "settings");
     }
   }
 

@@ -1,5 +1,5 @@
+import { CHECKLIST_ITEM_KEYS } from "~/constants";
 import { type TransformedChecklistTableData } from "~/models/types";
-import { CHECKLIST_ITEM_KEYS } from "../constants";
 // gets the relevant checklist status id from key
 function getChecklistItemId(
   key: string,
