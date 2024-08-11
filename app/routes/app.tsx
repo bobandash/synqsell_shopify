@@ -29,8 +29,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 export default function App() {
   const { apiKey, roleNames: initalRoles } = useLoaderData<typeof loader>();
   const [roles, setRoles] = useState(new Set(initalRoles));
-  const isSupplier = roles.has(ROLES.RETAILER);
-  const isRetailer = roles.has(ROLES.SUPPLIER);
+  const isSupplier = roles.has(ROLES.SUPPLIER);
+  const isRetailer = roles.has(ROLES.RETAILER);
 
   return (
     <AppProvider isEmbeddedApp apiKey={apiKey}>
