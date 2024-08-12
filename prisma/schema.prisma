@@ -18,31 +18,32 @@ datasource db {
 // this is offline access, which does not expire until the user removes the application
 // Before deployment, refactor so that all the database items are connected to the session instead of having its own shop field
 model Session {
-  id                  String              @id
-  shop                String
-  state               String
-  isOnline            Boolean             @default(false)
-  scope               String?
-  expires             DateTime?           @db.Timestamp
-  accessToken         String
-  userId              BigInt?
-  firstName           String?
-  lastName            String?
-  email               String?
-  accountOwner        Boolean             @default(false)
-  locale              String?
-  collaborator        Boolean?            @default(false)
-  emailVerified       Boolean?            @default(false)
-  Role                Role[]
-  Profile             UserProfile?
-  ChecklistStatus     ChecklistStatus[]
-  UserPreference      UserPreference?
-  FulfillmentService  FulfillmentService?
-  PriceList           PriceList[]
-  ImportedProduct     ImportedProduct[]
-  PriceListRetailer   PriceListRetailer[]
-  RetailerPartnership Partnership[]       @relation("RetailerPartnership")
-  SupplierPartnership Partnership[]       @relation("SupplierPartnership")
+  id                    String                 @id
+  shop                  String
+  state                 String
+  isOnline              Boolean                @default(false)
+  scope                 String?
+  expires               DateTime?              @db.Timestamp
+  accessToken           String
+  userId                BigInt?
+  firstName             String?
+  lastName              String?
+  email                 String?
+  accountOwner          Boolean                @default(false)
+  locale                String?
+  collaborator          Boolean?               @default(false)
+  emailVerified         Boolean?               @default(false)
+  Role                  Role[]
+  Profile               UserProfile?
+  ChecklistStatus       ChecklistStatus[]
+  UserPreference        UserPreference?
+  FulfillmentService    FulfillmentService?
+  PriceList             PriceList[]
+  ImportedProduct       ImportedProduct[]
+  PriceListRetailer     PriceListRetailer[]
+  RetailerPartnership   Partnership[]          @relation("RetailerPartnership")
+  SupplierPartnership   Partnership[]          @relation("SupplierPartnership")
+  SupplierAccessRequest SupplierAccessRequest?
 }
 
 model FulfillmentService {
@@ -80,12 +81,13 @@ model ChecklistItem {
 }
 
 model ChecklistStatus {
-  id              String        @id @default(uuid())
-  Session         Session       @relation(fields: [sessionId], references: [id])
-  sessionId       String
-  ChecklistItem   ChecklistItem @relation(fields: [checklistItemId], references: [id])
-  checklistItemId String
-  isCompleted     Boolean
+  id                    String                 @id @default(uuid())
+  Session               Session                @relation(fields: [sessionId], references: [id])
+  sessionId             String
+  ChecklistItem         ChecklistItem          @relation(fields: [checklistItemId], references: [id])
+  checklistItemId       String
+  isCompleted           Boolean
+  SupplierAccessRequest SupplierAccessRequest?
 }
 
 model Role {
@@ -158,4 +160,16 @@ model Partnership {
   supplierId String
   retailer   Session @relation("RetailerPartnership", fields: [retailerId], references: [id])
   supplier   Session @relation("SupplierPartnership", fields: [supplierId], references: [id])
+}
+
+model SupplierAccessRequest {
+  id                   String          @id @default(uuid())
+  ChecklistStatus      ChecklistStatus @relation(fields: [checklistStatusId], references: [id])
+  checklistStatusId    String          @unique
+  hasMetSalesThreshold Boolean
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @default(now())
+  status               String
+  Session              Session         @relation(fields: [sessionId], references: [id])
+  sessionId            String          @unique
 }
