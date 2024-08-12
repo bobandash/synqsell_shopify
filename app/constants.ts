@@ -8,6 +8,12 @@ export const PRICING_STRATEGY = {
   MARGIN: "MARGIN",
 };
 
+export const ACCESS_REQUEST_STATUS = {
+  REJECTED: "rejected",
+  PENDING: "pending",
+  APPROVED: "approved",
+};
+
 export const CHECKLIST_ITEM_KEYS = {
   RETAILER_GET_STARTED: "retailer_get_started",
   RETAILER_CUSTOMIZE_PROFILE: "retailer_customize_profile",

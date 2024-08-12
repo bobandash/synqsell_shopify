@@ -3,7 +3,7 @@
 client_id = "c2ff24913d6d89792234763f0830c676"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://responding-offer-bonds-camcorder.trycloudflare.com"
+application_url = "https://lucy-sport-ide-sydney.trycloudflare.com"
 embedded = true
 
 [build]
@@ -13,13 +13,13 @@ include_config_on_deploy = true
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read_inventory,read_products,read_third_party_fulfillment_orders,write_fulfillments,write_inventory,write_products,write_third_party_fulfillment_orders"
+scopes = "read/write_orders,read_all_orders,read_assigned_fulfillment_orders,read_inventory,read_products,read_third_party_fulfillment_orders,write_assigned_fulfillment_orders,write_fulfillments,write_inventory,write_products"
 
 [auth]
 redirect_urls = [
-  "https://responding-offer-bonds-camcorder.trycloudflare.com/auth/callback",
-  "https://responding-offer-bonds-camcorder.trycloudflare.com/auth/shopify/callback",
-  "https://responding-offer-bonds-camcorder.trycloudflare.com/api/auth/callback"
+  "https://lucy-sport-ide-sydney.trycloudflare.com/auth/callback",
+  "https://lucy-sport-ide-sydney.trycloudflare.com/auth/shopify/callback",
+  "https://lucy-sport-ide-sydney.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]

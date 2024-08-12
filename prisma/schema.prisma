@@ -163,13 +163,15 @@ model Partnership {
 }
 
 model SupplierAccessRequest {
-  id                   String          @id @default(uuid())
-  ChecklistStatus      ChecklistStatus @relation(fields: [checklistStatusId], references: [id])
-  checklistStatusId    String          @unique
-  hasMetSalesThreshold Boolean
-  createdAt            DateTime        @default(now())
-  updatedAt            DateTime        @default(now())
-  status               String
-  Session              Session         @relation(fields: [sessionId], references: [id])
-  sessionId            String          @unique
+  id                      String          @id @default(uuid())
+  ChecklistStatus         ChecklistStatus @relation(fields: [checklistStatusId], references: [id])
+  checklistStatusId       String          @unique
+  hasMetSalesThreshold    Boolean
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @default(now())
+  status                  String
+  Session                 Session         @relation(fields: [sessionId], references: [id])
+  sessionId               String          @unique
+  notes                   String?
+  isEligibleForNewRequest Boolean         @default(true) // This variable is just in case we reject a supplier and they are not allowed to relist on our app
 }

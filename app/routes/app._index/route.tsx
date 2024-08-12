@@ -33,6 +33,7 @@ import type {
 import {
   toggleChecklistVisibilityAction,
   getStartedRetailerAction,
+  getStartedSupplierAction,
 } from "./actions";
 import { convertFormDataToObject, getJSONError } from "~/util";
 import { getChecklistBtnFunction, getChecklistItemId } from "./util";
@@ -89,6 +90,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           formDataObject,
           sessionId,
         );
+      case INTENTS.SUPPLIER_GET_STARTED:
+        return getStartedSupplierAction(formDataObject, sessionId);
     }
   } catch (error) {
     logger.error(error);
@@ -120,6 +123,9 @@ function Index() {
   });
   const becomeRetailerFetcher = useFetcher({
     key: FETCHER_KEYS.RETAILER_GET_STARTED,
+  });
+  const becomeSupplierFetcher = useFetcher({
+    key: FETCHER_KEYS.SUPPLIER_GET_STARTED,
   });
 
   const transformedTablesData = useMemo(() => {
@@ -200,6 +206,16 @@ function Index() {
       shopify.modal.hide(MODALS.BECOME_RETAILER);
     }
   }, [becomeRetailerFetcher.data, updateChecklistStatus, shopify, addRole]);
+
+  useEffect(() => {
+    const data = becomeSupplierFetcher.data;
+    if (data) {
+      shopify.modal.hide(MODALS.BECOME_SUPPLIER);
+      shopify.toast.show(
+        "Your request to become a supplier has been submitted. You will receive an email with the decision shortly.",
+      );
+    }
+  }, [becomeSupplierFetcher.data, shopify]);
 
   const toggleActiveChecklistItem = useCallback(
     (checklistItemIndex: number, tableIndex: number) => {

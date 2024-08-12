@@ -10,3 +10,8 @@ export const getStartedRetailerSchema = object({
   intent: string().oneOf([INTENTS.RETAILER_GET_STARTED]),
   checklistItemId: string().required(),
 });
+
+export const getStartedSupplierSchema = object({
+  intent: string().oneOf([INTENTS.SUPPLIER_GET_STARTED]),
+  checklistItemId: string().required(),
+});

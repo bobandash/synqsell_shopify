@@ -6,3 +6,7 @@ export {
   type GetStartedRetailerActionData,
   getStartedRetailerAction,
 } from "./getStartedRetailerAction";
+export {
+  type GetStartedSupplierActionData,
+  getStartedSupplierAction,
+} from "./getStartedSupplierAction";
