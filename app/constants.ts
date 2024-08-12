@@ -1,6 +1,7 @@
 export const ROLES = {
   RETAILER: "retailer",
   SUPPLIER: "supplier",
+  ADMIN: "admin",
 };
 
 export const PRICING_STRATEGY = {

@@ -31,6 +31,7 @@ export default function App() {
   const [roles, setRoles] = useState(new Set(initalRoles));
   const isSupplier = roles.has(ROLES.SUPPLIER);
   const isRetailer = roles.has(ROLES.RETAILER);
+  const isAdmin = roles.has(ROLES.ADMIN);
 
   return (
     <AppProvider isEmbeddedApp apiKey={apiKey}>
@@ -39,12 +40,12 @@ export default function App() {
           <Link to="/app" rel="home">
             Home
           </Link>
+          {isAdmin && <Link to="/app/admin">Admin</Link>}
           {/* !!! TODO: Deny retailer access to supplier network */}
           <Link to="/app/retailer-network">Retailer Network</Link>
           {/* {isSupplier && (
             
           )} */}
-
           {isRetailer && (
             <Link to="/app/supplier-network">Supplier Network</Link>
           )}
