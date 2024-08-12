@@ -14,10 +14,12 @@ const INTENTS = {
 const FETCHER_KEYS = {
   TOGGLE_CHECKLIST_VISIBILITY: "toggle_checklist_visibility",
   RETAILER_GET_STARTED: "retailer_get_started",
+  SUPPLIER_GET_STARTED: "supplier_get_started",
 };
 
 const MODALS = {
   BECOME_RETAILER: "become_retailer",
+  BECOME_SUPPLIER: "become_supplier",
 };
 
 export { INTENTS, FETCHER_KEYS, MODALS };

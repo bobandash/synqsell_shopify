@@ -18,6 +18,9 @@ function getChecklistBtnFunction(
     case CHECKLIST_ITEM_KEYS.RETAILER_CUSTOMIZE_PROFILE:
       btnFunction = () => navigate("/app/settings");
       break;
+    case CHECKLIST_ITEM_KEYS.SUPPLIER_GET_STARTED:
+      btnFunction = () => openModal(shopify, MODALS.BECOME_SUPPLIER);
+      break;
   }
 
   return btnFunction;

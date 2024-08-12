@@ -39,6 +39,7 @@ import { getChecklistBtnFunction, getChecklistItemId } from "./util";
 import { useRoleContext } from "~/context/RoleProvider";
 import { getOrCreateProfile, hasProfile } from "~/models/userProfile";
 import { CHECKLIST_ITEM_KEYS } from "~/constants";
+import SupplierModal from "./components/Modals/SupplierModal";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
@@ -105,6 +106,10 @@ function Index() {
     useState<TransformedChecklistTableData[]>(tablesData);
   const retailerGetStartedId = getChecklistItemId(
     CHECKLIST_ITEM_KEYS.RETAILER_GET_STARTED,
+    tables,
+  );
+  const supplierGetStartedId = getChecklistItemId(
+    CHECKLIST_ITEM_KEYS.SUPPLIER_GET_STARTED,
     tables,
   );
   const { addRole } = useRoleContext();
@@ -236,6 +241,10 @@ function Index() {
           <Layout.Section>
             <RetailerModal
               checklistItemId={retailerGetStartedId}
+              shopify={shopify}
+            />
+            <SupplierModal
+              checklistItemId={supplierGetStartedId}
               shopify={shopify}
             />
             <BlockStack gap={"200"}>
