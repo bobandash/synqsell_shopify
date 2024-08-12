@@ -1,5 +1,17 @@
 import { Layout, Page } from "@shopify/polaris";
 import RetailerCard from "./_components/RetailerCard";
+import { json, type LoaderFunctionArgs } from "@remix-run/node";
+import { getJSONError } from "~/util";
+import { getVisibleRetailerProfiles } from "~/models/userProfile";
+
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  try {
+    const visibleProfiles = await getVisibleRetailerProfiles(null, null, false);
+    return json(visibleProfiles);
+  } catch (error) {
+    throw getJSONError(error, "retailer network");
+  }
+};
 
 const RetailerNetwork = () => {
   return (

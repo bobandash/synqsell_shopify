@@ -218,6 +218,41 @@ const Settings = () => {
                     }
                     {...fields.desiredProducts}
                   />
+                  <BlockStack gap={"150"}>
+                    <Text as="p" variant="bodyMd">
+                      Social Media Icons
+                    </Text>
+                    <TextField
+                      labelHidden
+                      label="Facebook"
+                      autoComplete="off"
+                      placeholder={"https://www.facebook.com/"}
+                    />
+                    <TextField
+                      labelHidden
+                      label="Twitter"
+                      autoComplete="off"
+                      placeholder={"https://twitter.com/"}
+                    />
+                    <TextField
+                      labelHidden
+                      label="Twitter"
+                      autoComplete="off"
+                      placeholder={"https://www.instagram.com/"}
+                    />
+                    <TextField
+                      labelHidden
+                      label="Youtube"
+                      autoComplete="off"
+                      placeholder={"https://www.youtube.com/"}
+                    />
+                    <TextField
+                      labelHidden
+                      label="TikTok"
+                      autoComplete="off"
+                      placeholder={"https://www.tiktok.com/@"}
+                    />
+                  </BlockStack>
                 </FormLayout>
               </Card>
             </Layout.AnnotatedSection>

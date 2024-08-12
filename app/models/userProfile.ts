@@ -1,18 +1,8 @@
 import type { Prisma } from "@prisma/client";
+import { ROLES } from "~/constants";
 import db from "~/db.server";
 import type { GraphQL } from "~/types";
 import { errorHandler, getLogContext } from "~/util";
-
-// model Profile {
-//     id              String  @id @default(uuid())
-//     name            String
-//     email           String
-//     logo            String
-//     biography       String
-//     desiredProducts String
-//     Session         Session @relation(fields: [sessionId], references: [id])
-//     sessionId       String  @unique
-//   }
 
 type ProfileDefaultsProps = {
   name: string;
@@ -185,6 +175,100 @@ export async function updateUserProfileTx(
       error,
       context,
       "Failed to update profile. Please contact support.",
+    );
+  }
+}
+
+async function getPaginatedVisibleProfiles(
+  cursor: string | null,
+  isReverse: boolean,
+  role: string,
+) {
+  const query = {
+    take: isReverse ? -12 : 12,
+    skip: cursor ? 1 : 0,
+    where: {
+      name: role,
+      isVisibleInNetwork: true,
+    },
+    select: {
+      id: true,
+      Session: {
+        include: {
+          Profile: true,
+        },
+      },
+    },
+    ...(cursor && { cursor: { id: cursor } }),
+    orderBy: {
+      Session: {
+        Profile: {
+          name: "asc" as Prisma.SortOrder,
+        },
+      },
+    },
+  };
+  const profilesRawData = await db.role.findMany(query);
+  const profiles = profilesRawData
+    .map((role) => {
+      return { roleId: role.id, ...role.Session.Profile };
+    })
+    .filter((profile) => profile.id !== undefined);
+  return profiles;
+}
+
+export async function getVisibleRetailerProfiles(
+  startCursor: string | null,
+  endCursor: string | null,
+  isReverse: boolean,
+) {
+  try {
+    const cursor = isReverse ? startCursor : endCursor;
+    const profiles = await getPaginatedVisibleProfiles(
+      cursor,
+      isReverse,
+      ROLES.RETAILER,
+    );
+
+    if (!profiles) {
+      return {
+        profiles: [],
+        hasPrevious: false,
+        hasNext: false,
+        previousCursor: null,
+        nextCursor: null,
+      };
+    }
+
+    const lastIndex = profiles.length - 1;
+    const previousCursor = profiles[0].roleId;
+    const nextCursor = profiles[lastIndex].roleId;
+
+    const hasPrevious =
+      (await getPaginatedVisibleProfiles(previousCursor, true, ROLES.RETAILER))
+        .length > 0;
+    const hasNext =
+      (await getPaginatedVisibleProfiles(nextCursor, true, ROLES.RETAILER))
+        .length > 0;
+
+    return {
+      profiles,
+      hasPrevious,
+      hasNext,
+      previousCursor,
+      nextCursor,
+    };
+  } catch (error) {
+    const context = getLogContext(
+      getVisibleRetailerProfiles,
+      startCursor,
+      endCursor,
+      isReverse,
+    );
+    throw errorHandler(
+      error,
+      context,
+      "Failed to get visible retailer profiles. Please contact support.",
     );
   }
 }
