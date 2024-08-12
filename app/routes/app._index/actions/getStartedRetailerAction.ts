@@ -23,11 +23,11 @@ import { createRoleAndCompleteChecklistItem } from "~/models/transactions";
 type getRetailerData = InferType<typeof getStartedRetailerSchema>;
 
 // Types for the data functions
-export interface GetStartedRetailerActionData {
+export type GetStartedRetailerActionData = {
   fulfillmentService: FulfillmentServiceProps;
   checklistStatus: ChecklistStatusProps;
   role: RoleProps;
-}
+};
 
 // Guard check for fetcher data
 

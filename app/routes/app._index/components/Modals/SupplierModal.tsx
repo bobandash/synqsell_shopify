@@ -17,7 +17,7 @@ const SupplierModal: FC<Props> = ({ checklistItemId, shopify }) => {
     }
   }, []);
   const hideModal = useCallback(() => {
-    shopify.modal.hide(MODALS.BECOME_RETAILER);
+    shopify.modal.hide(MODALS.BECOME_SUPPLIER);
   }, [shopify]);
 
   if (!checklistItemId) {

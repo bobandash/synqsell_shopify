@@ -104,6 +104,7 @@ function Index() {
   const tablesData = useLoaderData<
     typeof loader
   >() as TransformedChecklistTableData[];
+  const navigate = useNavigate();
   const shopify = useAppBridge();
   const [tables, setTables] =
     useState<TransformedChecklistTableData[]>(tablesData);
@@ -115,8 +116,9 @@ function Index() {
     CHECKLIST_ITEM_KEYS.SUPPLIER_GET_STARTED,
     tables,
   );
+
   const { addRole } = useRoleContext();
-  const navigate = useNavigate();
+
   // fetchers to get data from actions w/out refreshing the page
   const checklistVisibilityFetcher = useFetcher({
     key: FETCHER_KEYS.TOGGLE_CHECKLIST_VISIBILITY,
@@ -207,6 +209,7 @@ function Index() {
     }
   }, [becomeRetailerFetcher.data, updateChecklistStatus, shopify, addRole]);
 
+  // !!!TODO: data persists on refresh
   useEffect(() => {
     const data = becomeSupplierFetcher.data;
     if (data) {
