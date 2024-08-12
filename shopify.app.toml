@@ -3,7 +3,7 @@
 client_id = "c2ff24913d6d89792234763f0830c676"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://solar-conversion-flows-condition.trycloudflare.com"
+application_url = "https://none-hint-pressed-vancouver.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read_inventory,read_products,read_third_party_fulfillment_orders,write
 
 [auth]
 redirect_urls = [
-  "https://solar-conversion-flows-condition.trycloudflare.com/auth/callback",
-  "https://solar-conversion-flows-condition.trycloudflare.com/auth/shopify/callback",
-  "https://solar-conversion-flows-condition.trycloudflare.com/api/auth/callback"
+  "https://none-hint-pressed-vancouver.trycloudflare.com/auth/callback",
+  "https://none-hint-pressed-vancouver.trycloudflare.com/auth/shopify/callback",
+  "https://none-hint-pressed-vancouver.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]

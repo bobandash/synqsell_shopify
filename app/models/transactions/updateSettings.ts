@@ -4,7 +4,7 @@ import { CHECKLIST_ITEM_KEYS, ROLES } from "~/constants";
 import { updateUserProfileTx } from "../userProfile";
 import { errorHandler, getLogContext } from "~/util";
 import { updateChecklistStatusTx } from "../checklistStatus";
-import { Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 
 type ProfileDataProps = {
   name: string;

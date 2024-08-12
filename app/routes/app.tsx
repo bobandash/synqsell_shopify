@@ -39,9 +39,12 @@ export default function App() {
           <Link to="/app" rel="home">
             Home
           </Link>
-          {isSupplier && (
-            <Link to="/app/retailer-network">Retailer Network</Link>
-          )}
+          {/* !!! TODO: Deny retailer access to supplier network */}
+          <Link to="/app/retailer-network">Retailer Network</Link>
+          {/* {isSupplier && (
+            
+          )} */}
+
           {isRetailer && (
             <Link to="/app/supplier-network">Supplier Network</Link>
           )}
