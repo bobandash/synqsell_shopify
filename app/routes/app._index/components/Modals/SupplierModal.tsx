@@ -26,10 +26,21 @@ const SupplierModal: FC<Props> = ({ checklistItemId, shopify }) => {
 
   return (
     <Modal id={MODALS.BECOME_SUPPLIER}>
-      <p style={{ padding: "1rem" }}>
-        By clicking this button, you agree to our Terms of Service and are ready
-        to start importing products from other stores!
-      </p>
+      <div style={{ padding: "1rem" }}>
+        <p>
+          By clicking this button, you agree to our Terms of Service and are
+          ready to start listing products on Synqell for other retailers to
+          import!
+        </p>
+        <br />
+        <p>
+          To become a supplier, we ask that your annual sales total at least
+          $5000 USD. If you do not meet this threshold but still wish to become
+          a supplier, please reach out to us at{" "}
+          <a href="mailto:support@synqsell.com">support@synqsell.com</a> with an
+          explanation.
+        </p>
+      </div>
       <fetcher.Form method="post" ref={formRef}>
         <input
           type="hidden"
@@ -38,10 +49,10 @@ const SupplierModal: FC<Props> = ({ checklistItemId, shopify }) => {
         />
         <input type="hidden" name="checklistItemId" value={checklistItemId} />
       </fetcher.Form>
-      <TitleBar title="Become a retailer on SynqSell">
+      <TitleBar title="Become a supplier on SynqSell">
         <button onClick={hideModal}>Cancel</button>
         <button variant={"primary"} onClick={handleSubmitForm}>
-          Join SynqSell
+          Request Access
         </button>
       </TitleBar>
     </Modal>
