@@ -4,6 +4,18 @@ import { ACCESS_REQUEST_STATUS } from "~/constants";
 import logger from "logger";
 import createHttpError from "http-errors";
 
+export type SupplierAccessRequestProps = {
+  id: string;
+  checklistStatusId: string;
+  hasMetSalesThreshold: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  status: string;
+  sessionId: string;
+  notes: string | null;
+  isEligibleForNewRequest: boolean;
+};
+
 export async function hasSupplierAccessRequest(sessionId: string) {
   try {
     const supplierAccessRequest = await db.supplierAccessRequest.findFirst({
@@ -112,14 +124,33 @@ async function createSupplierAccessRequest(
 // TODO: add more filters to status in the future, this is more for the admin side
 export async function getAllSupplierAccessRequests(status?: string) {
   try {
-    const query = {
+    const allSupplierAccessRequests = await db.supplierAccessRequest.findMany({
       where: {
         ...(status && { status: status }),
       },
-    };
-    const allSupplierAccessRequests =
-      await db.supplierAccessRequest.findMany(query);
-    return allSupplierAccessRequests;
+      include: {
+        Session: {
+          select: {
+            Profile: true,
+          },
+        },
+      },
+    });
+
+    const allSupplierAccessRequestsFormatted = allSupplierAccessRequests.map(
+      ({ Session, ...rest }) => {
+        return {
+          supplierAccessRequest: {
+            ...rest,
+          },
+          profile: {
+            ...Session.Profile,
+          },
+        };
+      },
+    );
+
+    return allSupplierAccessRequestsFormatted;
   } catch (error) {
     const context = getLogContext(getAllSupplierAccessRequests, status);
     throw errorHandler(

@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import createHttpError from "http-errors";
 import { ROLES } from "~/constants";
 import db from "~/db.server";
 import type { GraphQL } from "~/types";
@@ -72,13 +73,20 @@ async function getProfileDefaultsShopify(sessionId: string, graphql: GraphQL) {
           name
           contactEmail
           description
+          url
+          billingAddress {
+            city
+            provinceCode
+            country
+          }
         }
       }
     `);
     const { data } = await response.json();
     if (!data) {
-      // TODO:
-      throw new Error("test");
+      throw new createHttpError.InternalServerError(
+        "Failed to get profile information.",
+      );
     }
     const { shop } = data;
     const { name, contactEmail, description } = shop;
