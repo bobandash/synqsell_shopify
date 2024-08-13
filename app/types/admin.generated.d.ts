@@ -32,11 +32,14 @@ export type SupplementFulfillmentServiceQueryQuery = { fulfillmentService?: Admi
 export type ProfileQueryQueryVariables = AdminTypes.Exact<{ [key: string]: never; }>;
 
 
-export type ProfileQueryQuery = { shop: Pick<AdminTypes.Shop, 'name' | 'contactEmail' | 'description'> };
+export type ProfileQueryQuery = { shop: (
+    Pick<AdminTypes.Shop, 'name' | 'contactEmail' | 'description' | 'url'>
+    & { billingAddress: Pick<AdminTypes.ShopAddress, 'city' | 'provinceCode' | 'country'> }
+  ) };
 
 interface GeneratedQueryTypes {
   "\n        query supplementFulfillmentServiceQuery($id: ID!) {\n          fulfillmentService(id: $id) {\n            id\n            serviceName\n          }\n        }\n      ": {return: SupplementFulfillmentServiceQueryQuery, variables: SupplementFulfillmentServiceQueryQueryVariables},
-  "\n      query profileQuery {\n        shop {\n          name\n          contactEmail\n          description\n        }\n      }\n    ": {return: ProfileQueryQuery, variables: ProfileQueryQueryVariables},
+  "\n      query profileQuery {\n        shop {\n          name\n          contactEmail\n          description\n          url\n          billingAddress {\n            city\n            provinceCode\n            country\n          }\n        }\n      }\n    ": {return: ProfileQueryQuery, variables: ProfileQueryQueryVariables},
 }
 
 interface GeneratedMutationTypes {

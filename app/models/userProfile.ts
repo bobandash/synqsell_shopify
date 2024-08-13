@@ -3,12 +3,15 @@ import createHttpError from "http-errors";
 import { ROLES } from "~/constants";
 import db from "~/db.server";
 import type { GraphQL } from "~/types";
+import type { ShopAddress } from "~/types/admin.types";
 import { errorHandler, getLogContext } from "~/util";
 
 type ProfileDefaultsProps = {
   name: string;
-  contactEmail: string;
-  description: string;
+  email: string;
+  biography: string;
+  website: string;
+  address: string;
 };
 
 export type ProfileProps = {
@@ -49,19 +52,36 @@ export async function hasProfile(sessionId: string) {
 
 export async function getProfile(sessionId: string) {
   try {
-    const profile = await db.userProfile.findFirst({
+    const profile = await db.userProfile.findFirstOrThrow({
       where: {
         sessionId,
       },
     });
-    if (!profile) {
-      return null;
-    }
     return profile;
   } catch (error) {
     const context = getLogContext(hasProfile, sessionId);
     throw errorHandler(error, context, "Failed to get profile.");
   }
+}
+
+// helper function for getProfileDefaultsShopify
+function getBillingAddressStringFmt(
+  billingAddress: Pick<ShopAddress, "city" | "provinceCode" | "country">,
+) {
+  const addressArr: string[] = [];
+
+  Object.values(billingAddress).forEach((value) => {
+    if (value) {
+      addressArr.push(value);
+    }
+  });
+
+  if (!addressArr) {
+    return "";
+  }
+
+  const address = addressArr.join(", ");
+  return address;
 }
 
 // retrieves the default profile details from shopify
@@ -89,11 +109,24 @@ async function getProfileDefaultsShopify(sessionId: string, graphql: GraphQL) {
       );
     }
     const { shop } = data;
-    const { name, contactEmail, description } = shop;
+    const {
+      name,
+      contactEmail: email,
+      description,
+      url,
+      billingAddress,
+    } = shop;
+
+    const address = getBillingAddressStringFmt(billingAddress);
+    const website = url as string; // enforce the string type on url, graphql by default type-checks if it's a valid url
+    const biography = description || "";
+
     return {
       name,
-      contactEmail,
-      description: description || "",
+      email,
+      biography,
+      website,
+      address,
     };
   } catch (error) {
     const context = getLogContext(
@@ -114,13 +147,10 @@ export async function createProfileDatabase(
   profileDefaults: ProfileDefaultsProps,
 ) {
   try {
-    const { name, contactEmail, description } = profileDefaults;
     const newProfile = await db.userProfile.create({
       data: {
         sessionId,
-        name,
-        email: contactEmail,
-        biography: description,
+        ...profileDefaults,
       },
     });
     return newProfile;
