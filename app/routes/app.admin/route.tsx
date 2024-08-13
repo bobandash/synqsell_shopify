@@ -1,5 +1,5 @@
 import { json, type LoaderFunctionArgs } from "@remix-run/node";
-import { useLoaderData } from "@remix-run/react";
+// import { useLoaderData } from "@remix-run/react";
 import {
   Badge,
   Card,
@@ -16,11 +16,10 @@ import type { NonEmptyArray } from "@shopify/polaris/build/ts/src/types";
 import createHttpError from "http-errors";
 import { StatusCodes } from "http-status-codes";
 import logger from "logger";
-import { type FC, useCallback, useMemo, useState } from "react";
+import { type FC, useCallback, useEffect, useMemo, useState } from "react";
 import { ACCESS_REQUEST_STATUS, ROLES } from "~/constants";
 import { hasRole } from "~/models/roles";
 import { getAllSupplierAccessRequests } from "~/models/supplierAccessRequest";
-
 import { authenticate } from "~/shopify.server";
 import { getJSONError } from "~/util";
 
@@ -79,11 +78,24 @@ const Admin = () => {
   };
 
   const [requestsData, setRequestsData] = useState(data);
+  const [filteredData, setFilteredData] = useState(data);
   const [selected, setSelected] = useState(0);
   const { mode, setMode } = useSetIndexFiltersMode();
   const [query, setQuery] = useState("");
-  const { selectedResources, allResourcesSelected, handleSelectionChange } =
-    useIndexResourceState(requestsData);
+  const {
+    selectedResources,
+    allResourcesSelected,
+    handleSelectionChange,
+    clearSelection,
+  } = useIndexResourceState(filteredData);
+
+  useEffect(() => {
+    setFilteredData(() => {
+      return requestsData.filter((item) =>
+        item.name.toLowerCase().includes(query.toLowerCase()),
+      );
+    });
+  }, [query, requestsData]);
 
   const tabs: TabProps[] = useMemo(
     () => [
@@ -92,7 +104,9 @@ const Admin = () => {
         content: "All",
         onAction: () => {
           setRequestsData(data);
+          setFilteredData(data);
           setSelected(0);
+          clearSelection();
         },
       },
       {
@@ -103,7 +117,9 @@ const Admin = () => {
             (item) => item.status === ACCESS_REQUEST_STATUS.PENDING,
           );
           setRequestsData(pendingData);
+          setFilteredData(pendingData);
           setSelected(1);
+          clearSelection();
         },
       },
       {
@@ -114,7 +130,9 @@ const Admin = () => {
             (item) => item.status === ACCESS_REQUEST_STATUS.APPROVED,
           );
           setRequestsData(approvedData);
+          setFilteredData(approvedData);
           setSelected(2);
+          clearSelection();
         },
       },
       {
@@ -125,11 +143,13 @@ const Admin = () => {
             (item) => item.status === ACCESS_REQUEST_STATUS.REJECTED,
           );
           setRequestsData(rejectedData);
+          setFilteredData(rejectedData);
           setSelected(3);
+          clearSelection();
         },
       },
     ],
-    [data],
+    [data, clearSelection],
   );
 
   const headings: NonEmptyArray<IndexTableHeading> = [
@@ -159,6 +179,7 @@ const Admin = () => {
         <IndexFilters
           tabs={tabs}
           mode={mode}
+          canCreateNewView={false}
           setMode={setMode}
           filters={[]}
           queryValue={query}
@@ -183,7 +204,7 @@ const Admin = () => {
           }
           onSelectionChange={handleSelectionChange}
         >
-          {requestsData.map((data, index) => (
+          {filteredData.map((data, index) => (
             <Row
               key={data.id}
               data={data}
