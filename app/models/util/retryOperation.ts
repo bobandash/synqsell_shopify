@@ -1,4 +1,4 @@
-import logger from "logger";
+import logger from "~/logger";
 import pRetry from "p-retry";
 import { getLogCombinedMessage } from "~/util";
 

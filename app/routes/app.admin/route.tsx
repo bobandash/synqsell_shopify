@@ -1,5 +1,5 @@
 import { json, type LoaderFunctionArgs } from "@remix-run/node";
-// import { useLoaderData } from "@remix-run/react";
+import { useLoaderData } from "@remix-run/react";
 import {
   Badge,
   Card,
@@ -15,24 +15,19 @@ import type { IndexTableHeading } from "@shopify/polaris/build/ts/src/components
 import type { NonEmptyArray } from "@shopify/polaris/build/ts/src/types";
 import createHttpError from "http-errors";
 import { StatusCodes } from "http-status-codes";
-import logger from "logger";
+import logger from "~/logger";
 import { type FC, useCallback, useEffect, useMemo, useState } from "react";
 import { ACCESS_REQUEST_STATUS, ROLES } from "~/constants";
 import { hasRole } from "~/models/roles";
-import { getAllSupplierAccessRequests } from "~/models/supplierAccessRequest";
+import {
+  getAllSupplierAccessRequests,
+  type GetSupplierAccessRequestJSONProps,
+} from "~/models/supplierAccessRequest";
 import { authenticate } from "~/shopify.server";
 import { getJSONError } from "~/util";
 
 type RowMarkupProps = {
-  data: {
-    id: string;
-    createdAt: string;
-    name: string;
-    website: string;
-    metSalesThreshold: boolean;
-    status: string;
-    updatedAt: string;
-  };
+  data: GetSupplierAccessRequestJSONProps;
   index: number;
   selected: boolean;
 };
@@ -46,9 +41,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       logger.error(`${sessionId} is not an admin.`);
       throw new createHttpError.Unauthorized("User is not an admin.");
     }
-    const supplierAccessRequests = await getAllSupplierAccessRequests(
-      ACCESS_REQUEST_STATUS.PENDING,
-    );
+    const supplierAccessRequests = await getAllSupplierAccessRequests();
     return json(supplierAccessRequests, { status: StatusCodes.OK });
   } catch (error) {
     throw getJSONError(error, "admin network");
@@ -56,21 +49,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 const Admin = () => {
-  const data = useMemo(
-    () => [
-      {
-        id: "1020",
-        createdAt: "Jul 20 at 4:34pm",
-        date: "Jul 20 at 4:34pm",
-        name: "BlankMod",
-        website: "https://www.blankmod.com",
-        metSalesThreshold: true,
-        status: ACCESS_REQUEST_STATUS.APPROVED,
-        updatedAt: "Jul 20 at 5:34pm",
-      },
-    ],
-    [],
-  );
+  const data = useLoaderData<
+    typeof loader
+  >() as unknown as GetSupplierAccessRequestJSONProps[];
 
   const resourceName = {
     singular: "Supplier Request",
@@ -156,6 +137,7 @@ const Admin = () => {
     { title: "Request" },
     { title: "Date" },
     { title: "Name" },
+    { title: "Email" },
     { title: "Website" },
     { title: "Met Sales" },
     { title: "Status" },
@@ -209,7 +191,7 @@ const Admin = () => {
               key={data.id}
               data={data}
               index={index}
-              selected={selectedResources.includes(data.id)}
+              selected={selectedResources.includes(data.id.toString())}
             />
           ))}
         </IndexTable>
@@ -218,12 +200,26 @@ const Admin = () => {
   );
 };
 
+// !!! TODO: FORMAT DATE PROPERLY
 const Row: FC<RowMarkupProps> = ({ data, index, selected }) => {
-  const { id, createdAt, name, website, metSalesThreshold, status, updatedAt } =
-    data;
+  const {
+    id,
+    createdAt,
+    email,
+    name,
+    website,
+    hasMetSalesThreshold,
+    status,
+    updatedAt,
+  } = data;
 
   return (
-    <IndexTable.Row id={id} key={id} selected={selected} position={index}>
+    <IndexTable.Row
+      id={id.toString()}
+      key={id}
+      selected={selected}
+      position={index}
+    >
       <IndexTable.Cell>
         <Text variant="bodyMd" fontWeight="bold" as="span">
           {id}
@@ -231,12 +227,15 @@ const Row: FC<RowMarkupProps> = ({ data, index, selected }) => {
       </IndexTable.Cell>
       <IndexTable.Cell>{createdAt}</IndexTable.Cell>
       <IndexTable.Cell>{name}</IndexTable.Cell>
+      <IndexTable.Cell>{email}</IndexTable.Cell>
       <IndexTable.Cell>
         <a href={website} target="_blank" rel="noreferrer">
           {website}
         </a>
       </IndexTable.Cell>
-      <IndexTable.Cell>{metSalesThreshold ? "True" : "False"}</IndexTable.Cell>
+      <IndexTable.Cell>
+        {hasMetSalesThreshold ? "True" : "False"}
+      </IndexTable.Cell>
       <IndexTable.Cell>
         <StatusBadge status={status} />
       </IndexTable.Cell>

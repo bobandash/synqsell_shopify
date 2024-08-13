@@ -30,7 +30,7 @@ import {
 import { convertFormDataToObject, getJSONError } from "~/util";
 import { useLoaderData, useLocation } from "@remix-run/react";
 import { isEmail } from "./util/customValidation";
-import logger from "logger";
+import logger from "~/logger";
 import styles from "./styles.module.css";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { getRoles, type RolePropsJSON } from "~/models/roles";

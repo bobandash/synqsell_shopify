@@ -1,5 +1,5 @@
 import createHttpError from "http-errors";
-import logger from "logger";
+import logger from "~/logger";
 import db from "~/db.server";
 import { errorHandler, getLogCombinedMessage, getLogContext } from "~/util";
 

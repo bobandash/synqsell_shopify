@@ -1,7 +1,7 @@
 import { errorHandler, getLogCombinedMessage, getLogContext } from "~/util";
 import db from "../db.server";
 import createHttpError from "http-errors";
-import logger from "logger";
+import logger from "~/logger";
 import { type Prisma } from "@prisma/client";
 import { getChecklistItem } from "./checklistItem";
 

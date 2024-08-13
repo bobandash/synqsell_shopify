@@ -2,7 +2,7 @@ import type { GraphQL } from "~/types";
 import db from "../../db.server";
 import createHttpError from "http-errors";
 import { getLogCombinedMessage, getLogContext, errorHandler } from "~/util";
-import logger from "logger";
+import logger from "~/logger";
 import { deleteFulfillmentServiceShopify } from "./deleteFulfillmentService";
 // Fulfillment services are designed for retailers to import products from suppliers
 // https://shopify.dev/docs/apps/build/orders-fulfillment/fulfillment-service-apps

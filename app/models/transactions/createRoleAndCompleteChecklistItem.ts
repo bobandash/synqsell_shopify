@@ -1,7 +1,7 @@
 import db from "~/db.server";
 import { errorHandler, getLogCombinedMessage, getLogContext } from "~/util";
 import { isValidRole } from "../roles";
-import logger from "logger";
+import logger from "~/logger";
 import createHttpError from "http-errors";
 import { isValidChecklistStatus } from "../checklistStatus";
 

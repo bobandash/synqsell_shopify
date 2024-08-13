@@ -2,15 +2,15 @@ import { PassThrough } from "stream";
 import { renderToPipeableStream } from "react-dom/server";
 import { RemixServer } from "@remix-run/react";
 import {
-  ActionFunctionArgs,
   createReadableStreamFromReadable,
-  LoaderFunctionArgs,
+  type ActionFunctionArgs,
+  type LoaderFunctionArgs,
   type EntryContext,
 } from "@remix-run/node";
 import { isbot } from "isbot";
 import { addDocumentResponseHeaders } from "./shopify.server";
 import createHttpError from "http-errors";
-import logger from "logger";
+import logger from "~/logger";
 
 const ABORT_DELAY = 5000;
 

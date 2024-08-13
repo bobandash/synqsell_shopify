@@ -1,7 +1,7 @@
 import { json } from "@remix-run/node";
 import * as createHttpError from "http-errors";
 import { ValidationError } from "yup";
-import logger from "logger";
+import logger from "~/logger";
 
 function getJSONError(error: unknown, route: string) {
   if (error instanceof ValidationError) {
@@ -24,6 +24,7 @@ function getJSONError(error: unknown, route: string) {
   }
 
   logger.error(`Unhandled error ${error} at ${route}`);
+  logger.error(error);
   return json("Unhandled: An internal server error occurred.", {
     status: 500,
   });

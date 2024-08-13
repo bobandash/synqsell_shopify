@@ -3,7 +3,7 @@ import db from "../../db.server";
 import createHttpError from "http-errors";
 import { getLogCombinedMessage, getLogContext } from "~/util/getLogContext";
 import { errorHandler } from "~/util";
-import logger from "logger";
+import logger from "~/logger";
 import { createFulfillmentService } from "./createFulfillmentService";
 
 export async function deleteFulfillmentServiceDatabase(id: string) {

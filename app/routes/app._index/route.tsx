@@ -22,7 +22,7 @@ import {
   hasUserPreferences,
 } from "~/models/userPreferences";
 import type { TransformedChecklistTableData } from "~/models/types";
-import logger from "logger";
+import logger from "~/logger";
 import { INTENTS, FETCHER_KEYS, MODALS } from "./constants";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { RetailerModal } from "./components/Modals";

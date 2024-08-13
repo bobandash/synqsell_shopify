@@ -4,7 +4,7 @@ import {
   PrismaClientUnknownRequestError,
   PrismaClientValidationError,
 } from "@prisma/client/runtime/library";
-import logger from "logger";
+import logger from "~/logger";
 import createHttpError from "http-errors";
 import { ValidationError } from "yup";
 

@@ -2,7 +2,7 @@ import createHttpError from "http-errors";
 import { errorHandler, getLogCombinedMessage, getLogContext } from "~/util";
 import db from "../../db.server";
 import type { GraphQL } from "~/types";
-import logger from "logger";
+import logger from "~/logger";
 
 export async function getFulfillmentService(
   sessionId: string,

@@ -1,15 +1,33 @@
 import db from "~/db.server";
 import { errorHandler, getLogCombinedMessage, getLogContext } from "~/util";
 import { ACCESS_REQUEST_STATUS } from "~/constants";
-import logger from "logger";
+import logger from "~/logger";
 import createHttpError from "http-errors";
 
-export type SupplierAccessRequestProps = {
-  id: string;
+export type GetSupplierAccessRequestProps = {
+  name: string;
+  website: string;
+  email: string;
+  id: number;
   checklistStatusId: string;
   hasMetSalesThreshold: boolean;
   createdAt: Date;
   updatedAt: Date;
+  status: string;
+  sessionId: string;
+  notes: string | null;
+  isEligibleForNewRequest: boolean;
+};
+
+export type GetSupplierAccessRequestJSONProps = {
+  name: string;
+  website: string;
+  email: string;
+  id: number;
+  checklistStatusId: string;
+  hasMetSalesThreshold: boolean;
+  createdAt: string;
+  updatedAt: string;
   status: string;
   sessionId: string;
   notes: string | null;
@@ -122,12 +140,11 @@ async function createSupplierAccessRequest(
 }
 
 // TODO: add more filters to status in the future, this is more for the admin side
-export async function getAllSupplierAccessRequests(status?: string) {
+export async function getAllSupplierAccessRequests(): Promise<
+  GetSupplierAccessRequestProps[]
+> {
   try {
     const allSupplierAccessRequests = await db.supplierAccessRequest.findMany({
-      where: {
-        ...(status && { status: status }),
-      },
       include: {
         Session: {
           select: {
@@ -138,21 +155,19 @@ export async function getAllSupplierAccessRequests(status?: string) {
     });
 
     const allSupplierAccessRequestsFormatted = allSupplierAccessRequests.map(
-      ({ Session, ...rest }) => {
+      ({ Session: { Profile }, ...rest }) => {
         return {
-          supplierAccessRequest: {
-            ...rest,
-          },
-          profile: {
-            ...Session.Profile,
-          },
+          ...rest,
+          name: Profile?.name || "",
+          website: Profile?.website || "",
+          email: Profile?.email || "",
         };
       },
     );
 
     return allSupplierAccessRequestsFormatted;
   } catch (error) {
-    const context = getLogContext(getAllSupplierAccessRequests, status);
+    const context = getLogContext(getAllSupplierAccessRequests);
     throw errorHandler(
       error,
       context,

@@ -3,7 +3,7 @@ import db from "../db.server";
 import { hasChecklistTable } from "./checklistTable";
 import type { UserPreferenceData } from "./types";
 import createHttpError from "http-errors";
-import logger from "logger";
+import logger from "~/logger";
 
 // function to add or remove table ID from user preferences depending on if it's hidden over visible
 export async function hasUserPreferences(sessionId: string): Promise<Boolean> {
