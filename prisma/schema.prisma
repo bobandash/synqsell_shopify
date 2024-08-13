@@ -102,7 +102,7 @@ model Role {
 model UserProfile {
   id              String  @id @default(uuid())
   name            String
-  website         String?
+  website         String
   address         String?
   email           String
   logo            String?
