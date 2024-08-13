@@ -165,7 +165,8 @@ model Partnership {
 }
 
 model SupplierAccessRequest {
-  id                      Int             @id @default(autoincrement())
+  id                      String          @id @default(uuid())
+  num                     Int             @default(autoincrement())
   ChecklistStatus         ChecklistStatus @relation(fields: [checklistStatusId], references: [id])
   checklistStatusId       String          @unique
   hasMetSalesThreshold    Boolean

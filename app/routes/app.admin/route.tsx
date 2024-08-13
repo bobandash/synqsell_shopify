@@ -25,6 +25,7 @@ import {
 } from "~/models/supplierAccessRequest";
 import { authenticate } from "~/shopify.server";
 import { getJSONError } from "~/util";
+import { BulkActionsProps } from "@shopify/polaris/build/ts/src/components/BulkActions";
 
 type RowMarkupProps = {
   data: GetSupplierAccessRequestJSONProps;
@@ -152,6 +153,19 @@ const Admin = () => {
     setQuery("");
   }, []);
 
+  const promotedBulkActions: BulkActionsProps["promotedActions"] = [
+    {
+      content: "Approve Suppliers",
+      onAction: () => console.log("Todo: implement approving suppliers"),
+    },
+    {
+      content: "Reject Suppliers",
+      onAction: () => console.log("Todo: implement rejecting suppliers"),
+    },
+  ];
+
+  console.log(selectedResources);
+
   return (
     <Page
       title="Admin Dashboard"
@@ -179,19 +193,20 @@ const Admin = () => {
         />
         <IndexTable
           resourceName={resourceName}
-          itemCount={1}
+          itemCount={filteredData.length}
           headings={headings}
           selectedItemsCount={
             allResourcesSelected ? "All" : selectedResources.length
           }
           onSelectionChange={handleSelectionChange}
+          promotedBulkActions={promotedBulkActions}
         >
           {filteredData.map((data, index) => (
             <Row
               key={data.id}
               data={data}
               index={index}
-              selected={selectedResources.includes(data.id.toString())}
+              selected={selectedResources.includes(data.id)}
             />
           ))}
         </IndexTable>
@@ -211,18 +226,14 @@ const Row: FC<RowMarkupProps> = ({ data, index, selected }) => {
     hasMetSalesThreshold,
     status,
     updatedAt,
+    num,
   } = data;
 
   return (
-    <IndexTable.Row
-      id={id.toString()}
-      key={id}
-      selected={selected}
-      position={index}
-    >
+    <IndexTable.Row id={id} key={id} selected={selected} position={index}>
       <IndexTable.Cell>
         <Text variant="bodyMd" fontWeight="bold" as="span">
-          {id}
+          {num}
         </Text>
       </IndexTable.Cell>
       <IndexTable.Cell>{createdAt}</IndexTable.Cell>

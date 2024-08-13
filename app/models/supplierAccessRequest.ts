@@ -8,7 +8,8 @@ export type GetSupplierAccessRequestProps = {
   name: string;
   website: string;
   email: string;
-  id: number;
+  id: string;
+  num: number;
   checklistStatusId: string;
   hasMetSalesThreshold: boolean;
   createdAt: Date;
@@ -23,7 +24,8 @@ export type GetSupplierAccessRequestJSONProps = {
   name: string;
   website: string;
   email: string;
-  id: number;
+  id: string;
+  num: number;
   checklistStatusId: string;
   hasMetSalesThreshold: boolean;
   createdAt: string;
