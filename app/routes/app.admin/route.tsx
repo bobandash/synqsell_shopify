@@ -111,6 +111,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 };
 
+// !!! TODO: After MVP verification, add state management to change rejected and approved status
 const Admin = () => {
   const data = useLoaderData<
     typeof loader
