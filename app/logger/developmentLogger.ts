@@ -5,7 +5,7 @@ const { combine, timestamp, json, colorize } = format;
 
 const logger = createLogger({
   level: "debug",
-  format: combine(timestamp(), colorize(), json()),
+  format: combine(colorize(), timestamp(), json()),
   transports: [new transports.Console()],
 });
 

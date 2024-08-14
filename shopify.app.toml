@@ -3,7 +3,7 @@
 client_id = "c2ff24913d6d89792234763f0830c676"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://trinidad-status-rebates-drinks.trycloudflare.com"
+application_url = "https://obtaining-hours-lauderdale-retrieval.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read/write_orders,read_all_orders,read_assigned_fulfillment_orders,rea
 
 [auth]
 redirect_urls = [
-  "https://trinidad-status-rebates-drinks.trycloudflare.com/auth/callback",
-  "https://trinidad-status-rebates-drinks.trycloudflare.com/auth/shopify/callback",
-  "https://trinidad-status-rebates-drinks.trycloudflare.com/api/auth/callback"
+  "https://obtaining-hours-lauderdale-retrieval.trycloudflare.com/auth/callback",
+  "https://obtaining-hours-lauderdale-retrieval.trycloudflare.com/auth/shopify/callback",
+  "https://obtaining-hours-lauderdale-retrieval.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]

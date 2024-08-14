@@ -77,27 +77,34 @@ export async function hasRole(sessionId: string, role: string) {
 
 export async function getRole(sessionId: string, role: string) {
   try {
-    const currentRole = await db.role.findFirst({
+    const currentRole = await db.role.findFirstOrThrow({
       where: {
         sessionId: sessionId,
         name: role,
       },
     });
-    if (!currentRole) {
-      const logMessage = getLogCombinedMessage(
-        getRole,
-        `Role does not exist in session.`,
-        sessionId,
-        role,
-      );
-      logger.error(logMessage);
-      throw new createHttpError.BadRequest(
-        `Role doesn't exist for user. Please contact support.`,
-      );
-    }
     return currentRole;
   } catch (error) {
     const context = getLogContext(getRole, sessionId, role);
+    throw errorHandler(
+      error,
+      context,
+      "Failed to get role. Please try again later",
+    );
+  }
+}
+
+export async function getRoleBatch(sessionIds: string[], role: string) {
+  try {
+    const roles = await db.role.findMany({
+      where: {
+        sessionId: { in: sessionIds },
+        name: role,
+      },
+    });
+    return roles;
+  } catch (error) {
+    const context = getLogContext(getRoleBatch, sessionIds, role);
     throw errorHandler(
       error,
       context,

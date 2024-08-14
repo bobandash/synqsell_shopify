@@ -1,5 +1,9 @@
-import { json, type LoaderFunctionArgs } from "@remix-run/node";
-import { useLoaderData } from "@remix-run/react";
+import {
+  json,
+  type ActionFunctionArgs,
+  type LoaderFunctionArgs,
+} from "@remix-run/node";
+import { useLoaderData, useLocation } from "@remix-run/react";
 import {
   Badge,
   Card,
@@ -25,12 +29,27 @@ import {
 } from "~/models/supplierAccessRequest";
 import { authenticate } from "~/shopify.server";
 import { getJSONError } from "~/util";
-import { BulkActionsProps } from "@shopify/polaris/build/ts/src/components/BulkActions";
+import { type BulkActionsProps } from "@shopify/polaris/build/ts/src/components/BulkActions";
+import {
+  type supplierAccessRequestInformationProps,
+  updateSupplierAccess,
+} from "~/models/transactions";
+import { useAppBridge } from "@shopify/app-bridge-react";
 
 type RowMarkupProps = {
   data: GetSupplierAccessRequestJSONProps;
   index: number;
   selected: boolean;
+};
+
+type ActionData = {
+  intent: "approve" | "reject";
+  supplierAccessRequestInfo: supplierAccessRequestInformationProps[];
+};
+
+const INTENTS = {
+  APPROVE: "approve",
+  REJECT: "reject",
 };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -43,7 +62,50 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       throw new createHttpError.Unauthorized("User is not an admin.");
     }
     const supplierAccessRequests = await getAllSupplierAccessRequests();
-    return json(supplierAccessRequests, { status: StatusCodes.OK });
+    return json(supplierAccessRequests);
+  } catch (error) {
+    throw getJSONError(error, "admin network");
+  }
+};
+
+export const action = async ({ request }: ActionFunctionArgs) => {
+  try {
+    const data = (await request.json()) as ActionData;
+    const { intent, supplierAccessRequestInfo } = data;
+    if (!supplierAccessRequestInfo) {
+      return json(
+        { message: "There were no suppliers selected." },
+        { status: StatusCodes.BAD_REQUEST },
+      );
+    }
+
+    switch (intent) {
+      case INTENTS.APPROVE:
+        await updateSupplierAccess(
+          supplierAccessRequestInfo,
+          ACCESS_REQUEST_STATUS.APPROVED,
+        );
+        return json(
+          { message: "Suppliers were successfully approved." },
+          {
+            status: 200,
+          },
+        );
+      case INTENTS.REJECT:
+        await updateSupplierAccess(
+          supplierAccessRequestInfo,
+          ACCESS_REQUEST_STATUS.REJECTED,
+        );
+        return json(
+          { message: "Suppliers were successfully rejected." },
+          { status: StatusCodes.OK },
+        );
+      default:
+        return json(
+          { message: "Invalid intent." },
+          { status: StatusCodes.BAD_REQUEST },
+        );
+    }
   } catch (error) {
     throw getJSONError(error, "admin network");
   }
@@ -53,12 +115,12 @@ const Admin = () => {
   const data = useLoaderData<
     typeof loader
   >() as unknown as GetSupplierAccessRequestJSONProps[];
-
+  const location = useLocation();
   const resourceName = {
     singular: "Supplier Request",
     plural: "Supplier Requests",
   };
-
+  const shopify = useAppBridge();
   const [requestsData, setRequestsData] = useState(data);
   const [filteredData, setFilteredData] = useState(data);
   const [selected, setSelected] = useState(0);
@@ -153,18 +215,72 @@ const Admin = () => {
     setQuery("");
   }, []);
 
+  const getSelectedSessionAndAccessIds = useCallback(() => {
+    const selectedAccessRequestIdSet = new Set(selectedResources);
+    const selectedSessionAndAccessIds: supplierAccessRequestInformationProps[] =
+      [];
+
+    filteredData.forEach((data) => {
+      const { sessionId, id } = data;
+      if (selectedAccessRequestIdSet.has(id)) {
+        selectedSessionAndAccessIds.push({
+          supplierAccessRequestId: id,
+          sessionId,
+        });
+      }
+    });
+
+    return selectedSessionAndAccessIds;
+  }, [selectedResources, filteredData]);
+
+  const approveSuppliers = useCallback(async () => {
+    try {
+      const supplierAccessRequestInfo = getSelectedSessionAndAccessIds();
+      await fetch(location.pathname, {
+        method: "post",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          intent: INTENTS.APPROVE,
+          supplierAccessRequestInfo,
+        }),
+      });
+      shopify.toast.show("Successfully approved suppliers.");
+    } catch (error) {
+      console.error(error);
+    }
+  }, [getSelectedSessionAndAccessIds, location, shopify]);
+
+  const rejectSuppliers = useCallback(async () => {
+    try {
+      const supplierAccessRequestInfo = getSelectedSessionAndAccessIds();
+      await fetch(location.pathname, {
+        method: "post",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          intent: INTENTS.REJECT,
+          supplierAccessRequestInfo,
+        }),
+      });
+      shopify.toast.show("Successfully rejected suppliers.");
+    } catch (error) {
+      console.error(error);
+    }
+  }, [getSelectedSessionAndAccessIds, location, shopify]);
+
   const promotedBulkActions: BulkActionsProps["promotedActions"] = [
     {
       content: "Approve Suppliers",
-      onAction: () => console.log("Todo: implement approving suppliers"),
+      onAction: approveSuppliers,
     },
     {
       content: "Reject Suppliers",
-      onAction: () => console.log("Todo: implement rejecting suppliers"),
+      onAction: rejectSuppliers,
     },
   ];
-
-  console.log(selectedResources);
 
   return (
     <Page

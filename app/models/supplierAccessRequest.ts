@@ -166,7 +166,6 @@ export async function getAllSupplierAccessRequests(): Promise<
         };
       },
     );
-
     return allSupplierAccessRequestsFormatted;
   } catch (error) {
     const context = getLogContext(getAllSupplierAccessRequests);
