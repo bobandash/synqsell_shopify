@@ -11,6 +11,7 @@ import { ROLES } from "~/constants";
 import { useState } from "react";
 import { RoleProvider } from "~/context/RoleProvider";
 import { getJSONError } from "~/util";
+import logger from "~/logger";
 
 export const links = () => [{ rel: "stylesheet", href: polarisStyles }];
 
@@ -22,6 +23,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const roleNames = roles.map((role) => role.name);
     return json({ apiKey: process.env.SHOPIFY_API_KEY || "", roleNames });
   } catch (error) {
+    logger.error(error);
     throw getJSONError(error, "app root");
   }
 };

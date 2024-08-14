@@ -1,7 +1,5 @@
-import { errorHandler, getLogCombinedMessage, getLogContext } from "~/util";
+import { errorHandler, getLogContext } from "~/util";
 import db from "../db.server";
-import createHttpError from "http-errors";
-import logger from "~/logger";
 import { type Prisma } from "@prisma/client";
 import { getChecklistItem } from "./checklistItem";
 
@@ -17,24 +15,12 @@ export async function getChecklistStatus(
   checklistItemId: string,
 ) {
   try {
-    const checklistStatus = await db.checklistStatus.findFirst({
+    const checklistStatus = await db.checklistStatus.findFirstOrThrow({
       where: {
         checklistItemId,
         sessionId,
       },
     });
-    if (!checklistStatus) {
-      const logMessage = getLogCombinedMessage(
-        getChecklistStatus,
-        `Checklist item ${checklistItemId} does not exist.`,
-        sessionId,
-        checklistItemId,
-      );
-      logger.error(logMessage);
-      throw new createHttpError.BadRequest(
-        `Checklist item does not exist. Please contact support.`,
-      );
-    }
     return checklistStatus;
   } catch (error) {
     const context = getLogContext(
@@ -42,11 +28,31 @@ export async function getChecklistStatus(
       sessionId,
       checklistItemId,
     );
-    throw errorHandler(
-      error,
-      context,
-      "Failed to retrieve tables and statuses",
+    throw errorHandler(error, context, "Failed to retrieve checklist status");
+  }
+}
+
+export async function getChecklistStatusBatch(
+  sessionIds: string[],
+  checklistItemId: string,
+) {
+  try {
+    const checklistStatuses = await db.checklistStatus.findMany({
+      where: {
+        sessionId: {
+          in: sessionIds,
+        },
+        checklistItemId,
+      },
+    });
+    return checklistStatuses;
+  } catch (error) {
+    const context = getLogContext(
+      getChecklistStatusBatch,
+      sessionIds,
+      checklistItemId,
     );
+    throw errorHandler(error, context, "Failed to retrieve checklist statuses");
   }
 }
 
@@ -90,7 +96,7 @@ export async function markCheckListStatus(
     throw errorHandler(
       error,
       context,
-      "Failed to mark checklist item as complete. Please try again later.",
+      "Failed to mark checklist item as complete.",
     );
   }
 }
@@ -127,7 +133,47 @@ export async function updateChecklistStatusTx(
     throw errorHandler(
       error,
       context,
-      "Failed to update check list status. Please try again later.",
+      "Failed to update checklist status in batch.",
+    );
+  }
+}
+
+export async function updateChecklistStatusBatchTx(
+  tx: Prisma.TransactionClient,
+  sessionIds: string[],
+  checklistItemKey: string,
+  isCompleted: boolean,
+) {
+  try {
+    const checklistItem = await getChecklistItem(checklistItemKey);
+    const checklistStatuses = await getChecklistStatusBatch(
+      sessionIds,
+      checklistItem.id,
+    );
+    const checklistStatusIds = checklistStatuses.map((status) => status.id);
+    const updatedChecklistStatuses = await tx.checklistStatus.updateMany({
+      where: {
+        id: {
+          in: checklistStatusIds,
+        },
+      },
+      data: {
+        isCompleted,
+      },
+    });
+    return updatedChecklistStatuses;
+  } catch (error) {
+    const context = getLogContext(
+      updateChecklistStatusBatchTx,
+      tx,
+      sessionIds,
+      checklistItemKey,
+      isCompleted,
+    );
+    throw errorHandler(
+      error,
+      context,
+      "Failed to update checklist status in batch.",
     );
   }
 }

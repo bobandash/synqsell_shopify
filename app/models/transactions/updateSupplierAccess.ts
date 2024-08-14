@@ -1,13 +1,21 @@
 import db from "~/db.server";
-import { ACCESS_REQUEST_STATUS, ROLES } from "~/constants";
+import { ACCESS_REQUEST_STATUS, CHECKLIST_ITEM_KEYS, ROLES } from "~/constants";
 import logger from "~/logger";
 import { errorHandler, getLogCombinedMessage, getLogContext } from "~/util";
 import createHttpError from "http-errors";
 import { getRoleBatch } from "../roles";
+import { updateChecklistStatusBatchTx } from "../checklistStatus";
+import { type Prisma } from "@prisma/client";
 
 export type supplierAccessRequestInformationProps = {
   supplierAccessRequestId: string;
   sessionId: string;
+};
+
+type NewRoleProps = {
+  name: string;
+  sessionId: string;
+  isVisibleInNetwork: boolean;
 };
 
 export async function updateSupplierAccess(
@@ -49,6 +57,58 @@ export async function updateSupplierAccess(
   }
 }
 
+// helper transaction functions for approving and rejecting suppliers
+// should only be called here
+async function updateSupplierAccessRequestBatchTx(
+  tx: Prisma.TransactionClient,
+  supplierAccessRequestIds: string[],
+  status: string,
+) {
+  const newSupplierAccessRequests = await tx.supplierAccessRequest.updateMany({
+    where: {
+      id: {
+        in: supplierAccessRequestIds,
+      },
+    },
+    data: {
+      status: status,
+      updatedAt: new Date(),
+    },
+  });
+  return newSupplierAccessRequests;
+}
+
+async function createSupplierRolesBatchTx(
+  tx: Prisma.TransactionClient,
+  newRoleData: NewRoleProps[],
+) {
+  if (newRoleData) {
+    const newRoles = await tx.role.createMany({
+      data: newRoleData,
+    });
+    return newRoles;
+  }
+  return Promise.resolve();
+}
+
+async function deleteSupplierRolesBatchTx(
+  tx: Prisma.TransactionClient,
+  sessionIds: string[],
+) {
+  const rolesDeleted = await db.role.deleteMany({
+    where: {
+      sessionId: {
+        in: sessionIds,
+      },
+      name: {
+        equals: ROLES.SUPPLIER,
+      },
+    },
+  });
+
+  return rolesDeleted;
+}
+
 // updates the status of the StatusAccessRequest and creates supplier roles for these suppliers
 export async function approveSuppliers(
   supplierAccessRequestInfo: supplierAccessRequestInformationProps[],
@@ -80,22 +140,20 @@ export async function approveSuppliers(
     });
 
     await db.$transaction(async (tx) => {
-      await tx.supplierAccessRequest.updateMany({
-        where: {
-          id: {
-            in: supplierAccessRequestIds,
-          },
-        },
-        data: {
-          status: ACCESS_REQUEST_STATUS.APPROVED,
-          updatedAt: new Date(),
-        },
-      });
-      if (newRoleData) {
-        await db.role.createMany({
-          data: newRoleData,
-        });
-      }
+      await Promise.all([
+        updateSupplierAccessRequestBatchTx(
+          tx,
+          supplierAccessRequestIds,
+          ACCESS_REQUEST_STATUS.APPROVED,
+        ),
+        createSupplierRolesBatchTx(tx, newRoleData),
+        updateChecklistStatusBatchTx(
+          tx,
+          sessionIds,
+          CHECKLIST_ITEM_KEYS.SUPPLIER_GET_STARTED,
+          true,
+        ),
+      ]);
     });
   } catch (error) {
     const context = getLogContext(approveSuppliers, supplierAccessRequestInfo);
@@ -109,7 +167,6 @@ export async function approveSuppliers(
 
 // TODO: in the future, decide whether or not to just hide the visibility or make admin permissions
 // !!! TODO: add price list deletion
-// marks supplier access request as rejected and deletes the role and any price lists that exist
 async function rejectSuppliers(
   supplierAccessRequestInfo: supplierAccessRequestInformationProps[],
 ) {
@@ -118,29 +175,22 @@ async function rejectSuppliers(
       (info) => info.supplierAccessRequestId,
     );
     const sessionIds = supplierAccessRequestInfo.map((info) => info.sessionId);
-    await db.$transaction([
-      db.supplierAccessRequest.updateMany({
-        where: {
-          id: {
-            in: supplierAccessRequestIds,
-          },
-        },
-        data: {
-          status: ACCESS_REQUEST_STATUS.REJECTED,
-          updatedAt: new Date(),
-        },
-      }),
-      db.role.deleteMany({
-        where: {
-          sessionId: {
-            in: sessionIds,
-          },
-          name: {
-            equals: ROLES.SUPPLIER,
-          },
-        },
-      }),
-    ]);
+    await db.$transaction(async (tx) => {
+      await Promise.all([
+        updateSupplierAccessRequestBatchTx(
+          tx,
+          supplierAccessRequestIds,
+          ACCESS_REQUEST_STATUS.REJECTED,
+        ),
+        deleteSupplierRolesBatchTx(tx, sessionIds),
+        updateChecklistStatusBatchTx(
+          tx,
+          sessionIds,
+          CHECKLIST_ITEM_KEYS.SUPPLIER_GET_STARTED,
+          false,
+        ),
+      ]);
+    });
   } catch (error) {
     const context = getLogContext(rejectSuppliers, supplierAccessRequestInfo);
     throw errorHandler(
