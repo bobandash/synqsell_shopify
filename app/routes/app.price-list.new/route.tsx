@@ -79,7 +79,7 @@ const NewPriceList = () => {
       ),
       pricingStrategy: useField(PRICE_LIST_PRICING_STRATEGY.MARGIN),
       margin: useField({
-        value: "0",
+        value: "10",
         validates: (value) => {
           const valueFloat = parseFloat(value);
 
@@ -119,22 +119,28 @@ const NewPriceList = () => {
                     title="Category"
                     choices={categoryChoices}
                   />
-                  <ChoiceList
-                    {...asChoiceList(fields.generalPricelistImportSettings)}
-                    title="Product Import Settings"
-                    choices={generalPriceListImportSettingChoices}
-                  />
+                  {fields.category.value === PRICE_LIST_CATEGORY.GENERAL && (
+                    <ChoiceList
+                      {...asChoiceList(fields.generalPricelistImportSettings)}
+                      title="Product Import Settings"
+                      choices={generalPriceListImportSettingChoices}
+                    />
+                  )}
+
                   <ChoiceList
                     {...asChoiceList(fields.pricingStrategy)}
                     title="Pricing Strategy"
                     choices={pricingStrategyChoices}
                   />
-                  <TextField
-                    type="number"
-                    label="Margin (%) that Retailer Generates on Sale"
-                    autoComplete="off"
-                    {...fields.margin}
-                  />
+                  {fields.pricingStrategy.value ===
+                    PRICE_LIST_PRICING_STRATEGY.MARGIN && (
+                    <TextField
+                      type="number"
+                      label="Margin (%) that Retailer Generates on Sale"
+                      autoComplete="off"
+                      {...fields.margin}
+                    />
+                  )}
                 </FormLayout>
               </Card>
             </Layout.AnnotatedSection>
