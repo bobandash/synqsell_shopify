@@ -117,7 +117,8 @@ model UserProfile {
 model PriceList {
   id                String              @id @default(uuid())
   createdAt         DateTime            @default(now())
-  isGeneric         Boolean
+  name              String
+  isGeneral         Boolean // There can only be one general price list, this is what products are visible on the products page
   pricingStrategy   String
   Session           Session             @relation(fields: [supplierId], references: [id])
   supplierId        String
@@ -125,7 +126,7 @@ model PriceList {
   PriceListRetailer PriceListRetailer[]
 }
 
-// Keeps track of the retailersi n the price list
+// Keeps track of the retailers in the price list
 model PriceListRetailer {
   id          String    @id @default(uuid())
   PriceList   PriceList @relation(fields: [priceListId], references: [id])
@@ -147,13 +148,23 @@ model Product {
 }
 
 model ImportedProduct {
-  id         String   @id @default(uuid())
-  Product    Product  @relation(fields: [productId], references: [id])
-  productId  String
-  Session    Session  @relation(fields: [retailerId], references: [id])
-  retailerId String
-  amtSold    Int
-  importedAt DateTime @default(now())
+  id                         String                       @id @default(uuid())
+  Product                    Product                      @relation(fields: [productId], references: [id])
+  productId                  String
+  Session                    Session                      @relation(fields: [retailerId], references: [id])
+  retailerId                 String
+  importedAt                 DateTime                     @default(now())
+  ImportedProductTransaction ImportedProductTransaction[]
+}
+
+model ImportedProductTransaction {
+  id                String          @id @default(uuid())
+  ImportedProduct   ImportedProduct @relation(fields: [importedProductId], references: [id])
+  importedProductId String
+  createdAt         DateTime
+  fulfilledAt       DateTime
+  // TODO: figure out what fields I need to add
+  unitSales         Int
 }
 
 model Partnership {

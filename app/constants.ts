@@ -5,7 +5,7 @@ export const ROLES = {
 };
 
 export const PRICING_STRATEGY = {
-  FIXED: "FIXED",
+  WHOLESALE: "WHOLESALE",
   MARGIN: "MARGIN",
 };
 

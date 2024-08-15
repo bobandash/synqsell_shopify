@@ -12,9 +12,12 @@ import { type IndexTableHeading } from "@shopify/polaris/build/ts/src/components
 import { type NonEmptyArray } from "@shopify/polaris/build/ts/src/types";
 import { ToolsIcon } from "~/assets";
 import styles from "./styles.module.css";
+import { useLocation, useNavigate } from "@remix-run/react";
 
 const PriceList = () => {
   const data: string[] = [];
+  const navigate = useNavigate();
+  const location = useLocation();
   const headings: NonEmptyArray<IndexTableHeading> = [
     { title: "Name" },
     { title: "Type" },
@@ -51,13 +54,19 @@ const PriceList = () => {
     },
   ];
 
+  function navigateCreatePriceList() {
+    const newPriceListRoute = [location.pathname, "new"].join("/");
+    console.log(newPriceListRoute);
+    navigate(newPriceListRoute);
+  }
+
   return (
     <Page
       title="Price lists"
       subtitle="Create and edit price lists for retailers to import your products!"
       primaryAction={{
         content: "Create Price List",
-        onAction: () => {},
+        onAction: navigateCreatePriceList,
       }}
     >
       <Card padding={"0"}>

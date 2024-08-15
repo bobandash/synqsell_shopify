@@ -3,7 +3,7 @@
 client_id = "c2ff24913d6d89792234763f0830c676"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://weighted-birds-alternatives-brings.trycloudflare.com"
+application_url = "https://comfortable-recommendation-fc-cork.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read/write_orders,read_all_orders,read_assigned_fulfillment_orders,rea
 
 [auth]
 redirect_urls = [
-  "https://weighted-birds-alternatives-brings.trycloudflare.com/auth/callback",
-  "https://weighted-birds-alternatives-brings.trycloudflare.com/auth/shopify/callback",
-  "https://weighted-birds-alternatives-brings.trycloudflare.com/api/auth/callback"
+  "https://comfortable-recommendation-fc-cork.trycloudflare.com/auth/callback",
+  "https://comfortable-recommendation-fc-cork.trycloudflare.com/auth/shopify/callback",
+  "https://comfortable-recommendation-fc-cork.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]
