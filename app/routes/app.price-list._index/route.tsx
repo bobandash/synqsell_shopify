@@ -8,7 +8,6 @@ import {
   Text,
   useIndexResourceState,
 } from "@shopify/polaris";
-import { type BulkActionsProps } from "@shopify/polaris/build/ts/src/components/BulkActions";
 import { type IndexTableHeading } from "@shopify/polaris/build/ts/src/components/IndexTable";
 import { type NonEmptyArray } from "@shopify/polaris/build/ts/src/types";
 import { ToolsIcon } from "~/assets";
@@ -70,7 +69,7 @@ const PriceList = () => {
     useIndexResourceState(priceListTableData);
 
   function navigateCreatePriceList() {
-    const newPriceListRoute = [location.pathname, "new"].join("/");
+    const newPriceListRoute = `${location.pathname}/new`;
     navigate(newPriceListRoute);
   }
 
@@ -139,8 +138,20 @@ const Row: FC<RowProps> = ({ data, index, selected }) => {
     sales,
   } = data;
 
+  const navigate = useNavigate();
+  const location = useLocation();
+  function navigateToPriceList() {
+    navigate(`${location.pathname}/${id}`);
+  }
+
   return (
-    <IndexTable.Row id={id} key={id} selected={selected} position={index}>
+    <IndexTable.Row
+      id={id}
+      key={id}
+      selected={selected}
+      position={index}
+      onClick={navigateToPriceList}
+    >
       <IndexTable.Cell>
         <Text variant="bodyMd" fontWeight="bold" as="span">
           {name}
