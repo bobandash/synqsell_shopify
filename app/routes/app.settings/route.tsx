@@ -155,6 +155,46 @@ const Settings = () => {
       isVisibleSupplierNetwork: useField(
         isVisibleInNetwork(ROLES.SUPPLIER, rolesData),
       ),
+      facebookLink: useField({
+        value: "",
+        validates: (value) => {
+          if (value && !value.includes("https://www.facebook.com/")) {
+            return "Link has to start with https://www.facebook.com/";
+          }
+        },
+      }),
+      twitterLink: useField({
+        value: "",
+        validates: (value) => {
+          if (value && !value.includes("https://twitter.com/")) {
+            return "Link has to start with https://twitter.com/";
+          }
+        },
+      }),
+      instagramLink: useField({
+        value: "",
+        validates: (value) => {
+          if (value && !value.includes("https://www.instagram.com/")) {
+            return "Link has to start with https://www.instagram.com/";
+          }
+        },
+      }),
+      youtubeLink: useField({
+        value: "",
+        validates: (value) => {
+          if (value && !value.includes("https://www.youtube.com/")) {
+            return "Link has to start with https://www.youtube.com/";
+          }
+        },
+      }),
+      tiktokLink: useField({
+        value: "",
+        validates: (value) => {
+          if (value && !value.includes("https://www.tiktok.com/@")) {
+            return "Link has to start with https://www.tiktok.com/@";
+          }
+        },
+      }),
     },
     onSubmit: async (fieldValues) => {
       try {
@@ -220,37 +260,42 @@ const Settings = () => {
                   />
                   <BlockStack gap={"150"}>
                     <Text as="p" variant="bodyMd">
-                      Social Media Icons
+                      Social Media Links
                     </Text>
                     <TextField
                       labelHidden
                       label="Facebook"
                       autoComplete="off"
                       placeholder={"https://www.facebook.com/"}
+                      {...fields.facebookLink}
                     />
                     <TextField
                       labelHidden
                       label="Twitter"
                       autoComplete="off"
                       placeholder={"https://twitter.com/"}
+                      {...fields.twitterLink}
                     />
                     <TextField
                       labelHidden
-                      label="Twitter"
+                      label="Instagram"
                       autoComplete="off"
                       placeholder={"https://www.instagram.com/"}
+                      {...fields.instagramLink}
                     />
                     <TextField
                       labelHidden
                       label="Youtube"
                       autoComplete="off"
                       placeholder={"https://www.youtube.com/"}
+                      {...fields.youtubeLink}
                     />
                     <TextField
                       labelHidden
                       label="TikTok"
                       autoComplete="off"
                       placeholder={"https://www.tiktok.com/@"}
+                      {...fields.tiktokLink}
                     />
                   </BlockStack>
                 </FormLayout>
