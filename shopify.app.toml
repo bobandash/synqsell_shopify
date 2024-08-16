@@ -3,7 +3,7 @@
 client_id = "c2ff24913d6d89792234763f0830c676"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://bears-robots-exactly-depend.trycloudflare.com"
+application_url = "https://nick-toilet-darwin-comp.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read/write_orders,read_all_orders,read_assigned_fulfillment_orders,rea
 
 [auth]
 redirect_urls = [
-  "https://bears-robots-exactly-depend.trycloudflare.com/auth/callback",
-  "https://bears-robots-exactly-depend.trycloudflare.com/auth/shopify/callback",
-  "https://bears-robots-exactly-depend.trycloudflare.com/api/auth/callback"
+  "https://nick-toilet-darwin-comp.trycloudflare.com/auth/callback",
+  "https://nick-toilet-darwin-comp.trycloudflare.com/auth/shopify/callback",
+  "https://nick-toilet-darwin-comp.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]

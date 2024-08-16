@@ -115,15 +115,17 @@ model UserProfile {
 // Supplier and Retailer Functionality
 // Price list and product
 model PriceList {
-  id                String              @id @default(uuid())
-  createdAt         DateTime            @default(now())
-  name              String
-  isGeneral         Boolean // There can only be one general price list, this is what products are visible on the products page
-  pricingStrategy   String
-  Session           Session             @relation(fields: [supplierId], references: [id])
-  supplierId        String
-  Product           Product[]
-  PriceListRetailer PriceListRetailer[]
+  id                       String              @id @default(uuid())
+  createdAt                DateTime            @default(now())
+  name                     String
+  isGeneral                Boolean // There can only be one general price list, this is what products are visible on the products page
+  requiresApprovalToImport Boolean? // if the price list is a general price list, suppliers can decide whether or not retailers have to request permission to import their products
+  pricingStrategy          String
+  Session                  Session             @relation(fields: [supplierId], references: [id])
+  supplierId               String
+  margin                   Int?
+  Product                  Product[]
+  PriceListRetailer        PriceListRetailer[]
 }
 
 // Keeps track of the retailers in the price list

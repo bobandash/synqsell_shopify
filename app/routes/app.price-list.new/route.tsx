@@ -1,4 +1,5 @@
-import { useLocation } from "@remix-run/react";
+import { type ActionFunctionArgs } from "@remix-run/node";
+import { useLocation, useSubmit as useRemixSubmit } from "@remix-run/react";
 import {
   Box,
   Button,
@@ -12,16 +13,49 @@ import {
   TextField,
 } from "@shopify/polaris";
 import { asChoiceList, notEmpty, useField, useForm } from "@shopify/react-form";
+import type { Field, FormMapping } from "@shopify/react-form";
+import { redirect } from "remix-typedjson";
 import {
   PRICE_LIST_CATEGORY,
   PRICE_LIST_IMPORT_SETTINGS,
   PRICE_LIST_PRICING_STRATEGY,
 } from "~/constants";
+import {
+  createPriceList,
+  type CreatePriceListDataProps,
+} from "~/models/priceList";
 import styles from "~/shared.module.css";
+import { authenticate } from "~/shopify.server";
+import { convertFormDataToObject, getJSONError } from "~/util";
+
+type FieldValueProps = FormMapping<
+  {
+    name: Field<string>;
+    category: Field<string>;
+    generalPriceListImportSettings: Field<string>;
+    pricingStrategy: Field<string>;
+    margin: Field<string>;
+  },
+  "value"
+>;
+
+export const action = async ({ request }: ActionFunctionArgs) => {
+  try {
+    const { session } = await authenticate.admin(request);
+    const { id: sessionId } = session;
+    const formData = await request.formData();
+    const data = convertFormDataToObject(formData) as CreatePriceListDataProps;
+    const newPriceList = await createPriceList(data, sessionId);
+    return redirect(`/app/price-list/${newPriceList.id}`);
+  } catch (error) {
+    throw getJSONError(error, "settings");
+  }
+};
 
 const NewPriceList = () => {
   const location = useLocation();
   const backActionUrl = location.pathname.replace("/new", "");
+  const remixSubmit = useRemixSubmit();
 
   const categoryChoices: ChoiceListProps["choices"] = [
     {
@@ -67,14 +101,40 @@ const NewPriceList = () => {
     },
   ];
 
-  const { fields } = useForm({
+  // Match data needed to submit to backend
+  function getFormattedData(fieldValues: FieldValueProps) {
+    const {
+      name,
+      category,
+      generalPriceListImportSettings,
+      pricingStrategy,
+      margin,
+    } = fieldValues;
+
+    return {
+      name,
+      isGeneral: category === PRICE_LIST_CATEGORY.GENERAL ? true : false,
+      pricingStrategy,
+      ...(category === PRICE_LIST_CATEGORY.GENERAL && {
+        requiresApprovalToImport:
+          generalPriceListImportSettings === PRICE_LIST_IMPORT_SETTINGS.APPROVAL
+            ? true
+            : false,
+      }),
+      ...(pricingStrategy === PRICE_LIST_PRICING_STRATEGY.MARGIN && {
+        margin: parseFloat(margin),
+      }),
+    };
+  }
+
+  const { fields, submit } = useForm({
     fields: {
       name: useField({
         value: "",
-        validates: [notEmpty("Store name is required")],
+        validates: [notEmpty("Price list name is required")],
       }),
       category: useField(PRICE_LIST_CATEGORY.GENERAL),
-      generalPricelistImportSettings: useField(
+      generalPriceListImportSettings: useField(
         PRICE_LIST_IMPORT_SETTINGS.APPROVAL,
       ),
       pricingStrategy: useField(PRICE_LIST_PRICING_STRATEGY.MARGIN),
@@ -82,7 +142,6 @@ const NewPriceList = () => {
         value: "10",
         validates: (value) => {
           const valueFloat = parseFloat(value);
-
           if (!value) {
             return "Margin cannot be empty.";
           } else if (valueFloat < 0) {
@@ -96,10 +155,18 @@ const NewPriceList = () => {
         },
       }),
     },
+    onSubmit: async (fieldValues) => {
+      const formattedData = getFormattedData(fieldValues);
+      remixSubmit(formattedData, {
+        method: "post",
+        action: location.pathname,
+      });
+      return { status: "success" };
+    },
   });
 
   return (
-    <Form onSubmit={() => {}}>
+    <Form onSubmit={submit}>
       <Page
         title="Create Price List"
         backAction={{ content: "Price Lists", url: backActionUrl }}
@@ -121,7 +188,7 @@ const NewPriceList = () => {
                   />
                   {fields.category.value === PRICE_LIST_CATEGORY.GENERAL && (
                     <ChoiceList
-                      {...asChoiceList(fields.generalPricelistImportSettings)}
+                      {...asChoiceList(fields.generalPriceListImportSettings)}
                       title="Product Import Settings"
                       choices={generalPriceListImportSettingChoices}
                     />

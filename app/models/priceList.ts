@@ -1,45 +1,93 @@
+import { boolean, number, object, string } from "yup";
+import { PRICE_LIST_PRICING_STRATEGY } from "~/constants";
 import db from "~/db.server";
+import { errorHandler, getLogContext } from "~/util";
 
-// return data for price list index table
-// export async function getAllPriceLists(sessionId: string) {
-// try {
-//   const priceLists = await db.priceList.findMany({
-//     where: {
-//       supplierId: sessionId,
-//     },
-//     select: {
-//       id: true,
-//       name: true,
-//     },
-//   });
+export type PriceListProps = {
+  id: string;
+  createdAt: string;
+  name: string;
+  isGeneral: boolean;
+  requiresApprovalToImport?: boolean;
+  pricingStrategy: string;
+  supplierId: string;
+  margin?: number;
+};
 
-// const headings: NonEmptyArray<IndexTableHeading> = [
-//   { title: "Name" },
-//   { title: "Type" },
-//   { title: "Retailers" },
-//   { title: "Units Sold" },
-//   { title: "Sales Generated" },
-//   { title: "Pricing Strategy" },
-// ];
+type CreatePriceListDataProps = {
+  margin?: number | undefined;
+  requiresApprovalToImport?: boolean | undefined;
+  name: string;
+  isGeneral: boolean;
+  pricingStrategy: string;
+};
 
-// model PriceList {
-//   id                String              @id @default(uuid())
-//   createdAt         DateTime            @default(now())
-//   isGeneric         Boolean
-//   pricingStrategy   String
-//   Session           Session             @relation(fields: [supplierId], references: [id])
-//   supplierId        String
-//   Product           Product[]
-//   PriceListRetailer PriceListRetailer[]
-// }
+// schema to validate data from createPriceList
+const validatePriceListDataSchema = object({
+  name: string().required(),
+  isGeneral: boolean().required(),
+  requiresApprovalToImport: boolean().when("isGeneral", {
+    is: true,
+    then: (schema) => schema.required(),
+    otherwise: (schema) =>
+      schema
+        .optional()
+        .test(
+          "is-undefined",
+          "Requires approval to import must be undefined when it's a private supplier price list",
+          (value) => value === undefined,
+        ),
+  }),
+  pricingStrategy: string().oneOf([
+    PRICE_LIST_PRICING_STRATEGY.MARGIN,
+    PRICE_LIST_PRICING_STRATEGY.WHOLESALE,
+  ]),
+  margin: number().when("pricingStrategy", {
+    is: PRICE_LIST_PRICING_STRATEGY.MARGIN,
+    then: (schema) => schema.required(),
+    otherwise: (schema) =>
+      schema
+        .optional()
+        .test(
+          "is-undefined",
+          "Margin must be undefined when the price list strategy is not based on margin.",
+          (value) => value === undefined,
+        ),
+  }),
+});
 
-// // Keeps track of the retailers in the price list
-// model PriceListRetailer {
-//   id          String    @id @default(uuid())
-//   PriceList   PriceList @relation(fields: [priceListId], references: [id])
-//   priceListId String
-//   Session     Session   @relation(fields: [retailerId], references: [id])
-//   retailerId  String
-// }
-//   } catch {}
-// }
+export async function createPriceList(
+  data: CreatePriceListDataProps,
+  sessionId: string,
+) {
+  try {
+    await validatePriceListDataSchema.validate(data);
+    const {
+      margin,
+      requiresApprovalToImport,
+      name,
+      isGeneral,
+      pricingStrategy,
+    } = data;
+
+    const newPriceList = await db.priceList.create({
+      data: {
+        name,
+        isGeneral,
+        ...(requiresApprovalToImport && {
+          requiresApprovalToImport,
+        }),
+        pricingStrategy,
+        ...(margin && {
+          margin,
+        }),
+        supplierId: sessionId,
+      },
+    });
+
+    return newPriceList;
+  } catch (error) {
+    const context = getLogContext(createPriceList, data, sessionId);
+    throw errorHandler(error, context, "Failed to create price list.");
+  }
+}
