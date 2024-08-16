@@ -1,4 +1,5 @@
 import {
+  Badge,
   BlockStack,
   Box,
   Card,
@@ -12,17 +13,50 @@ import { type IndexTableHeading } from "@shopify/polaris/build/ts/src/components
 import { type NonEmptyArray } from "@shopify/polaris/build/ts/src/types";
 import { ToolsIcon } from "~/assets";
 import styles from "./styles.module.css";
-import { useLocation, useNavigate } from "@remix-run/react";
+import { useLoaderData, useLocation, useNavigate } from "@remix-run/react";
+import { json, type LoaderFunctionArgs } from "@remix-run/node";
+import logger from "~/logger";
+import { getJSONError } from "~/util";
+import { authenticate } from "~/shopify.server";
+import {
+  getPriceListTableInfo,
+  type PriceListTableInfoProps,
+} from "~/models/priceList";
+import { StatusCodes } from "http-status-codes";
+import { useState, type FC } from "react";
+import { convertToTitleCase } from "../util";
+
+type RowProps = {
+  data: PriceListTableInfoProps;
+  index: number;
+  selected: boolean;
+};
+
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  try {
+    const { session } = await authenticate.admin(request);
+    const { id: sessionId } = session;
+    const priceListTableInfo = await getPriceListTableInfo(sessionId);
+    return json(priceListTableInfo, { status: StatusCodes.OK });
+  } catch (error) {
+    logger.error(error);
+    throw getJSONError(error, "price list");
+  }
+};
 
 const PriceList = () => {
-  const data: string[] = [];
+  const data = useLoaderData<
+    typeof loader
+  >() as unknown as PriceListTableInfoProps[];
+  const [priceListTableData] = useState(data);
+
   const navigate = useNavigate();
   const location = useLocation();
   const headings: NonEmptyArray<IndexTableHeading> = [
     { title: "Name" },
     { title: "Type" },
+    { title: "Products" },
     { title: "Retailers" },
-    { title: "Units Sold" },
     { title: "Sales Generated" },
     { title: "Pricing Strategy" },
   ];
@@ -32,31 +66,11 @@ const PriceList = () => {
     plural: "Price Lists",
   };
 
-  const {
-    selectedResources,
-    allResourcesSelected,
-    handleSelectionChange,
-    clearSelection,
-  } = useIndexResourceState(data);
-
-  const promotedBulkActions: BulkActionsProps["promotedActions"] = [
-    {
-      content: "Approve Suppliers",
-      onAction: () => {
-        console.log("To-do: implement");
-      },
-    },
-    {
-      content: "Reject Suppliers",
-      onAction: () => {
-        console.log("To-do: implement");
-      },
-    },
-  ];
+  const { selectedResources, allResourcesSelected, handleSelectionChange } =
+    useIndexResourceState(priceListTableData);
 
   function navigateCreatePriceList() {
     const newPriceListRoute = [location.pathname, "new"].join("/");
-    console.log(newPriceListRoute);
     navigate(newPriceListRoute);
   }
 
@@ -72,15 +86,23 @@ const PriceList = () => {
       <Card padding={"0"}>
         <IndexTable
           resourceName={resourceName}
-          itemCount={0}
           headings={headings}
+          itemCount={priceListTableData.length}
           selectedItemsCount={
             allResourcesSelected ? "All" : selectedResources.length
           }
           onSelectionChange={handleSelectionChange}
-          promotedBulkActions={promotedBulkActions}
           emptyState={<EmptyState />}
-        ></IndexTable>
+        >
+          {priceListTableData.map((priceListRowData, index) => (
+            <Row
+              key={priceListRowData.id}
+              data={priceListRowData}
+              index={index}
+              selected={selectedResources.includes(priceListRowData.id)}
+            />
+          ))}
+        </IndexTable>
       </Card>
     </Page>
   );
@@ -103,6 +125,39 @@ const EmptyState = () => {
         </Text>
       </BlockStack>
     </Box>
+  );
+};
+
+const Row: FC<RowProps> = ({ data, index, selected }) => {
+  const {
+    id,
+    name,
+    isGeneral,
+    pricingStrategy,
+    numProducts,
+    numRetailers,
+    sales,
+  } = data;
+
+  return (
+    <IndexTable.Row id={id} key={id} selected={selected} position={index}>
+      <IndexTable.Cell>
+        <Text variant="bodyMd" fontWeight="bold" as="span">
+          {name}
+        </Text>
+      </IndexTable.Cell>
+      <IndexTable.Cell>
+        {isGeneral ? (
+          <Badge tone="success">General</Badge>
+        ) : (
+          <Badge tone="info">Private</Badge>
+        )}
+      </IndexTable.Cell>
+      <IndexTable.Cell>{numProducts}</IndexTable.Cell>
+      <IndexTable.Cell>{numRetailers}</IndexTable.Cell>
+      <IndexTable.Cell>{sales}</IndexTable.Cell>
+      <IndexTable.Cell>{convertToTitleCase(pricingStrategy)}</IndexTable.Cell>
+    </IndexTable.Row>
   );
 };
 

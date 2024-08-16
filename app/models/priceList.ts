@@ -26,6 +26,16 @@ export type CreatePriceListDataProps = {
   pricingStrategy: string;
 };
 
+export type PriceListTableInfoProps = {
+  id: string;
+  name: string;
+  isGeneral: boolean;
+  pricingStrategy: string;
+  numProducts: number;
+  numRetailers: number;
+  sales: number;
+};
+
 // schema to validate data from createPriceList
 const validatePriceListDataSchema = object({
   name: string().required(),
@@ -159,3 +169,137 @@ export async function createPriceListAndCompleteChecklistItem(
     );
   }
 }
+
+// retrieves price list information
+// TODO: add the amt sold
+export async function getPriceListTableInfo(
+  sessionId: string,
+): Promise<PriceListTableInfoProps[]> {
+  try {
+    const priceListsInfo = await db.priceList.findMany({
+      where: { supplierId: sessionId },
+      select: {
+        id: true,
+        name: true,
+        isGeneral: true,
+        pricingStrategy: true,
+        _count: {
+          select: {
+            Product: true,
+            PriceListRetailer: true,
+          },
+        },
+        Product: {
+          select: {
+            ImportedProduct: {
+              select: {
+                ImportedProductTransaction: {
+                  select: {
+                    unitSales: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const priceListInfoFormatted = priceListsInfo.map(
+      ({ _count, Product, ...priceListInfo }) => {
+        const totalSales = Product.reduce((acc, { ImportedProduct }) => {
+          const productSales = ImportedProduct.reduce(
+            (productAcc, { ImportedProductTransaction }) => {
+              const transactionSales = ImportedProductTransaction.reduce(
+                (transactionAcc, { unitSales }) => {
+                  return transactionAcc + unitSales;
+                },
+                0,
+              );
+              return productAcc + transactionSales;
+            },
+            0,
+          );
+          return acc + productSales;
+        }, 0);
+
+        return {
+          ...priceListInfo,
+          numProducts: _count.Product,
+          numRetailers: _count.PriceListRetailer,
+          sales: totalSales,
+        };
+      },
+    );
+    return priceListInfoFormatted;
+  } catch (error) {
+    const context = getLogContext(getPriceListTableInfo, sessionId);
+    throw errorHandler(error, context, "Failed to get price list table info.");
+  }
+}
+
+// model Product {
+//   id              String            @id @default(uuid())
+//   title           String
+//   images          String[]
+//   description     String
+//   price           String
+//   PriceList       PriceList         @relation(fields: [priceListId], references: [id])
+//   priceListId     String
+//   wholesalePrice  Int?
+//   ImportedProduct ImportedProduct[]
+// }
+
+// model PriceList {
+//   id                       String              @id @default(uuid())
+//   createdAt                DateTime            @default(now())
+//   name                     String
+//   isGeneral                Boolean // There can only be one general price list, this is what products are visible on the products page
+//   requiresApprovalToImport Boolean? // if the price list is a general price list, suppliers can decide whether or not retailers have to request permission to import their products
+//   pricingStrategy          String
+//   Session                  Session             @relation(fields: [supplierId], references: [id])
+//   supplierId               String
+//   margin                   Int?
+//   Product                  Product[]
+//   PriceListRetailer        PriceListRetailer[]
+// }
+
+// // Keeps track of the retailers in the price list
+// model PriceListRetailer {
+//   id          String    @id @default(uuid())
+//   PriceList   PriceList @relation(fields: [priceListId], references: [id])
+//   priceListId String
+//   Session     Session   @relation(fields: [retailerId], references: [id])
+//   retailerId  String
+// }
+
+// model Product {
+//   id              String            @id @default(uuid())
+//   title           String
+//   images          String[]
+//   description     String
+//   price           String
+//   PriceList       PriceList         @relation(fields: [priceListId], references: [id])
+//   priceListId     String
+//   wholesalePrice  Int?
+//   ImportedProduct ImportedProduct[]
+// }
+
+// model ImportedProduct {
+//   id                         String                       @id @default(uuid())
+//   Product                    Product                      @relation(fields: [productId], references: [id])
+//   productId                  String
+//   Session                    Session                      @relation(fields: [retailerId], references: [id])
+//   retailerId                 String
+//   importedAt                 DateTime                     @default(now())
+//   ImportedProductTransaction ImportedProductTransaction[]
+// }
+
+// model ImportedProductTransaction {
+//   id                String          @id @default(uuid())
+//   ImportedProduct   ImportedProduct @relation(fields: [importedProductId], references: [id])
+//   importedProductId String
+//   createdAt         DateTime
+//   fulfilledAt       DateTime
+//   unitSales         Int
+// }
