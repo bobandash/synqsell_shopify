@@ -3,7 +3,7 @@
 client_id = "c2ff24913d6d89792234763f0830c676"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://runs-charlotte-dates-brakes.trycloudflare.com"
+application_url = "https://chain-billing-jesus-traditional.trycloudflare.com"
 embedded = true
 
 [build]
@@ -13,13 +13,13 @@ include_config_on_deploy = true
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read/write_orders,read_all_orders,read_assigned_fulfillment_orders,read_inventory,read_products,read_third_party_fulfillment_orders,write_assigned_fulfillment_orders,write_fulfillments,write_inventory,write_products"
+scopes = "read_assigned_fulfillment_orders,read_inventory,read_orders,read_products,read_third_party_fulfillment_orders,write_assigned_fulfillment_orders,write_fulfillments,write_inventory,write_orders,write_products"
 
 [auth]
 redirect_urls = [
-  "https://runs-charlotte-dates-brakes.trycloudflare.com/auth/callback",
-  "https://runs-charlotte-dates-brakes.trycloudflare.com/auth/shopify/callback",
-  "https://runs-charlotte-dates-brakes.trycloudflare.com/api/auth/callback"
+  "https://chain-billing-jesus-traditional.trycloudflare.com/auth/callback",
+  "https://chain-billing-jesus-traditional.trycloudflare.com/auth/shopify/callback",
+  "https://chain-billing-jesus-traditional.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]
