@@ -2,6 +2,7 @@ import {
   Badge,
   BlockStack,
   Box,
+  Button,
   Card,
   IndexTable,
   Page,
@@ -24,6 +25,9 @@ import {
 import { StatusCodes } from "http-status-codes";
 import { useState, type FC } from "react";
 import { convertToTitleCase } from "../util";
+import { useAppBridge } from "@shopify/app-bridge-react";
+import { MODALS } from "./constants";
+import DeletePriceListModal from "./_components/DeletePriceListModal";
 
 type RowProps = {
   data: PriceListTableInfoProps;
@@ -48,7 +52,7 @@ const PriceList = () => {
     typeof loader
   >() as unknown as PriceListTableInfoProps[];
   const [priceListTableData] = useState(data);
-
+  const shopify = useAppBridge();
   const navigate = useNavigate();
   const location = useLocation();
   const headings: NonEmptyArray<IndexTableHeading> = [
@@ -73,37 +77,60 @@ const PriceList = () => {
     navigate(newPriceListRoute);
   }
 
+  // delete information
+  const deleteText =
+    selectedResources.length === 0
+      ? `Delete Selected`
+      : `Delete Selected (${selectedResources.length})`;
+
+  function openDeleteModal() {
+    shopify.modal.show(MODALS.DELETE_PRICE_LIST);
+  }
+
   return (
-    <Page
-      title="Price lists"
-      subtitle="Create and edit price lists for retailers to import your products!"
-      primaryAction={{
-        content: "Create Price List",
-        onAction: navigateCreatePriceList,
-      }}
-    >
-      <Card padding={"0"}>
-        <IndexTable
-          resourceName={resourceName}
-          headings={headings}
-          itemCount={priceListTableData.length}
-          selectedItemsCount={
-            allResourcesSelected ? "All" : selectedResources.length
-          }
-          onSelectionChange={handleSelectionChange}
-          emptyState={<EmptyState />}
-        >
-          {priceListTableData.map((priceListRowData, index) => (
-            <Row
-              key={priceListRowData.id}
-              data={priceListRowData}
-              index={index}
-              selected={selectedResources.includes(priceListRowData.id)}
-            />
-          ))}
-        </IndexTable>
-      </Card>
-    </Page>
+    <>
+      <DeletePriceListModal priceListIds={selectedResources} />
+      <Page
+        title="Price lists"
+        subtitle="Create and edit price lists for retailers to import your products!"
+        primaryAction={{
+          content: "Create Price List",
+          onAction: navigateCreatePriceList,
+        }}
+        secondaryActions={
+          <Button
+            variant="primary"
+            tone="critical"
+            disabled={selectedResources.length === 0}
+            onClick={openDeleteModal}
+          >
+            {deleteText}
+          </Button>
+        }
+      >
+        <Card padding={"0"}>
+          <IndexTable
+            resourceName={resourceName}
+            headings={headings}
+            itemCount={priceListTableData.length}
+            selectedItemsCount={
+              allResourcesSelected ? "All" : selectedResources.length
+            }
+            onSelectionChange={handleSelectionChange}
+            emptyState={<EmptyState />}
+          >
+            {priceListTableData.map((priceListRowData, index) => (
+              <Row
+                key={priceListRowData.id}
+                data={priceListRowData}
+                index={index}
+                selected={selectedResources.includes(priceListRowData.id)}
+              />
+            ))}
+          </IndexTable>
+        </Card>
+      </Page>
+    </>
   );
 };
 

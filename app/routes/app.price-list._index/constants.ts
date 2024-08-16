@@ -1,0 +1,3 @@
+export const MODALS = {
+  DELETE_PRICE_LIST: "DELETE_PRICE_LIST",
+};
