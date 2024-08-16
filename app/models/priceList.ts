@@ -1,9 +1,11 @@
 import createHttpError from "http-errors";
 import { boolean, number, object, string } from "yup";
-import { PRICE_LIST_PRICING_STRATEGY } from "~/constants";
+import { CHECKLIST_ITEM_KEYS, PRICE_LIST_PRICING_STRATEGY } from "~/constants";
 import db from "~/db.server";
 import logger from "~/logger";
 import { errorHandler, getLogContext } from "~/util";
+import { updateChecklistStatusTx } from "./checklistStatus";
+import { type Prisma } from "@prisma/client";
 
 export type PriceListProps = {
   id: string;
@@ -80,7 +82,8 @@ async function hasGeneralPriceList(sessionId: string) {
   }
 }
 
-export async function createPriceList(
+async function createPriceListTx(
+  tx: Prisma.TransactionClient,
   data: CreatePriceListDataProps,
   sessionId: string,
 ) {
@@ -105,7 +108,7 @@ export async function createPriceList(
       pricingStrategy,
     } = data;
 
-    const newPriceList = await db.priceList.create({
+    const newPriceList = await tx.priceList.create({
       data: {
         name,
         isGeneral,
@@ -122,7 +125,37 @@ export async function createPriceList(
 
     return newPriceList;
   } catch (error) {
-    const context = getLogContext(createPriceList, data, sessionId);
+    const context = getLogContext(createPriceListTx, tx, data, sessionId);
     throw errorHandler(error, context, "Failed to create price list.");
+  }
+}
+
+export async function createPriceListAndCompleteChecklistItem(
+  data: CreatePriceListDataProps,
+  sessionId: string,
+) {
+  try {
+    const newPriceList = await db.$transaction(async (tx) => {
+      await updateChecklistStatusTx(
+        tx,
+        sessionId,
+        CHECKLIST_ITEM_KEYS.SUPPLIER_CREATE_PRICE_LIST,
+        true,
+      );
+      const newPriceList = await createPriceListTx(tx, data, sessionId);
+      return newPriceList;
+    });
+    return newPriceList;
+  } catch (error) {
+    const context = getLogContext(
+      createPriceListAndCompleteChecklistItem,
+      data,
+      sessionId,
+    );
+    throw errorHandler(
+      error,
+      context,
+      "Failed to create price list and update checklist status.",
+    );
   }
 }

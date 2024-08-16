@@ -21,7 +21,7 @@ import {
   PRICE_LIST_PRICING_STRATEGY,
 } from "~/constants";
 import {
-  createPriceList,
+  createPriceListAndCompleteChecklistItem,
   type CreatePriceListDataProps,
 } from "~/models/priceList";
 import styles from "~/shared.module.css";
@@ -45,7 +45,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const { id: sessionId } = session;
     const formData = await request.formData();
     const data = convertFormDataToObject(formData) as CreatePriceListDataProps;
-    const newPriceList = await createPriceList(data, sessionId);
+    const newPriceList = await createPriceListAndCompleteChecklistItem(
+      data,
+      sessionId,
+    );
     return redirect(`/app/price-list/${newPriceList.id}`);
   } catch (error) {
     throw getJSONError(error, "settings");
