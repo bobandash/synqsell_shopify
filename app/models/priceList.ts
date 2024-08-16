@@ -31,6 +31,7 @@ export type PriceListTableInfoProps = {
   name: string;
   isGeneral: boolean;
   pricingStrategy: string;
+  margin: number | null;
   numProducts: number;
   numRetailers: number;
   sales: number;
@@ -183,6 +184,7 @@ export async function getPriceListTableInfo(
         name: true,
         isGeneral: true,
         pricingStrategy: true,
+        margin: true,
         _count: {
           select: {
             Product: true,

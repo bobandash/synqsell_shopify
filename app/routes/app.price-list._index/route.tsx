@@ -163,6 +163,7 @@ const Row: FC<RowProps> = ({ data, index, selected }) => {
     numProducts,
     numRetailers,
     sales,
+    margin,
   } = data;
 
   const navigate = useNavigate();
@@ -170,6 +171,10 @@ const Row: FC<RowProps> = ({ data, index, selected }) => {
   function navigateToPriceList() {
     navigate(`${location.pathname}/${id}`);
   }
+
+  const marginText = margin
+    ? `${convertToTitleCase(pricingStrategy)} (${margin}%)`
+    : convertToTitleCase(pricingStrategy);
 
   return (
     <IndexTable.Row
@@ -194,7 +199,7 @@ const Row: FC<RowProps> = ({ data, index, selected }) => {
       <IndexTable.Cell>{numProducts}</IndexTable.Cell>
       <IndexTable.Cell>{numRetailers}</IndexTable.Cell>
       <IndexTable.Cell>{sales}</IndexTable.Cell>
-      <IndexTable.Cell>{convertToTitleCase(pricingStrategy)}</IndexTable.Cell>
+      <IndexTable.Cell>{marginText}</IndexTable.Cell>
     </IndexTable.Row>
   );
 };
