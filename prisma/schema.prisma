@@ -100,7 +100,7 @@ model Role {
 }
 
 model UserProfile {
-  id              String  @id @default(uuid())
+  id              String           @id @default(uuid())
   name            String
   website         String
   address         String?
@@ -108,8 +108,20 @@ model UserProfile {
   logo            String?
   biography       String?
   desiredProducts String?
-  Session         Session @relation(fields: [sessionId], references: [id])
-  sessionId       String  @unique
+  Session         Session          @relation(fields: [sessionId], references: [id])
+  sessionId       String           @unique
+  SocialMediaLink SocialMediaLink?
+}
+
+model SocialMediaLink {
+  id            String      @id @default(uuid())
+  facebook      String      @default("")
+  twitter       String      @default("")
+  instagram     String      @default("")
+  youtube       String      @default("")
+  tiktok        String      @default("")
+  UserProfile   UserProfile @relation(fields: [userProfileId], references: [id])
+  userProfileId String      @unique
 }
 
 // Supplier and Retailer Functionality

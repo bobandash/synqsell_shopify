@@ -13,12 +13,20 @@ type ProfileDataProps = {
   desiredProducts: string;
 };
 
+type SocialMediaDataProps = {
+  facebook: string;
+  twitter: string;
+  instagram: string;
+  youtube: string;
+  tiktok: string;
+};
+
 type VisibilityDataProps = {
   isVisibleRetailerNetwork: boolean;
   isVisibleSupplierNetwork: boolean;
 };
 
-async function updateRoleAndChecklist(
+async function updateRoleAndChecklistItemTx(
   tx: Prisma.TransactionClient,
   sessionId: string,
   role: string,
@@ -30,7 +38,7 @@ async function updateRoleAndChecklist(
     await updateChecklistStatusTx(tx, sessionId, checklistItemKey, true);
   } catch (error) {
     const context = getLogContext(
-      updateRoleAndChecklist,
+      updateRoleAndChecklistItemTx,
       tx,
       sessionId,
       role,
@@ -44,6 +52,7 @@ async function updateRoleAndChecklist(
 export default async function updateSettings(
   sessionId: string,
   profileData: ProfileDataProps,
+  socialMediaData: SocialMediaDataProps,
   visibilityData: VisibilityDataProps,
 ) {
   const { isVisibleRetailerNetwork, isVisibleSupplierNetwork } = visibilityData;
@@ -54,7 +63,7 @@ export default async function updateSettings(
 
     await db.$transaction(async (tx) => {
       if (isRetailer) {
-        await updateRoleAndChecklist(
+        await updateRoleAndChecklistItemTx(
           tx,
           sessionId,
           ROLES.RETAILER,
@@ -63,7 +72,7 @@ export default async function updateSettings(
         );
       }
       if (isSupplier) {
-        await updateRoleAndChecklist(
+        await updateRoleAndChecklistItemTx(
           tx,
           sessionId,
           ROLES.SUPPLIER,
@@ -71,13 +80,14 @@ export default async function updateSettings(
           CHECKLIST_ITEM_KEYS.SUPPLIER_CUSTOMIZE_PROFILE,
         );
       }
-      await updateUserProfileTx(tx, sessionId, profileData);
+      await updateUserProfileTx(tx, sessionId, profileData, socialMediaData);
     });
   } catch (error) {
     const context = getLogContext(
       updateSettings,
       sessionId,
       profileData,
+      socialMediaData,
       visibilityData,
     );
     throw errorHandler(error, context, "Failed to update user settings.");

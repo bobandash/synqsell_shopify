@@ -30,6 +30,15 @@ type ProfileUpdateProps = {
   logo?: string;
   biography?: string;
   productsWant?: string;
+  socialMediaUrls?: string[];
+};
+
+export type SocialMediaDataProps = {
+  facebook: string;
+  twitter: string;
+  instagram: string;
+  youtube: string;
+  tiktok: string;
 };
 
 export async function hasProfile(sessionId: string) {
@@ -55,6 +64,9 @@ export async function getProfile(sessionId: string) {
     const profile = await db.userProfile.findFirstOrThrow({
       where: {
         sessionId,
+      },
+      include: {
+        SocialMediaLink: true,
       },
     });
     return profile;
@@ -147,13 +159,30 @@ export async function createProfileDatabase(
   profileDefaults: ProfileDefaultsProps,
 ) {
   try {
-    const newProfile = await db.userProfile.create({
-      data: {
-        sessionId,
-        ...profileDefaults,
-      },
+    // creates profile with social media links or rollback
+    const profileWithSocialMediaLinks = await db.$transaction(async (tx) => {
+      const newProfile = await tx.userProfile.create({
+        data: {
+          sessionId,
+          ...profileDefaults,
+        },
+      });
+      await tx.socialMediaLink.create({
+        data: { userProfileId: newProfile.id },
+      });
+
+      const newProfileWithSocialMediaLinks =
+        await tx.userProfile.findFirstOrThrow({
+          where: {
+            id: newProfile.id,
+          },
+          include: {
+            SocialMediaLink: true,
+          },
+        });
+      return newProfileWithSocialMediaLinks;
     });
-    return newProfile;
+    return profileWithSocialMediaLinks;
   } catch (error) {
     const context = getLogContext(
       createProfileDatabase,
@@ -170,9 +199,10 @@ export async function createProfileDatabase(
 
 export async function getOrCreateProfile(sessionId: string, graphql: GraphQL) {
   try {
-    const existingProfile = await getProfile(sessionId);
+    const existingProfile = await hasProfile(sessionId);
     if (existingProfile) {
-      return existingProfile;
+      const profile = await getProfile(sessionId);
+      return profile;
     }
     const profileDefaults = await getProfileDefaultsShopify(sessionId, graphql);
     const newProfile = await createProfileDatabase(sessionId, profileDefaults);
@@ -191,6 +221,7 @@ export async function updateUserProfileTx(
   tx: Prisma.TransactionClient,
   sessionId: string,
   newProfileValues: ProfileUpdateProps,
+  socialMediaData: SocialMediaDataProps,
 ) {
   try {
     const updatedProfile = await tx.userProfile.update({
@@ -199,6 +230,11 @@ export async function updateUserProfileTx(
       },
       data: {
         ...newProfileValues,
+        SocialMediaLink: {
+          update: {
+            ...socialMediaData,
+          },
+        },
       },
     });
     return updatedProfile;
@@ -208,6 +244,7 @@ export async function updateUserProfileTx(
       tx,
       sessionId,
       newProfileValues,
+      socialMediaData,
     );
     throw errorHandler(
       error,

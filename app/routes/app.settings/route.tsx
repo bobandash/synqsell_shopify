@@ -25,6 +25,7 @@ import {
 import {
   getOrCreateProfile,
   hasProfile,
+  type SocialMediaDataProps,
   type ProfileProps,
 } from "~/models/userProfile";
 import { convertFormDataToObject, getJSONError } from "~/util";
@@ -44,6 +45,11 @@ type FormDataProps = {
   desiredProducts: string;
   isVisibleRetailerNetwork: boolean;
   isVisibleSupplierNetwork: boolean;
+  facebookLink: string;
+  twitterLink: string;
+  instagramLink: string;
+  youtubeLink: string;
+  tiktokLink: string;
 };
 
 type FormDataObjProps = {
@@ -53,6 +59,7 @@ type FormDataObjProps = {
 type LoaderDataProps = {
   profile: ProfileProps;
   roles: RolePropsJSON[];
+  socialMediaLinks: SocialMediaDataProps;
 };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -60,12 +67,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const { session, admin } = await authenticate.admin(request);
     const { id: sessionId } = session;
     const hasExistingProfile = await hasProfile(sessionId);
-    const [profile, roles] = await Promise.all([
+    const [profileWithSocialMediaLinks, roles] = await Promise.all([
       getOrCreateProfile(sessionId, admin.graphql),
       getRoles(sessionId),
     ]);
+    const { SocialMediaLink: socialMediaLinks, ...profile } =
+      profileWithSocialMediaLinks;
+
     return json(
-      { profile, roles },
+      { profile, roles, socialMediaLinks },
       {
         status: hasExistingProfile ? 200 : 201,
       },
@@ -87,6 +97,22 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     ) as unknown as FormDataObjProps;
     const jsonData: FormDataProps = JSON.parse(formDataObject.data);
     const { name, email, biography, desiredProducts } = jsonData;
+    const {
+      facebookLink,
+      twitterLink,
+      instagramLink,
+      youtubeLink,
+      tiktokLink,
+    } = jsonData;
+
+    const socialMediaLinks = {
+      facebook: facebookLink,
+      twitter: twitterLink,
+      instagram: instagramLink,
+      youtube: youtubeLink,
+      tiktok: tiktokLink,
+    };
+
     const { isVisibleRetailerNetwork, isVisibleSupplierNetwork } = jsonData;
     const profileObj = {
       name,
@@ -99,7 +125,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       isVisibleSupplierNetwork,
     };
 
-    await updateSettings(sessionId, profileObj, visibilityObj);
+    await updateSettings(
+      sessionId,
+      profileObj,
+      socialMediaLinks,
+      visibilityObj,
+    );
     return json("successfully saved");
   } catch (error) {
     if (error instanceof Error) {
@@ -107,13 +138,16 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       throw getJSONError(error, "settings");
     }
   }
-
-  return null;
 };
 
 const Settings = () => {
   const loaderData = useLoaderData<typeof loader>() as LoaderDataProps;
-  const { profile: profileData, roles: rolesData } = loaderData;
+  const {
+    profile: profileData,
+    roles: rolesData,
+    socialMediaLinks: socialMediaData,
+  } = loaderData;
+
   const { roles } = useRoleContext();
   const isRetailer = roles.has(ROLES.RETAILER);
   const isSupplier = roles.has(ROLES.SUPPLIER);
@@ -156,41 +190,41 @@ const Settings = () => {
         isVisibleInNetwork(ROLES.SUPPLIER, rolesData),
       ),
       facebookLink: useField({
-        value: "",
+        value: socialMediaData.facebook,
         validates: (value) => {
-          if (value && !value.includes("https://www.facebook.com/")) {
+          if (value && !value.startsWith("https://www.facebook.com/")) {
             return "Link has to start with https://www.facebook.com/";
           }
         },
       }),
       twitterLink: useField({
-        value: "",
+        value: socialMediaData.twitter,
         validates: (value) => {
-          if (value && !value.includes("https://twitter.com/")) {
+          if (value && !value.startsWith("https://twitter.com/")) {
             return "Link has to start with https://twitter.com/";
           }
         },
       }),
       instagramLink: useField({
-        value: "",
+        value: socialMediaData.instagram,
         validates: (value) => {
-          if (value && !value.includes("https://www.instagram.com/")) {
+          if (value && !value.startsWith("https://www.instagram.com/")) {
             return "Link has to start with https://www.instagram.com/";
           }
         },
       }),
       youtubeLink: useField({
-        value: "",
+        value: socialMediaData.youtube,
         validates: (value) => {
-          if (value && !value.includes("https://www.youtube.com/")) {
+          if (value && !value.startsWith("https://www.youtube.com/")) {
             return "Link has to start with https://www.youtube.com/";
           }
         },
       }),
       tiktokLink: useField({
-        value: "",
+        value: socialMediaData.tiktok,
         validates: (value) => {
-          if (value && !value.includes("https://www.tiktok.com/@")) {
+          if (value && !value.startsWith("https://www.tiktok.com/@")) {
             return "Link has to start with https://www.tiktok.com/@";
           }
         },
