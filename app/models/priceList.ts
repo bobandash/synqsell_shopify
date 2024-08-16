@@ -1,6 +1,8 @@
+import createHttpError from "http-errors";
 import { boolean, number, object, string } from "yup";
 import { PRICE_LIST_PRICING_STRATEGY } from "~/constants";
 import db from "~/db.server";
+import logger from "~/logger";
 import { errorHandler, getLogContext } from "~/util";
 
 export type PriceListProps = {
@@ -14,7 +16,7 @@ export type PriceListProps = {
   margin?: number;
 };
 
-type CreatePriceListDataProps = {
+export type CreatePriceListDataProps = {
   margin?: number | undefined;
   requiresApprovalToImport?: boolean | undefined;
   name: string;
@@ -56,11 +58,44 @@ const validatePriceListDataSchema = object({
   }),
 });
 
+async function hasGeneralPriceList(sessionId: string) {
+  try {
+    const generalPriceList = await db.priceList.findFirst({
+      where: {
+        isGeneral: true,
+        supplierId: sessionId,
+      },
+    });
+    if (!generalPriceList) {
+      return false;
+    }
+    return true;
+  } catch (error) {
+    const context = getLogContext(hasGeneralPriceList, sessionId);
+    throw errorHandler(
+      error,
+      context,
+      "Failed to retrieve general price list.",
+    );
+  }
+}
+
 export async function createPriceList(
   data: CreatePriceListDataProps,
   sessionId: string,
 ) {
   try {
+    const generalPriceListExists = await hasGeneralPriceList(sessionId);
+    // A supplier can only have one general price list at a time
+    if (generalPriceListExists && data.isGeneral) {
+      logger.error(
+        `${sessionId} attempted to make multiple general price lists"`,
+      );
+      throw new createHttpError.BadRequest(
+        "You can only have one general price list at once.",
+      );
+    }
+
     await validatePriceListDataSchema.validate(data);
     const {
       margin,
