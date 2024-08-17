@@ -7,7 +7,7 @@ import { errorHandler, getLogContext } from "~/util";
 import { updateChecklistStatusTx } from "./checklistStatus";
 import { type Prisma } from "@prisma/client";
 
-export type PriceListProps = {
+type PriceListProps = {
   id: string;
   createdAt: string;
   name: string;
@@ -18,7 +18,7 @@ export type PriceListProps = {
   margin?: number;
 };
 
-export type CreatePriceListDataProps = {
+type CreatePriceListDataProps = {
   margin?: number | undefined;
   requiresApprovalToImport?: boolean | undefined;
   name: string;
@@ -26,7 +26,7 @@ export type CreatePriceListDataProps = {
   pricingStrategy: string;
 };
 
-export type PriceListTableInfoProps = {
+type PriceListTableInfoProps = {
   id: string;
   name: string;
   isGeneral: boolean;
@@ -173,7 +173,7 @@ export async function createPriceListAndCompleteChecklistItem(
 
 // retrieves price list information
 // TODO: add the amt sold
-export async function getPriceListTableInfo(
+async function getPriceListTableInfo(
   sessionId: string,
 ): Promise<PriceListTableInfoProps[]> {
   try {
@@ -240,8 +240,55 @@ export async function getPriceListTableInfo(
   }
 }
 
+async function userHasPriceList(sessionId: string, priceListId: string) {
+  try {
+    const priceList = await db.priceList.findFirstOrThrow({
+      where: {
+        supplierId: sessionId,
+        id: priceListId,
+      },
+    });
+    if (priceList) {
+      return true;
+    }
+    return false;
+  } catch (error) {
+    const context = getLogContext(userHasPriceList, sessionId, priceListId);
+    throw errorHandler(error, context, "Failed to get price list.");
+  }
+}
+
+async function getPriceListDetailedInfo(
+  sessionId: string,
+  priceListId: string,
+) {
+  try {
+    const priceList = await db.priceList.findFirstOrThrow({
+      where: {
+        supplierId: sessionId,
+        id: priceListId,
+      },
+      include: {
+        Product: true,
+      },
+    });
+    return priceList;
+  } catch (error) {
+    const context = getLogContext(
+      getPriceListDetailedInfo,
+      sessionId,
+      priceListId,
+    );
+    throw errorHandler(
+      error,
+      context,
+      "Failed to get detailed price list info.",
+    );
+  }
+}
+
 // !!! TODO: add the cascade / default values to prevent deleting the price list from deleting reportable information
-export async function deletePriceListBatch(
+async function deletePriceListBatch(
   priceListsIds: string[],
   sessionId: string,
 ) {
@@ -264,3 +311,16 @@ export async function deletePriceListBatch(
     throw errorHandler(error, context, "Failed to delete price lists.");
   }
 }
+
+export type {
+  PriceListProps,
+  CreatePriceListDataProps,
+  PriceListTableInfoProps,
+};
+
+export {
+  getPriceListTableInfo,
+  userHasPriceList,
+  getPriceListDetailedInfo,
+  deletePriceListBatch,
+};

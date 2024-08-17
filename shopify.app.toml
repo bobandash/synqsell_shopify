@@ -3,7 +3,7 @@
 client_id = "c2ff24913d6d89792234763f0830c676"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://bars-gibraltar-lenses-purchase.trycloudflare.com"
+application_url = "https://essentials-fashion-nightmare-justice.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read_assigned_fulfillment_orders,read_inventory,read_orders,read_produ
 
 [auth]
 redirect_urls = [
-  "https://bars-gibraltar-lenses-purchase.trycloudflare.com/auth/callback",
-  "https://bars-gibraltar-lenses-purchase.trycloudflare.com/auth/shopify/callback",
-  "https://bars-gibraltar-lenses-purchase.trycloudflare.com/api/auth/callback"
+  "https://essentials-fashion-nightmare-justice.trycloudflare.com/auth/callback",
+  "https://essentials-fashion-nightmare-justice.trycloudflare.com/auth/shopify/callback",
+  "https://essentials-fashion-nightmare-justice.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]
