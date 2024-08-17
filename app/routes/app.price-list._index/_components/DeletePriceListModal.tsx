@@ -31,7 +31,7 @@ const DeletePriceListModal: FC<Props> = ({ priceListIds }) => {
         all retailers and products connected to them.{" "}
         <b>This action is irreversible.</b>
       </p>
-      <fetcher.Form method="post" ref={formRef}>
+      <fetcher.Form method="delete" ref={formRef}>
         <input type="hidden" name="intent" value={MODALS.DELETE_PRICE_LIST} />
         <input
           type="hidden"

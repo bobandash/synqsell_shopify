@@ -1,6 +1,6 @@
 import { getChecklistStatus } from "~/models/checklistStatus";
 import type { FormDataObject } from "~/types";
-import { getStartedSupplierSchema } from "../schemas/actionSchemas";
+import { getStartedSupplierSchema } from "./_schema";
 import type { InferType } from "yup";
 import {
   getOrCreateSupplierAccessRequest,

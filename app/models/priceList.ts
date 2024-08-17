@@ -239,3 +239,28 @@ export async function getPriceListTableInfo(
     throw errorHandler(error, context, "Failed to get price list table info.");
   }
 }
+
+// !!! TODO: add the cascade / default values to prevent deleting the price list from deleting reportable information
+export async function deletePriceListBatch(
+  priceListsIds: string[],
+  sessionId: string,
+) {
+  try {
+    const deletedPriceLists = await db.priceList.deleteMany({
+      where: {
+        id: {
+          in: priceListsIds,
+        },
+        supplierId: sessionId,
+      },
+    });
+    return deletedPriceLists;
+  } catch (error) {
+    const context = getLogContext(
+      deletePriceListBatch,
+      priceListsIds,
+      sessionId,
+    );
+    throw errorHandler(error, context, "Failed to delete price lists.");
+  }
+}

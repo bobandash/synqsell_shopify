@@ -13,21 +13,31 @@ import { type IndexTableHeading } from "@shopify/polaris/build/ts/src/components
 import { type NonEmptyArray } from "@shopify/polaris/build/ts/src/types";
 import { ToolsIcon } from "~/assets";
 import styles from "./styles.module.css";
-import { useLoaderData, useLocation, useNavigate } from "@remix-run/react";
-import { json, type LoaderFunctionArgs } from "@remix-run/node";
+import {
+  useFetcher,
+  useLoaderData,
+  useLocation,
+  useNavigate,
+} from "@remix-run/react";
+import {
+  json,
+  type ActionFunctionArgs,
+  type LoaderFunctionArgs,
+} from "@remix-run/node";
 import logger from "~/logger";
-import { getJSONError } from "~/util";
+import { convertFormDataToObject, getJSONError } from "~/util";
 import { authenticate } from "~/shopify.server";
 import {
   getPriceListTableInfo,
   type PriceListTableInfoProps,
 } from "~/models/priceList";
 import { StatusCodes } from "http-status-codes";
-import { useState, type FC } from "react";
+import { useEffect, useState, type FC } from "react";
 import { convertToTitleCase } from "../util";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { MODALS } from "./constants";
 import DeletePriceListModal from "./_components/DeletePriceListModal";
+import { deletePriceListAction } from "./actions/deletePriceListAction";
 
 type RowProps = {
   data: PriceListTableInfoProps;
@@ -47,11 +57,31 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   }
 };
 
+export const action = async ({ request }: ActionFunctionArgs) => {
+  try {
+    const { session } = await authenticate.admin(request);
+    const { id: sessionId } = session;
+    let formData = await request.formData();
+    const intent = formData.get("intent");
+    const formDataObject = convertFormDataToObject(formData);
+    switch (intent) {
+      case MODALS.DELETE_PRICE_LIST:
+        return deletePriceListAction(formDataObject, sessionId);
+    }
+    return json(null, { status: StatusCodes.NOT_IMPLEMENTED });
+  } catch (error) {
+    logger.error(error);
+  }
+
+  return null;
+};
+
 const PriceList = () => {
   const data = useLoaderData<
     typeof loader
   >() as unknown as PriceListTableInfoProps[];
-  const [priceListTableData] = useState(data);
+  const [priceListTableData, setPriceListTableData] = useState(data);
+  const [, setPrevPriceListTableData] = useState(data); // TODO: handle rollback
   const shopify = useAppBridge();
   const navigate = useNavigate();
   const location = useLocation();
@@ -63,21 +93,22 @@ const PriceList = () => {
     { title: "Sales Generated" },
     { title: "Pricing Strategy" },
   ];
-
   const resourceName = {
     singular: "Price List",
     plural: "Price Lists",
   };
-
-  const { selectedResources, allResourcesSelected, handleSelectionChange } =
-    useIndexResourceState(priceListTableData);
-
+  const deletePriceListFetcher = useFetcher({ key: MODALS.DELETE_PRICE_LIST });
+  const {
+    selectedResources,
+    allResourcesSelected,
+    handleSelectionChange,
+    clearSelection,
+  } = useIndexResourceState(priceListTableData);
   function navigateCreatePriceList() {
     const newPriceListRoute = `${location.pathname}/new`;
     navigate(newPriceListRoute);
   }
 
-  // delete information
   const deleteText =
     selectedResources.length === 0
       ? `Delete Selected`
@@ -86,6 +117,37 @@ const PriceList = () => {
   function openDeleteModal() {
     shopify.modal.show(MODALS.DELETE_PRICE_LIST);
   }
+
+  // !!! TODO: There is no way to ensure that the fetcher has failed
+  // !!! Some people just read the json responses, but figure out what approach to handle errors works best for you
+
+  useEffect(() => {
+    if (deletePriceListFetcher.state === "loading" && deletePriceListFetcher) {
+      shopify.toast.show("Successfully deleted the price lists.");
+      shopify.modal.hide(MODALS.DELETE_PRICE_LIST);
+    }
+  }, [deletePriceListFetcher, shopify]);
+
+  useEffect(() => {
+    if (
+      deletePriceListFetcher.formData &&
+      deletePriceListFetcher.formData.get("priceListIds") &&
+      deletePriceListFetcher.state === "submitting"
+    ) {
+      const priceListIdString = deletePriceListFetcher.formData.get(
+        "priceListIds",
+      ) as string;
+      const deletedPriceListIds = new Set(
+        JSON.parse(priceListIdString) as string[],
+      );
+      // optimistic render for deleting the price list
+      setPrevPriceListTableData([...priceListTableData]);
+      setPriceListTableData((prev) => {
+        return prev.filter((item) => !deletedPriceListIds.has(item.id));
+      });
+      clearSelection();
+    }
+  }, [deletePriceListFetcher, priceListTableData, clearSelection]);
 
   return (
     <>

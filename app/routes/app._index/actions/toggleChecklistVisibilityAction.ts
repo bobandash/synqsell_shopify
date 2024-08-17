@@ -1,6 +1,6 @@
 import { json } from "@remix-run/node";
 import type { TypedResponse } from "@remix-run/node";
-import { toggleChecklistVisibilitySchema } from "../schemas/actionSchemas";
+import { toggleChecklistVisibilitySchema } from "./_schema";
 import { toggleChecklistVisibility } from "~/models/userPreferences";
 import { type InferType } from "yup";
 import type { UserPreferenceData } from "~/models/types";

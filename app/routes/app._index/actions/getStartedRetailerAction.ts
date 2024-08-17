@@ -1,6 +1,6 @@
 import { json } from "@remix-run/node";
 import type { TypedResponse } from "@remix-run/node";
-import { getStartedRetailerSchema } from "../schemas/actionSchemas";
+import { getStartedRetailerSchema } from "./_schema";
 import { type InferType } from "yup";
 import { getJSONError } from "~/util";
 import {
