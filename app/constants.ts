@@ -36,4 +36,4 @@ export const PRICE_LIST_IMPORT_SETTINGS = {
 export const PRICE_LIST_PRICING_STRATEGY = {
   WHOLESALE: "WHOLESALE",
   MARGIN: "MARGIN",
-};
+} as const;

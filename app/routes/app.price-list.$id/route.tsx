@@ -9,15 +9,19 @@ import {
   useSubmit as useRemixSubmit,
 } from "@remix-run/react";
 import {
+  Avatar,
+  BlockStack,
   Box,
   Button,
   Card,
   ChoiceList,
-  type ChoiceListProps,
+  Filters,
   Form,
   FormLayout,
   Layout,
   Page,
+  ResourceList,
+  Text,
   TextField,
 } from "@shopify/polaris";
 import { asChoiceList, notEmpty, useField, useForm } from "@shopify/react-form";
@@ -38,6 +42,11 @@ import {
 import styles from "~/shared.module.css";
 import { authenticate } from "~/shopify.server";
 import { convertFormDataToObject, getJSONError } from "~/util";
+import {
+  categoryChoices,
+  generalPriceListImportSettingChoices,
+  pricingStrategyChoices,
+} from "~/formData/pricelist";
 
 type FieldValueProps = FormMapping<
   {
@@ -113,50 +122,6 @@ const EditPriceList = () => {
   const backActionUrl = pathname.substring(0, pathname.lastIndexOf("/"));
   const remixSubmit = useRemixSubmit();
 
-  const categoryChoices: ChoiceListProps["choices"] = [
-    {
-      label: "General",
-      value: PRICE_LIST_CATEGORY.GENERAL,
-      helpText:
-        "Products visible to all retailers within the retailer network.",
-    },
-    {
-      label: "Private",
-      value: PRICE_LIST_CATEGORY.PRIVATE,
-      helpText: "Accessible only to authorized retailers with granted access.",
-    },
-  ];
-
-  const generalPriceListImportSettingChoices: ChoiceListProps["choices"] = [
-    {
-      label: "No Approval",
-      value: PRICE_LIST_IMPORT_SETTINGS.NO_APPROVAL,
-      helpText:
-        "Allow any retailers from the retailer network to import products from the general price list without approval.",
-    },
-    {
-      label: "Requires Approval",
-      value: PRICE_LIST_IMPORT_SETTINGS.APPROVAL,
-      helpText:
-        "Prohibit retailers from importing products from the general price list unless you accept their retailer request.",
-    },
-  ];
-
-  const pricingStrategyChoices: ChoiceListProps["choices"] = [
-    {
-      label: "Margin",
-      value: PRICE_LIST_PRICING_STRATEGY.MARGIN,
-      helpText:
-        "Retailer who imports your products gets a percentage of the retail price when they make a sale.",
-    },
-    {
-      label: "Wholesale Price",
-      value: PRICE_LIST_PRICING_STRATEGY.WHOLESALE,
-      helpText:
-        "Retailer who imports your product gets the difference between the retail price and wholesale price when they make a sale.",
-    },
-  ];
-
   // Match data needed to submit to backend
   function getFormattedData(fieldValues: FieldValueProps) {
     const {
@@ -227,6 +192,23 @@ const EditPriceList = () => {
     },
   });
 
+  const filters = [
+    {
+      key: "products",
+      label: "Products",
+      filter: (
+        <TextField
+          label=""
+          value={""}
+          onChange={() => {}}
+          autoComplete="off"
+          labelHidden
+        />
+      ),
+      shortcut: true,
+    },
+  ];
+
   return (
     <Form onSubmit={submit}>
       <Page
@@ -235,44 +217,113 @@ const EditPriceList = () => {
       >
         <Box paddingBlockEnd={"400"}>
           <Layout>
-            <Layout.AnnotatedSection
-              id="settings"
-              title="Settings"
-              description="Modify the price list settings according to what works best for you and the retailers."
-            >
-              <Card>
-                <FormLayout>
+            <Layout.Section variant="oneThird">
+              <BlockStack gap={"300"}>
+                <Card>
                   <TextField label="Name" autoComplete="off" {...fields.name} />
-                  <ChoiceList
-                    {...asChoiceList(fields.category)}
-                    title="Category"
-                    choices={categoryChoices}
-                  />
-                  {fields.category.value === PRICE_LIST_CATEGORY.GENERAL && (
-                    <ChoiceList
-                      {...asChoiceList(fields.generalPriceListImportSettings)}
-                      title="Product Import Settings"
-                      choices={generalPriceListImportSettingChoices}
-                    />
-                  )}
+                </Card>
+                <Card padding={"100"}>
+                  <ResourceList
+                    resourceName={{ singular: "product", plural: "products" }}
+                    flushFilters={true}
+                    filterControl={
+                      <Filters
+                        queryValue={""}
+                        filters={filters}
+                        appliedFilters={[]}
+                        onQueryChange={() => {}}
+                        onQueryClear={() => {}}
+                        onClearAll={() => {}}
+                        hideFilters={true}
+                        queryPlaceholder="Search Products"
+                      />
+                    }
+                    items={[
+                      {
+                        id: "341",
+                        url: "#",
+                        name: "Mae Jemison",
+                        location: "Decatur, USA",
+                      },
+                    ]}
+                    renderItem={(item) => {
+                      const { id, url, name, location } = item;
+                      const media = <Avatar customer size="md" name={name} />;
 
-                  <ChoiceList
-                    {...asChoiceList(fields.pricingStrategy)}
-                    title="Pricing Strategy"
-                    choices={pricingStrategyChoices}
-                  />
-                  {fields.pricingStrategy.value ===
-                    PRICE_LIST_PRICING_STRATEGY.MARGIN && (
-                    <TextField
-                      type="number"
-                      label="Margin (%) that Retailer Generates on Sale"
-                      autoComplete="off"
-                      {...fields.margin}
-                    />
-                  )}
-                </FormLayout>
-              </Card>
-            </Layout.AnnotatedSection>
+                      return (
+                        <ResourceList.Item
+                          id={id}
+                          url={url}
+                          media={media}
+                          accessibilityLabel={`View details for ${name}`}
+                        >
+                          <Text as="h3" variant="bodyMd" fontWeight="bold">
+                            {name}
+                          </Text>
+                          <div>{location}</div>
+                        </ResourceList.Item>
+                      );
+                    }}
+                  ></ResourceList>
+                </Card>
+              </BlockStack>
+            </Layout.Section>
+            <Layout.Section>
+              <BlockStack gap="400">
+                <Card>
+                  <FormLayout>
+                    <Box>
+                      <Text as="h2" variant="headingMd">
+                        Category
+                      </Text>
+                      <ChoiceList
+                        {...asChoiceList(fields.category)}
+                        title="Category"
+                        choices={categoryChoices}
+                        titleHidden
+                      />
+                    </Box>
+                    {fields.category.value === PRICE_LIST_CATEGORY.GENERAL && (
+                      <ChoiceList
+                        {...asChoiceList(fields.generalPriceListImportSettings)}
+                        title="Product Import Settings"
+                        choices={generalPriceListImportSettingChoices}
+                      />
+                    )}
+                  </FormLayout>
+                </Card>
+                <Card>
+                  <FormLayout>
+                    <Box>
+                      <Text as="h2" variant="headingMd">
+                        Pricing Strategy
+                      </Text>
+                      <ChoiceList
+                        {...asChoiceList(fields.pricingStrategy)}
+                        title="Pricing Strategy"
+                        titleHidden
+                        choices={pricingStrategyChoices}
+                      />
+                    </Box>
+
+                    {fields.pricingStrategy.value ===
+                      PRICE_LIST_PRICING_STRATEGY.MARGIN && (
+                      <TextField
+                        type="number"
+                        label="Margin (%) that Retailer Generates on Sale"
+                        autoComplete="off"
+                        {...fields.margin}
+                      />
+                    )}
+                  </FormLayout>
+                </Card>
+                <Card>
+                  <Text as="h2" variant="headingMd">
+                    Retailers Connected
+                  </Text>
+                </Card>
+              </BlockStack>
+            </Layout.Section>
           </Layout>
         </Box>
         <div className={styles["center-right"]}>
