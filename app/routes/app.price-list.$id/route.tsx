@@ -47,6 +47,7 @@ import {
   generalPriceListImportSettingChoices,
   pricingStrategyChoices,
 } from "~/formData/pricelist";
+import { useAppBridge } from "@shopify/app-bridge-react";
 
 type FieldValueProps = FormMapping<
   {
@@ -120,6 +121,7 @@ const EditPriceList = () => {
   const initialData = useLoaderData<typeof loader>() as LoaderDataProps;
   const { pathname } = useLocation();
   const backActionUrl = pathname.substring(0, pathname.lastIndexOf("/"));
+  const shopify = useAppBridge();
   const remixSubmit = useRemixSubmit();
 
   // Match data needed to submit to backend
@@ -235,7 +237,12 @@ const EditPriceList = () => {
                         onQueryClear={() => {}}
                         onClearAll={() => {}}
                         hideFilters={true}
-                        queryPlaceholder="Search Products"
+                        queryPlaceholder="Add Products"
+                        onQueryFocus={async () => {
+                          await shopify.resourcePicker({
+                            type: "product",
+                          });
+                        }}
                       />
                     }
                     items={[
