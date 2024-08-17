@@ -35,6 +35,7 @@ import {
   updateSupplierAccess,
 } from "~/models/transactions";
 import { useAppBridge } from "@shopify/app-bridge-react";
+import { convertToDate } from "../util";
 
 type RowMarkupProps = {
   data: GetSupplierAccessRequestJSONProps;
@@ -198,10 +199,10 @@ const Admin = () => {
   );
 
   const headings: NonEmptyArray<IndexTableHeading> = [
-    { title: "Request" },
+    { title: "Num" },
     { title: "Date" },
     { title: "Name" },
-    { title: "Email" },
+    { title: "Contact Email" },
     { title: "Website" },
     { title: "Met Sales" },
     { title: "Status" },
@@ -353,12 +354,19 @@ const Row: FC<RowMarkupProps> = ({ data, index, selected }) => {
           {num}
         </Text>
       </IndexTable.Cell>
-      <IndexTable.Cell>{createdAt}</IndexTable.Cell>
+      <IndexTable.Cell>{convertToDate(createdAt)}</IndexTable.Cell>
       <IndexTable.Cell>{name}</IndexTable.Cell>
       <IndexTable.Cell>{email}</IndexTable.Cell>
       <IndexTable.Cell>
-        <a href={website} target="_blank" rel="noreferrer">
-          {website}
+        <a
+          href={website}
+          target="_blank"
+          rel="noreferrer"
+          onClick={(e) => {
+            e.stopPropagation();
+          }}
+        >
+          Link
         </a>
       </IndexTable.Cell>
       <IndexTable.Cell>
@@ -367,7 +375,7 @@ const Row: FC<RowMarkupProps> = ({ data, index, selected }) => {
       <IndexTable.Cell>
         <StatusBadge status={status} />
       </IndexTable.Cell>
-      <IndexTable.Cell>{updatedAt}</IndexTable.Cell>
+      <IndexTable.Cell>{convertToDate(updatedAt)}</IndexTable.Cell>
     </IndexTable.Row>
   );
 };
