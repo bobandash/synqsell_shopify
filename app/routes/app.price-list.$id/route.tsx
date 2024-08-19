@@ -16,6 +16,7 @@ import {
   ChoiceList,
   Form,
   FormLayout,
+  InlineStack,
   Layout,
   Page,
   ResourceItem,
@@ -49,8 +50,8 @@ import {
 } from "~/formData/pricelist";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { ProductFilterControl } from "~/components";
-import { useState } from "react";
-import { ImageIcon } from "@shopify/polaris-icons";
+import { useCallback, useState } from "react";
+import { ImageIcon, XIcon } from "@shopify/polaris-icons";
 
 // !!! TODO: add products to the type for this
 type LoaderDataProps = {
@@ -79,6 +80,7 @@ type SelectedProductProps = {
     title: string;
     sku: string;
     inventoryQuantity: number;
+    price: string;
   }[];
 };
 
@@ -197,6 +199,10 @@ const EditPriceList = () => {
     return data;
   }
 
+  const removeSelectedProduct = useCallback((productId: string) => {
+    setSelectedProducts((prev) => prev.filter(({ id }) => id !== productId));
+  }, []);
+
   async function handleSelectProducts() {
     const products = await shopify.resourcePicker({
       type: "product",
@@ -204,10 +210,14 @@ const EditPriceList = () => {
       action: "select",
       showArchived: false,
       showDraft: false,
+      filter: {
+        variants: false,
+      },
     });
     if (products) {
       const productIds = products.map(({ id }) => id);
       const idToStoreUrl = await getIdToStoreUrl(productIds);
+
       const productsFormatted: SelectedProductProps[] = products.map(
         ({
           id,
@@ -226,11 +236,14 @@ const EditPriceList = () => {
             storeUrl: idToStoreUrl[id] ?? "",
             totalInventory,
             totalVariants,
-            variants: variants.map(({ title, sku, inventoryQuantity }) => ({
-              title: title ?? "",
-              sku: sku ?? "",
-              inventoryQuantity: inventoryQuantity ?? 0,
-            })),
+            variants: variants.map(
+              ({ title, sku, inventoryQuantity, price }) => ({
+                title: title ?? "",
+                sku: sku ?? "",
+                inventoryQuantity: inventoryQuantity ?? 0,
+                price: price ?? "",
+              }),
+            ),
           };
         },
       );
@@ -311,6 +324,11 @@ const EditPriceList = () => {
                     )}
                   </FormLayout>
                 </Card>
+                <Card>
+                  <Text as="h2" variant="headingMd">
+                    Retailers Connected
+                  </Text>
+                </Card>
                 <Card padding={"200"}>
                   <Box paddingInline={"200"} paddingBlockStart={"100"}>
                     <Text as="h2" variant="headingMd">
@@ -328,15 +346,13 @@ const EditPriceList = () => {
                     emptyState={<></>}
                     items={selectedProducts}
                     renderItem={(selectedProduct) => (
-                      <ProductLineItem selectedProduct={selectedProduct} />
+                      <ProductLineItem
+                        selectedProduct={selectedProduct}
+                        removeSelectedProduct={removeSelectedProduct}
+                      />
                     )}
                   />
                   <Box paddingBlockEnd={"100"}></Box>
-                </Card>
-                <Card>
-                  <Text as="h2" variant="headingMd">
-                    Retailers Connected
-                  </Text>
                 </Card>
               </BlockStack>
             </Layout.Section>
@@ -352,39 +368,51 @@ const EditPriceList = () => {
   );
 };
 
-// type SelectedProductProps = {
-//   id: string;
-//   title: string;
-//   images: {
-//     id: string;
-//     altText?: string;
-//     originalSrc: string;
-//   }[];
-//   status: string;
-//   totalInventory: number;
-//   variants: {
-//     title: string;
-//     sku: string;
-//     inventoryQuantity: number;
-//   }[];
-// };
-
+// !!! TODO: figure out how to tell the currency
 const ProductLineItem = ({
   selectedProduct,
+  removeSelectedProduct,
 }: {
   selectedProduct: SelectedProductProps;
+  removeSelectedProduct: (productId: string) => void;
 }) => {
-  const { id, title, storeUrl, images } = selectedProduct;
+  const { id, title, storeUrl, images, variants } = selectedProduct;
   const primaryImage = images[0] ? images[0].originalSrc : ImageIcon;
   const primaryImageAlt =
     images[0] && images[0].altText ? images[0].altText : `${title} image`;
-
+  const retailPrices = variants.map(({ price }) => `$${price}`);
   return (
     <ResourceItem
       id={id}
       url={storeUrl ?? ""}
-      media={<Thumbnail source={primaryImage} alt={primaryImageAlt} />}
-    ></ResourceItem>
+      media={
+        <Thumbnail source={primaryImage} alt={primaryImageAlt} size="large" />
+      }
+    >
+      <InlineStack align="space-between" blockAlign="center">
+        <BlockStack>
+          <Text as="p" variant="headingSm">
+            {title}
+          </Text>
+          <Text as="p" variant="bodyMd">
+            Price(s): {retailPrices.join(",")}
+          </Text>
+          <Text as="p" variant="bodyMd">
+            Amount To Pay Retailer: {retailPrices.join(",")}
+          </Text>
+          <Text as="p" variant="bodyMd">
+            Profit / Wholesale Price: {retailPrices.join(",")}
+          </Text>
+        </BlockStack>
+        <Button
+          icon={XIcon}
+          accessibilityLabel="Remove Item"
+          onClick={() => {
+            removeSelectedProduct(id);
+          }}
+        />
+      </InlineStack>
+    </ResourceItem>
   );
 };
 
