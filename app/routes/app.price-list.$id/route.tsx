@@ -9,23 +9,21 @@ import {
   useSubmit as useRemixSubmit,
 } from "@remix-run/react";
 import {
-  Avatar,
   BlockStack,
   Box,
   Button,
   Card,
   ChoiceList,
-  Filters,
   Form,
   FormLayout,
   Layout,
   Page,
+  ResourceItem,
   ResourceList,
   Text,
   TextField,
 } from "@shopify/polaris";
 import { asChoiceList, notEmpty, useField, useForm } from "@shopify/react-form";
-import type { Field, FormMapping } from "@shopify/react-form";
 import { StatusCodes } from "http-status-codes";
 import { redirect } from "remix-typedjson";
 import {
@@ -44,21 +42,13 @@ import { authenticate } from "~/shopify.server";
 import { convertFormDataToObject, getJSONError } from "~/util";
 import {
   categoryChoices,
+  formatPriceListData,
   generalPriceListImportSettingChoices,
   pricingStrategyChoices,
 } from "~/formData/pricelist";
 import { useAppBridge } from "@shopify/app-bridge-react";
-
-type FieldValueProps = FormMapping<
-  {
-    name: Field<string>;
-    category: Field<string>;
-    generalPriceListImportSettings: Field<string>;
-    pricingStrategy: Field<string>;
-    margin: Field<string>;
-  },
-  "value"
->;
+import { ProductFilterControl } from "~/components";
+import { useState } from "react";
 
 // !!! TODO: add products to the type for this
 type LoaderDataProps = {
@@ -70,6 +60,23 @@ type LoaderDataProps = {
   pricingStrategy: string;
   supplierId: string;
   margin: number;
+};
+
+type SelectedProductProps = {
+  id: string;
+  title: string;
+  images: {
+    id: string;
+    altText?: string;
+    originalSrc: string;
+  }[];
+  status: string;
+  totalInventory: number;
+  variants: {
+    title: string;
+    sku: string;
+    inventoryQuantity: number;
+  }[];
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -123,32 +130,9 @@ const EditPriceList = () => {
   const backActionUrl = pathname.substring(0, pathname.lastIndexOf("/"));
   const shopify = useAppBridge();
   const remixSubmit = useRemixSubmit();
-
-  // Match data needed to submit to backend
-  function getFormattedData(fieldValues: FieldValueProps) {
-    const {
-      name,
-      category,
-      generalPriceListImportSettings,
-      pricingStrategy,
-      margin,
-    } = fieldValues;
-
-    return {
-      name,
-      isGeneral: category === PRICE_LIST_CATEGORY.GENERAL ? true : false,
-      pricingStrategy,
-      ...(category === PRICE_LIST_CATEGORY.GENERAL && {
-        requiresApprovalToImport:
-          generalPriceListImportSettings === PRICE_LIST_IMPORT_SETTINGS.APPROVAL
-            ? true
-            : false,
-      }),
-      ...(pricingStrategy === PRICE_LIST_PRICING_STRATEGY.MARGIN && {
-        margin: parseFloat(margin),
-      }),
-    };
-  }
+  const [selectedProducts, setSelectedProducts] = useState<
+    SelectedProductProps[]
+  >([]);
 
   const { fields, submit } = useForm({
     fields: {
@@ -185,31 +169,80 @@ const EditPriceList = () => {
       }),
     },
     onSubmit: async (fieldValues) => {
-      const formattedData = getFormattedData(fieldValues);
+      const formattedData = formatPriceListData(fieldValues);
       remixSubmit(formattedData, {
         method: "post",
-        action: location.pathname,
+        action: pathname,
       });
       return { status: "success" };
     },
   });
 
-  const filters = [
-    {
-      key: "products",
-      label: "Products",
-      filter: (
-        <TextField
-          label=""
-          value={""}
-          onChange={() => {}}
-          autoComplete="off"
-          labelHidden
-        />
-      ),
-      shortcut: true,
-    },
-  ];
+  // !!! TODO: add frontend error handling
+  async function getIdToStoreUrl(productIds: string[]) {
+    const params = {
+      productIds,
+    };
+    const encodedParams = encodeURIComponent(JSON.stringify(params));
+    const response = await fetch(
+      `/app/api/price-list?params=${encodedParams}`,
+      {
+        method: "GET",
+      },
+    );
+    const data = await response.json();
+    return data;
+  }
+
+  async function handleSelectProducts() {
+    const products = await shopify.resourcePicker({
+      type: "product",
+      multiple: true,
+      action: "select",
+      showArchived: false,
+      showDraft: false,
+    });
+    if (products) {
+      const productIds = products.map(({ id }) => id);
+      const idToStoreUrl = await getIdToStoreUrl(productIds);
+      const productsFormatted: SelectedProductProps[] = products.map(
+        ({
+          id,
+          title,
+          images,
+          status,
+          totalInventory,
+          variants,
+          totalVariants,
+        }) => {
+          return {
+            id,
+            title,
+            images,
+            status,
+            storeUrl: idToStoreUrl[id] ?? "",
+            totalInventory,
+            totalVariants,
+            variants: variants.map(({ title, sku, inventoryQuantity }) => ({
+              title: title ?? "",
+              sku: sku ?? "",
+              inventoryQuantity: inventoryQuantity ?? 0,
+            })),
+          };
+        },
+      );
+
+      setSelectedProducts((prev) => {
+        const newSelectedProductIds = new Set(
+          productsFormatted.map((product) => product.id),
+        );
+        const nonDuplicateProducts = prev.filter(
+          (product) => !newSelectedProductIds.has(product.id),
+        );
+        return [...nonDuplicateProducts, ...productsFormatted];
+      });
+    }
+  }
 
   return (
     <Form onSubmit={submit}>
@@ -223,55 +256,6 @@ const EditPriceList = () => {
               <BlockStack gap={"300"}>
                 <Card>
                   <TextField label="Name" autoComplete="off" {...fields.name} />
-                </Card>
-                <Card padding={"100"}>
-                  <ResourceList
-                    resourceName={{ singular: "product", plural: "products" }}
-                    flushFilters={true}
-                    filterControl={
-                      <Filters
-                        queryValue={""}
-                        filters={filters}
-                        appliedFilters={[]}
-                        onQueryChange={() => {}}
-                        onQueryClear={() => {}}
-                        onClearAll={() => {}}
-                        hideFilters={true}
-                        queryPlaceholder="Add Products"
-                        onQueryFocus={async () => {
-                          await shopify.resourcePicker({
-                            type: "product",
-                          });
-                        }}
-                      />
-                    }
-                    items={[
-                      {
-                        id: "341",
-                        url: "#",
-                        name: "Mae Jemison",
-                        location: "Decatur, USA",
-                      },
-                    ]}
-                    renderItem={(item) => {
-                      const { id, url, name, location } = item;
-                      const media = <Avatar customer size="md" name={name} />;
-
-                      return (
-                        <ResourceList.Item
-                          id={id}
-                          url={url}
-                          media={media}
-                          accessibilityLabel={`View details for ${name}`}
-                        >
-                          <Text as="h3" variant="bodyMd" fontWeight="bold">
-                            {name}
-                          </Text>
-                          <div>{location}</div>
-                        </ResourceList.Item>
-                      );
-                    }}
-                  ></ResourceList>
                 </Card>
               </BlockStack>
             </Layout.Section>
@@ -324,6 +308,28 @@ const EditPriceList = () => {
                     )}
                   </FormLayout>
                 </Card>
+                <Card padding={"200"}>
+                  <Box paddingInline={"200"} paddingBlockStart={"100"}>
+                    <Text as="h2" variant="headingMd">
+                      Products
+                    </Text>
+                  </Box>
+                  <ResourceList
+                    resourceName={{ singular: "product", plural: "products" }}
+                    flushFilters={true}
+                    filterControl={
+                      <ProductFilterControl
+                        onQueryFocus={handleSelectProducts}
+                      />
+                    }
+                    emptyState={<></>}
+                    items={selectedProducts}
+                    renderItem={(selectedProduct) => (
+                      <ProductLineItem selectedProduct={selectedProduct} />
+                    )}
+                  />
+                  <Box paddingBlockEnd={"100"}></Box>
+                </Card>
                 <Card>
                   <Text as="h2" variant="headingMd">
                     Retailers Connected
@@ -341,6 +347,14 @@ const EditPriceList = () => {
       </Page>
     </Form>
   );
+};
+
+const ProductLineItem = ({
+  selectedProduct,
+}: {
+  selectedProduct: SelectedProductProps;
+}) => {
+  return <ResourceItem></ResourceItem>;
 };
 
 export default EditPriceList;

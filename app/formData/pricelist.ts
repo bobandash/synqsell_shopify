@@ -1,10 +1,22 @@
 // Stores types and choices related to price list form data
 import { type ChoiceListProps } from "@shopify/polaris";
+import type { Field, FormMapping } from "@shopify/react-form";
 import {
   PRICE_LIST_CATEGORY,
   PRICE_LIST_IMPORT_SETTINGS,
   PRICE_LIST_PRICING_STRATEGY,
 } from "~/constants";
+
+type PriceListFormFieldValueProps = FormMapping<
+  {
+    name: Field<string>;
+    category: Field<string>;
+    generalPriceListImportSettings: Field<string>;
+    pricingStrategy: Field<string>;
+    margin: Field<string>;
+  },
+  "value"
+>;
 
 const categoryChoices: ChoiceListProps["choices"] = [
   {
@@ -49,14 +61,40 @@ const pricingStrategyChoices: ChoiceListProps["choices"] = [
   },
 ];
 
+function formatPriceListData(fieldValues: PriceListFormFieldValueProps) {
+  const {
+    name,
+    category,
+    generalPriceListImportSettings,
+    pricingStrategy,
+    margin,
+  } = fieldValues;
+
+  return {
+    name,
+    isGeneral: category === PRICE_LIST_CATEGORY.GENERAL ? true : false,
+    pricingStrategy,
+    ...(category === PRICE_LIST_CATEGORY.GENERAL && {
+      requiresApprovalToImport:
+        generalPriceListImportSettings === PRICE_LIST_IMPORT_SETTINGS.APPROVAL
+          ? true
+          : false,
+    }),
+    ...(pricingStrategy === PRICE_LIST_PRICING_STRATEGY.MARGIN && {
+      margin: parseFloat(margin),
+    }),
+  };
+}
+
 // !!! TODO: In the future (not urgent) - constrain fields to certain values for full benefit of typescript
 type PriceListStrategyProps =
   (typeof PRICE_LIST_PRICING_STRATEGY)[keyof typeof PRICE_LIST_PRICING_STRATEGY];
 
-export type { PriceListStrategyProps };
+export type { PriceListStrategyProps, PriceListFormFieldValueProps };
 
 export {
   categoryChoices,
   generalPriceListImportSettingChoices,
   pricingStrategyChoices,
+  formatPriceListData,
 };
