@@ -22,6 +22,7 @@ import {
   ResourceList,
   Text,
   TextField,
+  Thumbnail,
 } from "@shopify/polaris";
 import { asChoiceList, notEmpty, useField, useForm } from "@shopify/react-form";
 import { StatusCodes } from "http-status-codes";
@@ -49,6 +50,7 @@ import {
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { ProductFilterControl } from "~/components";
 import { useState } from "react";
+import { ImageIcon } from "@shopify/polaris-icons";
 
 // !!! TODO: add products to the type for this
 type LoaderDataProps = {
@@ -72,6 +74,7 @@ type SelectedProductProps = {
   }[];
   status: string;
   totalInventory: number;
+  storeUrl: string | null;
   variants: {
     title: string;
     sku: string;
@@ -349,12 +352,40 @@ const EditPriceList = () => {
   );
 };
 
+// type SelectedProductProps = {
+//   id: string;
+//   title: string;
+//   images: {
+//     id: string;
+//     altText?: string;
+//     originalSrc: string;
+//   }[];
+//   status: string;
+//   totalInventory: number;
+//   variants: {
+//     title: string;
+//     sku: string;
+//     inventoryQuantity: number;
+//   }[];
+// };
+
 const ProductLineItem = ({
   selectedProduct,
 }: {
   selectedProduct: SelectedProductProps;
 }) => {
-  return <ResourceItem></ResourceItem>;
+  const { id, title, storeUrl, images } = selectedProduct;
+  const primaryImage = images[0] ? images[0].originalSrc : ImageIcon;
+  const primaryImageAlt =
+    images[0] && images[0].altText ? images[0].altText : `${title} image`;
+
+  return (
+    <ResourceItem
+      id={id}
+      url={storeUrl ?? ""}
+      media={<Thumbnail source={primaryImage} alt={primaryImageAlt} />}
+    ></ResourceItem>
+  );
 };
 
 export default EditPriceList;
