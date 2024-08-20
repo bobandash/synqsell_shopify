@@ -17,6 +17,7 @@ import {
   Form,
   FormLayout,
   IndexTable,
+  IndexTableRowProps,
   InlineStack,
   Layout,
   Page,
@@ -55,6 +56,8 @@ import { ProductFilterControl } from "~/components";
 import { type FC, Fragment, useCallback, useMemo, useState } from "react";
 import { ImageIcon } from "@shopify/polaris-icons";
 import { round } from "../util";
+import { type Variant } from "./types";
+import { getAllVariantSelectedStatus } from "./util";
 
 // !!! TODO: add products to the type for this
 type LoaderDataProps = {
@@ -80,19 +83,14 @@ type SelectedProductProps = {
   totalInventory: number;
   totalVariants: number;
   storeUrl: string | null;
-  variants: {
-    id: string;
-    title: string;
-    sku: string;
-    inventoryQuantity: number;
-    price: string;
-  }[];
+  variants: Variant[];
 };
 
 type ProductTableRowProps = {
   product: SelectedProductProps;
   margin: string;
   pricingStrategy: PriceListPricingStrategyProps;
+  selectedResources: string[];
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -249,7 +247,6 @@ const EditPriceList = () => {
     if (products) {
       const productIds = products.map(({ id }) => id);
       const idToStoreUrl = await getIdToStoreUrl(productIds);
-      console.log(products);
       const productsFormatted: SelectedProductProps[] = products.map(
         ({
           id,
@@ -281,6 +278,7 @@ const EditPriceList = () => {
         },
       );
 
+      // this is where you deal with the positions because right now, it's in order
       setProducts((prev) => {
         const newSelectedProductIds = new Set(
           productsFormatted.map((product) => product.id),
@@ -384,6 +382,7 @@ const EditPriceList = () => {
                           product={product}
                           margin={fields.margin.value}
                           pricingStrategy={fields.pricingStrategy.value}
+                          selectedResources={selectedResources}
                         />
                       ))}
                     </IndexTable>
@@ -406,12 +405,19 @@ const EditPriceList = () => {
 
 // !!! TODO: figure out how to tell the currency
 const ProductTableRow: FC<ProductTableRowProps> = (props) => {
-  const { product, margin, pricingStrategy } = props;
+  const { product, margin, pricingStrategy, selectedResources } = props;
 
   const { images, title, variants, totalVariants } = product;
   const primaryImage = images && images[0] ? images[0].originalSrc : ImageIcon;
   const isSingleVariant =
     variants.length === 1 && variants.length === totalVariants;
+
+  const allVariantsSelected = getAllVariantSelectedStatus(
+    variants,
+    selectedResources,
+  );
+
+  console.log(selectedResources);
 
   if (isSingleVariant) {
     const firstVariant = variants[0];
@@ -425,10 +431,9 @@ const ProductTableRow: FC<ProductTableRowProps> = (props) => {
     return (
       <IndexTable.Row
         rowType="data"
-        selectionRange={[1, 1]}
         id={firstVariant.id}
         position={1}
-        selected={false}
+        selected={selectedResources.includes(firstVariant.id)}
       >
         <IndexTable.Cell scope={"row"}>
           <InlineStack gap="200" blockAlign="center" wrap={false}>
@@ -468,7 +473,7 @@ const ProductTableRow: FC<ProductTableRowProps> = (props) => {
         selectionRange={[1, 1]}
         id={product.id}
         position={1}
-        selected={false}
+        selected={allVariantsSelected}
       >
         <IndexTable.Cell scope="col">
           <InlineStack gap="200" blockAlign="center" wrap={false}>
@@ -493,7 +498,7 @@ const ProductTableRow: FC<ProductTableRowProps> = (props) => {
           key={id}
           id={id}
           position={1}
-          selected={false}
+          selected={selectedResources.includes(id)}
         >
           <IndexTable.Cell scope="row">
             <BlockStack>

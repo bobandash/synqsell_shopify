@@ -114,12 +114,6 @@ export function WithNestedRowsExample() {
     return groups;
   };
 
-  //   {
-  //     id, position, products[]
-  //   }
-
-  // so basically just to note: there's a position, but does there have to be a position?
-
   const resourceName = {
     singular: "product",
     plural: "products",
@@ -135,10 +129,11 @@ export function WithNestedRowsExample() {
     (color) => `color--${color.toLowerCase()}`,
   );
 
-  console.log(groupedProducts);
-
   const rowMarkup = Object.keys(groupedProducts).map((color, index) => {
     const { products, position, id: productId } = groupedProducts[color];
+    console.log(groupedProducts[color]);
+    console.log(selectedResources);
+
     let selected: IndexTableRowProps["selected"] = false;
 
     const someProductsSelected = products.some(({ id }) =>
@@ -156,6 +151,7 @@ export function WithNestedRowsExample() {
     }
 
     const selectableRows = rows.filter(({ disabled }) => !disabled);
+    console.log(selectableRows);
     const rowRange: IndexTableRowProps["selectionRange"] = [
       selectableRows.findIndex((row) => row.id === products[0].id),
       selectableRows.findIndex(
@@ -164,6 +160,7 @@ export function WithNestedRowsExample() {
     ];
 
     const disabled = products.every(({ disabled }) => disabled);
+
     return (
       <Fragment key={productId}>
         <IndexTable.Row
