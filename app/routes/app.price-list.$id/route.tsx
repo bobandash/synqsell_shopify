@@ -17,7 +17,6 @@ import {
   Form,
   FormLayout,
   IndexTable,
-  IndexTableRowProps,
   InlineStack,
   Layout,
   Page,
@@ -53,7 +52,7 @@ import {
 import type { PriceListPricingStrategyProps } from "~/formData/pricelist";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { ProductFilterControl } from "~/components";
-import { type FC, Fragment, useCallback, useMemo, useState } from "react";
+import { type FC, Fragment, useMemo, useState } from "react";
 import { ImageIcon } from "@shopify/polaris-icons";
 import { round } from "../util";
 import { type Variant } from "./types";
@@ -232,22 +231,26 @@ const EditPriceList = () => {
     return data;
   }
 
-  const removeSelectedProduct = useCallback((productId: string) => {
-    setProducts((prev) => prev.filter(({ id }) => id !== productId));
-  }, []);
-
   async function handleSelectProducts() {
-    const products = await shopify.resourcePicker({
+    // Mandatory field for to set shopify resource picker's initial values
+    const resourcePickerInitialSelection =
+      products.map((product) => ({
+        id: product.id,
+        variants: product.variants.map((variant) => ({ id: variant.id })),
+      })) ?? [];
+
+    const productsSelected = await shopify.resourcePicker({
       type: "product",
       multiple: true,
       action: "select",
       showArchived: false,
       showDraft: false,
+      selectionIds: resourcePickerInitialSelection,
     });
-    if (products) {
-      const productIds = products.map(({ id }) => id);
+    if (productsSelected) {
+      const productIds = productsSelected.map(({ id }) => id);
       const idToStoreUrl = await getIdToStoreUrl(productIds);
-      const productsFormatted: SelectedProductProps[] = products.map(
+      const productsFormatted: SelectedProductProps[] = productsSelected.map(
         ({
           id,
           title,
@@ -416,8 +419,6 @@ const ProductTableRow: FC<ProductTableRowProps> = (props) => {
     variants,
     selectedResources,
   );
-
-  console.log(selectedResources);
 
   if (isSingleVariant) {
     const firstVariant = variants[0];
