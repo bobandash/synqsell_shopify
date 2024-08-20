@@ -55,10 +55,16 @@ import { ProductFilterControl } from "~/components";
 import { type FC, Fragment, useMemo, useState } from "react";
 import { ImageIcon } from "@shopify/polaris-icons";
 import { round } from "../util";
-import { type Variant } from "./types";
-import { getAllVariantSelectedStatus } from "./util";
+import {
+  getAllVariantSelectedStatus,
+  getProductsFormattedWithPositions,
+} from "./util";
+import type {
+  ProductPropsWithPositions,
+  ProductProps,
+  VariantWithPosition,
+} from "./types";
 
-// !!! TODO: add products to the type for this
 type LoaderDataProps = {
   id: string;
   createdAt: string;
@@ -70,26 +76,12 @@ type LoaderDataProps = {
   margin: number;
 };
 
-type SelectedProductProps = {
-  id: string;
-  title: string;
-  images: {
-    id: string;
-    altText?: string;
-    originalSrc: string;
-  }[];
-  status: string;
-  totalInventory: number;
-  totalVariants: number;
-  storeUrl: string | null;
-  variants: Variant[];
-};
-
 type ProductTableRowProps = {
-  product: SelectedProductProps;
+  product: ProductPropsWithPositions;
   margin: string;
   pricingStrategy: PriceListPricingStrategyProps;
   selectedResources: string[];
+  tableRows: VariantWithPosition[];
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -143,9 +135,19 @@ const EditPriceList = () => {
   const backActionUrl = pathname.substring(0, pathname.lastIndexOf("/"));
   const shopify = useAppBridge();
   const remixSubmit = useRemixSubmit();
-  const [products, setProducts] = useState<SelectedProductProps[]>([]);
+  const [products, setProducts] = useState<ProductPropsWithPositions[]>([]);
+  // in order for the non-nested fields to select the nested rows, you have to create an array of objects of the variants
+  // and get the indexes of the nested fields
+  const tableRows = useMemo(() => {
+    const rows: VariantWithPosition[] = [];
+    products.map(({ variants }) =>
+      variants.map((variant) => rows.push({ ...variant })),
+    );
+    return rows;
+  }, [products]);
+
   const { selectedResources, allResourcesSelected, handleSelectionChange } =
-    useIndexResourceState(products);
+    useIndexResourceState(tableRows);
 
   // Mandatory fields for index table
   const numRows = useMemo(() => {
@@ -250,7 +252,8 @@ const EditPriceList = () => {
     if (productsSelected) {
       const productIds = productsSelected.map(({ id }) => id);
       const idToStoreUrl = await getIdToStoreUrl(productIds);
-      const productsFormatted: SelectedProductProps[] = productsSelected.map(
+      // TODO: extract to separate function once you figure out how to import the select payload type
+      const productsFormatted: ProductProps[] = productsSelected.map(
         ({
           id,
           title,
@@ -280,17 +283,9 @@ const EditPriceList = () => {
           };
         },
       );
-
-      // this is where you deal with the positions because right now, it's in order
-      setProducts((prev) => {
-        const newSelectedProductIds = new Set(
-          productsFormatted.map((product) => product.id),
-        );
-        const nonDuplicateProducts = prev.filter(
-          (product) => !newSelectedProductIds.has(product.id),
-        );
-        return [...nonDuplicateProducts, ...productsFormatted];
-      });
+      const newProducts = getProductsFormattedWithPositions(productsFormatted);
+      console.log(newProducts);
+      setProducts([...newProducts]);
     }
   }
 
@@ -386,6 +381,7 @@ const EditPriceList = () => {
                           margin={fields.margin.value}
                           pricingStrategy={fields.pricingStrategy.value}
                           selectedResources={selectedResources}
+                          tableRows={tableRows}
                         />
                       ))}
                     </IndexTable>
@@ -408,8 +404,8 @@ const EditPriceList = () => {
 
 // !!! TODO: figure out how to tell the currency
 const ProductTableRow: FC<ProductTableRowProps> = (props) => {
-  const { product, margin, pricingStrategy, selectedResources } = props;
-
+  const { product, margin, pricingStrategy, selectedResources, tableRows } =
+    props;
   const { images, title, variants, totalVariants } = product;
   const primaryImage = images && images[0] ? images[0].originalSrc : ImageIcon;
   const isSingleVariant =
@@ -419,6 +415,11 @@ const ProductTableRow: FC<ProductTableRowProps> = (props) => {
     variants,
     selectedResources,
   );
+
+  const selectionRange = [
+    tableRows.findIndex(({ id }) => variants[0].id === id),
+    tableRows.findIndex(({ id }) => variants[variants.length - 1].id === id),
+  ] as [number, number];
 
   if (isSingleVariant) {
     const firstVariant = variants[0];
@@ -433,7 +434,7 @@ const ProductTableRow: FC<ProductTableRowProps> = (props) => {
       <IndexTable.Row
         rowType="data"
         id={firstVariant.id}
-        position={1}
+        position={firstVariant.position}
         selected={selectedResources.includes(firstVariant.id)}
       >
         <IndexTable.Cell scope={"row"}>
@@ -471,9 +472,9 @@ const ProductTableRow: FC<ProductTableRowProps> = (props) => {
     <Fragment key={product.id}>
       <IndexTable.Row
         rowType="data"
-        selectionRange={[1, 1]}
+        selectionRange={selectionRange}
         id={product.id}
-        position={1}
+        position={product.position}
         selected={allVariantsSelected}
       >
         <IndexTable.Cell scope="col">
@@ -493,39 +494,42 @@ const ProductTableRow: FC<ProductTableRowProps> = (props) => {
         <IndexTable.Cell />
         <IndexTable.Cell />
       </IndexTable.Row>
-      {variants.map(({ id, title, sku, price }) => (
-        <IndexTable.Row
-          rowType="child"
-          key={id}
-          id={id}
-          position={1}
-          selected={selectedResources.includes(id)}
-        >
-          <IndexTable.Cell scope="row">
-            <BlockStack>
-              <Text as="span" variant="headingSm">
-                {title}
-              </Text>
-              {sku && (
+      {variants.map(({ id, title, sku, price, position }) => {
+        console.log(position);
+        return (
+          <IndexTable.Row
+            rowType="child"
+            key={id}
+            id={id}
+            position={position}
+            selected={selectedResources.includes(id)}
+          >
+            <IndexTable.Cell scope="row" headers={`${product.id}`}>
+              <BlockStack>
                 <Text as="span" variant="headingSm">
-                  Sku: {sku}
+                  {title}
                 </Text>
-              )}
-            </BlockStack>
-          </IndexTable.Cell>
-          <IndexTable.Cell>
-            <Text as="span" numeric>
-              {price}
-            </Text>
-          </IndexTable.Cell>
-          <IndexTable.Cell>
-            <Text as="span">Not Impl</Text>
-          </IndexTable.Cell>
-          <IndexTable.Cell>
-            <Text as="span">Not Impl</Text>
-          </IndexTable.Cell>
-        </IndexTable.Row>
-      ))}
+                {sku && (
+                  <Text as="span" variant="headingSm">
+                    Sku: {sku}
+                  </Text>
+                )}
+              </BlockStack>
+            </IndexTable.Cell>
+            <IndexTable.Cell>
+              <Text as="span" numeric>
+                {price}
+              </Text>
+            </IndexTable.Cell>
+            <IndexTable.Cell>
+              <Text as="span">Not Impl</Text>
+            </IndexTable.Cell>
+            <IndexTable.Cell>
+              <Text as="span">Not Impl</Text>
+            </IndexTable.Cell>
+          </IndexTable.Row>
+        );
+      })}
     </Fragment>
   );
 };
