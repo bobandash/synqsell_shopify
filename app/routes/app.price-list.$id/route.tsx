@@ -16,14 +16,15 @@ import {
   ChoiceList,
   Form,
   FormLayout,
+  IndexTable,
   InlineStack,
   Layout,
   Page,
-  ResourceItem,
-  ResourceList,
   Text,
   TextField,
   Thumbnail,
+  useIndexResourceState,
+  type IndexTableProps,
 } from "@shopify/polaris";
 import { asChoiceList, notEmpty, useField, useForm } from "@shopify/react-form";
 import { StatusCodes } from "http-status-codes";
@@ -48,10 +49,12 @@ import {
   generalPriceListImportSettingChoices,
   pricingStrategyChoices,
 } from "~/formData/pricelist";
+import type { PriceListPricingStrategyProps } from "~/formData/pricelist";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { ProductFilterControl } from "~/components";
-import { useCallback, useState } from "react";
-import { ImageIcon, XIcon } from "@shopify/polaris-icons";
+import { type FC, useCallback, useMemo, useState } from "react";
+import { ImageIcon } from "@shopify/polaris-icons";
+import { round } from "../util";
 
 // !!! TODO: add products to the type for this
 type LoaderDataProps = {
@@ -60,7 +63,7 @@ type LoaderDataProps = {
   name: string;
   isGeneral: boolean;
   requiresApprovalToImport: boolean;
-  pricingStrategy: string;
+  pricingStrategy: PriceListPricingStrategyProps;
   supplierId: string;
   margin: number;
 };
@@ -75,13 +78,21 @@ type SelectedProductProps = {
   }[];
   status: string;
   totalInventory: number;
+  totalVariants: number;
   storeUrl: string | null;
   variants: {
+    id: string;
     title: string;
     sku: string;
     inventoryQuantity: number;
     price: string;
   }[];
+};
+
+type ProductTableRowProps = {
+  product: SelectedProductProps;
+  margin: string;
+  pricingStrategy: PriceListPricingStrategyProps;
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -135,9 +146,29 @@ const EditPriceList = () => {
   const backActionUrl = pathname.substring(0, pathname.lastIndexOf("/"));
   const shopify = useAppBridge();
   const remixSubmit = useRemixSubmit();
-  const [selectedProducts, setSelectedProducts] = useState<
-    SelectedProductProps[]
-  >([]);
+  const [products, setProducts] = useState<SelectedProductProps[]>([]);
+  const { selectedResources, allResourcesSelected, handleSelectionChange } =
+    useIndexResourceState(products);
+
+  // Mandatory fields for index table
+  const numRows = useMemo(() => {
+    return products.reduce((acc, product) => {
+      acc += product.variants.length;
+      return acc;
+    }, 0);
+  }, [products]);
+
+  const resourceName = {
+    singular: "product",
+    plural: "products",
+  };
+
+  const headings: IndexTableProps["headings"] = [
+    { title: "Product" },
+    { title: "Price" },
+    { title: "Retailer Payment" },
+    { title: "Profit / Wholesale Price" },
+  ];
 
   const { fields, submit } = useForm({
     fields: {
@@ -155,7 +186,9 @@ const EditPriceList = () => {
           ? PRICE_LIST_IMPORT_SETTINGS.APPROVAL
           : PRICE_LIST_IMPORT_SETTINGS.NO_APPROVAL,
       ),
-      pricingStrategy: useField(initialData.pricingStrategy),
+      pricingStrategy: useField<PriceListPricingStrategyProps>(
+        initialData.pricingStrategy,
+      ),
       margin: useField({
         value: initialData.margin.toString() ?? "10",
         validates: (value) => {
@@ -164,6 +197,8 @@ const EditPriceList = () => {
             return "Margin cannot be empty.";
           } else if (valueFloat < 0) {
             return "Margin cannot be less than 0.";
+          } else if (valueFloat > 100) {
+            return "Margin cannot be greater than 100.";
           } else if (
             fields.category.value === PRICE_LIST_CATEGORY.GENERAL &&
             valueFloat < 10
@@ -200,7 +235,7 @@ const EditPriceList = () => {
   }
 
   const removeSelectedProduct = useCallback((productId: string) => {
-    setSelectedProducts((prev) => prev.filter(({ id }) => id !== productId));
+    setProducts((prev) => prev.filter(({ id }) => id !== productId));
   }, []);
 
   async function handleSelectProducts() {
@@ -210,14 +245,11 @@ const EditPriceList = () => {
       action: "select",
       showArchived: false,
       showDraft: false,
-      filter: {
-        variants: false,
-      },
     });
     if (products) {
       const productIds = products.map(({ id }) => id);
       const idToStoreUrl = await getIdToStoreUrl(productIds);
-
+      console.log(products);
       const productsFormatted: SelectedProductProps[] = products.map(
         ({
           id,
@@ -237,7 +269,8 @@ const EditPriceList = () => {
             totalInventory,
             totalVariants,
             variants: variants.map(
-              ({ title, sku, inventoryQuantity, price }) => ({
+              ({ id, title, sku, inventoryQuantity, price }) => ({
+                id: id ?? "",
                 title: title ?? "",
                 sku: sku ?? "",
                 inventoryQuantity: inventoryQuantity ?? 0,
@@ -248,7 +281,7 @@ const EditPriceList = () => {
         },
       );
 
-      setSelectedProducts((prev) => {
+      setProducts((prev) => {
         const newSelectedProductIds = new Set(
           productsFormatted.map((product) => product.id),
         );
@@ -312,7 +345,6 @@ const EditPriceList = () => {
                         choices={pricingStrategyChoices}
                       />
                     </Box>
-
                     {fields.pricingStrategy.value ===
                       PRICE_LIST_PRICING_STRATEGY.MARGIN && (
                       <TextField
@@ -335,24 +367,28 @@ const EditPriceList = () => {
                       Products
                     </Text>
                   </Box>
-                  <ResourceList
-                    resourceName={{ singular: "product", plural: "products" }}
-                    flushFilters={true}
-                    filterControl={
-                      <ProductFilterControl
-                        onQueryFocus={handleSelectProducts}
-                      />
-                    }
-                    emptyState={<></>}
-                    items={selectedProducts}
-                    renderItem={(selectedProduct) => (
-                      <ProductLineItem
-                        selectedProduct={selectedProduct}
-                        removeSelectedProduct={removeSelectedProduct}
-                      />
-                    )}
-                  />
-                  <Box paddingBlockEnd={"100"}></Box>
+                  <ProductFilterControl onQueryFocus={handleSelectProducts} />
+                  {products.length > 0 && (
+                    <IndexTable
+                      onSelectionChange={handleSelectionChange}
+                      selectedItemsCount={
+                        allResourcesSelected ? "All" : selectedResources.length
+                      }
+                      resourceName={resourceName}
+                      itemCount={numRows}
+                      headings={headings}
+                    >
+                      {products.map((product) => (
+                        <ProductTableRow
+                          key={product.id}
+                          product={product}
+                          margin={fields.margin.value}
+                          pricingStrategy={fields.pricingStrategy.value}
+                        />
+                      ))}
+                    </IndexTable>
+                  )}
+                  <Box paddingBlockEnd={"100"} />
                 </Card>
               </BlockStack>
             </Layout.Section>
@@ -369,51 +405,61 @@ const EditPriceList = () => {
 };
 
 // !!! TODO: figure out how to tell the currency
-const ProductLineItem = ({
-  selectedProduct,
-  removeSelectedProduct,
-}: {
-  selectedProduct: SelectedProductProps;
-  removeSelectedProduct: (productId: string) => void;
-}) => {
-  const { id, title, storeUrl, images, variants } = selectedProduct;
-  const primaryImage = images[0] ? images[0].originalSrc : ImageIcon;
-  const primaryImageAlt =
-    images[0] && images[0].altText ? images[0].altText : `${title} image`;
-  const retailPrices = variants.map(({ price }) => `$${price}`);
-  return (
-    <ResourceItem
-      id={id}
-      url={storeUrl ?? ""}
-      media={
-        <Thumbnail source={primaryImage} alt={primaryImageAlt} size="large" />
-      }
-    >
-      <InlineStack align="space-between" blockAlign="center">
-        <BlockStack>
-          <Text as="p" variant="headingSm">
-            {title}
+const ProductTableRow: FC<ProductTableRowProps> = (props) => {
+  const { product, margin, pricingStrategy } = props;
+
+  const { images, title, variants, totalVariants } = product;
+  const primaryImage = images && images[0] ? images[0].originalSrc : ImageIcon;
+  const isSingleVariant =
+    variants.length === 1 && variants.length === totalVariants;
+
+  if (isSingleVariant) {
+    const firstVariant = variants[0];
+    // TODO: add wholesale price
+    const retailerPayment =
+      pricingStrategy === "MARGIN"
+        ? round(Number(firstVariant.price) * (Number(margin) / 100), 2)
+        : Number(firstVariant.price) - 0;
+    const profit = round(Number(firstVariant.price) - retailerPayment, 2);
+
+    return (
+      <IndexTable.Row
+        rowType="data"
+        selectionRange={[1, 1]}
+        id={firstVariant.id}
+        position={1}
+        selected={false}
+      >
+        <IndexTable.Cell scope={"row"}>
+          <InlineStack gap="200" blockAlign="center" wrap={false}>
+            <Thumbnail
+              source={primaryImage}
+              alt={`${title} image`}
+              size={"small"}
+            />
+            <BlockStack>
+              <Text as="span" variant="headingSm">
+                {title}
+              </Text>
+              {firstVariant.sku && (
+                <Text as="span" variant="headingSm">
+                  Sku: {firstVariant.sku}
+                </Text>
+              )}
+            </BlockStack>
+          </InlineStack>
+        </IndexTable.Cell>
+        <IndexTable.Cell>${firstVariant.price}</IndexTable.Cell>
+        <IndexTable.Cell>${retailerPayment}</IndexTable.Cell>
+        <IndexTable.Cell>
+          <Text as="p" variant="headingSm" tone="success">
+            ${profit}
           </Text>
-          <Text as="p" variant="bodyMd">
-            Price(s): {retailPrices.join(",")}
-          </Text>
-          <Text as="p" variant="bodyMd">
-            Amount To Pay Retailer: {retailPrices.join(",")}
-          </Text>
-          <Text as="p" variant="bodyMd">
-            Profit / Wholesale Price: {retailPrices.join(",")}
-          </Text>
-        </BlockStack>
-        <Button
-          icon={XIcon}
-          accessibilityLabel="Remove Item"
-          onClick={() => {
-            removeSelectedProduct(id);
-          }}
-        />
-      </InlineStack>
-    </ResourceItem>
-  );
+        </IndexTable.Cell>
+      </IndexTable.Row>
+    );
+  }
+  return null;
 };
 
 export default EditPriceList;

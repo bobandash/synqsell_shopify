@@ -13,7 +13,6 @@ export default function convertIsoStringToDateFmt(isoString: string) {
       day: "numeric",
     };
     const formattedDate = dateInUTC.toLocaleString("en-US", options);
-    console.log("Formatted date:", formattedDate);
     return formattedDate;
   } catch (error) {
     console.error("Error formatting date:", error);

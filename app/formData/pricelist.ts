@@ -18,6 +18,15 @@ type PriceListFormFieldValueProps = FormMapping<
   "value"
 >;
 
+type PriceListPricingStrategyProps =
+  (typeof PRICE_LIST_PRICING_STRATEGY)[keyof typeof PRICE_LIST_PRICING_STRATEGY];
+
+type PriceListCategoryProps =
+  (typeof PRICE_LIST_CATEGORY)[keyof typeof PRICE_LIST_CATEGORY];
+
+type PriceListImportSettingsProps =
+  (typeof PRICE_LIST_IMPORT_SETTINGS)[keyof typeof PRICE_LIST_IMPORT_SETTINGS];
+
 const categoryChoices: ChoiceListProps["choices"] = [
   {
     label: "General",
@@ -86,11 +95,12 @@ function formatPriceListData(fieldValues: PriceListFormFieldValueProps) {
   };
 }
 
-// !!! TODO: In the future (not urgent) - constrain fields to certain values for full benefit of typescript
-type PriceListStrategyProps =
-  (typeof PRICE_LIST_PRICING_STRATEGY)[keyof typeof PRICE_LIST_PRICING_STRATEGY];
-
-export type { PriceListStrategyProps, PriceListFormFieldValueProps };
+export type {
+  PriceListPricingStrategyProps,
+  PriceListFormFieldValueProps,
+  PriceListCategoryProps,
+  PriceListImportSettingsProps,
+};
 
 export {
   categoryChoices,

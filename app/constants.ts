@@ -26,14 +26,16 @@ export const CHECKLIST_ITEM_KEYS = {
 export const PRICE_LIST_CATEGORY = {
   GENERAL: "GENERAL",
   PRIVATE: "PRIVATE",
-};
+} as const;
 
 export const PRICE_LIST_IMPORT_SETTINGS = {
   NO_APPROVAL: "NO_APPROVAL",
   APPROVAL: "APPROVAL",
-};
+} as const;
 
 export const PRICE_LIST_PRICING_STRATEGY = {
   WHOLESALE: "WHOLESALE",
   MARGIN: "MARGIN",
 } as const;
+
+export const MARKETPLACE_FEE = 0.03;
