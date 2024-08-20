@@ -52,7 +52,7 @@ import {
 import type { PriceListPricingStrategyProps } from "~/formData/pricelist";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { ProductFilterControl } from "~/components";
-import { type FC, useCallback, useMemo, useState } from "react";
+import { type FC, Fragment, useCallback, useMemo, useState } from "react";
 import { ImageIcon } from "@shopify/polaris-icons";
 import { round } from "../util";
 
@@ -459,7 +459,69 @@ const ProductTableRow: FC<ProductTableRowProps> = (props) => {
       </IndexTable.Row>
     );
   }
-  return null;
+
+  // case: multiple variants
+  return (
+    <Fragment key={product.id}>
+      <IndexTable.Row
+        rowType="data"
+        selectionRange={[1, 1]}
+        id={product.id}
+        position={1}
+        selected={false}
+      >
+        <IndexTable.Cell scope="col">
+          <InlineStack gap="200" blockAlign="center" wrap={false}>
+            <Thumbnail
+              source={primaryImage}
+              alt={`${title} image`}
+              size={"small"}
+            />
+
+            <Text as="span" variant="headingSm">
+              {title}
+            </Text>
+          </InlineStack>
+        </IndexTable.Cell>
+        <IndexTable.Cell />
+        <IndexTable.Cell />
+        <IndexTable.Cell />
+      </IndexTable.Row>
+      {variants.map(({ id, title, sku, price }) => (
+        <IndexTable.Row
+          rowType="child"
+          key={id}
+          id={id}
+          position={1}
+          selected={false}
+        >
+          <IndexTable.Cell scope="row">
+            <BlockStack>
+              <Text as="span" variant="headingSm">
+                {title}
+              </Text>
+              {sku && (
+                <Text as="span" variant="headingSm">
+                  Sku: {sku}
+                </Text>
+              )}
+            </BlockStack>
+          </IndexTable.Cell>
+          <IndexTable.Cell>
+            <Text as="span" numeric>
+              {price}
+            </Text>
+          </IndexTable.Cell>
+          <IndexTable.Cell>
+            <Text as="span">Not Impl</Text>
+          </IndexTable.Cell>
+          <IndexTable.Cell>
+            <Text as="span">Not Impl</Text>
+          </IndexTable.Cell>
+        </IndexTable.Row>
+      ))}
+    </Fragment>
+  );
 };
 
 export default EditPriceList;
