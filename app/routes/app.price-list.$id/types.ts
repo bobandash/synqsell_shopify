@@ -4,6 +4,7 @@ export type Variant = {
   sku: string;
   inventoryQuantity: number;
   price: string;
+  wholesalePrice: number | null;
 };
 
 export type VariantWithPosition = Variant & {

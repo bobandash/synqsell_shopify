@@ -19,7 +19,6 @@ import {
   FormLayout,
   Icon,
   IndexTable,
-  InlineStack,
   Layout,
   Listbox,
   Page,
@@ -27,7 +26,6 @@ import {
   ResourceList,
   Text,
   TextField,
-  Thumbnail,
   useIndexResourceState,
   type IndexTableProps,
 } from "@shopify/polaris";
@@ -57,18 +55,18 @@ import {
 import type { PriceListPricingStrategyProps } from "~/formData/pricelist";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { ProductFilterControl } from "~/components";
-import { type FC, Fragment, useCallback, useMemo, useState } from "react";
-import { ImageIcon, SearchIcon } from "@shopify/polaris-icons";
-import { round } from "../util";
+import { useCallback, useMemo, useState } from "react";
+import { SearchIcon } from "@shopify/polaris-icons";
 import {
-  getAllVariantSelectedStatus,
   getProductsFormattedWithPositions,
+  getVariantIdToWholesalePrice,
 } from "./util";
 import type {
   ProductPropsWithPositions,
   ProductProps,
   VariantWithPosition,
 } from "./types";
+import ProductTableRow from "./components/ProductTableRow";
 
 type LoaderDataProps = {
   id: string;
@@ -79,14 +77,6 @@ type LoaderDataProps = {
   pricingStrategy: PriceListPricingStrategyProps;
   supplierId: string;
   margin: number;
-};
-
-type ProductTableRowProps = {
-  product: ProductPropsWithPositions;
-  margin: string;
-  pricingStrategy: PriceListPricingStrategyProps;
-  selectedResources: string[];
-  tableRows: VariantWithPosition[];
 };
 
 type RetailerOption = {
@@ -171,7 +161,6 @@ const EditPriceList = () => {
         setVisibleRetailerOptions(retailerOptions);
         return;
       }
-
       const filterRegex = new RegExp(escapeSpecialRegExCharacters(value), "i");
       const resultOptions = retailerOptions.filter((option) =>
         option.label.match(filterRegex),
@@ -310,7 +299,7 @@ const EditPriceList = () => {
     if (productsSelected) {
       const productIds = productsSelected.map(({ id }) => id);
       const idToStoreUrl = await getIdToStoreUrl(productIds);
-      // TODO: extract to separate function once you figure out how to import the select payload type
+      const variantIdToWholesalePrice = getVariantIdToWholesalePrice(products);
       const productsFormatted: ProductProps[] = productsSelected.map(
         ({
           id,
@@ -336,14 +325,16 @@ const EditPriceList = () => {
                 sku: sku ?? "",
                 inventoryQuantity: inventoryQuantity ?? 0,
                 price: price ?? "",
+                wholesalePrice: variantIdToWholesalePrice.get(id) ?? null,
               }),
             ),
           };
         },
       );
       const newProducts = getProductsFormattedWithPositions(productsFormatted);
-      console.log(newProducts);
       setProducts([...newProducts]);
+    } else {
+      setProducts([]);
     }
   }
 
@@ -513,138 +504,6 @@ const EditPriceList = () => {
         </div>
       </Page>
     </Form>
-  );
-};
-
-// !!! TODO: figure out how to tell the currency
-const ProductTableRow: FC<ProductTableRowProps> = (props) => {
-  const { product, margin, pricingStrategy, selectedResources, tableRows } =
-    props;
-  const { images, title, variants, totalVariants } = product;
-  const primaryImage = images && images[0] ? images[0].originalSrc : ImageIcon;
-  const isSingleVariant =
-    variants.length === 1 && variants.length === totalVariants;
-
-  const allVariantsSelected = getAllVariantSelectedStatus(
-    variants,
-    selectedResources,
-  );
-
-  const selectionRange = [
-    tableRows.findIndex(({ id }) => variants[0].id === id),
-    tableRows.findIndex(({ id }) => variants[variants.length - 1].id === id),
-  ] as [number, number];
-
-  if (isSingleVariant) {
-    const firstVariant = variants[0];
-    // TODO: add wholesale price
-    const retailerPayment =
-      pricingStrategy === "MARGIN"
-        ? round(Number(firstVariant.price) * (Number(margin) / 100), 2)
-        : Number(firstVariant.price) - 0;
-    const profit = round(Number(firstVariant.price) - retailerPayment, 2);
-
-    return (
-      <IndexTable.Row
-        rowType="data"
-        id={firstVariant.id}
-        position={firstVariant.position}
-        selected={selectedResources.includes(firstVariant.id)}
-      >
-        <IndexTable.Cell scope={"row"}>
-          <InlineStack gap="200" blockAlign="center" wrap={false}>
-            <Thumbnail
-              source={primaryImage}
-              alt={`${title} image`}
-              size={"small"}
-            />
-            <BlockStack>
-              <Text as="span" variant="headingSm">
-                {title}
-              </Text>
-              {firstVariant.sku && (
-                <Text as="span" variant="headingSm">
-                  Sku: {firstVariant.sku}
-                </Text>
-              )}
-            </BlockStack>
-          </InlineStack>
-        </IndexTable.Cell>
-        <IndexTable.Cell>${firstVariant.price}</IndexTable.Cell>
-        <IndexTable.Cell>${retailerPayment}</IndexTable.Cell>
-        <IndexTable.Cell>
-          <Text as="p" variant="headingSm" tone="success">
-            ${profit}
-          </Text>
-        </IndexTable.Cell>
-      </IndexTable.Row>
-    );
-  }
-
-  // case: multiple variants
-  return (
-    <Fragment key={product.id}>
-      <IndexTable.Row
-        rowType="data"
-        selectionRange={selectionRange}
-        id={product.id}
-        position={product.position}
-        selected={allVariantsSelected}
-      >
-        <IndexTable.Cell scope="col">
-          <InlineStack gap="200" blockAlign="center" wrap={false}>
-            <Thumbnail
-              source={primaryImage}
-              alt={`${title} image`}
-              size={"small"}
-            />
-
-            <Text as="span" variant="headingSm">
-              {title}
-            </Text>
-          </InlineStack>
-        </IndexTable.Cell>
-        <IndexTable.Cell />
-        <IndexTable.Cell />
-        <IndexTable.Cell />
-      </IndexTable.Row>
-      {variants.map(({ id, title, sku, price, position }) => {
-        console.log(position);
-        return (
-          <IndexTable.Row
-            rowType="child"
-            key={id}
-            id={id}
-            position={position}
-            selected={selectedResources.includes(id)}
-          >
-            <IndexTable.Cell scope="row" headers={`${product.id}`}>
-              <BlockStack>
-                <Text as="span" variant="headingSm">
-                  {title}
-                </Text>
-                {sku && (
-                  <Text as="span" variant="headingSm">
-                    Sku: {sku}
-                  </Text>
-                )}
-              </BlockStack>
-            </IndexTable.Cell>
-            <IndexTable.Cell>
-              <Text as="span" numeric>
-                {price}
-              </Text>
-            </IndexTable.Cell>
-            <IndexTable.Cell>
-              <Text as="span">Not Impl</Text>
-            </IndexTable.Cell>
-            <IndexTable.Cell>
-              <Text as="span">Not Impl</Text>
-            </IndexTable.Cell>
-          </IndexTable.Row>
-        );
-      })}
-    </Fragment>
   );
 };
 
