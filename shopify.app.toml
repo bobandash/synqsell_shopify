@@ -3,7 +3,7 @@
 client_id = "c2ff24913d6d89792234763f0830c676"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://wa-upc-chains-mil.trycloudflare.com"
+application_url = "https://networks-dennis-broadcast-headers.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read_assigned_fulfillment_orders,read_inventory,read_orders,read_produ
 
 [auth]
 redirect_urls = [
-  "https://wa-upc-chains-mil.trycloudflare.com/auth/callback",
-  "https://wa-upc-chains-mil.trycloudflare.com/auth/shopify/callback",
-  "https://wa-upc-chains-mil.trycloudflare.com/api/auth/callback"
+  "https://networks-dennis-broadcast-headers.trycloudflare.com/auth/callback",
+  "https://networks-dennis-broadcast-headers.trycloudflare.com/auth/shopify/callback",
+  "https://networks-dennis-broadcast-headers.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]

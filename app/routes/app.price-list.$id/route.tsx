@@ -79,9 +79,11 @@ type LoaderDataProps = {
   margin: number;
 };
 
-type RetailerOption = {
-  value: string;
-  label: string;
+type PartneredRetailersProps = {
+  id: string;
+  name: string;
+  website: string;
+  selected: boolean;
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -137,18 +139,32 @@ const EditPriceList = () => {
   const remixSubmit = useRemixSubmit();
   const [products, setProducts] = useState<ProductPropsWithPositions[]>([]);
 
-  // everything to do with selecting retailers
-  const retailerOptions: RetailerOption[] = useMemo(() => {
-    return [
+  // todo: fetch this information
+  const allPartneredRetailers: PartneredRetailersProps[] = useMemo(
+    () => [
       {
-        value: "retailer-id",
-        label: "Eppeal",
+        id: "retailer-id",
+        name: "Eppeal",
+        website: "https://www.eppeal.com",
+        selected: true,
       },
-    ];
-  }, []);
-  const [visibleRetailerOptions, setVisibleRetailerOptions] =
-    useState<RetailerOption[]>(retailerOptions);
-  const [selectedRetailerIds, setSelectedRetailerIds] = useState<string[]>([]);
+    ],
+    [],
+  );
+
+  const initialSelectedRetailers = useMemo(() => {
+    return allPartneredRetailers
+      .filter(({ selected }) => selected === true)
+      .map(({ id }) => id);
+  }, [allPartneredRetailers]);
+
+  const [visibleRetailerOptions, setVisibleRetailerOptions] = useState<
+    PartneredRetailersProps[]
+  >(allPartneredRetailers);
+
+  const [selectedRetailerIds, setSelectedRetailerIds] = useState<string[]>(
+    initialSelectedRetailers,
+  );
   const [retailerSearchValue, setRetailerSearchValue] = useState("");
   const escapeSpecialRegExCharacters = useCallback(
     (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
@@ -158,20 +174,21 @@ const EditPriceList = () => {
     (value: string) => {
       setRetailerSearchValue(value);
       if (value === "") {
-        setVisibleRetailerOptions(retailerOptions);
+        setVisibleRetailerOptions(allPartneredRetailers);
         return;
       }
       const filterRegex = new RegExp(escapeSpecialRegExCharacters(value), "i");
-      const resultOptions = retailerOptions.filter((option) =>
-        option.label.match(filterRegex),
+      const resultOptions = allPartneredRetailers.filter((retailer) =>
+        retailer.name.match(filterRegex),
       );
       setVisibleRetailerOptions(resultOptions);
     },
-    [retailerOptions, escapeSpecialRegExCharacters],
+    [allPartneredRetailers, escapeSpecialRegExCharacters],
   );
 
   const updateRetailerSelection = useCallback(
     (selected: string) => {
+      console.log(selected);
       if (selectedRetailerIds.includes(selected)) {
         setSelectedRetailerIds(
           selectedRetailerIds.filter((option) => option !== selected),
@@ -422,15 +439,15 @@ const EditPriceList = () => {
                     >
                       {visibleRetailerOptions.length > 0 ? (
                         <Listbox onSelect={updateRetailerSelection}>
-                          {visibleRetailerOptions.map(({ value, label }) => {
+                          {visibleRetailerOptions.map(({ id, name }) => {
                             return (
                               <Listbox.Option
-                                key={value}
-                                value={value}
-                                selected={selectedRetailerIds.includes(value)}
-                                accessibilityLabel={label}
+                                key={id}
+                                value={id}
+                                selected={selectedRetailerIds.includes(id)}
+                                accessibilityLabel={name}
                               >
-                                {label}
+                                {name}
                               </Listbox.Option>
                             );
                           })}
@@ -442,19 +459,19 @@ const EditPriceList = () => {
                         singular: "customer",
                         plural: "customers",
                       }}
-                      items={retailerOptions.filter(({ value }) =>
-                        selectedRetailerIds.includes(value),
+                      items={allPartneredRetailers.filter(({ id }) =>
+                        selectedRetailerIds.includes(id),
                       )}
                       renderItem={(item) => {
-                        const { value, label } = item;
+                        const { id, name, website } = item;
                         return (
                           <ResourceItem
-                            id={value}
-                            url={"test"}
+                            id={id}
+                            url={website}
                             accessibilityLabel={`View details for ${name}`}
                           >
                             <Text variant="bodyMd" fontWeight="bold" as="h3">
-                              {label}
+                              {name}
                             </Text>
                           </ResourceItem>
                         );
