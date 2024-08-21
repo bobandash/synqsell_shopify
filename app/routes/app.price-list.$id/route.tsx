@@ -19,6 +19,7 @@ import {
   FormLayout,
   Icon,
   IndexTable,
+  InlineStack,
   Layout,
   Listbox,
   Page,
@@ -56,7 +57,7 @@ import type { PriceListPricingStrategyProps } from "~/formData/pricelist";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { ProductFilterControl } from "~/components";
 import { useCallback, useMemo, useState } from "react";
-import { SearchIcon } from "@shopify/polaris-icons";
+import { SearchIcon, XIcon } from "@shopify/polaris-icons";
 import {
   getProductsFormattedWithPositions,
   getVariantIdToWholesalePrice,
@@ -145,7 +146,7 @@ const EditPriceList = () => {
       {
         id: "retailer-id",
         name: "Eppeal",
-        website: "https://www.eppeal.com",
+        website: "/app/retailer-network/retailer-id", // TODO: make this in the frontend
         selected: true,
       },
     ],
@@ -470,9 +471,26 @@ const EditPriceList = () => {
                             url={website}
                             accessibilityLabel={`View details for ${name}`}
                           >
-                            <Text variant="bodyMd" fontWeight="bold" as="h3">
-                              {name}
-                            </Text>
+                            <InlineStack
+                              blockAlign="center"
+                              align="space-between"
+                            >
+                              <Text variant="bodyMd" fontWeight="bold" as="h3">
+                                {name}
+                              </Text>
+                              <div
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                }}
+                              >
+                                <Button
+                                  icon={XIcon}
+                                  onClick={() => {
+                                    updateRetailerSelection(id);
+                                  }}
+                                />
+                              </div>
+                            </InlineStack>
                           </ResourceItem>
                         );
                       }}
