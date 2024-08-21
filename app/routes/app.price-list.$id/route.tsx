@@ -213,7 +213,7 @@ const EditPriceList = () => {
     { title: "Product" },
     { title: "Price" },
     { title: "Retailer Payment" },
-    { title: "Profit / Wholesale Price" },
+    { title: "Profit" },
   ];
 
   const { fields, submit } = useForm({
@@ -484,7 +484,9 @@ const EditPriceList = () => {
                           key={product.id}
                           product={product}
                           margin={fields.margin.value}
-                          pricingStrategy={fields.pricingStrategy.value}
+                          isWholesalePricing={
+                            fields.pricingStrategy.value === "WHOLESALE"
+                          }
                           selectedResources={selectedResources}
                           tableRows={tableRows}
                         />

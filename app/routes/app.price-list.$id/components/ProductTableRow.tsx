@@ -1,30 +1,23 @@
-import type { PriceListPricingStrategyProps } from "~/formData/pricelist";
 import type { ProductPropsWithPositions, VariantWithPosition } from "../types";
 import { getAllVariantSelectedStatus } from "../util";
-import { round } from "~/routes/util";
-import {
-  BlockStack,
-  IndexTable,
-  InlineStack,
-  Text,
-  Thumbnail,
-} from "@shopify/polaris";
+import { IndexTable, InlineStack, Text, Thumbnail } from "@shopify/polaris";
 import { Fragment } from "react/jsx-runtime";
 import { type FC } from "react";
 import { ImageIcon } from "@shopify/polaris-icons";
 import ProductTableNestedRow from "./ProductTableNestedRow";
+import ProductTableRowSingleVariant from "./ProductTableRowSingleVariant";
 
 type ProductTableRowProps = {
   product: ProductPropsWithPositions;
   margin: string;
-  pricingStrategy: PriceListPricingStrategyProps;
+  isWholesalePricing: boolean;
   selectedResources: string[];
   tableRows: VariantWithPosition[];
 };
 
 // !!! TODO: figure out how to tell the currency
 const ProductTableRow: FC<ProductTableRowProps> = (props) => {
-  const { product, margin, pricingStrategy, selectedResources, tableRows } =
+  const { product, margin, isWholesalePricing, selectedResources, tableRows } =
     props;
   const { images, title, variants, totalVariants } = product;
   const primaryImage = images && images[0] ? images[0].originalSrc : ImageIcon;
@@ -42,47 +35,15 @@ const ProductTableRow: FC<ProductTableRowProps> = (props) => {
   ] as [number, number];
 
   if (isSingleVariant) {
-    const firstVariant = variants[0];
-    const retailerPayment =
-      pricingStrategy === "MARGIN"
-        ? round(Number(firstVariant.price) * (Number(margin) / 100), 2)
-        : Number(firstVariant.price) - 0;
-    const profit = round(Number(firstVariant.price) - retailerPayment, 2);
-
     return (
-      <IndexTable.Row
-        rowType="data"
-        id={firstVariant.id}
-        position={firstVariant.position}
-        selected={selectedResources.includes(firstVariant.id)}
-      >
-        <IndexTable.Cell scope={"row"}>
-          <InlineStack gap="200" blockAlign="center" wrap={false}>
-            <Thumbnail
-              source={primaryImage}
-              alt={`${title} image`}
-              size={"small"}
-            />
-            <BlockStack>
-              <Text as="span" variant="headingSm">
-                {title}
-              </Text>
-              {firstVariant.sku && (
-                <Text as="span" variant="headingSm">
-                  Sku: {firstVariant.sku}
-                </Text>
-              )}
-            </BlockStack>
-          </InlineStack>
-        </IndexTable.Cell>
-        <IndexTable.Cell>${firstVariant.price}</IndexTable.Cell>
-        <IndexTable.Cell>${retailerPayment}</IndexTable.Cell>
-        <IndexTable.Cell>
-          <Text as="p" variant="headingSm" tone="success">
-            ${profit}
-          </Text>
-        </IndexTable.Cell>
-      </IndexTable.Row>
+      <ProductTableRowSingleVariant
+        variant={variants[0]}
+        isWholesalePricing={isWholesalePricing}
+        margin={margin}
+        selectedResources={selectedResources}
+        primaryImage={primaryImage}
+        title={title}
+      />
     );
   }
 
@@ -103,7 +64,6 @@ const ProductTableRow: FC<ProductTableRowProps> = (props) => {
               alt={`${title} image`}
               size={"small"}
             />
-
             <Text as="span" variant="headingSm">
               {title}
             </Text>
@@ -115,10 +75,12 @@ const ProductTableRow: FC<ProductTableRowProps> = (props) => {
       </IndexTable.Row>
       {variants.map((variant) => (
         <ProductTableNestedRow
+          isWholesalePricing={isWholesalePricing}
           variant={variant}
           product={product}
           key={variant.id}
           selectedResources={selectedResources}
+          margin={margin}
         />
       ))}
     </Fragment>

@@ -1,30 +1,37 @@
-// component for product variants' nested row
-import { BlockStack, IndexTable, Text, TextField } from "@shopify/polaris";
-import type { ProductPropsWithPositions, VariantWithPosition } from "../types";
 import { useMemo, type FC } from "react";
-import { useField } from "@shopify/react-form";
+import type { VariantWithPosition } from "../types";
+import {
+  BlockStack,
+  IndexTable,
+  InlineStack,
+  Text,
+  TextField,
+  Thumbnail,
+} from "@shopify/polaris";
 import {
   calculatePriceDifference,
   calculateRetailerPaymentGivenMargin,
 } from "../util";
+import { useField } from "@shopify/react-form";
 
 type Props = {
-  product: ProductPropsWithPositions;
   variant: VariantWithPosition;
-  selectedResources: string[];
   isWholesalePricing: boolean;
   margin: string;
+  selectedResources: string[];
+  title: string;
+  primaryImage: string | React.FunctionComponent<React.SVGProps<SVGSVGElement>>;
 };
 
-const ProductTableNestedRow: FC<Props> = ({
+const ProductTableRowSingleVariant: FC<Props> = ({
   variant,
-  product,
-  selectedResources,
   isWholesalePricing,
+  selectedResources,
   margin,
+  primaryImage,
+  title,
 }) => {
-  const { id, title, sku, price, wholesalePrice } = variant;
-  const { position } = product;
+  const { id, position, price, sku, wholesalePrice } = variant;
   const variantWholesalePrice = useField({
     value: wholesalePrice?.toString() ?? "",
     validates: [
@@ -60,32 +67,32 @@ const ProductTableNestedRow: FC<Props> = ({
 
   return (
     <IndexTable.Row
-      rowType="child"
-      key={id}
+      rowType="data"
       id={id}
       position={position}
       selected={selectedResources.includes(id)}
     >
-      <IndexTable.Cell scope="row" headers={`${product.id}`}>
-        <BlockStack>
-          <Text as="span" variant="headingSm">
-            {title}
-          </Text>
-          {sku && (
+      <IndexTable.Cell scope={"row"}>
+        <InlineStack gap="200" blockAlign="center" wrap={false}>
+          <Thumbnail
+            source={primaryImage}
+            alt={`${title} image`}
+            size={"small"}
+          />
+          <BlockStack>
             <Text as="span" variant="headingSm">
-              Sku: {sku}
+              {title}
             </Text>
-          )}
-        </BlockStack>
+            {sku && (
+              <Text as="span" variant="headingSm">
+                Sku: {sku}
+              </Text>
+            )}
+          </BlockStack>
+        </InlineStack>
       </IndexTable.Cell>
-      <IndexTable.Cell>
-        <Text as="span" numeric>
-          {price}
-        </Text>
-      </IndexTable.Cell>
-      <IndexTable.Cell>
-        <Text as="span">{retailerPayment}</Text>
-      </IndexTable.Cell>
+      <IndexTable.Cell>{price}</IndexTable.Cell>
+      <IndexTable.Cell>{retailerPayment}</IndexTable.Cell>
       <IndexTable.Cell>
         {!isWholesalePricing ? (
           <Text as="p" variant="headingSm" tone="success">
@@ -111,4 +118,4 @@ const ProductTableNestedRow: FC<Props> = ({
   );
 };
 
-export default ProductTableNestedRow;
+export default ProductTableRowSingleVariant;
