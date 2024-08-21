@@ -14,11 +14,14 @@ import {
   Button,
   Card,
   ChoiceList,
+  Combobox,
   Form,
   FormLayout,
+  Icon,
   IndexTable,
   InlineStack,
   Layout,
+  Listbox,
   Page,
   Text,
   TextField,
@@ -52,8 +55,8 @@ import {
 import type { PriceListPricingStrategyProps } from "~/formData/pricelist";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { ProductFilterControl } from "~/components";
-import { type FC, Fragment, useMemo, useState } from "react";
-import { ImageIcon } from "@shopify/polaris-icons";
+import { type FC, Fragment, useCallback, useMemo, useState } from "react";
+import { ImageIcon, SearchIcon } from "@shopify/polaris-icons";
 import { round } from "../util";
 import {
   getAllVariantSelectedStatus,
@@ -82,6 +85,11 @@ type ProductTableRowProps = {
   pricingStrategy: PriceListPricingStrategyProps;
   selectedResources: string[];
   tableRows: VariantWithPosition[];
+};
+
+type RetailerOption = {
+  value: string;
+  label: string;
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -136,6 +144,55 @@ const EditPriceList = () => {
   const shopify = useAppBridge();
   const remixSubmit = useRemixSubmit();
   const [products, setProducts] = useState<ProductPropsWithPositions[]>([]);
+
+  // everything to do with selecting retailers
+  const retailerOptions: RetailerOption[] = useMemo(() => {
+    return [
+      {
+        value: "retailer-id",
+        label: "Eppeal",
+      },
+    ];
+  }, []);
+  const [visibleRetailerOptions, setVisibleRetailerOptions] =
+    useState<RetailerOption[]>(retailerOptions);
+  const [selectedRetailerIds, setSelectedRetailerIds] = useState<string[]>([]);
+  const [retailerSearchValue, setRetailerSearchValue] = useState("");
+  const escapeSpecialRegExCharacters = useCallback(
+    (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+    [],
+  );
+  const filterRetailerOptions = useCallback(
+    (value: string) => {
+      setRetailerSearchValue(value);
+      if (value === "") {
+        setVisibleRetailerOptions(retailerOptions);
+        return;
+      }
+
+      const filterRegex = new RegExp(escapeSpecialRegExCharacters(value), "i");
+      const resultOptions = retailerOptions.filter((option) =>
+        option.label.match(filterRegex),
+      );
+      setVisibleRetailerOptions(resultOptions);
+    },
+    [retailerOptions, escapeSpecialRegExCharacters],
+  );
+
+  // TODO: refactor into a higher order function if use more than once
+  const updateRetailerSelection = useCallback(
+    (selected: string) => {
+      if (selectedRetailerIds.includes(selected)) {
+        setSelectedRetailerIds(
+          selectedRetailerIds.filter((option) => option !== selected),
+        );
+      } else {
+        setSelectedRetailerIds([...selectedRetailerIds, selected]);
+      }
+    },
+    [selectedRetailerIds],
+  );
+
   // in order for the non-nested fields to select the nested rows, you have to create an array of objects of the variants
   // and get the indexes of the nested fields
   const tableRows = useMemo(() => {
@@ -353,9 +410,42 @@ const EditPriceList = () => {
                   </FormLayout>
                 </Card>
                 <Card>
-                  <Text as="h2" variant="headingMd">
-                    Retailers Connected
-                  </Text>
+                  <BlockStack gap="200">
+                    <Text as="h2" variant="headingMd">
+                      Retailers Connected
+                    </Text>
+                    <Combobox
+                      allowMultiple
+                      activator={
+                        <Combobox.TextField
+                          prefix={<Icon source={SearchIcon} />}
+                          onChange={filterRetailerOptions}
+                          label="Search retailers"
+                          labelHidden
+                          value={retailerSearchValue}
+                          placeholder="Search retailers"
+                          autoComplete="off"
+                        />
+                      }
+                    >
+                      {visibleRetailerOptions.length > 0 ? (
+                        <Listbox onSelect={updateRetailerSelection}>
+                          {visibleRetailerOptions.map(({ value, label }) => {
+                            return (
+                              <Listbox.Option
+                                key={value}
+                                value={value}
+                                selected={selectedRetailerIds.includes(value)}
+                                accessibilityLabel={label}
+                              >
+                                {label}
+                              </Listbox.Option>
+                            );
+                          })}
+                        </Listbox>
+                      ) : null}
+                    </Combobox>
+                  </BlockStack>
                 </Card>
                 <Card padding={"200"}>
                   <Box paddingInline={"200"} paddingBlockStart={"100"}>
