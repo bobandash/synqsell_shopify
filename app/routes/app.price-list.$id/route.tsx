@@ -68,6 +68,7 @@ import type {
   VariantWithPosition,
 } from "./types";
 import ProductTableRow from "./components/ProductTableRow";
+import { BulkActionsProps } from "@shopify/polaris/build/ts/src/components/BulkActions";
 
 type LoaderDataProps = {
   id: string;
@@ -86,6 +87,10 @@ type PartneredRetailersProps = {
   website: string;
   selected: boolean;
 };
+
+// !!! TODOs for this page:
+// !!! Before I start, I need to figure out the product data that I need to store
+// !!! I have to store all the data on my server/db because I can't query their store without their session id
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   try {
@@ -211,10 +216,14 @@ const EditPriceList = () => {
     return rows;
   }, [products]);
 
-  const { selectedResources, allResourcesSelected, handleSelectionChange } =
-    useIndexResourceState(tableRows);
+  const {
+    selectedResources,
+    allResourcesSelected,
+    handleSelectionChange,
+    clearSelection,
+  } = useIndexResourceState(tableRows);
 
-  // Mandatory fields for index table
+  // Mandatory fields for index table (products)
   const numRows = useMemo(() => {
     return products.reduce((acc, product) => {
       acc += product.variants.length;
@@ -232,6 +241,32 @@ const EditPriceList = () => {
     { title: "Price" },
     { title: "Retailer Payment" },
     { title: "Profit" },
+  ];
+
+  // removes the selected products from index table
+  const removeProductsIndexTable = useCallback(() => {
+    const selectedVariantIdSet = new Set(selectedResources);
+    const newProducts = products
+      .map(({ variants, ...rest }) => {
+        return {
+          ...rest,
+          variants: variants.filter((variant) => {
+            return !selectedVariantIdSet.has(variant.id);
+          }),
+        };
+      })
+      .filter(({ variants }) => variants.length > 0);
+    const newProductsWithUpdatedPosition =
+      getProductsFormattedWithPositions(newProducts);
+    setProducts([...newProductsWithUpdatedPosition]);
+    clearSelection();
+  }, [clearSelection, products, selectedResources]);
+
+  const productsBulkAction: BulkActionsProps["promotedActions"] = [
+    {
+      content: "Remove Products",
+      onAction: removeProductsIndexTable,
+    },
   ];
 
   const { fields, submit } = useForm({
@@ -351,8 +386,6 @@ const EditPriceList = () => {
       );
       const newProducts = getProductsFormattedWithPositions(productsFormatted);
       setProducts([...newProducts]);
-    } else {
-      setProducts([]);
     }
   }
 
@@ -513,6 +546,7 @@ const EditPriceList = () => {
                       resourceName={resourceName}
                       itemCount={numRows}
                       headings={headings}
+                      promotedBulkActions={productsBulkAction}
                     >
                       {products.map((product) => (
                         <ProductTableRow
@@ -539,6 +573,7 @@ const EditPriceList = () => {
             Save
           </Button>
         </div>
+        <Box paddingBlockEnd={"400"} />
       </Page>
     </Form>
   );
