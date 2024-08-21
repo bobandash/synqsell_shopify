@@ -23,6 +23,8 @@ import {
   Layout,
   Listbox,
   Page,
+  ResourceItem,
+  ResourceList,
   Text,
   TextField,
   Thumbnail,
@@ -179,7 +181,6 @@ const EditPriceList = () => {
     [retailerOptions, escapeSpecialRegExCharacters],
   );
 
-  // TODO: refactor into a higher order function if use more than once
   const updateRetailerSelection = useCallback(
     (selected: string) => {
       if (selectedRetailerIds.includes(selected)) {
@@ -445,6 +446,29 @@ const EditPriceList = () => {
                         </Listbox>
                       ) : null}
                     </Combobox>
+                    <ResourceList
+                      resourceName={{
+                        singular: "customer",
+                        plural: "customers",
+                      }}
+                      items={retailerOptions.filter(({ value }) =>
+                        selectedRetailerIds.includes(value),
+                      )}
+                      renderItem={(item) => {
+                        const { value, label } = item;
+                        return (
+                          <ResourceItem
+                            id={value}
+                            url={"test"}
+                            accessibilityLabel={`View details for ${name}`}
+                          >
+                            <Text variant="bodyMd" fontWeight="bold" as="h3">
+                              {label}
+                            </Text>
+                          </ResourceItem>
+                        );
+                      }}
+                    />
                   </BlockStack>
                 </Card>
                 <Card padding={"200"}>

@@ -3,7 +3,7 @@
 client_id = "c2ff24913d6d89792234763f0830c676"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://arrive-dance-pda-hash.trycloudflare.com"
+application_url = "https://stuff-mirror-privileges-followed.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read_assigned_fulfillment_orders,read_inventory,read_orders,read_produ
 
 [auth]
 redirect_urls = [
-  "https://arrive-dance-pda-hash.trycloudflare.com/auth/callback",
-  "https://arrive-dance-pda-hash.trycloudflare.com/auth/shopify/callback",
-  "https://arrive-dance-pda-hash.trycloudflare.com/api/auth/callback"
+  "https://stuff-mirror-privileges-followed.trycloudflare.com/auth/callback",
+  "https://stuff-mirror-privileges-followed.trycloudflare.com/auth/shopify/callback",
+  "https://stuff-mirror-privileges-followed.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]
