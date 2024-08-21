@@ -12,6 +12,7 @@ import {
 import { Fragment } from "react/jsx-runtime";
 import { type FC } from "react";
 import { ImageIcon } from "@shopify/polaris-icons";
+import ProductTableNestedRow from "./ProductTableNestedRow";
 
 type ProductTableRowProps = {
   product: ProductPropsWithPositions;
@@ -112,41 +113,14 @@ const ProductTableRow: FC<ProductTableRowProps> = (props) => {
         <IndexTable.Cell />
         <IndexTable.Cell />
       </IndexTable.Row>
-      {variants.map(({ id, title, sku, price, position }) => {
-        return (
-          <IndexTable.Row
-            rowType="child"
-            key={id}
-            id={id}
-            position={position}
-            selected={selectedResources.includes(id)}
-          >
-            <IndexTable.Cell scope="row" headers={`${product.id}`}>
-              <BlockStack>
-                <Text as="span" variant="headingSm">
-                  {title}
-                </Text>
-                {sku && (
-                  <Text as="span" variant="headingSm">
-                    Sku: {sku}
-                  </Text>
-                )}
-              </BlockStack>
-            </IndexTable.Cell>
-            <IndexTable.Cell>
-              <Text as="span" numeric>
-                {price}
-              </Text>
-            </IndexTable.Cell>
-            <IndexTable.Cell>
-              <Text as="span">Not Impl</Text>
-            </IndexTable.Cell>
-            <IndexTable.Cell>
-              <Text as="span">Not Impl</Text>
-            </IndexTable.Cell>
-          </IndexTable.Row>
-        );
-      })}
+      {variants.map((variant) => (
+        <ProductTableNestedRow
+          variant={variant}
+          product={product}
+          key={variant.id}
+          selectedResources={selectedResources}
+        />
+      ))}
     </Fragment>
   );
 };
