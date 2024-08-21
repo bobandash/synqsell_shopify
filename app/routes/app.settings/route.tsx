@@ -35,8 +35,9 @@ import logger from "~/logger";
 import styles from "~/shared.module.css";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { getRoles, type RolePropsJSON } from "~/models/roles";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { updateSettings } from "~/models/transactions";
+import { ImageDropZone, type DropZoneImageFileProps } from "~/components";
 
 type FormDataProps = {
   name: string;
@@ -148,11 +149,10 @@ const Settings = () => {
     socialMediaLinks: socialMediaData,
   } = loaderData;
 
-  const { roles } = useRoleContext();
-  const isRetailer = roles.has(ROLES.RETAILER);
-  const isSupplier = roles.has(ROLES.SUPPLIER);
+  const { isRetailer, isSupplier } = useRoleContext();
   const location = useLocation();
   const shopify = useAppBridge();
+  const [logo, setLogo] = useState<DropZoneImageFileProps>(null);
 
   const isVisibleInNetwork = useCallback(
     (role: string, rolesData: RolePropsJSON[]) => {
@@ -282,6 +282,11 @@ const Settings = () => {
                     autoComplete="off"
                     placeholder="Tell us a little bit about your brand and the products you sell."
                     {...fields.biography}
+                  />
+                  <ImageDropZone
+                    file={logo}
+                    setFile={setLogo}
+                    label={"Logo (Recommended 400 x 400px):"}
                   />
                   <TextField
                     label="Products You’re Searching For:"
