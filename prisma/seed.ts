@@ -17,7 +17,7 @@ async function main() {
     addRole(process.env.ADMIN_SESSION_ID, ROLES.ADMIN)
   }
 
-  if(!checklistTables){
+  if(checklistTables.length === 0){
     await Promise.all([
       // Create checklist 1
       db.checklistTable.create({
