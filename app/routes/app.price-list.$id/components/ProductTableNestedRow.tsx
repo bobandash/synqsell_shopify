@@ -5,7 +5,7 @@ import type {
   UpdateProductWholesalePrice,
   VariantWithPosition,
 } from "../types";
-import { useEffect, useMemo, type FC } from "react";
+import { useCallback, useMemo, type FC } from "react";
 import { useField } from "@shopify/react-form";
 import {
   calculatePriceDifference,
@@ -47,16 +47,6 @@ const ProductTableNestedRow: FC<Props> = ({
     ],
   });
 
-  useEffect(() => {
-    if (!variantWholesalePrice.error && variantWholesalePrice.dirty) {
-      updateProductWholesalePrice(
-        product.id,
-        id,
-        parseFloat(variantWholesalePrice.value),
-      );
-    }
-  }, [variantWholesalePrice, id, product.id, updateProductWholesalePrice]);
-
   const retailerPayment = useMemo(() => {
     if (!isWholesalePricing) {
       return calculateRetailerPaymentGivenMargin(price, margin);
@@ -73,6 +63,17 @@ const ProductTableNestedRow: FC<Props> = ({
     }
     return calculatePriceDifference(price, retailerPayment);
   }, [isWholesalePricing, price, retailerPayment]);
+
+  const handleBlur = useCallback(() => {
+    const error = variantWholesalePrice.runValidation();
+    if (!error) {
+      updateProductWholesalePrice(
+        product.id,
+        id,
+        parseFloat(variantWholesalePrice.value),
+      );
+    }
+  }, [id, product.id, updateProductWholesalePrice, variantWholesalePrice]);
 
   return (
     <IndexTable.Row
@@ -119,6 +120,7 @@ const ProductTableNestedRow: FC<Props> = ({
               labelHidden
               autoComplete="off"
               {...variantWholesalePrice}
+              onBlur={handleBlur}
             />
           </div>
         )}

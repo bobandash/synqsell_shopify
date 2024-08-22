@@ -53,7 +53,7 @@ const ProductTableRow: FC<ProductTableRowProps> = (props) => {
         margin={margin}
         selectedResources={selectedResources}
         primaryImage={primaryImage}
-        title={title}
+        product={product}
         updateProductWholesalePrice={updateProductWholesalePrice}
       />
     );

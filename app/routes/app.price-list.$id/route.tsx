@@ -44,7 +44,7 @@ import {
   userHasPriceList,
   type CreatePriceListDataProps,
 } from "~/models/priceList";
-import styles from "~/shared.module.css";
+
 import { authenticate } from "~/shopify.server";
 import { convertFormDataToObject, getJSONError } from "~/util";
 import {
@@ -69,6 +69,8 @@ import type {
 } from "./types";
 import ProductTableRow from "./components/ProductTableRow";
 import { type BulkActionsProps } from "@shopify/polaris/build/ts/src/components/BulkActions";
+
+import styles from "~/shared.module.css";
 
 type LoaderDataProps = {
   id: string;
