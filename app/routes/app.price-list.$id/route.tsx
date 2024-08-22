@@ -91,6 +91,7 @@ type PartneredRetailersProps = {
 // !!! TODOs for this page:
 // !!! Before I start, I need to figure out the product data that I need to store
 // !!! I have to store all the data on my server/db because I can't query their store without their session id
+// !!! The payload for now for products will be whatever I determine
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   try {
@@ -392,6 +393,45 @@ const EditPriceList = () => {
   // functions related to updating wholesale price for products
   // this function is for when submitting with margin and edit the wholesale prices before
 
+  // update wholesale price for specific product and variant
+  const updateProductWholesalePrice = useCallback(
+    (productId: string, variantId: string, wholesalePrice: number) => {
+      setProducts((prev) =>
+        prev.map((product) =>
+          product.id === productId
+            ? {
+                ...product,
+                variants: product.variants.map((variant) =>
+                  variant.id === variantId
+                    ? { ...variant, wholesalePrice }
+                    : variant,
+                ),
+              }
+            : product,
+        ),
+      );
+    },
+    [],
+  );
+  // cleans product data before submission
+  // Default behavior: want the wholesale price to persist if the seller changes their mind on pricing strategy before refreshing / navigating the page
+  const getCleanedProductDataForSubmission = useCallback(() => {
+    if (fields.margin.value === PRICE_LIST_PRICING_STRATEGY.MARGIN) {
+      return products;
+    }
+    return products.map((product) => {
+      return {
+        ...product,
+        variants: product.variants.map((variant) => {
+          return {
+            ...variant,
+            wholesalePrice: null,
+          };
+        }),
+      };
+    });
+  }, [fields, products]);
+
   return (
     <Form onSubmit={submit}>
       <Page
@@ -561,6 +601,9 @@ const EditPriceList = () => {
                           }
                           selectedResources={selectedResources}
                           tableRows={tableRows}
+                          updateProductWholesalePrice={
+                            updateProductWholesalePrice
+                          }
                         />
                       ))}
                     </IndexTable>

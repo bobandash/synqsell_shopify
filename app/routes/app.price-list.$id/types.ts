@@ -30,3 +30,9 @@ export type ProductPropsWithPositions = Omit<ProductProps, "variants"> & {
   position: number;
   variants: VariantWithPosition[];
 };
+
+export type UpdateProductWholesalePrice = (
+  productId: string,
+  variantId: string,
+  wholesalePrice: number,
+) => void;

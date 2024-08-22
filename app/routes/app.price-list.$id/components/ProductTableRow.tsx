@@ -1,4 +1,8 @@
-import type { ProductPropsWithPositions, VariantWithPosition } from "../types";
+import type {
+  ProductPropsWithPositions,
+  UpdateProductWholesalePrice,
+  VariantWithPosition,
+} from "../types";
 import { getAllVariantSelectedStatus } from "../util";
 import { IndexTable, InlineStack, Text, Thumbnail } from "@shopify/polaris";
 import { Fragment } from "react/jsx-runtime";
@@ -13,12 +17,19 @@ type ProductTableRowProps = {
   isWholesalePricing: boolean;
   selectedResources: string[];
   tableRows: VariantWithPosition[];
+  updateProductWholesalePrice: UpdateProductWholesalePrice;
 };
 
 // !!! TODO: figure out how to tell the currency
 const ProductTableRow: FC<ProductTableRowProps> = (props) => {
-  const { product, margin, isWholesalePricing, selectedResources, tableRows } =
-    props;
+  const {
+    product,
+    margin,
+    isWholesalePricing,
+    selectedResources,
+    tableRows,
+    updateProductWholesalePrice,
+  } = props;
   const { images, title, variants, totalVariants } = product;
   const primaryImage = images && images[0] ? images[0].originalSrc : ImageIcon;
   const isSingleVariant =
@@ -43,6 +54,7 @@ const ProductTableRow: FC<ProductTableRowProps> = (props) => {
         selectedResources={selectedResources}
         primaryImage={primaryImage}
         title={title}
+        updateProductWholesalePrice={updateProductWholesalePrice}
       />
     );
   }
@@ -81,6 +93,7 @@ const ProductTableRow: FC<ProductTableRowProps> = (props) => {
           key={variant.id}
           selectedResources={selectedResources}
           margin={margin}
+          updateProductWholesalePrice={updateProductWholesalePrice}
         />
       ))}
     </Fragment>

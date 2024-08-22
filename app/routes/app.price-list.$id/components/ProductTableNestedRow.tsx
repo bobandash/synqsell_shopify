@@ -1,7 +1,11 @@
 // component for product variants' nested row
 import { BlockStack, IndexTable, Text, TextField } from "@shopify/polaris";
-import type { ProductPropsWithPositions, VariantWithPosition } from "../types";
-import { useMemo, type FC } from "react";
+import type {
+  ProductPropsWithPositions,
+  UpdateProductWholesalePrice,
+  VariantWithPosition,
+} from "../types";
+import { useEffect, useMemo, type FC } from "react";
 import { useField } from "@shopify/react-form";
 import {
   calculatePriceDifference,
@@ -14,6 +18,7 @@ type Props = {
   selectedResources: string[];
   isWholesalePricing: boolean;
   margin: string;
+  updateProductWholesalePrice: UpdateProductWholesalePrice;
 };
 
 const ProductTableNestedRow: FC<Props> = ({
@@ -22,6 +27,7 @@ const ProductTableNestedRow: FC<Props> = ({
   selectedResources,
   isWholesalePricing,
   margin,
+  updateProductWholesalePrice,
 }) => {
   const { id, title, sku, price, wholesalePrice } = variant;
   const { position } = product;
@@ -40,6 +46,16 @@ const ProductTableNestedRow: FC<Props> = ({
       },
     ],
   });
+
+  useEffect(() => {
+    if (!variantWholesalePrice.error && variantWholesalePrice.dirty) {
+      updateProductWholesalePrice(
+        product.id,
+        id,
+        parseFloat(variantWholesalePrice.value),
+      );
+    }
+  }, [variantWholesalePrice, id, product.id, updateProductWholesalePrice]);
 
   const retailerPayment = useMemo(() => {
     if (!isWholesalePricing) {

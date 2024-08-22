@@ -1,5 +1,9 @@
-import { useMemo, type FC } from "react";
-import type { VariantWithPosition } from "../types";
+import { useEffect, useMemo, type FC } from "react";
+import type {
+  ProductPropsWithPositions,
+  UpdateProductWholesalePrice,
+  VariantWithPosition,
+} from "../types";
 import {
   BlockStack,
   IndexTable,
@@ -19,8 +23,9 @@ type Props = {
   isWholesalePricing: boolean;
   margin: string;
   selectedResources: string[];
-  title: string;
+  product: ProductPropsWithPositions;
   primaryImage: string | React.FunctionComponent<React.SVGProps<SVGSVGElement>>;
+  updateProductWholesalePrice: UpdateProductWholesalePrice;
 };
 
 const ProductTableRowSingleVariant: FC<Props> = ({
@@ -29,8 +34,10 @@ const ProductTableRowSingleVariant: FC<Props> = ({
   selectedResources,
   margin,
   primaryImage,
-  title,
+  updateProductWholesalePrice,
+  product,
 }) => {
+  const { title } = product;
   const { id, position, price, sku, wholesalePrice } = variant;
   const variantWholesalePrice = useField({
     value: wholesalePrice?.toString() ?? "",
@@ -47,6 +54,16 @@ const ProductTableRowSingleVariant: FC<Props> = ({
       },
     ],
   });
+
+  useEffect(() => {
+    if (!variantWholesalePrice.error && variantWholesalePrice.dirty) {
+      updateProductWholesalePrice(
+        product.id,
+        id,
+        parseFloat(variantWholesalePrice.value),
+      );
+    }
+  }, [variantWholesalePrice, id, product.id, updateProductWholesalePrice]);
 
   const retailerPayment = useMemo(() => {
     if (!isWholesalePricing) {
