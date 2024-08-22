@@ -68,7 +68,7 @@ import type {
   VariantWithPosition,
 } from "./types";
 import ProductTableRow from "./components/ProductTableRow";
-import { BulkActionsProps } from "@shopify/polaris/build/ts/src/components/BulkActions";
+import { type BulkActionsProps } from "@shopify/polaris/build/ts/src/components/BulkActions";
 
 type LoaderDataProps = {
   id: string;
@@ -388,6 +388,9 @@ const EditPriceList = () => {
       setProducts([...newProducts]);
     }
   }
+
+  // functions related to updating wholesale price for products
+  // this function is for when submitting with margin and edit the wholesale prices before
 
   return (
     <Form onSubmit={submit}>
