@@ -1,7 +1,3 @@
-export {
-  deleteFulfillmentServiceShopify,
-  deleteFulfillmentServiceDatabase,
-  deleteFulfillmentService,
-} from "./deleteFulfillmentService";
-export { getFulfillmentService } from "./getFulfillmentService";
-export { createFulfillmentService } from "./createFulfillmentService";
+export * from "./deleteFulfillmentService";
+export * from "./getFulfillmentService";
+export * from "./createFulfillmentService";

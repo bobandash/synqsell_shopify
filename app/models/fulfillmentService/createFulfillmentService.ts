@@ -4,13 +4,23 @@ import createHttpError from "http-errors";
 import { getLogCombinedMessage, getLogContext, errorHandler } from "~/util";
 import logger from "~/logger";
 import { deleteFulfillmentServiceShopify } from "./deleteFulfillmentService";
+import {
+  getFulfillmentService,
+  hasFulfillmentService,
+} from "./getFulfillmentService";
 // Fulfillment services are designed for retailers to import products from suppliers
 // https://shopify.dev/docs/apps/build/orders-fulfillment/fulfillment-service-apps
 // https://shopify.dev/docs/api/admin-graphql/2024-04/mutations/fulfillmentServiceCreate
 
-export type FulfillmentServiceProps = {
+export type FulfillmentServiceShopifyProps = {
   id: string;
   name: string;
+};
+
+export type FulfillmentServiceDBProps = {
+  id: string;
+  fulfillmentServiceId: string;
+  sessionId: string;
 };
 
 // Helper functions for creating fulfillment service (in Shopify and database)
@@ -119,50 +129,76 @@ async function createFulfillmentServiceDatabase(
   }
 }
 
-// !!! Add Retry Logic
-export async function createFulfillmentService(
+async function getOrCreateFulfillmentService(
   sessionId: string,
   graphql: GraphQL,
-): Promise<FulfillmentServiceProps> {
-  let fulfillmentServiceShopify;
+) {
   try {
-    fulfillmentServiceShopify = await createFulfillmentServiceShopify(
-      sessionId,
-      graphql,
-    );
-    await createFulfillmentServiceDatabase(
-      sessionId,
-      fulfillmentServiceShopify.id,
-    );
-    return fulfillmentServiceShopify;
-  } catch (error) {
-    // rollback mechanism if graphql query succeeds but db operation fails
-    const context = getLogContext(createFulfillmentService, sessionId, graphql);
-    if (!fulfillmentServiceShopify) {
+    const fulfillmentServiceExists = await hasFulfillmentService(sessionId);
+    if (fulfillmentServiceExists) {
+      return await getFulfillmentService(sessionId);
+    }
+    let fulfillmentServiceShopify;
+    try {
+      fulfillmentServiceShopify = await createFulfillmentServiceShopify(
+        sessionId,
+        graphql,
+      );
+      const fulfillmentServiceDb = await createFulfillmentServiceDatabase(
+        sessionId,
+        fulfillmentServiceShopify.id,
+      );
+      return fulfillmentServiceDb;
+    } catch (error) {
+      // rollback mechanism if graphql query succeeds but db operation fails
+      const context = getLogContext(
+        getOrCreateFulfillmentService,
+        sessionId,
+        graphql,
+      );
+      if (!fulfillmentServiceShopify) {
+        throw errorHandler(
+          error,
+          context,
+          "Failed to create fulfillment services",
+        );
+      }
+
+      try {
+        await deleteFulfillmentServiceShopify(
+          fulfillmentServiceShopify.id,
+          graphql,
+        );
+      } catch {
+        const logMessage = getLogCombinedMessage(
+          getOrCreateFulfillmentService,
+          `Failed deleting fulfillment service ${fulfillmentServiceShopify.id} during rollback`,
+          sessionId,
+          graphql,
+        );
+        logger.error(logMessage);
+        throw new createHttpError.InternalServerError(
+          "Failed to delete new fulfillment service. Please contact support.",
+        );
+      }
       throw errorHandler(
         error,
         context,
         "Failed to create fulfillment services",
       );
     }
-
-    try {
-      await deleteFulfillmentServiceShopify(
-        fulfillmentServiceShopify.id,
-        graphql,
-      );
-    } catch {
-      const logMessage = getLogCombinedMessage(
-        createFulfillmentService,
-        `Failed deleting fulfillment service ${fulfillmentServiceShopify.id} during rollback`,
-        sessionId,
-        graphql,
-      );
-      logger.error(logMessage);
-      throw new createHttpError.InternalServerError(
-        "Failed to delete new fulfillment service. Please contact support.",
-      );
-    }
-    throw errorHandler(error, context, "Failed to create fulfillment services");
+  } catch (error) {
+    const context = getLogContext(
+      getOrCreateFulfillmentService,
+      sessionId,
+      graphql,
+    );
+    throw errorHandler(
+      error,
+      context,
+      "Failed to create fulfillment service in database. Please try again later.",
+    );
   }
 }
+
+export { getOrCreateFulfillmentService };

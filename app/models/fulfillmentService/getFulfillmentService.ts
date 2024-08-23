@@ -1,26 +1,16 @@
-import createHttpError from "http-errors";
-import { errorHandler, getLogCombinedMessage, getLogContext } from "~/util";
+import { errorHandler, getLogContext } from "~/util";
 import db from "../../db.server";
-import type { GraphQL } from "~/types";
-import logger from "~/logger";
 
-export async function getFulfillmentService(
-  sessionId: string,
-  graphql: GraphQL,
-) {
+async function getFulfillmentService(sessionId: string) {
   try {
-    const fulfillmentService = await db.fulfillmentService.findFirst({
+    const fulfillmentService = await db.fulfillmentService.findFirstOrThrow({
       where: {
         sessionId,
       },
     });
-    if (!fulfillmentService) {
-      return null;
-    }
-    const { fulfillmentServiceId } = fulfillmentService;
-    return await supplementFulfillmentService(fulfillmentServiceId, graphql);
+    return fulfillmentService;
   } catch (error) {
-    const context = getLogContext(getFulfillmentService, sessionId, graphql);
+    const context = getLogContext(getFulfillmentService, sessionId);
     throw errorHandler(
       error,
       context,
@@ -29,57 +19,25 @@ export async function getFulfillmentService(
   }
 }
 
-// TODO: These two services have to be synced together
-async function supplementFulfillmentService(
-  fulfillmentServiceId: string,
-  graphql: GraphQL,
-) {
+async function hasFulfillmentService(sessionId: string) {
   try {
-    const response = await graphql(
-      `
-        query supplementFulfillmentServiceQuery($id: ID!) {
-          fulfillmentService(id: $id) {
-            id
-            serviceName
-          }
-        }
-      `,
-      {
-        variables: { id: fulfillmentServiceId },
+    const fulfillmentService = await db.fulfillmentService.findFirstOrThrow({
+      where: {
+        sessionId,
       },
-    );
-
-    const { data } = await response.json();
-    if (!data || !data.fulfillmentService) {
-      const logMessage = getLogCombinedMessage(
-        supplementFulfillmentService,
-        `Could not fetch fulfillment service given id ${fulfillmentServiceId}`,
-        fulfillmentServiceId,
-        graphql,
-      );
-      logger.error(logMessage);
-      //!!! TODO: Maybe need to delete the fulfillment service from db, need to google
-      throw new createHttpError.BadRequest(
-        `Could not retrieve fulfillment service. Please contact support.`,
-      );
+    });
+    if (!fulfillmentService) {
+      return false;
     }
-
-    const { fulfillmentService } = data;
-
-    return {
-      id: fulfillmentService.id,
-      name: fulfillmentService.serviceName,
-    };
+    return true;
   } catch (error) {
-    const context = getLogContext(
-      supplementFulfillmentService,
-      fulfillmentServiceId,
-      graphql,
-    );
+    const context = getLogContext(hasFulfillmentService, sessionId);
     throw errorHandler(
       error,
       context,
-      "Failed to retrieve the fulfillment service in Shopify.",
+      "Failed to retrieve fulfillment service.",
     );
   }
 }
+
+export { getFulfillmentService, hasFulfillmentService };

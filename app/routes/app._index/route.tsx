@@ -27,8 +27,8 @@ import {
 } from "./actions";
 import { convertFormDataToObject, getJSONError } from "~/util";
 import { getOrCreateProfile, hasProfile } from "~/models/userProfile";
-import TableSkeleton from "./components/Skeleton/TableSkeleton";
 import { ChecklistTables } from "./asyncComponents";
+import { TableSkeleton } from "./components/Skeleton";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {

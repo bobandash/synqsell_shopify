@@ -3,8 +3,8 @@ import styles from "./styles.module.css";
 import { CheckCircleIcon } from "@shopify/polaris-icons";
 import { type FC } from "react";
 import { IncompleteCircle } from "~/assets";
-import type { TransformedChecklistItemData } from "~/models/types";
 import type { toggleActiveChecklistItemProps } from ".";
+import type { TransformedChecklistItemData } from "../../types";
 
 type Props = {
   task: TransformedChecklistItemData;

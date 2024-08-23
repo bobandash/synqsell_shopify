@@ -4,7 +4,7 @@ import createHttpError from "http-errors";
 import { getLogCombinedMessage, getLogContext } from "~/util/getLogContext";
 import { errorHandler } from "~/util";
 import logger from "~/logger";
-import { createFulfillmentService } from "./createFulfillmentService";
+import { getOrCreateFulfillmentService } from "./createFulfillmentService";
 
 export async function deleteFulfillmentServiceDatabase(id: string) {
   try {
@@ -80,7 +80,7 @@ async function rollbackDeleteFulfillmentService(
   graphql: GraphQL,
 ) {
   try {
-    const newFulfillmentService = await createFulfillmentService(
+    const newFulfillmentService = await getOrCreateFulfillmentService(
       sessionId,
       graphql,
     );
