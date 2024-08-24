@@ -20,7 +20,7 @@ export const CHECKLIST_ITEM_KEYS = {
   SUPPLIER_MANAGE_ZONES: "supplier_manage_zones",
   SUPPLIER_CREATE_PRICE_LIST: "supplier_create_price_list",
   SUPPLIER_EXPLORE_NETWORK: "supplier_explore_network",
-};
+} as const;
 
 // constants that have to do with price list
 export const PRICE_LIST_CATEGORY = {
@@ -37,5 +37,7 @@ export const PRICE_LIST_PRICING_STRATEGY = {
   WHOLESALE: "WHOLESALE",
   MARGIN: "MARGIN",
 } as const;
+
+export const FULFILLMENT_CENTER = "SynqSell" as const;
 
 export const MARKETPLACE_FEE = 0.03;

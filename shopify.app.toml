@@ -3,7 +3,7 @@
 client_id = "c2ff24913d6d89792234763f0830c676"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://4ca2-2601-8c0-b01-b760-4587-e695-7245-6d81.ngrok-free.app"
+application_url = "https://citizens-workflow-improve-rochester.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read_assigned_fulfillment_orders,read_inventory,read_orders,read_produ
 
 [auth]
 redirect_urls = [
-  "https://4ca2-2601-8c0-b01-b760-4587-e695-7245-6d81.ngrok-free.app/auth/callback",
-  "https://4ca2-2601-8c0-b01-b760-4587-e695-7245-6d81.ngrok-free.app/auth/shopify/callback",
-  "https://4ca2-2601-8c0-b01-b760-4587-e695-7245-6d81.ngrok-free.app/api/auth/callback"
+  "https://citizens-workflow-improve-rochester.trycloudflare.com/auth/callback",
+  "https://citizens-workflow-improve-rochester.trycloudflare.com/auth/shopify/callback",
+  "https://citizens-workflow-improve-rochester.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]

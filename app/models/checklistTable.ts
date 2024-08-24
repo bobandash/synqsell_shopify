@@ -1,6 +1,5 @@
 import db from "../db.server";
 import { getUserPreferences } from "./userPreferences";
-import type { TransformedChecklistTableData } from "./types";
 import { errorHandler, getLogContext } from "~/util";
 async function hasChecklistTable(id: string): Promise<boolean> {
   try {
@@ -87,9 +86,7 @@ async function getMissingChecklistIds(sessionId: string): Promise<string[]> {
   }
 }
 
-async function getTablesAndStatuses(
-  sessionId: string,
-): Promise<TransformedChecklistTableData[]> {
+async function getTablesAndStatuses(sessionId: string) {
   try {
     const userPreferences = await getUserPreferences(sessionId);
     const { tableIdsHidden } = userPreferences;

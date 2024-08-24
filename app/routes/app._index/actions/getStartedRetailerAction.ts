@@ -15,12 +15,10 @@ import { addRole, getRole, hasRole, type RoleProps } from "~/models/roles";
 import { ROLES } from "~/constants";
 import { createRoleAndCompleteChecklistItem } from "~/models/transactions";
 import {
-  getFulfillmentService,
-  hasFulfillmentService,
-} from "~/models/fulfillmentService/getFulfillmentService";
-import {
   deleteFulfillmentService,
+  getFulfillmentService,
   getOrCreateFulfillmentService,
+  hasFulfillmentService,
   type FulfillmentServiceDBProps,
 } from "~/models/fulfillmentService";
 
