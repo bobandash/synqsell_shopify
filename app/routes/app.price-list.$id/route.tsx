@@ -54,7 +54,7 @@ import {
 } from '~/formData/pricelist';
 import type { PriceListPricingStrategyProps } from '~/formData/pricelist';
 import { useAppBridge } from '@shopify/app-bridge-react';
-import { ProductFilterControl } from '~/components';
+import { PaddedBox, ProductFilterControl } from '~/components';
 import { useCallback, useMemo, useState } from 'react';
 import { SearchIcon, XIcon } from '@shopify/polaris-icons';
 import {
@@ -621,7 +621,7 @@ const EditPriceList = () => {
             Save
           </Button>
         </div>
-        <Box paddingBlockEnd={'400'} />
+        <PaddedBox />
       </Page>
     </Form>
   );
