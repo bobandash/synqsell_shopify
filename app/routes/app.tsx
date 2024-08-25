@@ -1,19 +1,19 @@
-import type { HeadersFunction, LoaderFunctionArgs } from "@remix-run/node";
-import { json } from "@remix-run/node";
-import { Link, Outlet, useLoaderData, useRouteError } from "@remix-run/react";
-import { boundary } from "@shopify/shopify-app-remix/server";
-import { AppProvider } from "@shopify/shopify-app-remix/react";
-import { NavMenu } from "@shopify/app-bridge-react";
-import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
-import { authenticate } from "../shopify.server";
-import { getRoles } from "~/models/roles";
-import { ROLES } from "~/constants";
-import { useState } from "react";
-import { RoleProvider } from "~/context/RoleProvider";
-import { getJSONError } from "~/util";
-import logger from "~/logger";
+import type { HeadersFunction, LoaderFunctionArgs } from '@remix-run/node';
+import { json } from '@remix-run/node';
+import { Link, Outlet, useLoaderData, useRouteError } from '@remix-run/react';
+import { boundary } from '@shopify/shopify-app-remix/server';
+import { AppProvider } from '@shopify/shopify-app-remix/react';
+import { NavMenu } from '@shopify/app-bridge-react';
+import polarisStyles from '@shopify/polaris/build/esm/styles.css?url';
+import { authenticate } from '../shopify.server';
+import { getRoles } from '~/services/models/roles';
+import { ROLES } from '~/constants';
+import { useState } from 'react';
+import { RoleProvider } from '~/context/RoleProvider';
+import { getJSONError } from '~/util';
+import logger from '~/logger';
 
-export const links = () => [{ rel: "stylesheet", href: polarisStyles }];
+export const links = () => [{ rel: 'stylesheet', href: polarisStyles }];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
@@ -21,10 +21,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const { id: sessionId } = session;
     const roles = await getRoles(sessionId);
     const roleNames = roles.map((role) => role.name);
-    return json({ apiKey: process.env.SHOPIFY_API_KEY || "", roleNames });
+    return json({ apiKey: process.env.SHOPIFY_API_KEY || '', roleNames });
   } catch (error) {
     logger.error(error);
-    throw getJSONError(error, "app root");
+    throw getJSONError(error, 'app root');
   }
 };
 
@@ -44,11 +44,10 @@ export default function App() {
           </Link>
           {isAdmin && <Link to="/app/admin">Admin</Link>}
           {/* !!! TODO: Deny retailer access to supplier network */}
-          <Link to="/app/retailer-network">Retailer Network</Link>
-          {/* {isSupplier && (
-            
-          )} */}
           {isRetailer && (
+            <Link to="/app/retailer-network">Retailer Network</Link>
+          )}
+          {isSupplier && (
             <Link to="/app/supplier-network">Supplier Network</Link>
           )}
           {isSupplier && <Link to="/app/price-list">Price Lists</Link>}

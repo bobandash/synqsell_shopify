@@ -1,5 +1,5 @@
-import { type ActionFunctionArgs } from "@remix-run/node";
-import { useLocation, useSubmit as useRemixSubmit } from "@remix-run/react";
+import { type ActionFunctionArgs } from '@remix-run/node';
+import { useLocation, useSubmit as useRemixSubmit } from '@remix-run/react';
 import {
   Box,
   Button,
@@ -11,22 +11,20 @@ import {
   Layout,
   Page,
   TextField,
-} from "@shopify/polaris";
-import { asChoiceList, notEmpty, useField, useForm } from "@shopify/react-form";
-import type { Field, FormMapping } from "@shopify/react-form";
-import { redirect } from "remix-typedjson";
+} from '@shopify/polaris';
+import { asChoiceList, notEmpty, useField, useForm } from '@shopify/react-form';
+import type { Field, FormMapping } from '@shopify/react-form';
+import { redirect } from 'remix-typedjson';
 import {
   PRICE_LIST_CATEGORY,
   PRICE_LIST_IMPORT_SETTINGS,
   PRICE_LIST_PRICING_STRATEGY,
-} from "~/constants";
-import {
-  createPriceListAndCompleteChecklistItem,
-  type CreatePriceListDataProps,
-} from "~/models/priceList";
-import styles from "~/shared.module.css";
-import { authenticate } from "~/shopify.server";
-import { convertFormDataToObject, getJSONError } from "~/util";
+} from '~/constants';
+import { type CreatePriceListDataProps } from '~/services/models/priceList';
+import { createPriceListAndCompleteChecklistItem } from '~/services/transactions';
+import styles from '~/shared.module.css';
+import { authenticate } from '~/shopify.server';
+import { convertFormDataToObject, getJSONError } from '~/util';
 
 type FieldValueProps = FormMapping<
   {
@@ -36,7 +34,7 @@ type FieldValueProps = FormMapping<
     pricingStrategy: Field<string>;
     margin: Field<string>;
   },
-  "value"
+  'value'
 >;
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -51,56 +49,56 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     );
     return redirect(`/app/price-list/${newPriceList.id}`);
   } catch (error) {
-    throw getJSONError(error, "settings");
+    throw getJSONError(error, 'settings');
   }
 };
 
 const NewPriceList = () => {
   const location = useLocation();
-  const backActionUrl = location.pathname.replace("/new", "");
+  const backActionUrl = location.pathname.replace('/new', '');
   const remixSubmit = useRemixSubmit();
 
-  const categoryChoices: ChoiceListProps["choices"] = [
+  const categoryChoices: ChoiceListProps['choices'] = [
     {
-      label: "General",
+      label: 'General',
       value: PRICE_LIST_CATEGORY.GENERAL,
       helpText:
-        "Products visible to all retailers within the retailer network.",
+        'Products visible to all retailers within the retailer network.',
     },
     {
-      label: "Private",
+      label: 'Private',
       value: PRICE_LIST_CATEGORY.PRIVATE,
-      helpText: "Accessible only to authorized retailers with granted access.",
+      helpText: 'Accessible only to authorized retailers with granted access.',
     },
   ];
 
-  const generalPriceListImportSettingChoices: ChoiceListProps["choices"] = [
+  const generalPriceListImportSettingChoices: ChoiceListProps['choices'] = [
     {
-      label: "No Approval",
+      label: 'No Approval',
       value: PRICE_LIST_IMPORT_SETTINGS.NO_APPROVAL,
       helpText:
-        "Allow any retailers from the retailer network to import products from the general price list without approval.",
+        'Allow any retailers from the retailer network to import products from the general price list without approval.',
     },
     {
-      label: "Requires Approval",
+      label: 'Requires Approval',
       value: PRICE_LIST_IMPORT_SETTINGS.APPROVAL,
       helpText:
-        "Prohibit retailers from importing products from the general price list unless you accept their retailer request.",
+        'Prohibit retailers from importing products from the general price list unless you accept their retailer request.',
     },
   ];
 
-  const pricingStrategyChoices: ChoiceListProps["choices"] = [
+  const pricingStrategyChoices: ChoiceListProps['choices'] = [
     {
-      label: "Margin",
+      label: 'Margin',
       value: PRICE_LIST_PRICING_STRATEGY.MARGIN,
       helpText:
-        "Retailer who imports your products gets a percentage of the retail price when they make a sale.",
+        'Retailer who imports your products gets a percentage of the retail price when they make a sale.',
     },
     {
-      label: "Wholesale Price",
+      label: 'Wholesale Price',
       value: PRICE_LIST_PRICING_STRATEGY.WHOLESALE,
       helpText:
-        "Retailer who imports your product gets the difference between the retail price and wholesale price when they make a sale.",
+        'Retailer who imports your product gets the difference between the retail price and wholesale price when they make a sale.',
     },
   ];
 
@@ -133,8 +131,8 @@ const NewPriceList = () => {
   const { fields, submit } = useForm({
     fields: {
       name: useField({
-        value: "",
-        validates: [notEmpty("Price list name is required")],
+        value: '',
+        validates: [notEmpty('Price list name is required')],
       }),
       category: useField(PRICE_LIST_CATEGORY.GENERAL),
       generalPriceListImportSettings: useField(
@@ -142,18 +140,18 @@ const NewPriceList = () => {
       ),
       pricingStrategy: useField(PRICE_LIST_PRICING_STRATEGY.MARGIN),
       margin: useField({
-        value: "10",
+        value: '10',
         validates: (value) => {
           const valueFloat = parseFloat(value);
           if (!value) {
-            return "Margin cannot be empty.";
+            return 'Margin cannot be empty.';
           } else if (valueFloat < 0) {
-            return "Margin cannot be less than 0.";
+            return 'Margin cannot be less than 0.';
           } else if (
             fields.category.value === PRICE_LIST_CATEGORY.GENERAL &&
             valueFloat < 10
           ) {
-            return "Retailer must have at least 10% margin for general price list";
+            return 'Retailer must have at least 10% margin for general price list';
           }
         },
       }),
@@ -161,10 +159,10 @@ const NewPriceList = () => {
     onSubmit: async (fieldValues) => {
       const formattedData = getFormattedData(fieldValues);
       remixSubmit(formattedData, {
-        method: "post",
+        method: 'post',
         action: location.pathname,
       });
-      return { status: "success" };
+      return { status: 'success' };
     },
   });
 
@@ -172,9 +170,9 @@ const NewPriceList = () => {
     <Form onSubmit={submit}>
       <Page
         title="Create Price List"
-        backAction={{ content: "Price Lists", url: backActionUrl }}
+        backAction={{ content: 'Price Lists', url: backActionUrl }}
       >
-        <Box paddingBlockEnd={"400"}>
+        <Box paddingBlockEnd={'400'}>
           <Layout>
             <Layout.AnnotatedSection
               id="settings"
@@ -216,7 +214,7 @@ const NewPriceList = () => {
             </Layout.AnnotatedSection>
           </Layout>
         </Box>
-        <div className={styles["center-right"]}>
+        <div className={styles['center-right']}>
           <Button submit variant="primary">
             Create Price List
           </Button>

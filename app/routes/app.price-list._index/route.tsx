@@ -30,7 +30,7 @@ import { authenticate } from "~/shopify.server";
 import {
   getPriceListTableInfo,
   type PriceListTableInfoProps,
-} from "~/models/priceList";
+} from "~/services/models/priceList";
 import { StatusCodes } from "http-status-codes";
 import { useEffect, useState, type FC } from "react";
 import { convertToTitleCase } from "../util";

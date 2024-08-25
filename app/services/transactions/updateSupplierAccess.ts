@@ -1,11 +1,10 @@
-import db from "~/db.server";
-import { ACCESS_REQUEST_STATUS, CHECKLIST_ITEM_KEYS, ROLES } from "~/constants";
-import logger from "~/logger";
-import { errorHandler, getLogCombinedMessage, getLogContext } from "~/util";
-import createHttpError from "http-errors";
-import { getRoleBatch } from "../roles";
-import { updateChecklistStatusBatchTx } from "../checklistStatus";
-import { type Prisma } from "@prisma/client";
+import db from '~/db.server';
+import { ACCESS_REQUEST_STATUS, CHECKLIST_ITEM_KEYS, ROLES } from '~/constants';
+import type { AccessRequestStatusOptionsProps } from '~/constants';
+import { getRoleBatch } from '../models/roles';
+import { updateChecklistStatusBatchTx } from '../models/checklistStatus';
+import { type Prisma } from '@prisma/client';
+import { errorHandler } from '../util';
 
 export type supplierAccessRequestInformationProps = {
   supplierAccessRequestId: string;
@@ -20,27 +19,9 @@ type NewRoleProps = {
 
 export async function updateSupplierAccess(
   supplierAccessRequestInfo: supplierAccessRequestInformationProps[],
-  status: string,
+  status: AccessRequestStatusOptionsProps,
 ) {
   try {
-    if (
-      !(
-        status === ACCESS_REQUEST_STATUS.REJECTED ||
-        status === ACCESS_REQUEST_STATUS.APPROVED
-      )
-    ) {
-      const logMessage = getLogCombinedMessage(
-        updateSupplierAccess,
-        `Status to update suppliers was invalid.`,
-        supplierAccessRequestInfo,
-        status,
-      );
-      logger.error(logMessage);
-      throw new createHttpError.BadRequest(
-        `Status to update was not valid. Please contact support.`,
-      );
-    }
-
     if (status === ACCESS_REQUEST_STATUS.REJECTED) {
       await rejectSuppliers(supplierAccessRequestInfo);
     } else if (status === ACCESS_REQUEST_STATUS.APPROVED) {
@@ -48,54 +29,70 @@ export async function updateSupplierAccess(
     }
     return;
   } catch (error) {
-    const context = getLogContext(
+    throw errorHandler(
+      error,
+      'Failed to update user settings.',
       updateSupplierAccess,
-      supplierAccessRequestInfo,
-      status,
+      { supplierAccessRequestInfo, status },
     );
-    throw errorHandler(error, context, "Failed to update supplier access.");
   }
 }
 
-// helper transaction functions for approving and rejecting suppliers
-// should only be called here
 async function updateSupplierAccessRequestBatchTx(
   tx: Prisma.TransactionClient,
   supplierAccessRequestIds: string[],
   status: string,
 ) {
-  const newSupplierAccessRequests = await tx.supplierAccessRequest.updateMany({
-    where: {
-      id: {
-        in: supplierAccessRequestIds,
+  try {
+    const newSupplierAccessRequests = await tx.supplierAccessRequest.updateMany(
+      {
+        where: {
+          id: {
+            in: supplierAccessRequestIds,
+          },
+        },
+        data: {
+          status: status,
+          updatedAt: new Date(),
+        },
       },
-    },
-    data: {
-      status: status,
-      updatedAt: new Date(),
-    },
-  });
-  return newSupplierAccessRequests;
+    );
+    return newSupplierAccessRequests;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to update supplier access requests in bulk.',
+      updateSupplierAccess,
+      { supplierAccessRequestIds, status },
+    );
+  }
 }
 
+// helper functions to approve / reject supplier access
 async function createSupplierRolesBatchTx(
   tx: Prisma.TransactionClient,
   newRoleData: NewRoleProps[],
 ) {
-  if (newRoleData) {
+  try {
     const newRoles = await tx.role.createMany({
       data: newRoleData,
     });
     return newRoles;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to create supplier roles in bulk.',
+      createSupplierRolesBatchTx,
+      { newRoleData },
+    );
   }
-  return Promise.resolve();
 }
 
 async function deleteSupplierRolesBatchTx(
   tx: Prisma.TransactionClient,
   sessionIds: string[],
 ) {
-  const rolesDeleted = await db.role.deleteMany({
+  const rolesDeleted = await tx.role.deleteMany({
     where: {
       sessionId: {
         in: sessionIds,
@@ -105,7 +102,6 @@ async function deleteSupplierRolesBatchTx(
       },
     },
   });
-
   return rolesDeleted;
 }
 
@@ -156,11 +152,11 @@ export async function approveSuppliers(
       ]);
     });
   } catch (error) {
-    const context = getLogContext(approveSuppliers, supplierAccessRequestInfo);
     throw errorHandler(
       error,
-      context,
-      "Failed to approve all suppliers in bulk.",
+      'Failed to approve all suppliers in bulk.',
+      approveSuppliers,
+      { supplierAccessRequestInfo },
     );
   }
 }
@@ -192,11 +188,11 @@ async function rejectSuppliers(
       ]);
     });
   } catch (error) {
-    const context = getLogContext(rejectSuppliers, supplierAccessRequestInfo);
     throw errorHandler(
       error,
-      context,
-      "Failed to reject all suppliers in bulk.",
+      'Failed to reject all suppliers in bulk.',
+      rejectSuppliers,
+      { supplierAccessRequestInfo },
     );
   }
 }

@@ -1,13 +1,12 @@
-import createHttpError from "http-errors";
-import { boolean, number, object, string } from "yup";
-import { CHECKLIST_ITEM_KEYS, PRICE_LIST_PRICING_STRATEGY } from "~/constants";
-import db from "~/db.server";
-import logger from "~/logger";
-import { errorHandler, getLogContext } from "~/util";
-import { updateChecklistStatusTx } from "./checklistStatus";
-import { type Prisma } from "@prisma/client";
+import createHttpError from 'http-errors';
+import { boolean, number, object, string } from 'yup';
+import { PRICE_LIST_PRICING_STRATEGY } from '~/constants';
+import db from '~/db.server';
+import logger from '~/logger';
+import { type Prisma } from '@prisma/client';
+import { errorHandler } from '../util';
 
-type PriceListProps = {
+export type PriceListProps = {
   id: string;
   createdAt: string;
   name: string;
@@ -18,7 +17,7 @@ type PriceListProps = {
   margin?: number;
 };
 
-type CreatePriceListDataProps = {
+export type CreatePriceListDataProps = {
   margin?: number | undefined;
   requiresApprovalToImport?: boolean | undefined;
   name: string;
@@ -26,7 +25,7 @@ type CreatePriceListDataProps = {
   pricingStrategy: string;
 };
 
-type PriceListTableInfoProps = {
+export type PriceListTableInfoProps = {
   id: string;
   name: string;
   isGeneral: boolean;
@@ -41,14 +40,14 @@ type PriceListTableInfoProps = {
 const validatePriceListDataSchema = object({
   name: string().required(),
   isGeneral: boolean().required(),
-  requiresApprovalToImport: boolean().when("isGeneral", {
+  requiresApprovalToImport: boolean().when('isGeneral', {
     is: true,
     then: (schema) => schema.required(),
     otherwise: (schema) =>
       schema
         .optional()
         .test(
-          "is-undefined",
+          'is-undefined',
           "Requires approval to import must be undefined when it's a private supplier price list",
           (value) => value === undefined,
         ),
@@ -57,21 +56,21 @@ const validatePriceListDataSchema = object({
     PRICE_LIST_PRICING_STRATEGY.MARGIN,
     PRICE_LIST_PRICING_STRATEGY.WHOLESALE,
   ]),
-  margin: number().when("pricingStrategy", {
+  margin: number().when('pricingStrategy', {
     is: PRICE_LIST_PRICING_STRATEGY.MARGIN,
     then: (schema) => schema.required(),
     otherwise: (schema) =>
       schema
         .optional()
         .test(
-          "is-undefined",
-          "Margin must be undefined when the price list strategy is not based on margin.",
+          'is-undefined',
+          'Margin must be undefined when the price list strategy is not based on margin.',
           (value) => value === undefined,
         ),
   }),
 });
 
-async function hasGeneralPriceList(sessionId: string) {
+export async function hasGeneralPriceList(sessionId: string) {
   try {
     const generalPriceList = await db.priceList.findFirst({
       where: {
@@ -84,16 +83,16 @@ async function hasGeneralPriceList(sessionId: string) {
     }
     return true;
   } catch (error) {
-    const context = getLogContext(hasGeneralPriceList, sessionId);
     throw errorHandler(
       error,
-      context,
-      "Failed to retrieve general price list.",
+      'Failed to check whether general price list exists.',
+      hasGeneralPriceList,
+      { sessionId },
     );
   }
 }
 
-async function createPriceListTx(
+export async function createPriceListTx(
   tx: Prisma.TransactionClient,
   data: CreatePriceListDataProps,
   sessionId: string,
@@ -102,12 +101,10 @@ async function createPriceListTx(
     const generalPriceListExists = await hasGeneralPriceList(sessionId);
     // A supplier can only have one general price list at a time
     if (generalPriceListExists && data.isGeneral) {
-      logger.error(
-        `${sessionId} attempted to make multiple general price lists"`,
-      );
-      throw new createHttpError.BadRequest(
-        "You can only have one general price list at once.",
-      );
+      const errorMessage =
+        'A user is only allowed have one general price list at once.';
+      logger.error(errorMessage, { data, sessionId });
+      throw new createHttpError.BadRequest(errorMessage);
     }
 
     await validatePriceListDataSchema.validate(data);
@@ -136,44 +133,18 @@ async function createPriceListTx(
 
     return newPriceList;
   } catch (error) {
-    const context = getLogContext(createPriceListTx, tx, data, sessionId);
-    throw errorHandler(error, context, "Failed to create price list.");
-  }
-}
-
-export async function createPriceListAndCompleteChecklistItem(
-  data: CreatePriceListDataProps,
-  sessionId: string,
-) {
-  try {
-    const newPriceList = await db.$transaction(async (tx) => {
-      await updateChecklistStatusTx(
-        tx,
-        sessionId,
-        CHECKLIST_ITEM_KEYS.SUPPLIER_CREATE_PRICE_LIST,
-        true,
-      );
-      const newPriceList = await createPriceListTx(tx, data, sessionId);
-      return newPriceList;
-    });
-    return newPriceList;
-  } catch (error) {
-    const context = getLogContext(
-      createPriceListAndCompleteChecklistItem,
-      data,
-      sessionId,
-    );
     throw errorHandler(
       error,
-      context,
-      "Failed to create price list and update checklist status.",
+      'Failed to create price list in transaction.',
+      createPriceListTx,
+      { data, sessionId },
     );
   }
 }
 
 // retrieves price list information
-// TODO: add the amt sold
-async function getPriceListTableInfo(
+// !!! TODO: add the amt sold
+export async function getPriceListTableInfo(
   sessionId: string,
 ): Promise<PriceListTableInfoProps[]> {
   try {
@@ -235,14 +206,18 @@ async function getPriceListTableInfo(
     );
     return priceListInfoFormatted;
   } catch (error) {
-    const context = getLogContext(getPriceListTableInfo, sessionId);
-    throw errorHandler(error, context, "Failed to get price list table info.");
+    throw errorHandler(
+      error,
+      'Failed to retrieve price list table information.',
+      getPriceListTableInfo,
+      { sessionId },
+    );
   }
 }
 
-async function userHasPriceList(sessionId: string, priceListId: string) {
+export async function userHasPriceList(sessionId: string, priceListId: string) {
   try {
-    const priceList = await db.priceList.findFirstOrThrow({
+    const priceList = await db.priceList.findFirst({
       where: {
         supplierId: sessionId,
         id: priceListId,
@@ -253,12 +228,16 @@ async function userHasPriceList(sessionId: string, priceListId: string) {
     }
     return false;
   } catch (error) {
-    const context = getLogContext(userHasPriceList, sessionId, priceListId);
-    throw errorHandler(error, context, "Failed to get price list.");
+    throw errorHandler(
+      error,
+      'Failed to check if user has price list.',
+      getPriceListTableInfo,
+      { sessionId },
+    );
   }
 }
 
-async function getPriceListDetailedInfo(
+export async function getPriceListDetailedInfo(
   sessionId: string,
   priceListId: string,
 ) {
@@ -274,21 +253,16 @@ async function getPriceListDetailedInfo(
     });
     return priceList;
   } catch (error) {
-    const context = getLogContext(
-      getPriceListDetailedInfo,
-      sessionId,
-      priceListId,
-    );
     throw errorHandler(
       error,
-      context,
-      "Failed to get detailed price list info.",
+      'Failed to retrieve price list detailed information.',
+      getPriceListTableInfo,
+      { sessionId },
     );
   }
 }
 
-// !!! TODO: add the cascade / default values to prevent deleting the price list from deleting reportable information
-async function deletePriceListBatch(
+export async function deletePriceListBatch(
   priceListsIds: string[],
   sessionId: string,
 ) {
@@ -303,24 +277,11 @@ async function deletePriceListBatch(
     });
     return deletedPriceLists;
   } catch (error) {
-    const context = getLogContext(
+    throw errorHandler(
+      error,
+      'Failed to delete price lists in batch.',
       deletePriceListBatch,
-      priceListsIds,
-      sessionId,
+      { priceListsIds, sessionId },
     );
-    throw errorHandler(error, context, "Failed to delete price lists.");
   }
 }
-
-export type {
-  PriceListProps,
-  CreatePriceListDataProps,
-  PriceListTableInfoProps,
-};
-
-export {
-  getPriceListTableInfo,
-  userHasPriceList,
-  getPriceListDetailedInfo,
-  deletePriceListBatch,
-};

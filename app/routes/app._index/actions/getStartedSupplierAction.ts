@@ -1,16 +1,16 @@
-import { getChecklistStatus } from "~/models/checklistStatus";
-import type { FormDataObject } from "~/types";
-import { getStartedSupplierSchema } from "./_schema";
-import type { InferType } from "yup";
+import type { FormDataObject } from '~/types';
+import { object, string, type InferType } from 'yup';
 import {
   getOrCreateSupplierAccessRequest,
   hasSupplierAccessRequest,
-} from "~/models/supplierAccessRequest";
-import { getJSONError } from "~/util";
-import { json } from "@remix-run/node";
-import { StatusCodes } from "http-status-codes";
-
-type getStartedSupplierData = InferType<typeof getStartedSupplierSchema>;
+} from '~/services/models/supplierAccessRequest';
+import { getJSONError } from '~/util';
+import { json } from '@remix-run/node';
+import { StatusCodes } from 'http-status-codes';
+import { getChecklistStatus } from '~/services/models/checklistStatus';
+import { INTENTS } from '../constants';
+import { checklistItemIdMatchesKey } from '~/services/models/checklistItem';
+import { CHECKLIST_ITEM_KEYS } from '~/constants';
 
 export type GetStartedSupplierActionData = {
   supplierAccessRequest: {
@@ -25,6 +25,20 @@ export type GetStartedSupplierActionData = {
     isEligibleForNewRequest: boolean;
   };
 };
+
+export const getStartedSupplierSchema = object({
+  intent: string().oneOf([INTENTS.SUPPLIER_GET_STARTED]),
+  checklistItemId: string()
+    .required()
+    .test('check-item-id', 'Invalid checklist item ID', async (value) => {
+      return checklistItemIdMatchesKey(
+        value,
+        CHECKLIST_ITEM_KEYS.SUPPLIER_GET_STARTED,
+      );
+    }),
+});
+
+type getStartedSupplierData = InferType<typeof getStartedSupplierSchema>;
 
 // For now, suppliers should be able to request access at any time
 export async function getStartedSupplierAction(
@@ -54,6 +68,6 @@ export async function getStartedSupplierAction(
       },
     );
   } catch (error) {
-    throw getJSONError(error, "index");
+    throw getJSONError(error, 'index');
   }
 }

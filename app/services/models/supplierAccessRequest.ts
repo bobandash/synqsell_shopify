@@ -1,8 +1,7 @@
-import db from "~/db.server";
-import { errorHandler, getLogCombinedMessage, getLogContext } from "~/util";
-import { ACCESS_REQUEST_STATUS } from "~/constants";
-import logger from "~/logger";
-import createHttpError from "http-errors";
+import db from '~/db.server';
+
+import { ACCESS_REQUEST_STATUS } from '~/constants';
+import { errorHandler } from '../util';
 
 export type GetSupplierAccessRequestProps = {
   name: string;
@@ -48,40 +47,59 @@ export async function hasSupplierAccessRequest(sessionId: string) {
     }
     return true;
   } catch (error) {
-    const context = getLogContext(hasSupplierAccessRequest, sessionId);
     throw errorHandler(
       error,
-      context,
-      "Failed to get supplier access request from db. Please try again later.",
+      `Failed to check if supplier access request exists.`,
+      hasSupplierAccessRequest,
+      {
+        sessionId,
+      },
     );
   }
 }
 
 export async function getSupplierAccessRequest(sessionId: string) {
   try {
-    const supplierAccessRequest = await db.supplierAccessRequest.findFirst({
-      where: {
-        sessionId,
-      },
-    });
-    if (!supplierAccessRequest) {
-      const logMessage = getLogCombinedMessage(
-        getSupplierAccessRequest,
-        sessionId,
-        "Supplier access request does not exist",
-      );
-      logger.error(logMessage);
-      throw new createHttpError.BadRequest(
-        `Role doesn't exist for user. Please contact support.`,
-      );
-    }
+    const supplierAccessRequest =
+      await db.supplierAccessRequest.findFirstOrThrow({
+        where: {
+          sessionId,
+        },
+      });
     return supplierAccessRequest;
   } catch (error) {
-    const context = getLogContext(getSupplierAccessRequest, sessionId);
     throw errorHandler(
       error,
-      context,
-      "Failed to get supplier access request from db. Please try again later.",
+      `Failed to get supplier access request.`,
+      getSupplierAccessRequest,
+      {
+        sessionId,
+      },
+    );
+  }
+}
+
+async function createSupplierAccessRequest(
+  sessionId: string,
+  checklistStatusId: string,
+) {
+  try {
+    const newSupplierAccessRequest = await db.supplierAccessRequest.create({
+      data: {
+        status: ACCESS_REQUEST_STATUS.PENDING,
+        sessionId,
+        checklistStatusId,
+        hasMetSalesThreshold: true, // !!! TODO: create a graphql query to check if user met sales threshold
+      },
+    });
+
+    return newSupplierAccessRequest;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to create supplier access request.',
+      createSupplierAccessRequest,
+      { sessionId, checklistStatusId },
     );
   }
 }
@@ -103,40 +121,14 @@ export async function getOrCreateSupplierAccessRequest(
     const supplierAccessRequest = await getSupplierAccessRequest(sessionId);
     return supplierAccessRequest;
   } catch (error) {
-    const context = getLogContext(getSupplierAccessRequest, sessionId);
     throw errorHandler(
       error,
-      context,
-      "Failed to get or create supplier access request from db. Please try again later.",
-    );
-  }
-}
-
-async function createSupplierAccessRequest(
-  sessionId: string,
-  checklistStatusId: string,
-) {
-  try {
-    const newSupplierAccessRequest = await db.supplierAccessRequest.create({
-      data: {
-        status: ACCESS_REQUEST_STATUS.PENDING,
+      `Failed to get or create supplier access request.`,
+      getOrCreateSupplierAccessRequest,
+      {
         sessionId,
         checklistStatusId,
-        hasMetSalesThreshold: true, // !!! TODO: create a graphql query to check if user met sales threshold
       },
-    });
-
-    return newSupplierAccessRequest;
-  } catch (error) {
-    const context = getLogContext(
-      createSupplierAccessRequest,
-      sessionId,
-      checklistStatusId,
-    );
-    throw errorHandler(
-      error,
-      context,
-      "Failed to create supplier access request. Please contact support.",
     );
   }
 }
@@ -160,19 +152,18 @@ export async function getAllSupplierAccessRequests(): Promise<
       ({ Session: { Profile }, ...rest }) => {
         return {
           ...rest,
-          name: Profile?.name || "",
-          website: Profile?.website || "",
-          email: Profile?.email || "",
+          name: Profile?.name || '',
+          website: Profile?.website || '',
+          email: Profile?.email || '',
         };
       },
     );
     return allSupplierAccessRequestsFormatted;
   } catch (error) {
-    const context = getLogContext(getAllSupplierAccessRequests);
     throw errorHandler(
       error,
-      context,
-      "Failed to get all supplier access requests.",
+      'Failed to get all supplier access requests.',
+      getAllSupplierAccessRequests,
     );
   }
 }
@@ -198,17 +189,16 @@ export async function updateSupplierAccessRequest(
     });
     return updatedSupplierAccessRequest;
   } catch (error) {
-    const context = getLogContext(
-      updateSupplierAccessRequest,
-      sessionId,
-      status,
-      notes,
-      isEligibleForNewRequest,
-    );
     throw errorHandler(
       error,
-      context,
-      "Failed to update supplier access request.",
+      `Failed to check if supplier access request exists.`,
+      updateSupplierAccessRequest,
+      {
+        sessionId,
+        status,
+        notes,
+        isEligibleForNewRequest,
+      },
     );
   }
 }

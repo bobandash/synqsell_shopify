@@ -10,34 +10,34 @@ import {
   Page,
   Text,
   TextField,
-} from "@shopify/polaris";
-import { ROLES } from "~/constants";
-import { useRoleContext } from "~/context/RoleProvider";
-import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { json } from "@remix-run/node";
-import { authenticate } from "~/shopify.server";
+} from '@shopify/polaris';
+import { ROLES } from '~/constants';
+import { useRoleContext } from '~/context/RoleProvider';
+import type { ActionFunctionArgs, LoaderFunctionArgs } from '@remix-run/node';
+import { json } from '@remix-run/node';
+import { authenticate } from '~/shopify.server';
 import {
   useForm,
   useField,
   notEmpty,
   asChoiceField,
-} from "@shopify/react-form";
+} from '@shopify/react-form';
 import {
-  getOrCreateProfile,
   hasProfile,
   type SocialMediaDataProps,
   type ProfileProps,
-} from "~/models/userProfile";
-import { convertFormDataToObject, getJSONError } from "~/util";
-import { useLoaderData, useLocation } from "@remix-run/react";
-import { isEmail } from "./util/customValidation";
-import logger from "~/logger";
-import styles from "~/shared.module.css";
-import { useAppBridge } from "@shopify/app-bridge-react";
-import { getRoles, type RolePropsJSON } from "~/models/roles";
-import { useCallback, useState } from "react";
-import { updateSettings } from "~/models/transactions";
-import { ImageDropZone, type DropZoneImageFileProps } from "~/components";
+} from '~/services/models/userProfile';
+import { convertFormDataToObject, getJSONError } from '~/util';
+import { useLoaderData, useLocation } from '@remix-run/react';
+import { isEmail } from './util/customValidation';
+import logger from '~/logger';
+import styles from '~/shared.module.css';
+import { useAppBridge } from '@shopify/app-bridge-react';
+import { getRoles, type RolePropsJSON } from '~/services/models/roles';
+import { useCallback, useState } from 'react';
+import { updateSettings } from '~/services/transactions';
+import { ImageDropZone, type DropZoneImageFileProps } from '~/components';
+import { getOrCreateProfile } from '~/services/helper/userProfile';
 
 type FormDataProps = {
   name: string;
@@ -82,7 +82,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       },
     );
   } catch (error) {
-    throw getJSONError(error, "settings");
+    throw getJSONError(error, 'settings');
   }
 };
 
@@ -132,11 +132,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       socialMediaLinks,
       visibilityObj,
     );
-    return json("successfully saved");
+    return json('successfully saved');
   } catch (error) {
     if (error instanceof Error) {
       logger.error(error.message);
-      throw getJSONError(error, "settings");
+      throw getJSONError(error, 'settings');
     }
   }
 };
@@ -169,20 +169,20 @@ const Settings = () => {
     fields: {
       name: useField({
         value: profileData.name,
-        validates: [notEmpty("Store name is required")],
+        validates: [notEmpty('Store name is required')],
       }),
       email: useField({
         value: profileData.email,
         validates: [
-          notEmpty("Contact email is required"),
-          isEmail("Contact email is not a valid email"),
+          notEmpty('Contact email is required'),
+          isEmail('Contact email is not a valid email'),
         ],
       }),
       biography: useField({
-        value: profileData.biography || "",
-        validates: [notEmpty("Store bio cannot be empty")],
+        value: profileData.biography || '',
+        validates: [notEmpty('Store bio cannot be empty')],
       }),
-      desiredProducts: useField(profileData.desiredProducts || ""),
+      desiredProducts: useField(profileData.desiredProducts || ''),
       isVisibleRetailerNetwork: useField(
         isVisibleInNetwork(ROLES.RETAILER, rolesData),
       ),
@@ -192,40 +192,40 @@ const Settings = () => {
       facebookLink: useField({
         value: socialMediaData.facebook,
         validates: (value) => {
-          if (value && !value.startsWith("https://www.facebook.com/")) {
-            return "Link has to start with https://www.facebook.com/";
+          if (value && !value.startsWith('https://www.facebook.com/')) {
+            return 'Link has to start with https://www.facebook.com/';
           }
         },
       }),
       twitterLink: useField({
         value: socialMediaData.twitter,
         validates: (value) => {
-          if (value && !value.startsWith("https://twitter.com/")) {
-            return "Link has to start with https://twitter.com/";
+          if (value && !value.startsWith('https://twitter.com/')) {
+            return 'Link has to start with https://twitter.com/';
           }
         },
       }),
       instagramLink: useField({
         value: socialMediaData.instagram,
         validates: (value) => {
-          if (value && !value.startsWith("https://www.instagram.com/")) {
-            return "Link has to start with https://www.instagram.com/";
+          if (value && !value.startsWith('https://www.instagram.com/')) {
+            return 'Link has to start with https://www.instagram.com/';
           }
         },
       }),
       youtubeLink: useField({
         value: socialMediaData.youtube,
         validates: (value) => {
-          if (value && !value.startsWith("https://www.youtube.com/")) {
-            return "Link has to start with https://www.youtube.com/";
+          if (value && !value.startsWith('https://www.youtube.com/')) {
+            return 'Link has to start with https://www.youtube.com/';
           }
         },
       }),
       tiktokLink: useField({
         value: socialMediaData.tiktok,
         validates: (value) => {
-          if (value && !value.startsWith("https://www.tiktok.com/@")) {
-            return "Link has to start with https://www.tiktok.com/@";
+          if (value && !value.startsWith('https://www.tiktok.com/@')) {
+            return 'Link has to start with https://www.tiktok.com/@';
           }
         },
       }),
@@ -233,16 +233,16 @@ const Settings = () => {
     onSubmit: async (fieldValues) => {
       try {
         const formData = new FormData();
-        formData.append("data", JSON.stringify(fieldValues));
+        formData.append('data', JSON.stringify(fieldValues));
         await fetch(location.pathname, {
           body: formData,
-          method: "post",
+          method: 'post',
         });
-        shopify.toast.show("Settings successfully saved");
-        return { status: "success" };
+        shopify.toast.show('Settings successfully saved');
+        return { status: 'success' };
       } catch {
-        shopify.toast.show("Something went wrong. Please try again.");
-        return { status: "success" };
+        shopify.toast.show('Something went wrong. Please try again.');
+        return { status: 'success' };
       }
     },
   });
@@ -257,7 +257,7 @@ const Settings = () => {
           </Button>
         }
       >
-        <Box paddingBlockEnd={"400"}>
+        <Box paddingBlockEnd={'400'}>
           <Layout>
             <Layout.AnnotatedSection
               id="profile"
@@ -286,7 +286,7 @@ const Settings = () => {
                   <ImageDropZone
                     file={logo}
                     setFile={setLogo}
-                    label={"Logo (Recommended 400 x 400px):"}
+                    label={'Logo (Recommended 400 x 400px):'}
                   />
                   <TextField
                     label="Products You’re Searching For:"
@@ -297,7 +297,7 @@ const Settings = () => {
                     }
                     {...fields.desiredProducts}
                   />
-                  <BlockStack gap={"150"}>
+                  <BlockStack gap={'150'}>
                     <Text as="p" variant="bodyMd">
                       Social Media Links
                     </Text>
@@ -305,35 +305,35 @@ const Settings = () => {
                       labelHidden
                       label="Facebook"
                       autoComplete="off"
-                      placeholder={"https://www.facebook.com/"}
+                      placeholder={'https://www.facebook.com/'}
                       {...fields.facebookLink}
                     />
                     <TextField
                       labelHidden
                       label="Twitter"
                       autoComplete="off"
-                      placeholder={"https://twitter.com/"}
+                      placeholder={'https://twitter.com/'}
                       {...fields.twitterLink}
                     />
                     <TextField
                       labelHidden
                       label="Instagram"
                       autoComplete="off"
-                      placeholder={"https://www.instagram.com/"}
+                      placeholder={'https://www.instagram.com/'}
                       {...fields.instagramLink}
                     />
                     <TextField
                       labelHidden
                       label="Youtube"
                       autoComplete="off"
-                      placeholder={"https://www.youtube.com/"}
+                      placeholder={'https://www.youtube.com/'}
                       {...fields.youtubeLink}
                     />
                     <TextField
                       labelHidden
                       label="TikTok"
                       autoComplete="off"
-                      placeholder={"https://www.tiktok.com/@"}
+                      placeholder={'https://www.tiktok.com/@'}
                       {...fields.tiktokLink}
                     />
                   </BlockStack>
@@ -346,7 +346,7 @@ const Settings = () => {
               description="Decide your profile visibility."
             >
               <Card>
-                <BlockStack gap={"200"}>
+                <BlockStack gap={'200'}>
                   <Text as="h2" variant="headingSm">
                     Profile Visibility
                   </Text>
@@ -395,7 +395,7 @@ const Settings = () => {
             </Layout.AnnotatedSection>
           </Layout>
         </Box>
-        <div className={styles["center-right"]}>
+        <div className={styles['center-right']}>
           <Button submit variant="primary">
             Save
           </Button>

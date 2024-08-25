@@ -1,9 +1,14 @@
-import { errorHandler, getLogCombinedMessage, getLogContext } from "~/util";
-import db from "../db.server";
-import { hasChecklistTable } from "./checklistTable";
-import type { UserPreferenceData } from "./types";
-import createHttpError from "http-errors";
-import logger from "~/logger";
+import db from '../../db.server';
+import { errorHandler } from '../util';
+import { hasChecklistTable } from './checklistTable';
+import createHttpError from 'http-errors';
+import logger from '~/logger';
+
+export type UserPreferenceData = {
+  id: string;
+  sessionId: string;
+  tableIdsHidden: string[];
+};
 
 // function to add or remove table ID from user preferences depending on if it's hidden over visible
 export async function hasUserPreferences(sessionId: string): Promise<Boolean> {
@@ -18,11 +23,11 @@ export async function hasUserPreferences(sessionId: string): Promise<Boolean> {
     }
     return true;
   } catch (error) {
-    const context = getLogContext(hasUserPreferences, sessionId);
     throw errorHandler(
       error,
-      context,
-      "Failed to check if user preferences exist. Please try again later.",
+      'Failed to check if user preferences exist.',
+      hasUserPreferences,
+      { sessionId },
     );
   }
 }
@@ -31,52 +36,40 @@ export async function getUserPreferences(
   sessionId: string,
 ): Promise<UserPreferenceData> {
   try {
-    const userPreferences = await db.userPreference.findFirst({
+    const userPreferences = await db.userPreference.findFirstOrThrow({
       where: {
         sessionId: sessionId,
       },
     });
-    if (!userPreferences) {
-      const logMessage = getLogCombinedMessage(
-        getUserPreferences,
-        `User has no user preferences.`,
-        sessionId,
-      );
-      logger.error(logMessage);
-      throw new createHttpError.NotFound(
-        `User has no user preferences. Please contact support.`,
-      );
-    }
     return userPreferences;
   } catch (error) {
-    const context = getLogContext(getUserPreferences, sessionId);
     throw errorHandler(
       error,
-      context,
-      "Failed to retrieve user preferences. Please try again later.",
+      'Failed to check if profile exists',
+      getUserPreferences,
+      {
+        sessionId,
+      },
     );
   }
 }
 
+// TODO: refactor to use yup
 async function validateCreateUserPreferences(sessionId: string) {
   try {
     if (await hasUserPreferences(sessionId)) {
-      const logMessage = getLogCombinedMessage(
-        validateCreateUserPreferences,
-        `User preferences already exists for user.`,
-        sessionId,
-      );
-      logger.error(logMessage);
-      throw new createHttpError.BadRequest(
-        `User preferences already exists for user. Please contact support.`,
-      );
+      const logMessage = `User preferences already exists for user.`;
+      logger.error(logMessage, { sessionId });
+      throw new createHttpError.BadRequest(logMessage);
     }
   } catch (error) {
-    const context = getLogContext(validateCreateUserPreferences, sessionId);
     throw errorHandler(
       error,
-      context,
-      "User preferences already exists for user. Please contact support.",
+      `User preferences already exists for user.`,
+      validateCreateUserPreferences,
+      {
+        sessionId,
+      },
     );
   }
 }
@@ -94,15 +87,18 @@ export async function createUserPreferences(
     });
     return newUserPreference;
   } catch (error) {
-    const context = getLogContext(createUserPreferences, sessionId);
     throw errorHandler(
       error,
-      context,
-      "Could not create user preferences. Please contact support.",
+      `Failed to create user preferences.`,
+      createUserPreferences,
+      {
+        sessionId,
+      },
     );
   }
 }
 
+// TODO: refactor to use yup
 export async function validateToggleChecklistVisibility(
   sessionId: string,
   tableId: string,
@@ -113,30 +109,23 @@ export async function validateToggleChecklistVisibility(
     if (!checklistTableExists || !userPreferenceExists) {
       const errors = [];
       if (!checklistTableExists) {
-        errors.push("Table id is invalid.");
+        errors.push('Table id is invalid.');
       }
       if (!userPreferenceExists) {
-        errors.push("This shop does not have user preferences.");
+        errors.push('This shop does not have user preferences.');
       }
-      const logMessage = getLogCombinedMessage(
-        validateToggleChecklistVisibility,
-        `User has no user preferences.`,
-        sessionId,
-        tableId,
-      );
-      logger.error(logMessage);
-      throw new createHttpError.BadRequest(errors.join(" "));
+      const message = errors.join(' ');
+      logger.error(message, { sessionId, tableId });
+      throw new createHttpError.BadRequest(message);
     }
   } catch (error) {
-    const context = getLogContext(
-      validateToggleChecklistVisibility,
-      sessionId,
-      tableId,
-    );
     throw errorHandler(
       error,
-      context,
-      "Something went wrong with the checklist table. Please try again later.",
+      `Could not validate toggling checklist table visibility.`,
+      validateToggleChecklistVisibility,
+      {
+        sessionId,
+      },
     );
   }
 }
@@ -164,15 +153,14 @@ export async function toggleChecklistVisibility(
     });
     return newUserPreferences;
   } catch (error) {
-    const context = getLogContext(
-      toggleChecklistVisibility,
-      sessionId,
-      tableId,
-    );
     throw errorHandler(
       error,
-      context,
-      "Failed to update checklist visibility. Please try again later.",
+      `Could not toggle checklist table visibility.`,
+      toggleChecklistVisibility,
+      {
+        sessionId,
+        tableId,
+      },
     );
   }
 }

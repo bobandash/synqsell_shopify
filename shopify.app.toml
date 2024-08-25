@@ -3,7 +3,7 @@
 client_id = "c2ff24913d6d89792234763f0830c676"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://citizens-workflow-improve-rochester.trycloudflare.com"
+application_url = "https://nature-caps-transform-treated.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read_assigned_fulfillment_orders,read_inventory,read_orders,read_produ
 
 [auth]
 redirect_urls = [
-  "https://citizens-workflow-improve-rochester.trycloudflare.com/auth/callback",
-  "https://citizens-workflow-improve-rochester.trycloudflare.com/auth/shopify/callback",
-  "https://citizens-workflow-improve-rochester.trycloudflare.com/api/auth/callback"
+  "https://nature-caps-transform-treated.trycloudflare.com/auth/callback",
+  "https://nature-caps-transform-treated.trycloudflare.com/auth/shopify/callback",
+  "https://nature-caps-transform-treated.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]

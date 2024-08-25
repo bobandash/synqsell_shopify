@@ -1,23 +1,22 @@
-import { useAsyncValue, useFetcher, useNavigate } from "@remix-run/react";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { FETCHER_KEYS, MODALS } from "../constants";
-import { useAppBridge } from "@shopify/app-bridge-react";
-import { RetailerModal } from "../components/Modals";
+import { useAsyncValue, useFetcher, useNavigate } from '@remix-run/react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { FETCHER_KEYS, MODALS } from '../constants';
+import { useAppBridge } from '@shopify/app-bridge-react';
+import { RetailerModal } from '../components/Modals';
 import type {
   ToggleChecklistVisibilityActionData,
   GetStartedRetailerActionData,
-} from "../actions";
-import { getChecklistBtnFunction, getChecklistItemId } from "../util";
-import { useRoleContext } from "~/context/RoleProvider";
-import { CHECKLIST_ITEM_KEYS } from "~/constants";
-import SupplierModal from "../components/Modals/SupplierModal";
-import type { TransformedChecklistTableData, LoaderResponse } from "../types";
-import ChecklistTable from "../components/ChecklistTable";
-import { BlockStack } from "@shopify/polaris";
+} from '../actions';
+import { getChecklistBtnFunction, getChecklistItemId } from '../util';
+import { useRoleContext } from '~/context/RoleProvider';
+import { CHECKLIST_ITEM_KEYS } from '~/constants';
+import SupplierModal from '../components/Modals/SupplierModal';
+import type { TransformedChecklistTableData, LoaderResponse } from '../types';
+import ChecklistTable from '../components/ChecklistTable';
+import { BlockStack } from '@shopify/polaris';
 
 function ChecklistTables() {
   const { tables: tablesData } = useAsyncValue() as unknown as LoaderResponse;
-
   const navigate = useNavigate();
   const shopify = useAppBridge();
   const [tables, setTables] =
@@ -127,7 +126,7 @@ function ChecklistTables() {
     if (data) {
       shopify.modal.hide(MODALS.BECOME_SUPPLIER);
       shopify.toast.show(
-        "Your request to become a supplier has been submitted. You will receive an email with the decision shortly.",
+        'Your request to become a supplier has been submitted. You will receive an email with the decision shortly.',
       );
     }
   }, [becomeSupplierFetcher.data, shopify]);
@@ -166,7 +165,7 @@ function ChecklistTables() {
   );
 
   return (
-    <BlockStack gap={"200"}>
+    <BlockStack gap={'200'}>
       <RetailerModal checklistItemId={retailerGetStartedId} shopify={shopify} />
       <SupplierModal checklistItemId={supplierGetStartedId} shopify={shopify} />
       {tables &&

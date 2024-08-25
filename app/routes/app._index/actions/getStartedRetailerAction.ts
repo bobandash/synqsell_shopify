@@ -1,26 +1,46 @@
-import { json } from "@remix-run/node";
-import type { TypedResponse } from "@remix-run/node";
-import { getStartedRetailerSchema } from "./_schema";
-import { type InferType } from "yup";
-import { errorHandler, getJSONError, getLogContext } from "~/util";
-import type { FormDataObject, GraphQL } from "~/types";
-import { StatusCodes } from "http-status-codes";
+import { json } from '@remix-run/node';
+import type { TypedResponse } from '@remix-run/node';
+import { object, string, type InferType } from 'yup';
+import { getJSONError } from '~/util';
+import type { FormDataObject, GraphQL } from '~/types';
+import { StatusCodes } from 'http-status-codes';
 import {
   getChecklistStatus,
   isChecklistStatusCompleted,
   markCheckListStatus,
-} from "~/models/checklistStatus";
-import type { ChecklistStatusProps } from "~/models/checklistStatus";
-import { addRole, getRole, hasRole, type RoleProps } from "~/models/roles";
-import { ROLES } from "~/constants";
-import { createRoleAndCompleteChecklistItem } from "~/models/transactions";
+} from '~/services/models/checklistStatus';
+import type { ChecklistStatusProps } from '~/services/models/checklistStatus';
 import {
-  deleteFulfillmentService,
+  addRole,
+  getRole,
+  hasRole,
+  type RoleProps,
+} from '~/services/models/roles';
+import { CHECKLIST_ITEM_KEYS, ROLES } from '~/constants';
+import { createRoleAndCompleteChecklistItem } from '~/services/transactions';
+import {
   getFulfillmentService,
+  type FulfillmentServiceDBProps,
+} from '~/services/models/fulfillmentService';
+import {
   getOrCreateFulfillmentService,
   hasFulfillmentService,
-  type FulfillmentServiceDBProps,
-} from "~/models/fulfillmentService";
+} from '~/services/helper/fulfillmentService';
+import { errorHandler } from '~/services/util';
+import { INTENTS } from '../constants';
+import { checklistItemIdMatchesKey } from '~/services/models/checklistItem';
+
+const getStartedRetailerSchema = object({
+  intent: string().oneOf([INTENTS.RETAILER_GET_STARTED]),
+  checklistItemId: string()
+    .required()
+    .test('check-item-id', 'Invalid checklist item ID', async (value) => {
+      return checklistItemIdMatchesKey(
+        value,
+        CHECKLIST_ITEM_KEYS.RETAILER_GET_STARTED,
+      );
+    }),
+});
 
 type getRetailerData = InferType<typeof getStartedRetailerSchema>;
 
@@ -46,7 +66,7 @@ export async function getStartedRetailerAction(
       hasRetailerRole,
     ] = await Promise.all([
       isChecklistStatusCompleted(sessionId, checklistItemId),
-      hasFulfillmentService(sessionId),
+      hasFulfillmentService(sessionId, graphql),
       hasRole(sessionId, ROLES.RETAILER),
     ]);
 
@@ -69,11 +89,9 @@ export async function getStartedRetailerAction(
 
     return newFields;
   } catch (error) {
-    throw getJSONError(error, "index");
+    throw getJSONError(error, 'index');
   }
 }
-
-// Helper functions for getStartedRetailerAction
 
 // Just return all the relevant fields, fulfillmentService, checklistStatus, and role if the item is already completed
 async function handleCompleted(sessionId: string, checklistItemId: string) {
@@ -90,11 +108,11 @@ async function handleCompleted(sessionId: string, checklistItemId: string) {
       },
     );
   } catch (error) {
-    const context = getLogContext(handleCompleted, sessionId, checklistItemId);
     throw errorHandler(
       error,
-      context,
-      "Failed to get fulfillment service, checklist status, or retailer role.",
+      'Failed to get fulfillment service, checklist status, or retailer role.',
+      handleCompleted,
+      { sessionId, checklistItemId },
     );
   }
 }
@@ -118,11 +136,17 @@ async function getExistingFieldsOrUndefined(
       : undefined;
     return { fulfillmentService, checklistStatus, retailerRole };
   } catch (error) {
-    const context = getLogContext(handleCompleted, sessionId, checklistItemId);
     throw errorHandler(
       error,
-      context,
-      "Failed to get fulfillment service, checklist status, or retailer role.",
+      'Failed to get fulfillment service, checklist status, or retailer role.',
+      getExistingFieldsOrUndefined,
+      {
+        checklistStatusCompleted,
+        fulfillmentServiceExists,
+        hasRetailerRole,
+        sessionId,
+        checklistItemId,
+      },
     );
   }
 }
@@ -136,7 +160,6 @@ async function createOrGetFields(
   sessionId: string,
   checklistItemId: string,
 ) {
-  // !!! TODO: refactor before deployment
   let fulfillmentService;
   let checklistStatus;
   let retailerRole;
@@ -175,19 +198,9 @@ async function createOrGetFields(
       checklistStatus = newRoleAndChecklistStatus.checklistStatus;
     } else if (!checklistStatus) {
       checklistStatus = await markCheckListStatus(checklistStatusId, true);
-    } else if (!retailerRole) {
-      retailerRole = await addRole(sessionId, ROLES.RETAILER);
-    }
-
-    // TODO: make this more organized / figure out the typescript error
-    if (!fulfillmentService) {
-      throw new Error("FulfillmentService is required.");
-    }
-    if (!checklistStatus) {
-      throw new Error("ChecklistStatus is required.");
     }
     if (!retailerRole) {
-      throw new Error("RetailerRole is required.");
+      retailerRole = await addRole(sessionId, ROLES.RETAILER);
     }
 
     return json(
@@ -201,18 +214,7 @@ async function createOrGetFields(
       },
     );
   } catch (error) {
-    try {
-      if (fulfillmentService) {
-        await deleteFulfillmentService(
-          sessionId,
-          fulfillmentService.id,
-          graphql,
-        );
-      }
-      // !!! TODO: handle errors better
-      throw getJSONError(error, "getStartedRetailerAction");
-    } catch (error) {
-      throw getJSONError(error, "getStartedRetailerAction");
-    }
+    // !!! TODO: read about distributed system rollbacks
+    throw getJSONError(error, 'index');
   }
 }

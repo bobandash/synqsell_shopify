@@ -1,10 +1,11 @@
-import db from "~/db.server";
-import { hasRole, updateRoleVisibilityTx } from "../roles";
-import { CHECKLIST_ITEM_KEYS, ROLES } from "~/constants";
-import { updateUserProfileTx } from "../userProfile";
-import { errorHandler, getLogContext } from "~/util";
-import { updateChecklistStatusTx } from "../checklistStatus";
-import type { Prisma } from "@prisma/client";
+import db from '~/db.server';
+import { hasRole, updateRoleVisibilityTx } from '../models/roles';
+import { CHECKLIST_ITEM_KEYS, ROLES } from '~/constants';
+import type { ChecklistItemKeysOptionsProps } from '~/constants';
+import { updateUserProfileTx } from '../models/userProfile';
+import { updateChecklistStatusTx } from '../models/checklistStatus';
+import type { Prisma } from '@prisma/client';
+import { errorHandler } from '../util';
 
 type ProfileDataProps = {
   name: string;
@@ -31,21 +32,18 @@ async function updateRoleAndChecklistItemTx(
   sessionId: string,
   role: string,
   isVisibleInNetwork: boolean,
-  checklistItemKey: string,
+  checklistItemKey: ChecklistItemKeysOptionsProps,
 ) {
   try {
     await updateRoleVisibilityTx(tx, sessionId, role, isVisibleInNetwork);
     await updateChecklistStatusTx(tx, sessionId, checklistItemKey, true);
   } catch (error) {
-    const context = getLogContext(
+    throw errorHandler(
+      error,
+      'Failed to update user settings.',
       updateRoleAndChecklistItemTx,
-      tx,
-      sessionId,
-      role,
-      isVisibleInNetwork,
-      checklistItemKey,
+      { sessionId, role, isVisibleInNetwork, checklistItemKey },
     );
-    throw errorHandler(error, context, "Failed to update user settings.");
   }
 }
 
@@ -83,13 +81,11 @@ export default async function updateSettings(
       await updateUserProfileTx(tx, sessionId, profileData, socialMediaData);
     });
   } catch (error) {
-    const context = getLogContext(
+    throw errorHandler(
+      error,
+      'Failed to update user settings.',
       updateSettings,
-      sessionId,
-      profileData,
-      socialMediaData,
-      visibilityData,
+      { sessionId, profileData, socialMediaData, visibilityData },
     );
-    throw errorHandler(error, context, "Failed to update user settings.");
   }
 }

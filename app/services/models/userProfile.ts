@@ -1,10 +1,7 @@
-import type { Prisma } from "@prisma/client";
-import createHttpError from "http-errors";
-import { ROLES } from "~/constants";
-import db from "~/db.server";
-import type { GraphQL } from "~/types";
-import type { ShopAddress } from "~/types/admin.types";
-import { errorHandler, getLogContext } from "~/util";
+import type { Prisma } from '@prisma/client';
+import { ROLES } from '~/constants';
+import db from '~/db.server';
+import { errorHandler } from '../util';
 
 type ProfileDefaultsProps = {
   name: string;
@@ -54,8 +51,9 @@ export async function hasProfile(sessionId: string) {
     }
     return true;
   } catch (error) {
-    const context = getLogContext(hasProfile, sessionId);
-    throw errorHandler(error, context, "Failed to check if profile exists.");
+    throw errorHandler(error, 'Failed to check if profile exists', hasProfile, {
+      sessionId,
+    });
   }
 }
 
@@ -71,90 +69,13 @@ export async function getProfile(sessionId: string) {
     });
     return profile;
   } catch (error) {
-    const context = getLogContext(hasProfile, sessionId);
-    throw errorHandler(error, context, "Failed to get profile.");
-  }
-}
-
-// helper function for getProfileDefaultsShopify
-function getBillingAddressStringFmt(
-  billingAddress: Pick<ShopAddress, "city" | "provinceCode" | "country">,
-) {
-  const addressArr: string[] = [];
-
-  Object.values(billingAddress).forEach((value) => {
-    if (value) {
-      addressArr.push(value);
-    }
-  });
-
-  if (!addressArr) {
-    return "";
-  }
-
-  const address = addressArr.join(", ");
-  return address;
-}
-
-// retrieves the default profile details from shopify
-async function getProfileDefaultsShopify(sessionId: string, graphql: GraphQL) {
-  try {
-    const response = await graphql(`
-      query profileQuery {
-        shop {
-          name
-          contactEmail
-          description
-          url
-          billingAddress {
-            city
-            provinceCode
-            country
-          }
-        }
-      }
-    `);
-    const { data } = await response.json();
-    if (!data) {
-      throw new createHttpError.InternalServerError(
-        "Failed to get profile information.",
-      );
-    }
-    const { shop } = data;
-    const {
-      name,
-      contactEmail: email,
-      description,
-      url,
-      billingAddress,
-    } = shop;
-
-    const address = getBillingAddressStringFmt(billingAddress);
-    const website = url as string; // enforce the string type on url, graphql by default type-checks if it's a valid url
-    const biography = description || "";
-
-    return {
-      name,
-      email,
-      biography,
-      website,
-      address,
-    };
-  } catch (error) {
-    const context = getLogContext(
-      getProfileDefaultsShopify,
+    throw errorHandler(error, 'Failed to retrieve profile.', getProfile, {
       sessionId,
-      graphql,
-    );
-    throw errorHandler(
-      error,
-      context,
-      "Failed to retrieve default profile values",
-    );
+    });
   }
 }
 
-export async function createProfileDatabase(
+export async function createProfile(
   sessionId: string,
   profileDefaults: ProfileDefaultsProps,
 ) {
@@ -184,35 +105,14 @@ export async function createProfileDatabase(
     });
     return profileWithSocialMediaLinks;
   } catch (error) {
-    const context = getLogContext(
-      createProfileDatabase,
-      sessionId,
-      profileDefaults,
-    );
     throw errorHandler(
       error,
-      context,
-      "Failed to create profile in database. Please try again later.",
-    );
-  }
-}
-
-export async function getOrCreateProfile(sessionId: string, graphql: GraphQL) {
-  try {
-    const existingProfile = await hasProfile(sessionId);
-    if (existingProfile) {
-      const profile = await getProfile(sessionId);
-      return profile;
-    }
-    const profileDefaults = await getProfileDefaultsShopify(sessionId, graphql);
-    const newProfile = await createProfileDatabase(sessionId, profileDefaults);
-    return newProfile;
-  } catch (error) {
-    const context = getLogContext(getOrCreateProfile, sessionId, graphql);
-    throw errorHandler(
-      error,
-      context,
-      "Failed to create profile. Please contact support.",
+      'Failed to create profile in database.',
+      createProfile,
+      {
+        sessionId,
+        profileDefaults,
+      },
     );
   }
 }
@@ -239,17 +139,15 @@ export async function updateUserProfileTx(
     });
     return updatedProfile;
   } catch (error) {
-    const context = getLogContext(
-      updateUserProfileTx,
-      tx,
-      sessionId,
-      newProfileValues,
-      socialMediaData,
-    );
     throw errorHandler(
       error,
-      context,
-      "Failed to update profile. Please contact support.",
+      'Failed to update profile in transaction.',
+      updateUserProfileTx,
+      {
+        sessionId,
+        newProfileValues,
+        socialMediaData,
+      },
     );
   }
 }
@@ -278,7 +176,7 @@ async function getPaginatedVisibleProfiles(
     orderBy: {
       Session: {
         Profile: {
-          name: "asc" as Prisma.SortOrder,
+          name: 'asc' as Prisma.SortOrder,
         },
       },
     },
@@ -334,16 +232,15 @@ export async function getVisibleRetailerProfiles(
       nextCursor,
     };
   } catch (error) {
-    const context = getLogContext(
-      getVisibleRetailerProfiles,
-      startCursor,
-      endCursor,
-      isReverse,
-    );
     throw errorHandler(
       error,
-      context,
-      "Failed to get visible retailer profiles. Please contact support.",
+      'Failed to update profile in transaction.',
+      getVisibleRetailerProfiles,
+      {
+        startCursor,
+        endCursor,
+        isReverse,
+      },
     );
   }
 }

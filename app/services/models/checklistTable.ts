@@ -1,7 +1,8 @@
-import db from "../db.server";
-import { getUserPreferences } from "./userPreferences";
-import { errorHandler, getLogContext } from "~/util";
-async function hasChecklistTable(id: string): Promise<boolean> {
+import db from '../../db.server';
+import { errorHandler } from '../util';
+import { getUserPreferences } from './userPreferences';
+
+export async function hasChecklistTable(id: string): Promise<boolean> {
   try {
     const table = await db.checklistTable.findFirst({
       where: {
@@ -13,16 +14,16 @@ async function hasChecklistTable(id: string): Promise<boolean> {
     }
     return true;
   } catch (error) {
-    const context = getLogContext(hasChecklistTable, id);
     throw errorHandler(
       error,
-      context,
-      "Failed to retrieve checklist table. Please try again later",
+      'Failed to check if check list table exists.',
+      hasChecklistTable,
+      { id },
     );
   }
 }
 
-async function createMissingChecklistStatuses(
+export async function createMissingChecklistStatuses(
   missingChecklistIds: string[],
   sessionId: string,
 ) {
@@ -38,20 +39,18 @@ async function createMissingChecklistStatuses(
     });
     return missingChecklistStatuses;
   } catch (error) {
-    const context = getLogContext(
-      createMissingChecklistStatuses,
-      missingChecklistIds,
-      sessionId,
-    );
     throw errorHandler(
       error,
-      context,
-      "Failed to create missing checklist statuses",
+      'Failed to create missing checklist statuses.',
+      createMissingChecklistStatuses,
+      { missingChecklistIds, sessionId },
     );
   }
 }
 
-async function getMissingChecklistIds(sessionId: string): Promise<string[]> {
+export async function getMissingChecklistIds(
+  sessionId: string,
+): Promise<string[]> {
   try {
     const currentChecklistItems = await db.checklistStatus.findMany({
       where: {
@@ -77,27 +76,27 @@ async function getMissingChecklistIds(sessionId: string): Promise<string[]> {
     );
     return missingChecklistIds;
   } catch (error) {
-    const context = getLogContext(getMissingChecklistIds, sessionId);
     throw errorHandler(
       error,
-      context,
-      "Failed to retrieve missing check list ids",
+      'Failed to retrieve missing check list ids',
+      getMissingChecklistIds,
+      { sessionId },
     );
   }
 }
 
-async function getTablesAndStatuses(sessionId: string) {
+export async function getTablesAndStatuses(sessionId: string) {
   try {
     const userPreferences = await getUserPreferences(sessionId);
     const { tableIdsHidden } = userPreferences;
     const tables = await db.checklistTable.findMany({
       orderBy: {
-        position: "asc",
+        position: 'asc',
       },
       include: {
         checklistItems: {
           orderBy: {
-            position: "asc",
+            position: 'asc',
           },
           include: {
             checklistStatus: {
@@ -153,18 +152,11 @@ async function getTablesAndStatuses(sessionId: string) {
     });
     return transformedTables;
   } catch (error) {
-    const context = getLogContext(getTablesAndStatuses, sessionId);
     throw errorHandler(
       error,
-      context,
-      "Failed to retrieve tables and statuses",
+      'Failed to get tables with checklist status.',
+      getTablesAndStatuses,
+      { sessionId },
     );
   }
 }
-
-export {
-  createMissingChecklistStatuses,
-  getMissingChecklistIds,
-  getTablesAndStatuses,
-  hasChecklistTable,
-};

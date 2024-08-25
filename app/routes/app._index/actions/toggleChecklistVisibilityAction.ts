@@ -1,11 +1,23 @@
-import { json } from "@remix-run/node";
-import type { TypedResponse } from "@remix-run/node";
-import { toggleChecklistVisibilitySchema } from "./_schema";
-import { toggleChecklistVisibility } from "~/models/userPreferences";
-import { type InferType } from "yup";
-import type { UserPreferenceData } from "~/models/types";
-import { StatusCodes } from "http-status-codes";
-import { getJSONError } from "~/util";
+import { json } from '@remix-run/node';
+import type { TypedResponse } from '@remix-run/node';
+import {
+  toggleChecklistVisibility,
+  type UserPreferenceData,
+} from '~/services/models/userPreferences';
+import { object, string, type InferType } from 'yup';
+import { StatusCodes } from 'http-status-codes';
+import { getJSONError } from '~/util';
+import { INTENTS } from '../constants';
+import { hasChecklistTable } from '~/services/models/checklistTable';
+
+const toggleChecklistVisibilitySchema = object({
+  intent: string().oneOf([INTENTS.TOGGLE_CHECKLIST_VISIBILITY]).required(),
+  tableId: string()
+    .required()
+    .test('table-id', 'Invalid table id', async (value) => {
+      return await hasChecklistTable(value);
+    }),
+});
 
 type toggleChecklistVisibilityData = InferType<
   typeof toggleChecklistVisibilitySchema
@@ -26,6 +38,6 @@ export async function toggleChecklistVisibilityAction(
       status: StatusCodes.OK,
     });
   } catch (error) {
-    throw getJSONError(error, "index");
+    throw getJSONError(error, 'index');
   }
 }

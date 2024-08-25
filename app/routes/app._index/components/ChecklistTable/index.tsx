@@ -13,7 +13,7 @@ import type { FormEvent, FC } from "react";
 import { CheckListItem } from "./ChecklistItem";
 import { useFetcher } from "@remix-run/react";
 import { INTENTS, FETCHER_KEYS } from "../../constants";
-import type { TransformedChecklistTableData } from "~/models/types";
+import type { TransformedChecklistTableData } from "~/services/models/types";
 
 export type toggleActiveChecklistItemProps = (
   checklistItemIndex: number,

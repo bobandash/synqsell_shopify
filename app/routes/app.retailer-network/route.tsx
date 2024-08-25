@@ -2,7 +2,7 @@ import { Layout, Page } from "@shopify/polaris";
 import RetailerCard from "./_components/RetailerCard";
 import { json, type LoaderFunctionArgs } from "@remix-run/node";
 import { getJSONError } from "~/util";
-import { getVisibleRetailerProfiles } from "~/models/userProfile";
+import { getVisibleRetailerProfiles } from "~/services/models/userProfile";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {

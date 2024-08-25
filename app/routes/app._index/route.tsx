@@ -1,34 +1,35 @@
-import { Page, Layout, BlockStack } from "@shopify/polaris";
-import { authenticate } from "~/shopify.server";
-import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
+import { Page, Layout, BlockStack, Box } from '@shopify/polaris';
+import { authenticate } from '~/shopify.server';
+import type { ActionFunctionArgs, LoaderFunctionArgs } from '@remix-run/node';
 import {
   createMissingChecklistStatuses,
   getMissingChecklistIds,
   getTablesAndStatuses,
-} from "~/models/checklistTable";
+} from '~/services/models/checklistTable';
 import {
   Await,
   defer,
   isRouteErrorResponse,
   useLoaderData,
   useRouteError,
-} from "@remix-run/react";
-import { Suspense } from "react";
+} from '@remix-run/react';
+import { Suspense } from 'react';
 import {
   createUserPreferences,
   hasUserPreferences,
-} from "~/models/userPreferences";
-import logger from "~/logger";
-import { INTENTS } from "./constants";
+} from '~/services/models/userPreferences';
+import logger from '~/logger';
+import { INTENTS } from './constants';
 import {
   toggleChecklistVisibilityAction,
   getStartedRetailerAction,
   getStartedSupplierAction,
-} from "./actions";
-import { convertFormDataToObject, getJSONError } from "~/util";
-import { getOrCreateProfile, hasProfile } from "~/models/userProfile";
-import { ChecklistTables } from "./asyncComponents";
-import { TableSkeleton } from "./components/Skeleton";
+} from './actions';
+import { convertFormDataToObject, getJSONError } from '~/util';
+import { hasProfile } from '~/services/models/userProfile';
+import { ChecklistTables } from './asyncComponents';
+import { TableSkeleton } from './components/Skeleton';
+import { getOrCreateProfile } from '~/services/helper/userProfile';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
@@ -59,7 +60,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       tables: tablesPromise,
     });
   } catch (error) {
-    throw getJSONError(error, "index");
+    throw getJSONError(error, 'index');
   }
 };
 
@@ -68,7 +69,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const { session, admin } = await authenticate.admin(request);
     const { id: sessionId } = session;
     let formData = await request.formData();
-    const intent = formData.get("intent");
+    const intent = formData.get('intent');
     const formDataObject = convertFormDataToObject(formData);
     switch (intent) {
       case INTENTS.TOGGLE_CHECKLIST_VISIBILITY:
@@ -107,6 +108,7 @@ function Index() {
           </Layout.Section>
         </Layout>
       </BlockStack>
+      <Box paddingBlockEnd={'400'} />
     </Page>
   );
 }

@@ -2,12 +2,12 @@ import {
   json,
   type LoaderFunctionArgs,
   type ActionFunctionArgs,
-} from "@remix-run/node";
+} from '@remix-run/node';
 import {
   useLoaderData,
   useLocation,
   useSubmit as useRemixSubmit,
-} from "@remix-run/react";
+} from '@remix-run/react';
 import {
   BlockStack,
   Box,
@@ -29,48 +29,48 @@ import {
   TextField,
   useIndexResourceState,
   type IndexTableProps,
-} from "@shopify/polaris";
-import { asChoiceList, notEmpty, useField, useForm } from "@shopify/react-form";
-import { StatusCodes } from "http-status-codes";
-import { redirect } from "remix-typedjson";
+} from '@shopify/polaris';
+import { asChoiceList, notEmpty, useField, useForm } from '@shopify/react-form';
+import { StatusCodes } from 'http-status-codes';
+import { redirect } from 'remix-typedjson';
 import {
   PRICE_LIST_CATEGORY,
   PRICE_LIST_IMPORT_SETTINGS,
   PRICE_LIST_PRICING_STRATEGY,
-} from "~/constants";
+} from '~/constants';
 import {
-  createPriceListAndCompleteChecklistItem,
   getPriceListDetailedInfo,
   userHasPriceList,
   type CreatePriceListDataProps,
-} from "~/models/priceList";
+} from '~/services/models/priceList';
 
-import { authenticate } from "~/shopify.server";
-import { convertFormDataToObject, getJSONError } from "~/util";
+import { authenticate } from '~/shopify.server';
+import { convertFormDataToObject, getJSONError } from '~/util';
 import {
   categoryChoices,
   formatPriceListData,
   generalPriceListImportSettingChoices,
   pricingStrategyChoices,
-} from "~/formData/pricelist";
-import type { PriceListPricingStrategyProps } from "~/formData/pricelist";
-import { useAppBridge } from "@shopify/app-bridge-react";
-import { ProductFilterControl } from "~/components";
-import { useCallback, useMemo, useState } from "react";
-import { SearchIcon, XIcon } from "@shopify/polaris-icons";
+} from '~/formData/pricelist';
+import type { PriceListPricingStrategyProps } from '~/formData/pricelist';
+import { useAppBridge } from '@shopify/app-bridge-react';
+import { ProductFilterControl } from '~/components';
+import { useCallback, useMemo, useState } from 'react';
+import { SearchIcon, XIcon } from '@shopify/polaris-icons';
 import {
   getProductsFormattedWithPositions,
   getVariantIdToWholesalePrice,
-} from "./util";
+} from './util';
 import type {
   ProductPropsWithPositions,
   ProductProps,
   VariantWithPosition,
-} from "./types";
-import ProductTableRow from "./components/ProductTableRow";
-import { type BulkActionsProps } from "@shopify/polaris/build/ts/src/components/BulkActions";
+} from './types';
+import ProductTableRow from './components/ProductTableRow';
+import { type BulkActionsProps } from '@shopify/polaris/build/ts/src/components/BulkActions';
 
-import styles from "~/shared.module.css";
+import styles from '~/shared.module.css';
+import { createPriceListAndCompleteChecklistItem } from '~/services/transactions';
 
 type LoaderDataProps = {
   id: string;
@@ -107,7 +107,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     );
     return redirect(`/app/price-list/${newPriceList.id}`);
   } catch (error) {
-    throw getJSONError(error, "settings");
+    throw getJSONError(error, 'settings');
   }
 };
 
@@ -118,14 +118,14 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     const { id: priceListId } = params;
 
     if (!priceListId) {
-      throw json("Price list id is empty", {
+      throw json('Price list id is empty', {
         status: StatusCodes.BAD_REQUEST,
       });
     }
 
     const hasPriceList = await userHasPriceList(sessionId, priceListId);
     if (!hasPriceList) {
-      throw json("User does not have price list.", {
+      throw json('User does not have price list.', {
         status: StatusCodes.UNAUTHORIZED,
       });
     }
@@ -136,14 +136,14 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     );
     return json(visibleProfiles);
   } catch (error) {
-    throw getJSONError(error, "retailer network");
+    throw getJSONError(error, 'retailer network');
   }
 };
 
 const EditPriceList = () => {
   const initialData = useLoaderData<typeof loader>() as LoaderDataProps;
   const { pathname } = useLocation();
-  const backActionUrl = pathname.substring(0, pathname.lastIndexOf("/"));
+  const backActionUrl = pathname.substring(0, pathname.lastIndexOf('/'));
   const shopify = useAppBridge();
   const remixSubmit = useRemixSubmit();
   const [products, setProducts] = useState<ProductPropsWithPositions[]>([]);
@@ -152,9 +152,9 @@ const EditPriceList = () => {
   const allPartneredRetailers: PartneredRetailersProps[] = useMemo(
     () => [
       {
-        id: "retailer-id",
-        name: "Eppeal",
-        website: "/app/retailer-network/retailer-id", // TODO: make this in the frontend
+        id: 'retailer-id',
+        name: 'Eppeal',
+        website: '/app/retailer-network/retailer-id', // TODO: make this in the frontend
         selected: true,
       },
     ],
@@ -174,19 +174,19 @@ const EditPriceList = () => {
   const [selectedRetailerIds, setSelectedRetailerIds] = useState<string[]>(
     initialSelectedRetailers,
   );
-  const [retailerSearchValue, setRetailerSearchValue] = useState("");
+  const [retailerSearchValue, setRetailerSearchValue] = useState('');
   const escapeSpecialRegExCharacters = useCallback(
-    (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+    (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
     [],
   );
   const filterRetailerOptions = useCallback(
     (value: string) => {
       setRetailerSearchValue(value);
-      if (value === "") {
+      if (value === '') {
         setVisibleRetailerOptions(allPartneredRetailers);
         return;
       }
-      const filterRegex = new RegExp(escapeSpecialRegExCharacters(value), "i");
+      const filterRegex = new RegExp(escapeSpecialRegExCharacters(value), 'i');
       const resultOptions = allPartneredRetailers.filter((retailer) =>
         retailer.name.match(filterRegex),
       );
@@ -235,15 +235,15 @@ const EditPriceList = () => {
   }, [products]);
 
   const resourceName = {
-    singular: "product",
-    plural: "products",
+    singular: 'product',
+    plural: 'products',
   };
 
-  const headings: IndexTableProps["headings"] = [
-    { title: "Product" },
-    { title: "Price" },
-    { title: "Retailer Payment" },
-    { title: "Profit" },
+  const headings: IndexTableProps['headings'] = [
+    { title: 'Product' },
+    { title: 'Price' },
+    { title: 'Retailer Payment' },
+    { title: 'Profit' },
   ];
 
   // removes the selected products from index table
@@ -265,9 +265,9 @@ const EditPriceList = () => {
     clearSelection();
   }, [clearSelection, products, selectedResources]);
 
-  const productsBulkAction: BulkActionsProps["promotedActions"] = [
+  const productsBulkAction: BulkActionsProps['promotedActions'] = [
     {
-      content: "Remove Products",
+      content: 'Remove Products',
       onAction: removeProductsIndexTable,
     },
   ];
@@ -276,7 +276,7 @@ const EditPriceList = () => {
     fields: {
       name: useField({
         value: initialData.name,
-        validates: [notEmpty("Price list name is required")],
+        validates: [notEmpty('Price list name is required')],
       }),
       category: useField(
         initialData.isGeneral
@@ -292,20 +292,20 @@ const EditPriceList = () => {
         initialData.pricingStrategy,
       ),
       margin: useField({
-        value: initialData.margin.toString() ?? "10",
+        value: initialData.margin.toString() ?? '10',
         validates: (value) => {
           const valueFloat = parseFloat(value);
           if (!value) {
-            return "Margin cannot be empty.";
+            return 'Margin cannot be empty.';
           } else if (valueFloat < 0) {
-            return "Margin cannot be less than 0.";
+            return 'Margin cannot be less than 0.';
           } else if (valueFloat > 100) {
-            return "Margin cannot be greater than 100.";
+            return 'Margin cannot be greater than 100.';
           } else if (
             fields.category.value === PRICE_LIST_CATEGORY.GENERAL &&
             valueFloat < 10
           ) {
-            return "Retailer must have at least 10% margin for general price list";
+            return 'Retailer must have at least 10% margin for general price list';
           }
         },
       }),
@@ -313,10 +313,10 @@ const EditPriceList = () => {
     onSubmit: async (fieldValues) => {
       const formattedData = formatPriceListData(fieldValues);
       remixSubmit(formattedData, {
-        method: "post",
+        method: 'post',
         action: pathname,
       });
-      return { status: "success" };
+      return { status: 'success' };
     },
   });
 
@@ -329,7 +329,7 @@ const EditPriceList = () => {
     const response = await fetch(
       `/app/api/price-list?params=${encodedParams}`,
       {
-        method: "GET",
+        method: 'GET',
       },
     );
     const data = await response.json();
@@ -345,9 +345,9 @@ const EditPriceList = () => {
       })) ?? [];
 
     const productsSelected = await shopify.resourcePicker({
-      type: "product",
+      type: 'product',
       multiple: true,
-      action: "select",
+      action: 'select',
       showArchived: false,
       showDraft: false,
       selectionIds: resourcePickerInitialSelection,
@@ -371,16 +371,16 @@ const EditPriceList = () => {
             title,
             images,
             status,
-            storeUrl: idToStoreUrl[id] ?? "",
+            storeUrl: idToStoreUrl[id] ?? '',
             totalInventory,
             totalVariants,
             variants: variants.map(
               ({ id, title, sku, inventoryQuantity, price }) => ({
-                id: id ?? "",
-                title: title ?? "",
-                sku: sku ?? "",
+                id: id ?? '',
+                title: title ?? '',
+                sku: sku ?? '',
                 inventoryQuantity: inventoryQuantity ?? 0,
-                price: price ?? "",
+                price: price ?? '',
                 wholesalePrice: variantIdToWholesalePrice.get(id) ?? null,
               }),
             ),
@@ -438,12 +438,12 @@ const EditPriceList = () => {
     <Form onSubmit={submit}>
       <Page
         title="Edit Price List"
-        backAction={{ content: "Price Lists", url: backActionUrl }}
+        backAction={{ content: 'Price Lists', url: backActionUrl }}
       >
-        <Box paddingBlockEnd={"400"}>
+        <Box paddingBlockEnd={'400'}>
           <Layout>
             <Layout.Section variant="oneThird">
-              <BlockStack gap={"300"}>
+              <BlockStack gap={'300'}>
                 <Card>
                   <TextField label="Name" autoComplete="off" {...fields.name} />
                 </Card>
@@ -535,8 +535,8 @@ const EditPriceList = () => {
                     </Combobox>
                     <ResourceList
                       resourceName={{
-                        singular: "customer",
-                        plural: "customers",
+                        singular: 'customer',
+                        plural: 'customers',
                       }}
                       items={allPartneredRetailers.filter(({ id }) =>
                         selectedRetailerIds.includes(id),
@@ -575,8 +575,8 @@ const EditPriceList = () => {
                     />
                   </BlockStack>
                 </Card>
-                <Card padding={"200"}>
-                  <Box paddingInline={"200"} paddingBlockStart={"100"}>
+                <Card padding={'200'}>
+                  <Box paddingInline={'200'} paddingBlockStart={'100'}>
                     <Text as="h2" variant="headingMd">
                       Products
                     </Text>
@@ -586,7 +586,7 @@ const EditPriceList = () => {
                     <IndexTable
                       onSelectionChange={handleSelectionChange}
                       selectedItemsCount={
-                        allResourcesSelected ? "All" : selectedResources.length
+                        allResourcesSelected ? 'All' : selectedResources.length
                       }
                       resourceName={resourceName}
                       itemCount={numRows}
@@ -599,7 +599,7 @@ const EditPriceList = () => {
                           product={product}
                           margin={fields.margin.value}
                           isWholesalePricing={
-                            fields.pricingStrategy.value === "WHOLESALE"
+                            fields.pricingStrategy.value === 'WHOLESALE'
                           }
                           selectedResources={selectedResources}
                           tableRows={tableRows}
@@ -610,18 +610,18 @@ const EditPriceList = () => {
                       ))}
                     </IndexTable>
                   )}
-                  <Box paddingBlockEnd={"100"} />
+                  <Box paddingBlockEnd={'100'} />
                 </Card>
               </BlockStack>
             </Layout.Section>
           </Layout>
         </Box>
-        <div className={styles["center-right"]}>
+        <div className={styles['center-right']}>
           <Button submit variant="primary">
             Save
           </Button>
         </div>
-        <Box paddingBlockEnd={"400"} />
+        <Box paddingBlockEnd={'400'} />
       </Page>
     </Form>
   );

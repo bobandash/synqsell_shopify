@@ -2,8 +2,8 @@ import {
   json,
   type ActionFunctionArgs,
   type LoaderFunctionArgs,
-} from "@remix-run/node";
-import { useLoaderData, useLocation } from "@remix-run/react";
+} from '@remix-run/node';
+import { useLoaderData, useLocation } from '@remix-run/react';
 import {
   Badge,
   Card,
@@ -14,28 +14,28 @@ import {
   Text,
   useIndexResourceState,
   useSetIndexFiltersMode,
-} from "@shopify/polaris";
-import type { IndexTableHeading } from "@shopify/polaris/build/ts/src/components/IndexTable";
-import type { NonEmptyArray } from "@shopify/polaris/build/ts/src/types";
-import createHttpError from "http-errors";
-import { StatusCodes } from "http-status-codes";
-import logger from "~/logger";
-import { type FC, useCallback, useEffect, useMemo, useState } from "react";
-import { ACCESS_REQUEST_STATUS, ROLES } from "~/constants";
-import { hasRole } from "~/models/roles";
+} from '@shopify/polaris';
+import type { IndexTableHeading } from '@shopify/polaris/build/ts/src/components/IndexTable';
+import type { NonEmptyArray } from '@shopify/polaris/build/ts/src/types';
+import createHttpError from 'http-errors';
+import { StatusCodes } from 'http-status-codes';
+import logger from '~/logger';
+import { type FC, useCallback, useEffect, useMemo, useState } from 'react';
+import { ACCESS_REQUEST_STATUS, ROLES } from '~/constants';
+import { hasRole } from '~/services/models/roles';
 import {
   getAllSupplierAccessRequests,
   type GetSupplierAccessRequestJSONProps,
-} from "~/models/supplierAccessRequest";
-import { authenticate } from "~/shopify.server";
-import { getJSONError } from "~/util";
-import { type BulkActionsProps } from "@shopify/polaris/build/ts/src/components/BulkActions";
+} from '~/services/models/supplierAccessRequest';
+import { authenticate } from '~/shopify.server';
+import { getJSONError } from '~/util';
+import { type BulkActionsProps } from '@shopify/polaris/build/ts/src/components/BulkActions';
 import {
   type supplierAccessRequestInformationProps,
   updateSupplierAccess,
-} from "~/models/transactions";
-import { useAppBridge } from "@shopify/app-bridge-react";
-import { convertToDate } from "../util";
+} from '~/services/transactions';
+import { useAppBridge } from '@shopify/app-bridge-react';
+import { convertToDate } from '../util';
 
 type RowMarkupProps = {
   data: GetSupplierAccessRequestJSONProps;
@@ -44,13 +44,13 @@ type RowMarkupProps = {
 };
 
 type ActionData = {
-  intent: "approve" | "reject";
+  intent: 'approve' | 'reject';
   supplierAccessRequestInfo: supplierAccessRequestInformationProps[];
 };
 
 const INTENTS = {
-  APPROVE: "approve",
-  REJECT: "reject",
+  APPROVE: 'approve',
+  REJECT: 'reject',
 };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -60,12 +60,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const isAdmin = await hasRole(sessionId, ROLES.ADMIN);
     if (!isAdmin) {
       logger.error(`${sessionId} is not an admin.`);
-      throw new createHttpError.Unauthorized("User is not an admin.");
+      throw new createHttpError.Unauthorized('User is not an admin.');
     }
     const supplierAccessRequests = await getAllSupplierAccessRequests();
     return json(supplierAccessRequests);
   } catch (error) {
-    throw getJSONError(error, "admin network");
+    throw getJSONError(error, 'admin network');
   }
 };
 
@@ -75,7 +75,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const { intent, supplierAccessRequestInfo } = data;
     if (!supplierAccessRequestInfo) {
       return json(
-        { message: "There were no suppliers selected." },
+        { message: 'There were no suppliers selected.' },
         { status: StatusCodes.BAD_REQUEST },
       );
     }
@@ -87,7 +87,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           ACCESS_REQUEST_STATUS.APPROVED,
         );
         return json(
-          { message: "Suppliers were successfully approved." },
+          { message: 'Suppliers were successfully approved.' },
           {
             status: 200,
           },
@@ -98,17 +98,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           ACCESS_REQUEST_STATUS.REJECTED,
         );
         return json(
-          { message: "Suppliers were successfully rejected." },
+          { message: 'Suppliers were successfully rejected.' },
           { status: StatusCodes.OK },
         );
       default:
         return json(
-          { message: "Invalid intent." },
+          { message: 'Invalid intent.' },
           { status: StatusCodes.BAD_REQUEST },
         );
     }
   } catch (error) {
-    throw getJSONError(error, "admin network");
+    throw getJSONError(error, 'admin network');
   }
 };
 
@@ -119,15 +119,15 @@ const Admin = () => {
   >() as unknown as GetSupplierAccessRequestJSONProps[];
   const location = useLocation();
   const resourceName = {
-    singular: "Supplier Request",
-    plural: "Supplier Requests",
+    singular: 'Supplier Request',
+    plural: 'Supplier Requests',
   };
   const shopify = useAppBridge();
   const [requestsData, setRequestsData] = useState(data);
   const [filteredData, setFilteredData] = useState(data);
   const [selected, setSelected] = useState(0);
   const { mode, setMode } = useSetIndexFiltersMode();
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState('');
   const {
     selectedResources,
     allResourcesSelected,
@@ -146,8 +146,8 @@ const Admin = () => {
   const tabs: TabProps[] = useMemo(
     () => [
       {
-        id: "0",
-        content: "All",
+        id: '0',
+        content: 'All',
         onAction: () => {
           setRequestsData(data);
           setFilteredData(data);
@@ -156,8 +156,8 @@ const Admin = () => {
         },
       },
       {
-        id: "1",
-        content: "Pending",
+        id: '1',
+        content: 'Pending',
         onAction: () => {
           const pendingData = data.filter(
             (item) => item.status === ACCESS_REQUEST_STATUS.PENDING,
@@ -169,8 +169,8 @@ const Admin = () => {
         },
       },
       {
-        id: "2",
-        content: "Approved",
+        id: '2',
+        content: 'Approved',
         onAction: () => {
           const approvedData = data.filter(
             (item) => item.status === ACCESS_REQUEST_STATUS.APPROVED,
@@ -182,8 +182,8 @@ const Admin = () => {
         },
       },
       {
-        id: "3",
-        content: "Rejected",
+        id: '3',
+        content: 'Rejected',
         onAction: () => {
           const rejectedData = data.filter(
             (item) => item.status === ACCESS_REQUEST_STATUS.REJECTED,
@@ -199,14 +199,14 @@ const Admin = () => {
   );
 
   const headings: NonEmptyArray<IndexTableHeading> = [
-    { title: "Num" },
-    { title: "Date" },
-    { title: "Name" },
-    { title: "Contact Email" },
-    { title: "Website" },
-    { title: "Met Sales" },
-    { title: "Status" },
-    { title: "Updated At" },
+    { title: 'Num' },
+    { title: 'Date' },
+    { title: 'Name' },
+    { title: 'Contact Email' },
+    { title: 'Website' },
+    { title: 'Met Sales' },
+    { title: 'Status' },
+    { title: 'Updated At' },
   ];
 
   const handleFiltersQueryChange = useCallback((value: string) => {
@@ -214,7 +214,7 @@ const Admin = () => {
   }, []);
 
   const clearQuery = useCallback(() => {
-    setQuery("");
+    setQuery('');
   }, []);
 
   const getSelectedSessionAndAccessIds = useCallback(() => {
@@ -239,16 +239,16 @@ const Admin = () => {
     try {
       const supplierAccessRequestInfo = getSelectedSessionAndAccessIds();
       await fetch(location.pathname, {
-        method: "post",
+        method: 'post',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           intent: INTENTS.APPROVE,
           supplierAccessRequestInfo,
         }),
       });
-      shopify.toast.show("Successfully approved suppliers.");
+      shopify.toast.show('Successfully approved suppliers.');
     } catch (error) {
       console.error(error);
     }
@@ -258,28 +258,28 @@ const Admin = () => {
     try {
       const supplierAccessRequestInfo = getSelectedSessionAndAccessIds();
       await fetch(location.pathname, {
-        method: "post",
+        method: 'post',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           intent: INTENTS.REJECT,
           supplierAccessRequestInfo,
         }),
       });
-      shopify.toast.show("Successfully rejected suppliers.");
+      shopify.toast.show('Successfully rejected suppliers.');
     } catch (error) {
       console.error(error);
     }
   }, [getSelectedSessionAndAccessIds, location, shopify]);
 
-  const promotedBulkActions: BulkActionsProps["promotedActions"] = [
+  const promotedBulkActions: BulkActionsProps['promotedActions'] = [
     {
-      content: "Approve Suppliers",
+      content: 'Approve Suppliers',
       onAction: approveSuppliers,
     },
     {
-      content: "Reject Suppliers",
+      content: 'Reject Suppliers',
       onAction: rejectSuppliers,
     },
   ];
@@ -289,7 +289,7 @@ const Admin = () => {
       title="Admin Dashboard"
       subtitle="Approve or reject supplier requests."
     >
-      <Card padding={"0"}>
+      <Card padding={'0'}>
         <IndexFilters
           tabs={tabs}
           mode={mode}
@@ -314,7 +314,7 @@ const Admin = () => {
           itemCount={filteredData.length}
           headings={headings}
           selectedItemsCount={
-            allResourcesSelected ? "All" : selectedResources.length
+            allResourcesSelected ? 'All' : selectedResources.length
           }
           onSelectionChange={handleSelectionChange}
           promotedBulkActions={promotedBulkActions}
@@ -370,7 +370,7 @@ const Row: FC<RowMarkupProps> = ({ data, index, selected }) => {
         </a>
       </IndexTable.Cell>
       <IndexTable.Cell>
-        {hasMetSalesThreshold ? "True" : "False"}
+        {hasMetSalesThreshold ? 'True' : 'False'}
       </IndexTable.Cell>
       <IndexTable.Cell>
         <StatusBadge status={status} />
@@ -382,13 +382,13 @@ const Row: FC<RowMarkupProps> = ({ data, index, selected }) => {
 
 const StatusBadge = ({ status }: { status: string }) => {
   if (status === ACCESS_REQUEST_STATUS.APPROVED) {
-    return <Badge tone={"success"}>Approved</Badge>;
+    return <Badge tone={'success'}>Approved</Badge>;
   } else if (status === ACCESS_REQUEST_STATUS.PENDING) {
-    return <Badge tone={"attention"}>Pending</Badge>;
+    return <Badge tone={'attention'}>Pending</Badge>;
   } else if (status === ACCESS_REQUEST_STATUS.REJECTED) {
-    return <Badge tone={"critical"}>Rejected</Badge>;
+    return <Badge tone={'critical'}>Rejected</Badge>;
   }
-  return <Badge tone={"critical"}>Error</Badge>;
+  return <Badge tone={'critical'}>Error</Badge>;
 };
 
 export default Admin;

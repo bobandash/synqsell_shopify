@@ -1,8 +1,8 @@
-import { type FormDataObject } from "~/types";
-import { deletePriceListSchema } from "./_schema";
-import { type InferType } from "yup";
-import { deletePriceListBatch } from "~/models/priceList";
-import { getJSONError } from "~/util";
+import { type FormDataObject } from '~/types';
+import { deletePriceListSchema } from './_schema';
+import { type InferType } from 'yup';
+import { deletePriceListBatch } from '~/services/models/priceList';
+import { getJSONError } from '~/util';
 
 type deletePriceListData = InferType<typeof deletePriceListSchema>;
 
@@ -21,6 +21,6 @@ export async function deletePriceListAction(
     );
     return deletedPriceLists;
   } catch (error) {
-    throw getJSONError(error, "Price List");
+    throw getJSONError(error, 'Price List');
   }
 }

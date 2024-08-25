@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import { ROLES } from '~/constants';
-import { addRole } from '~/models/roles';
+import { addRole } from '~/services/models/roles';
 const db = new PrismaClient()
 
 // npx prisma db seed - to run seed for database
