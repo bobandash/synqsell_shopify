@@ -1,4 +1,4 @@
-import type { ProductProps } from "../types";
+import type { ProductProps } from '../types';
 
 // adds the field position to both the product and variants for table UI purposes
 function getProductsFormattedWithPositions(products: ProductProps[]) {

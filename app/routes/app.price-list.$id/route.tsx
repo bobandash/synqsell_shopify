@@ -338,11 +338,10 @@ const EditPriceList = () => {
 
   async function handleSelectProducts() {
     // Mandatory field for to set shopify resource picker's initial values
-    const resourcePickerInitialSelection =
-      products.map((product) => ({
-        id: product.id,
-        variants: product.variants.map((variant) => ({ id: variant.id })),
-      })) ?? [];
+    const resourcePickerInitialSelection = products.map((product) => ({
+      id: product.id,
+      variants: product.variants.map(({ id }) => ({ id })),
+    }));
 
     const productsSelected = await shopify.resourcePicker({
       type: 'product',
@@ -352,38 +351,27 @@ const EditPriceList = () => {
       showDraft: false,
       selectionIds: resourcePickerInitialSelection,
     });
+
     if (productsSelected) {
       const productIds = productsSelected.map(({ id }) => id);
       const idToStoreUrl = await getIdToStoreUrl(productIds);
       const variantIdToWholesalePrice = getVariantIdToWholesalePrice(products);
+      // only get the relevant information needed to render the UI, to create a product using a graphQL mutation is a lot harder
       const productsFormatted: ProductProps[] = productsSelected.map(
-        ({
-          id,
-          title,
-          images,
-          status,
-          totalInventory,
-          variants,
-          totalVariants,
-        }) => {
+        ({ id, title, images, variants, totalVariants }) => {
           return {
             id,
             title,
             images,
-            status,
             storeUrl: idToStoreUrl[id] ?? '',
-            totalInventory,
             totalVariants,
-            variants: variants.map(
-              ({ id, title, sku, inventoryQuantity, price }) => ({
-                id: id ?? '',
-                title: title ?? '',
-                sku: sku ?? '',
-                inventoryQuantity: inventoryQuantity ?? 0,
-                price: price ?? '',
-                wholesalePrice: variantIdToWholesalePrice.get(id) ?? null,
-              }),
-            ),
+            variants: variants.map(({ id, title, sku, price }) => ({
+              id: id ?? '',
+              title: title ?? null,
+              sku: sku ?? null,
+              price: price ?? null,
+              wholesalePrice: variantIdToWholesalePrice.get(id ?? '') ?? null,
+            })),
           };
         },
       );

@@ -1,9 +1,8 @@
 export type Variant = {
   id: string;
-  title: string;
-  sku: string;
-  inventoryQuantity: number;
-  price: string;
+  title: string | null;
+  sku: string | null;
+  price: string | null;
   wholesalePrice: number | null;
 };
 
@@ -19,14 +18,12 @@ export type ProductProps = {
     altText?: string;
     originalSrc: string;
   }[];
-  status: string;
-  totalInventory: number;
+  storeUrl: string;
   totalVariants: number;
-  storeUrl: string | null;
   variants: Variant[];
 };
 
-export type ProductPropsWithPositions = Omit<ProductProps, "variants"> & {
+export type ProductPropsWithPositions = Omit<ProductProps, 'variants'> & {
   position: number;
   variants: VariantWithPosition[];
 };
