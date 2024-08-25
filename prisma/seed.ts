@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client'
-import { ROLES } from '~/constants';
+import { CHECKLIST_ITEM_KEYS, ROLES } from '~/constants';
 import { addRole } from '~/services/models/roles';
 const db = new PrismaClient()
 
@@ -29,7 +29,7 @@ async function main() {
           checklistItems: {
             create: [
               {
-                key: "retailer_get_started",
+                key: CHECKLIST_ITEM_KEYS.RETAILER_GET_STARTED,
                 position: 1,
                 header: "Become a retailer",
                 subheader:
@@ -37,7 +37,7 @@ async function main() {
                 buttonText: "Get Access",
               },
               {
-                key: "retailer_customize_profile",
+                key: CHECKLIST_ITEM_KEYS.RETAILER_CUSTOMIZE_PROFILE,
                 position: 2,
                 header: "Customize your brand profile",
                 subheader:
@@ -45,7 +45,7 @@ async function main() {
                 buttonText: "Edit brand profile",
               },
               {
-                key: "retailer_request_partnership",
+                key: CHECKLIST_ITEM_KEYS.RETAILER_REQUEST_PARTNERSHIP,
                 position: 3,
                 header: "Request a partnership with a supplier",
                 subheader:
@@ -53,7 +53,7 @@ async function main() {
                 buttonText: "Explore suppliers",
               },
               {
-                key: "retailer_import_product",
+                key: CHECKLIST_ITEM_KEYS.RETAILER_IMPORT_PRODUCT,
                 position: 4,
                 header: "Import a product to your store",
                 subheader:
@@ -73,7 +73,7 @@ async function main() {
           checklistItems: {
             create: [
               {
-                key: "supplier_get_started",
+                key: CHECKLIST_ITEM_KEYS.SUPPLIER_GET_STARTED,
                 position: 1,
                 header: "Request access to become a supplier",
                 subheader:
@@ -81,7 +81,7 @@ async function main() {
                 buttonText: "Request approval",
               },
               {
-                key: "supplier_customize_profile",
+                key: CHECKLIST_ITEM_KEYS.SUPPLIER_CUSTOMIZE_PROFILE,
                 position: 2,
                 header: "Customize your brand profile",
                 subheader:
@@ -89,7 +89,7 @@ async function main() {
                 buttonText: "Edit brand profile",
               },
               {
-                key: "supplier_manage_zones",
+                key: CHECKLIST_ITEM_KEYS.SUPPLIER_MANAGE_ZONES,
                 position: 3,
                 header: "Manage your shipping zones and rates",
                 subheader:
@@ -97,7 +97,7 @@ async function main() {
                 buttonText: "Edit shipping rates",
               },
               {
-                key: "supplier_create_price_list",
+                key: CHECKLIST_ITEM_KEYS.SUPPLIER_CREATE_PRICE_LIST,
                 position: 4,
                 header: "Create a price list",
                 subheader:
@@ -105,7 +105,7 @@ async function main() {
                 buttonText: "Create price list",
               },
               {
-                key: "supplier_explore_network",
+                key: CHECKLIST_ITEM_KEYS.SUPPLIER_EXPLORE_NETWORK,
                 position: 5,
                 header: "Request a partnership with a retailer",
                 subheader:
