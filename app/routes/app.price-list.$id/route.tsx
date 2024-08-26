@@ -38,21 +38,16 @@ import {
   PRICE_LIST_IMPORT_SETTINGS,
   PRICE_LIST_PRICING_STRATEGY,
 } from '~/constants';
-import {
-  getPriceListDetailedInfo,
-  userHasPriceList,
-  type CreatePriceListDataProps,
-} from '~/services/models/priceList';
 
 import { authenticate } from '~/shopify.server';
 import { convertFormDataToObject, getJSONError } from '~/util';
 import {
   categoryChoices,
-  formatPriceListData,
+  formatPriceListFields,
   generalPriceListImportSettingChoices,
   pricingStrategyChoices,
-} from '~/formData/pricelist';
-import type { PriceListPricingStrategyProps } from '~/formData/pricelist';
+} from '~/routes/app.price-list.$id/formData/pricelist';
+import type { PriceListPricingStrategyProps } from '~/routes/app.price-list.$id/formData/pricelist';
 import { useAppBridge } from '@shopify/app-bridge-react';
 import { PaddedBox, ProductFilterControl } from '~/components';
 import { useCallback, useMemo, useState } from 'react';
@@ -71,6 +66,12 @@ import { type BulkActionsProps } from '@shopify/polaris/build/ts/src/components/
 
 import styles from '~/shared.module.css';
 import { createPriceListAndCompleteChecklistItem } from '~/services/transactions';
+import {
+  type CreatePriceListDataProps,
+  getPriceListDetailedInfo,
+  updatePriceList,
+  userHasPriceList,
+} from '~/services/models/priceList';
 
 type LoaderDataProps = {
   id: string;
@@ -90,22 +91,38 @@ type PartneredRetailersProps = {
   selected: boolean;
 };
 
-// !!! TODOs for this page:
-// !!! Before I start, I need to figure out the product data that I need to store
-// !!! I have to store all the data on my server/db because I can't query their store without their session id
-// !!! The payload for now for products will be whatever I determine
-
-export const action = async ({ request }: ActionFunctionArgs) => {
+export const action = async ({ request, params }: ActionFunctionArgs) => {
   try {
-    const { session } = await authenticate.admin(request);
+    const { session, admin } = await authenticate.admin(request);
     const { id: sessionId } = session;
+    const { graphql } = admin;
     const formData = await request.formData();
-    const data = convertFormDataToObject(formData) as CreatePriceListDataProps;
-    const newPriceList = await createPriceListAndCompleteChecklistItem(
-      data,
-      sessionId,
-    );
-    return redirect(`/app/price-list/${newPriceList.id}`);
+    const { id: priceListId } = params;
+    const rawData = convertFormDataToObject(formData);
+    const data = {
+      settings: JSON.parse(rawData.settings),
+      products: JSON.parse(rawData.products),
+      retailers: JSON.parse(rawData.retailers),
+    } as CreatePriceListDataProps;
+
+    if (priceListId === 'new') {
+      const newPriceList = await createPriceListAndCompleteChecklistItem(
+        data,
+        sessionId,
+      );
+      return redirect(`/app/price-list/${newPriceList.id}`);
+    }
+    if (priceListId) {
+      const updatedPriceList = await updatePriceList(
+        priceListId,
+        data,
+        sessionId,
+        graphql,
+      );
+      return json(updatedPriceList, StatusCodes.OK);
+    }
+
+    return json({ message: 'success' }, StatusCodes.OK);
   } catch (error) {
     throw getJSONError(error, 'settings');
   }
@@ -197,7 +214,6 @@ const EditPriceList = () => {
 
   const updateRetailerSelection = useCallback(
     (selected: string) => {
-      console.log(selected);
       if (selectedRetailerIds.includes(selected)) {
         setSelectedRetailerIds(
           selectedRetailerIds.filter((option) => option !== selected),
@@ -311,11 +327,21 @@ const EditPriceList = () => {
       }),
     },
     onSubmit: async (fieldValues) => {
-      const formattedData = formatPriceListData(fieldValues);
-      remixSubmit(formattedData, {
-        method: 'post',
-        action: pathname,
-      });
+      const formattedFieldData = formatPriceListFields(fieldValues);
+      const formattedProductsData = getCleanedProductDataForSubmission();
+      const formattedRetailers = selectedRetailerIds;
+
+      remixSubmit(
+        {
+          settings: JSON.stringify(formattedFieldData),
+          products: JSON.stringify(formattedProductsData),
+          retailers: JSON.stringify(formattedRetailers),
+        },
+        {
+          method: 'post',
+          action: pathname,
+        },
+      );
       return { status: 'success' };
     },
   });
@@ -406,16 +432,16 @@ const EditPriceList = () => {
   // cleans product data before submission
   // Default behavior: want the wholesale price to persist if the seller changes their mind on pricing strategy before refreshing / navigating the page
   const getCleanedProductDataForSubmission = useCallback(() => {
-    if (fields.margin.value === PRICE_LIST_PRICING_STRATEGY.MARGIN) {
-      return products;
-    }
-    return products.map((product) => {
+    return products.map(({ id, variants }) => {
       return {
-        ...product,
-        variants: product.variants.map((variant) => {
+        id,
+        variants: variants.map((variant) => {
           return {
             ...variant,
-            wholesalePrice: null,
+            wholesalePrice:
+              fields.margin.value === PRICE_LIST_PRICING_STRATEGY.MARGIN
+                ? variant.wholesalePrice
+                : null,
           };
         }),
       };
