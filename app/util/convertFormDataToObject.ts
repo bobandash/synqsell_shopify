@@ -1,8 +1,8 @@
 function convertFormDataToObject(formData: FormData): Record<string, any> {
   const obj: Record<string, any> = {};
   formData.forEach((value, key) => {
-    if (value === "true" || value === "false") {
-      obj[key] = value === "true";
+    if (value === 'true' || value === 'false') {
+      obj[key] = value === 'true';
     } else if (!isNaN(Number(value))) {
       obj[key] = Number(value);
     } else if (Date.parse(value as string)) {
