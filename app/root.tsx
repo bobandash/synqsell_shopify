@@ -1,10 +1,22 @@
+import type { LoaderFunctionArgs } from '@remix-run/node';
 import {
+  json,
   Links,
   Meta,
   Outlet,
   Scripts,
   ScrollRestoration,
-} from "@remix-run/react";
+} from '@remix-run/react';
+import { authenticate, registerWebhooks } from './shopify.server';
+
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const { session } = await authenticate.admin(request);
+  await registerWebhooks({ session });
+
+  return json({
+    apiKey: process.env.SHOPIFY_API_KEY,
+  });
+};
 
 export default function App() {
   return (
