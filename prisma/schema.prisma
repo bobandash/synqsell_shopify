@@ -151,14 +151,30 @@ model PriceListRetailer {
 
 model Product {
   id              String            @id @default(uuid())
-  title           String
-  images          String[]
+  productId       String
+  categoryId      String
+  productType     String
   description     String
+  descriptionHtml String
+  status          String
+  vendor          String
+  title           String
   price           String
   PriceList       PriceList         @relation(fields: [priceListId], references: [id])
   priceListId     String
   wholesalePrice  Int?
   ImportedProduct ImportedProduct[]
+  Image           Image[]
+}
+
+model Image {
+  id               String  @id @default(uuid())
+  Product          Product @relation(fields: [productId], references: [id])
+  productId        String
+  url              String
+  alt              String
+  mediaContentType String
+  position         Int
 }
 
 model ImportedProduct {
