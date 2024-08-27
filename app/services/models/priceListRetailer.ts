@@ -37,12 +37,10 @@ export async function removePriceListRetailersTx(
   try {
     const deletedRetailerPriceLists = await tx.priceListRetailer.deleteMany({
       where: {
-        AND: {
-          retailerId: {
-            in: retailerIds,
-          },
-          priceListId: priceListId,
+        retailerId: {
+          in: retailerIds,
         },
+        priceListId: priceListId,
       },
     });
 
@@ -56,11 +54,3 @@ export async function removePriceListRetailersTx(
     );
   }
 }
-
-// model PriceListRetailer {
-//   id          String    @id @default(uuid())
-//   PriceList   PriceList @relation(fields: [priceListId], references: [id])
-//   priceListId String
-//   Session     Session   @relation(fields: [retailerId], references: [id])
-//   retailerId  String
-// }
