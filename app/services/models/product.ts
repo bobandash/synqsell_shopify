@@ -58,3 +58,29 @@ export async function addProductsTx(
     );
   }
 }
+
+// helper function to map shopify's product id field to created product's is field in prisma
+export async function getMapShopifyProductIdToPrismaIdTx(
+  tx: Prisma.TransactionClient,
+  productIds: string[],
+  priceListId: string,
+) {
+  const idAndProductIds = await tx.product.findMany({
+    where: {
+      id: {
+        in: productIds,
+      },
+      priceListId,
+    },
+    select: {
+      id: true,
+      productId: true,
+    },
+  });
+
+  const shopifyProductIdToPrismaId = new Map<string, string>();
+  idAndProductIds.forEach(({ id, productId }) => {
+    shopifyProductIdToPrismaId.set(productId, id);
+  });
+  return shopifyProductIdToPrismaId;
+}

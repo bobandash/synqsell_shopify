@@ -10,7 +10,14 @@ import {
   addPriceListRetailersTx,
   removePriceListRetailersTx,
 } from '../models/priceListRetailer';
-import { addProductsTx, deleteProductsTx } from '../models/product';
+import {
+  addProductsTx,
+  deleteProductsTx,
+  getMapShopifyProductIdToPrismaIdTx,
+} from '../models/product';
+import type { Prisma } from '@prisma/client';
+import type { CoreProductProps } from '../types';
+import { getShopifyVariantIdsInPriceListTx } from '../models/variants';
 
 // gets retailers to add and remove from price list
 async function getRetailerStatus(priceListId: string, newRetailers: string[]) {
@@ -81,6 +88,66 @@ async function getProductStatus(priceListId: string, productIds: string[]) {
   }
 }
 
+// returns the data of the variants to add, remove, and update
+// the problem with variants is that when a product is deleted, it should cascade delete the variants as well
+// so that's why you have to use the transaction instead and call this when products are already deleted
+async function getVariantStatusTx(
+  tx: Prisma.TransactionClient,
+  priceListId: string,
+  products: CoreProductProps[],
+) {
+  try {
+    const productIds = products.map(({ id }) => id);
+    const shopifyProductIdToPrismaId = await getMapShopifyProductIdToPrismaIdTx(
+      tx,
+      productIds,
+      priceListId,
+    );
+    const variantsWithPrismaProductId = products.flatMap((product) =>
+      product.variants.map((variant) => ({
+        variantId: variant.id,
+        wholesalePrice: variant.wholesalePrice,
+        productId: shopifyProductIdToPrismaId.get(variant.id) ?? '',
+      })),
+    );
+    // TODO: add error handling for if productId is nothing
+    const variantIdsInOldPriceList = await getShopifyVariantIdsInPriceListTx(
+      tx,
+      priceListId,
+    );
+    const variantIdsInOldPriceListSet = new Set(variantIdsInOldPriceList);
+    const variantIdsInNewPriceListSet = new Set(
+      products.flatMap((product) =>
+        product.variants.map((variant) => variant.id),
+      ),
+    );
+
+    const variantsToRemove = variantIdsInOldPriceList.filter(
+      (id) => !variantIdsInNewPriceListSet.has(id),
+    );
+    const variantsToAdd = variantsWithPrismaProductId.filter(
+      ({ variantId: id }) => !variantIdsInOldPriceListSet.has(id),
+    );
+    const variantsToUpdate = variantsWithPrismaProductId.filter(
+      ({ variantId: id }) => variantIdsInOldPriceListSet.has(id),
+    );
+
+    return { variantsToUpdate, variantsToAdd, variantsToRemove };
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to get product statuses of variants that will be removed, updated, and added to price list.',
+      getProductStatus,
+      {
+        priceListId,
+        products,
+      },
+    );
+  }
+
+  // for variants to update, it's only if we must update wholesale price
+}
+
 export async function updateAllPriceListInformation(
   priceListId: string,
   data: CreatePriceListDataProps,
@@ -103,12 +170,16 @@ export async function updateAllPriceListInformation(
     );
 
     await db.$transaction(async (tx) => {
+      // variants can only be created after all the products are created because they depend on the product db's id
+      await addProductsTx(tx, sessionId, priceListId, productsToAdd, graphql);
+      const { variantsToAdd, variantsToRemove, variantsToDelete } =
+        await getVariantStatusTx(tx, priceListId, products);
+
       await Promise.all([
         updatePriceListSettingsTx(tx, sessionId, priceListId, settings),
         removePriceListRetailersTx(tx, priceListId, retailersToRemove),
         addPriceListRetailersTx(tx, priceListId, retailersToAdd),
         deleteProductsTx(tx, priceListId, productsToRemove),
-        addProductsTx(tx, sessionId, priceListId, productsToAdd, graphql),
       ]);
     });
   } catch (error) {

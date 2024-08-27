@@ -3,7 +3,7 @@
 client_id = "c2ff24913d6d89792234763f0830c676"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://gods-educated-coordination-receipt.trycloudflare.com"
+application_url = "https://vaccine-fellowship-dennis-guest.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read_assigned_fulfillment_orders,read_inventory,read_orders,read_produ
 
 [auth]
 redirect_urls = [
-  "https://gods-educated-coordination-receipt.trycloudflare.com/auth/callback",
-  "https://gods-educated-coordination-receipt.trycloudflare.com/auth/shopify/callback",
-  "https://gods-educated-coordination-receipt.trycloudflare.com/api/auth/callback"
+  "https://vaccine-fellowship-dennis-guest.trycloudflare.com/auth/callback",
+  "https://vaccine-fellowship-dennis-guest.trycloudflare.com/auth/shopify/callback",
+  "https://vaccine-fellowship-dennis-guest.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]

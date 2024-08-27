@@ -65,7 +65,7 @@ export async function hasGeneralPriceList(sessionId: string) {
   }
 }
 
-async function updatePriceListSettings(
+export async function updatePriceListSettings(
   sessionId: string,
   priceListId: string,
   settings: PriceListSettings,
@@ -153,7 +153,6 @@ export async function updatePriceListSettingsTx(
     );
   }
 }
-
 
 export async function createPriceListTx(
   tx: Prisma.TransactionClient,
