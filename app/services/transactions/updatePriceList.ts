@@ -17,7 +17,12 @@ import {
 } from '../models/product';
 import type { Prisma } from '@prisma/client';
 import type { CoreProductProps } from '../types';
-import { getShopifyVariantIdsInPriceListTx } from '../models/variants';
+import {
+  deleteVariantsTx,
+  getShopifyVariantIdsInPriceListTx,
+  updateVariantsTx,
+} from '../models/variants';
+import { addVariantsTx } from '../helper/variants';
 
 // gets retailers to add and remove from price list
 async function getRetailerStatus(priceListId: string, newRetailers: string[]) {
@@ -91,6 +96,7 @@ async function getProductStatus(priceListId: string, productIds: string[]) {
 // returns the data of the variants to add, remove, and update
 // the problem with variants is that when a product is deleted, it should cascade delete the variants as well
 // so that's why you have to use the transaction instead and call this when products are already deleted
+// TODO: refactor this function later
 async function getVariantStatusTx(
   tx: Prisma.TransactionClient,
   priceListId: string,
@@ -107,32 +113,54 @@ async function getVariantStatusTx(
       product.variants.map((variant) => ({
         variantId: variant.id,
         wholesalePrice: variant.wholesalePrice,
-        productId: shopifyProductIdToPrismaId.get(variant.id) ?? '',
+        prismaProductId: shopifyProductIdToPrismaId.get(variant.id) ?? '',
       })),
     );
     // TODO: add error handling for if productId is nothing
-    const variantIdsInOldPriceList = await getShopifyVariantIdsInPriceListTx(
+    const idsInOldPriceList = await getShopifyVariantIdsInPriceListTx(
       tx,
       priceListId,
     );
-    const variantIdsInOldPriceListSet = new Set(variantIdsInOldPriceList);
+    const variantIdToPrismaIdInOldPriceListMap = new Map<string, string>();
+    idsInOldPriceList.forEach((item) => {
+      variantIdToPrismaIdInOldPriceListMap.set(item.variantId, item.id);
+    });
+
+    const shopifyVariantIdsInOldPriceList = idsInOldPriceList.map(
+      ({ variantId }) => variantId,
+    );
+    const shopifyVariantIdsInOldPriceListSet = new Set(
+      shopifyVariantIdsInOldPriceList,
+    );
     const variantIdsInNewPriceListSet = new Set(
       products.flatMap((product) =>
         product.variants.map((variant) => variant.id),
       ),
     );
 
-    const variantsToRemove = variantIdsInOldPriceList.filter(
-      (id) => !variantIdsInNewPriceListSet.has(id),
-    );
+    // variantsToRemove has to be an array of ids in the database
+    const prismaIdsToRemoveInVariant = idsInOldPriceList
+      .filter((ids) => !variantIdsInNewPriceListSet.has(ids.variantId))
+      .map(({ id }) => id);
     const variantsToAdd = variantsWithPrismaProductId.filter(
-      ({ variantId: id }) => !variantIdsInOldPriceListSet.has(id),
+      ({ variantId: id }) => !shopifyVariantIdsInOldPriceListSet.has(id),
     );
     const variantsToUpdate = variantsWithPrismaProductId.filter(
-      ({ variantId: id }) => variantIdsInOldPriceListSet.has(id),
+      ({ variantId: id }) => shopifyVariantIdsInOldPriceListSet.has(id),
     );
+    const variantsToUpdateWithPrismaId = variantsToUpdate.map((item) => {
+      return {
+        ...item,
+        prismaId:
+          variantIdToPrismaIdInOldPriceListMap.get(item.variantId) ?? '',
+      };
+    });
 
-    return { variantsToUpdate, variantsToAdd, variantsToRemove };
+    return {
+      variantsToUpdate: variantsToUpdateWithPrismaId,
+      variantsToAdd,
+      prismaIdsToRemoveInVariant,
+    };
   } catch (error) {
     throw errorHandler(
       error,
@@ -171,15 +199,20 @@ export async function updateAllPriceListInformation(
 
     await db.$transaction(async (tx) => {
       // variants can only be created after all the products are created because they depend on the product db's id
-      await addProductsTx(tx, sessionId, priceListId, productsToAdd, graphql);
-      const { variantsToAdd, variantsToRemove, variantsToDelete } =
+      await Promise.all([
+        addProductsTx(tx, sessionId, priceListId, productsToAdd, graphql),
+        deleteProductsTx(tx, priceListId, productsToRemove),
+      ]);
+      const { variantsToAdd, prismaIdsToRemoveInVariant, variantsToUpdate } =
         await getVariantStatusTx(tx, priceListId, products);
 
       await Promise.all([
+        deleteVariantsTx(tx, prismaIdsToRemoveInVariant),
+        updateVariantsTx(tx, variantsToUpdate),
+        addVariantsTx(tx, variantsToAdd, sessionId, graphql),
         updatePriceListSettingsTx(tx, sessionId, priceListId, settings),
         removePriceListRetailersTx(tx, priceListId, retailersToRemove),
         addPriceListRetailersTx(tx, priceListId, retailersToAdd),
-        deleteProductsTx(tx, priceListId, productsToRemove),
       ]);
     });
   } catch (error) {

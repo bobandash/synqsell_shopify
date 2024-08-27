@@ -16,7 +16,7 @@ export async function getOrCreateProfile(sessionId: string, graphql: GraphQL) {
   } catch (error) {
     throw errorHandler(
       error,
-      'Failed to get or  create profile.',
+      'Failed to get or create profile.',
       getOrCreateProfile,
       { sessionId },
     );

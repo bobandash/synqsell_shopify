@@ -190,10 +190,10 @@ model Variant {
   productId         String // !!! NOTE: productId refers to product's id, not product's productId
   InventoryItem     InventoryItem?
   inventoryPolicy   String
-  inventoryQuantity Int
+  inventoryQuantity Int?
   price             Int
   wholesalePrice    Int?
-  taxCode           String
+  taxCode           String?
   taxable           Boolean
   VariantOption     VariantOption[]
 }
@@ -202,12 +202,11 @@ model Variant {
 // Fields simplified: weightUnit and weightValue
 model InventoryItem {
   id                   String  @id @default(uuid())
-  cost                 String
-  countryCodeOfOrigin  String
-  harmonizedSystemCode String
-  weightUnit           String
-  weightValue          Int
-  provinceCodeOfOrigin String
+  countryCodeOfOrigin  String?
+  harmonizedSystemCode String?
+  weightUnit           String?
+  weightValue          Int?
+  provinceCodeOfOrigin String?
   requiresShipping     Boolean
   sku                  String
   tracked              Boolean
