@@ -3,6 +3,8 @@ import { type GraphQL } from '~/types';
 import { errorHandler } from '../util';
 
 import getQueryStr from './util/getQueryStr';
+import type { ProductInformationForPrismaQueryQuery } from '~/types/admin.generated';
+import { MediaContentType } from '~/types/admin.types';
 
 // shopify graphql has an issue where they can't detect fragments
 const MODEL_3D_FIELDS_FRAGMENT = `#graphql
@@ -31,6 +33,14 @@ const IMAGE_FIELDS_FRAGMENT = `#graphql
     alt: altText
   }
 `;
+
+export type ImageProps = {
+  productId: string;
+  url: string;
+  alt: string;
+  mediaContentType: MediaContentType;
+  position: number;
+};
 
 export async function getIdMappedToStoreUrl(
   graphql: GraphQL,
@@ -88,9 +98,69 @@ export async function getIdMappedToStoreUrl(
   }
 }
 
+function convertProductInfoQueryToMatchPrismaModel(
+  data: ProductInformationForPrismaQueryQuery,
+  priceListId: string,
+) {
+  const { products } = data;
+  return products.edges.map(({ node: product }) => {
+    const {
+      id,
+      category,
+      productType,
+      description,
+      descriptionHtml,
+      status,
+      vendor,
+      title,
+    } = product;
+
+    const imagesFormatted: ImageProps[] = [];
+    let currentPos = 0;
+    product.images.edges.forEach(({ node: image }) => {
+      imagesFormatted.push({
+        productId: id,
+        url: image.url,
+        alt: image.alt ?? '',
+        mediaContentType: MediaContentType.Image,
+        position: currentPos,
+      });
+      currentPos += 1;
+    });
+
+    product.media.edges.forEach(({ node: media }) => {
+      if (!media.originalSource) {
+        return;
+      }
+      imagesFormatted.push({
+        productId: id,
+        url: media.originalSource.url,
+        alt: media.alt ?? '',
+        mediaContentType: media.mediaContentType,
+        position: currentPos,
+      });
+      currentPos += 1;
+    });
+
+    return {
+      productId: id,
+      priceListId,
+      categoryId: category?.id ?? null,
+      productType: productType,
+      description,
+      descriptionHtml: descriptionHtml as string,
+      status,
+      vendor,
+      title,
+      images: imagesFormatted,
+    };
+  });
+}
+
 export const getRelevantProductInformationForPrisma = async (
   productIds: string[],
   sessionId: string,
+  priceListId: string,
   graphql: GraphQL,
 ) => {
   const queryStr = getQueryStr(productIds);
@@ -111,12 +181,9 @@ export const getRelevantProductInformationForPrisma = async (
               productType
               description
               descriptionHtml
-              seo {
-                description
-                title
-              }
               status
               vendor
+              title
               images(first: 10) {
                 edges {
                   node {
@@ -145,10 +212,17 @@ export const getRelevantProductInformationForPrisma = async (
       },
     });
     const { data } = await response.json();
-    if (data) {
-      return data;
+    if (!data) {
+      return null;
     }
-    return null;
+
+    const prismaDataFmt = convertProductInfoQueryToMatchPrismaModel(
+      data,
+      priceListId,
+    );
+    return prismaDataFmt;
+
+    // clean up data to submit to create product model
   } catch (error) {
     throw errorHandler(
       error,

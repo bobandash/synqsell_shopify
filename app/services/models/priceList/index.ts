@@ -5,6 +5,7 @@ import { priceListDataSchema } from './schemas';
 import type { CoreProductProps } from '~/services/types';
 import { type GraphQL } from '~/types';
 import { getRelevantProductInformationForPrisma } from '~/services/shopify/products';
+import { Settings } from 'http2';
 
 export type PriceListProps = {
   id: string;
@@ -18,15 +19,17 @@ export type PriceListProps = {
 };
 
 export type CreatePriceListDataProps = {
-  settings: {
-    margin?: number | undefined;
-    requiresApprovalToImport?: boolean | undefined;
-    name: string;
-    isGeneral: boolean;
-    pricingStrategy: string;
-  };
+  settings: PriceListSettings;
   products: CoreProductProps[];
   retailers: string[];
+};
+
+export type PriceListSettings = {
+  margin?: number | undefined;
+  requiresApprovalToImport?: boolean | undefined;
+  name: string;
+  isGeneral: boolean;
+  pricingStrategy: string;
 };
 
 export type PriceListTableInfoProps = {
@@ -62,25 +65,12 @@ export async function hasGeneralPriceList(sessionId: string) {
   }
 }
 
-export async function updatePriceList(
-  priceListId: string,
-  data: CreatePriceListDataProps,
+async function updatePriceListSettings(
   sessionId: string,
-  graphql: GraphQL,
+  priceListId: string,
+  settings: PriceListSettings,
 ) {
   try {
-    await priceListDataSchema.validate(data, {
-      context: data,
-    });
-    const { settings, products, retailers } = data;
-    const productIds = products.map((product) => product.id);
-
-    const productData = await getRelevantProductInformationForPrisma(
-      productIds,
-      sessionId,
-      graphql,
-    );
-
     const {
       margin,
       requiresApprovalToImport,
@@ -88,7 +78,6 @@ export async function updatePriceList(
       isGeneral,
       pricingStrategy,
     } = settings;
-
     const updatedPriceList = await db.priceList.update({
       where: {
         id: priceListId,
@@ -108,11 +97,63 @@ export async function updatePriceList(
     });
     return updatedPriceList;
   } catch (error) {
-    throw errorHandler(error, 'Failed to update price list.', updatePriceList, {
-      sessionId,
-    });
+    throw errorHandler(
+      error,
+      'Failed to update price list.',
+      updatePriceListSettings,
+      {
+        priceListId,
+        settings,
+      },
+    );
   }
 }
+
+export async function updatePriceListSettingsTx(
+  tx: Prisma.TransactionClient,
+  sessionId: string,
+  priceListId: string,
+  settings: PriceListSettings,
+) {
+  try {
+    const {
+      margin,
+      requiresApprovalToImport,
+      name,
+      isGeneral,
+      pricingStrategy,
+    } = settings;
+    const updatedPriceList = await tx.priceList.update({
+      where: {
+        id: priceListId,
+      },
+      data: {
+        name,
+        isGeneral,
+        ...(requiresApprovalToImport && {
+          requiresApprovalToImport,
+        }),
+        pricingStrategy,
+        ...(margin && {
+          margin,
+        }),
+        supplierId: sessionId,
+      },
+    });
+    return updatedPriceList;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to update price list in transaction.',
+      updatePriceListSettingsTx,
+      {
+        priceListId,
+        settings,
+      },
+    );
+  }
+}
+
 
 export async function createPriceListTx(
   tx: Prisma.TransactionClient,
@@ -129,7 +170,6 @@ export async function createPriceListTx(
       isGeneral,
       pricingStrategy,
     } = settings;
-    // const productData = getProductCreationData(products);
 
     const newPriceList = await tx.priceList.create({
       data: {
