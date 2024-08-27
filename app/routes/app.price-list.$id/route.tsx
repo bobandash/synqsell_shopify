@@ -69,9 +69,9 @@ import { createPriceListAndCompleteChecklistItem } from '~/services/transactions
 import {
   type CreatePriceListDataProps,
   getPriceListDetailedInfo,
-  updatePriceList,
   userHasPriceList,
 } from '~/services/models/priceList';
+import { updateAllPriceListInformation } from '~/services/transactions/updatePriceList';
 
 type LoaderDataProps = {
   id: string;
@@ -113,7 +113,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       return redirect(`/app/price-list/${newPriceList.id}`);
     }
     if (priceListId) {
-      const updatedPriceList = await updatePriceList(
+      const updatedPriceList = await updateAllPriceListInformation(
         priceListId,
         data,
         sessionId,
@@ -168,12 +168,12 @@ const EditPriceList = () => {
   // todo: fetch this information
   const allPartneredRetailers: PartneredRetailersProps[] = useMemo(
     () => [
-      {
-        id: 'retailer-id',
-        name: 'Eppeal',
-        website: '/app/retailer-network/retailer-id', // TODO: make this in the frontend
-        selected: true,
-      },
+      // {
+      //   id: 'retailer-id',
+      //   name: 'Eppeal',
+      //   website: '/app/retailer-network/retailer-id', // TODO: make this in the frontend
+      //   selected: true,
+      // },
     ],
     [],
   );

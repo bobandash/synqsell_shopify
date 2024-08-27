@@ -4,8 +4,12 @@ import { errorHandler } from '../util';
 
 import getQueryStr from './util/getQueryStr';
 import type { ProductInformationForPrismaQueryQuery } from '~/types/admin.generated';
-import { MediaContentType } from '~/types/admin.types';
-
+enum MediaContentType {
+  ExternalVideo = 'EXTERNAL_VIDEO',
+  Image = 'IMAGE',
+  Model_3D = 'MODEL_3D',
+  Video = 'VIDEO',
+}
 // shopify graphql has an issue where they can't detect fragments
 const MODEL_3D_FIELDS_FRAGMENT = `#graphql
   fragment Model3dFields on Model3d {
@@ -35,7 +39,6 @@ const IMAGE_FIELDS_FRAGMENT = `#graphql
 `;
 
 export type ImageProps = {
-  productId: string;
   url: string;
   alt: string;
   mediaContentType: MediaContentType;
@@ -119,7 +122,6 @@ function convertProductInfoQueryToMatchPrismaModel(
     let currentPos = 0;
     product.images.edges.forEach(({ node: image }) => {
       imagesFormatted.push({
-        productId: id,
         url: image.url,
         alt: image.alt ?? '',
         mediaContentType: MediaContentType.Image,
@@ -133,7 +135,6 @@ function convertProductInfoQueryToMatchPrismaModel(
         return;
       }
       imagesFormatted.push({
-        productId: id,
         url: media.originalSource.url,
         alt: media.alt ?? '',
         mediaContentType: media.mediaContentType,
@@ -152,7 +153,7 @@ function convertProductInfoQueryToMatchPrismaModel(
       status,
       vendor,
       title,
-      images: imagesFormatted,
+      ...(imagesFormatted.length > 0 && { Image: { create: imagesFormatted } }),
     };
   });
 }

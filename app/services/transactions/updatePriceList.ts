@@ -113,7 +113,7 @@ async function getVariantStatusTx(
       product.variants.map((variant) => ({
         variantId: variant.id,
         wholesalePrice: variant.wholesalePrice,
-        prismaProductId: shopifyProductIdToPrismaId.get(variant.id) ?? '',
+        prismaProductId: shopifyProductIdToPrismaId.get(product.id) ?? '',
       })),
     );
     // TODO: add error handling for if productId is nothing

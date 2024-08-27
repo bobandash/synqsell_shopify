@@ -6,14 +6,14 @@ import { getRelevantProductInformationForPrisma } from '../shopify/products';
 export async function deleteProductsTx(
   tx: Prisma.TransactionClient,
   priceListId: string,
-  productIds: string[],
+  prismaProductIds: string[],
 ) {
   try {
     const deletedProducts = await tx.product.deleteMany({
       where: {
         priceListId,
-        productId: {
-          in: productIds,
+        id: {
+          in: prismaProductIds,
         },
       },
     });
@@ -23,7 +23,7 @@ export async function deleteProductsTx(
       error,
       'Failed to delete products from price list.',
       deleteProductsTx,
-      { priceListId, productIds },
+      { priceListId, prismaProductIds },
     );
   }
 }
@@ -45,9 +45,15 @@ export async function addProductsTx(
     if (!productsFmt) {
       return null;
     }
-    const newProducts = await tx.product.createMany({
-      data: productsFmt,
-    });
+
+    const newProducts = await Promise.all(
+      productsFmt.map((product) =>
+        tx.product.create({
+          data: product,
+        }),
+      ),
+    );
+
     return newProducts;
   } catch (error) {
     throw errorHandler(
@@ -67,7 +73,7 @@ export async function getMapShopifyProductIdToPrismaIdTx(
 ) {
   const idAndProductIds = await tx.product.findMany({
     where: {
-      id: {
+      productId: {
         in: productIds,
       },
       priceListId,

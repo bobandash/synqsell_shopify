@@ -28,6 +28,7 @@ function getFormattedAddVariantData(
   data: VariantInformationForPrismaQueryQuery,
   variants: BasicVariantInfo[],
 ) {
+  console.log(variants);
   const variantIdToOtherFieldsMap = getMapVariantIdToOtherFields(variants);
   const productVariants = data.productVariants.edges;
 
@@ -66,21 +67,25 @@ function getFormattedAddVariantData(
       taxCode,
       taxable,
       InventoryItem: {
-        countryCodeOfOrigin: inventoryItem.countryCodeOfOrigin,
-        harmonizedSystemCode: inventoryItem.harmonizedSystemCode,
-        weightUnit: inventoryItem.measurement.weight?.unit,
-        weightValue: inventoryItem.measurement.weight?.value,
-        provinceCodeOfOrigin: inventoryItem.provinceCodeOfOrigin,
-        requiresShipping: inventoryItem.requiresShipping,
-        sku: inventoryItem.sku,
-        tracked: inventoryItem.tracked,
+        create: {
+          countryCodeOfOrigin: inventoryItem.countryCodeOfOrigin,
+          harmonizedSystemCode: inventoryItem.harmonizedSystemCode,
+          weightUnit: inventoryItem.measurement.weight?.unit,
+          weightValue: inventoryItem.measurement.weight?.value,
+          provinceCodeOfOrigin: inventoryItem.provinceCodeOfOrigin,
+          requiresShipping: inventoryItem.requiresShipping,
+          ...(inventoryItem.sku && { sku: inventoryItem.sku }),
+          tracked: inventoryItem.tracked,
+        },
       },
-      VariantOption: variant.selectedOptions.map((option) => {
-        return {
-          name: option.name,
-          value: option.value,
-        };
-      }),
+      VariantOption: {
+        create: variant.selectedOptions.map((option) => {
+          return {
+            name: option.name,
+            value: option.value,
+          };
+        }),
+      },
     };
   });
 }
@@ -102,9 +107,14 @@ export async function addVariantsTx(
       return null;
     }
     const prismaData = getFormattedAddVariantData(graphqlData, variants);
-    await tx.variant.createMany({
-      data: prismaData,
-    });
+
+    await Promise.all(
+      prismaData.map((data) =>
+        tx.variant.create({
+          data: data,
+        }),
+      ),
+    );
   } catch (error) {
     throw errorHandler(
       error,

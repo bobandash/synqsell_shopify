@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Variant" ALTER COLUMN "price" SET DATA TYPE TEXT,
+ALTER COLUMN "wholesalePrice" SET DATA TYPE TEXT;
