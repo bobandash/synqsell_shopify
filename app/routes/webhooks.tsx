@@ -4,7 +4,7 @@ import db from '../db.server';
 
 // TODO: switch to cloud to save costs
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { topic, shop, session, admin, payload } =
+  const { topic, admin, payload } =
     await authenticate.webhook(request);
 
   if (!admin) {
