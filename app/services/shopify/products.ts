@@ -1,14 +1,36 @@
 import { nodesFromEdges } from '@shopify/admin-graphql-api-utilities';
 import { type GraphQL } from '~/types';
 import { errorHandler } from '../util';
-import type { CoreProductProps } from '../types';
-import gql from 'graphql-tag';
-import {
-  IMAGE_FIELDS_FRAGMENT,
-  MODEL_3D_FIELDS_FRAGMENT,
-  VIDEO_FIELDS_FRAGMENT,
-} from './util/fragments';
+
 import getQueryStr from './util/getQueryStr';
+
+// shopify graphql has an issue where they can't detect fragments
+const MODEL_3D_FIELDS_FRAGMENT = `#graphql
+  fragment Model3dFields on Model3d {
+    mediaContentType
+    alt
+    originalSource {
+      url
+    }
+  }
+`;
+
+const VIDEO_FIELDS_FRAGMENT = `#graphql
+  fragment VideoFields on Video {
+    mediaContentType
+    alt
+    originalSource {
+      url
+    }
+  }
+`;
+
+const IMAGE_FIELDS_FRAGMENT = `#graphql
+  fragment ImageFields on Image {
+    url
+    alt: altText
+  }
+`;
 
 export async function getIdMappedToStoreUrl(
   graphql: GraphQL,
@@ -66,16 +88,20 @@ export async function getIdMappedToStoreUrl(
   }
 }
 
-// helper graphql queries for product information
-const ProductsQuery = (productIds: string[]) => {
+export const getRelevantProductInformationForPrisma = async (
+  productIds: string[],
+  sessionId: string,
+  graphql: GraphQL,
+) => {
   const queryStr = getQueryStr(productIds);
-  return gql(
-    `
-    ${MODEL_3D_FIELDS_FRAGMENT},
-    ${VIDEO_FIELDS_FRAGMENT},
-    ${IMAGE_FIELDS_FRAGMENT}
-      query ProductUrlsQuery($query: String) {
-        products(query: $query) {
+  const numProducts = productIds.length;
+  try {
+    const PRODUCT_QUERY = `#graphql
+      ${MODEL_3D_FIELDS_FRAGMENT}
+      ${VIDEO_FIELDS_FRAGMENT}
+      ${IMAGE_FIELDS_FRAGMENT}
+      query ProductInformationForPrismaQuery($query: String, $first: Int) {
+        products(query: $query, first: $first) {
           edges {
             node {
               id
@@ -91,17 +117,17 @@ const ProductsQuery = (productIds: string[]) => {
               }
               status
               vendor
-              images(first: 20){
-                edges{
-                  node{
+              images(first: 10) {
+                edges {
+                  node {
                     ...ImageFields
                   }
                 }
               }
-              media(first: 20){
+              media(first: 10) {
                 edges {
                   node {
-                    ...Model3dFields,
+                    ...Model3dFields
                     ...VideoFields
                   }
                 }
@@ -110,46 +136,25 @@ const ProductsQuery = (productIds: string[]) => {
           }
         }
       }
-    `,
-    {
+    `;
+
+    const response = await graphql(PRODUCT_QUERY, {
       variables: {
         query: queryStr,
+        first: numProducts,
       },
-    },
-  );
-};
-
-// gets all required fields to mutate / create products on shopify
-export async function getProductCreationData(
-  products: CoreProductProps[],
-  sessionid: string,
-  graphql: GraphQL,
-) {
-  try {
-    const productIds = products.map((product) => product.id);
-    const response = await graphql(
-      `
-        mutation bulkOperationGetProductDetailsQuery($query: String!) {
-          bulkOperationRunQuery(query: $query) {
-            bulkOperation {
-              id
-              status
-            }
-            userErrors {
-              field
-              message
-            }
-          }
-        }
-      `,
-      {
-        variables: {
-          query: ProductsQuery(productIds),
-        },
-      },
+    });
+    const { data } = await response.json();
+    if (data) {
+      return data;
+    }
+    return null;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to get relevant product information from product ids.',
+      getRelevantProductInformationForPrisma,
+      { productIds, sessionId },
     );
-
-    const data = await response.json();
-    console.log(data);
-  } catch {}
-}
+  }
+};

@@ -3,8 +3,8 @@ import { type Prisma } from '@prisma/client';
 import { errorHandler } from '~/services/util';
 import { priceListDataSchema } from './schemas';
 import type { CoreProductProps } from '~/services/types';
-import { getProductCreationData } from '~/services/shopify/products';
 import { type GraphQL } from '~/types';
+import { getRelevantProductInformationForPrisma } from '~/services/shopify/products';
 
 export type PriceListProps = {
   id: string;
@@ -73,11 +73,14 @@ export async function updatePriceList(
       context: data,
     });
     const { settings, products, retailers } = data;
-    const productData = await getProductCreationData(
-      products,
+    const productIds = products.map((product) => product.id);
+
+    const productData = await getRelevantProductInformationForPrisma(
+      productIds,
       sessionId,
       graphql,
     );
+
     const {
       margin,
       requiresApprovalToImport,

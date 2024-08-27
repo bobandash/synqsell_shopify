@@ -27,13 +27,20 @@ export type FulfillmentServiceCreateMutationVariables = AdminTypes.Exact<{
 
 export type FulfillmentServiceCreateMutation = { fulfillmentServiceCreate?: AdminTypes.Maybe<{ fulfillmentService?: AdminTypes.Maybe<Pick<AdminTypes.FulfillmentService, 'id' | 'serviceName' | 'callbackUrl' | 'trackingSupport'>>, userErrors: Array<Pick<AdminTypes.UserError, 'field' | 'message'>> }> };
 
-export type ProfileQueryQueryVariables = AdminTypes.Exact<{ [key: string]: never; }>;
+export type Model3dFieldsFragment = (
+  Pick<AdminTypes.Model3d, 'mediaContentType' | 'alt'>
+  & { originalSource?: AdminTypes.Maybe<Pick<AdminTypes.Model3dSource, 'url'>> }
+);
 
+export type VideoFieldsFragment = (
+  Pick<AdminTypes.Video, 'mediaContentType' | 'alt'>
+  & { originalSource?: AdminTypes.Maybe<Pick<AdminTypes.VideoSource, 'url'>> }
+);
 
-export type ProfileQueryQuery = { shop: (
-    Pick<AdminTypes.Shop, 'name' | 'contactEmail' | 'description' | 'url'>
-    & { billingAddress: Pick<AdminTypes.ShopAddress, 'city' | 'provinceCode' | 'country'> }
-  ) };
+export type ImageFieldsFragment = (
+  Pick<AdminTypes.Image, 'url'>
+  & { alt: AdminTypes.Image['altText'] }
+);
 
 export type ProductUrlsQueryQueryVariables = AdminTypes.Exact<{
   first?: AdminTypes.InputMaybe<AdminTypes.Scalars['Int']['input']>;
@@ -43,10 +50,39 @@ export type ProductUrlsQueryQueryVariables = AdminTypes.Exact<{
 
 export type ProductUrlsQueryQuery = { products: { edges: Array<{ node: Pick<AdminTypes.Product, 'id' | 'onlineStoreUrl'> }> } };
 
+export type ProductInformationForPrismaQueryQueryVariables = AdminTypes.Exact<{
+  query?: AdminTypes.InputMaybe<AdminTypes.Scalars['String']['input']>;
+  first?: AdminTypes.InputMaybe<AdminTypes.Scalars['Int']['input']>;
+}>;
+
+
+export type ProductInformationForPrismaQueryQuery = { products: { edges: Array<{ node: (
+        Pick<AdminTypes.Product, 'id' | 'productType' | 'description' | 'descriptionHtml' | 'status' | 'vendor'>
+        & { category?: AdminTypes.Maybe<Pick<AdminTypes.TaxonomyCategory, 'id'>>, seo: Pick<AdminTypes.Seo, 'description' | 'title'>, images: { edges: Array<{ node: (
+              Pick<AdminTypes.Image, 'url'>
+              & { alt: AdminTypes.Image['altText'] }
+            ) }> }, media: { edges: Array<{ node: (
+              Pick<AdminTypes.Model3d, 'mediaContentType' | 'alt'>
+              & { originalSource?: AdminTypes.Maybe<Pick<AdminTypes.Model3dSource, 'url'>> }
+            ) | (
+              Pick<AdminTypes.Video, 'mediaContentType' | 'alt'>
+              & { originalSource?: AdminTypes.Maybe<Pick<AdminTypes.VideoSource, 'url'>> }
+            ) }> } }
+      ) }> } };
+
+export type ProfileQueryQueryVariables = AdminTypes.Exact<{ [key: string]: never; }>;
+
+
+export type ProfileQueryQuery = { shop: (
+    Pick<AdminTypes.Shop, 'name' | 'contactEmail' | 'description' | 'url'>
+    & { billingAddress: Pick<AdminTypes.ShopAddress, 'city' | 'provinceCode' | 'country'> }
+  ) };
+
 interface GeneratedQueryTypes {
   "\n      query FulfillmentServicesQuery {\n        shop {\n          fulfillmentServices {\n            id\n            serviceName\n          }\n        }\n      }\n    ": {return: FulfillmentServicesQueryQuery, variables: FulfillmentServicesQueryQueryVariables},
-  "\n      query profileQuery {\n        shop {\n          name\n          contactEmail\n          description\n          url\n          billingAddress {\n            city\n            provinceCode\n            country\n          }\n        }\n      }\n    ": {return: ProfileQueryQuery, variables: ProfileQueryQueryVariables},
   "\n        query ProductUrlsQuery($first: Int, $query: String) {\n          products(first: $first, query: $query) {\n            edges {\n              node {\n                id\n                onlineStoreUrl\n              }\n            }\n          }\n        }\n      ": {return: ProductUrlsQueryQuery, variables: ProductUrlsQueryQueryVariables},
+  "#graphql\n      #graphql\n  fragment Model3dFields on Model3d {\n    mediaContentType\n    alt\n    originalSource {\n      url\n    }\n  }\n\n      #graphql\n  fragment VideoFields on Video {\n    mediaContentType\n    alt\n    originalSource {\n      url\n    }\n  }\n\n      #graphql\n  fragment ImageFields on Image {\n    url\n    alt: altText\n  }\n\n      query ProductInformationForPrismaQuery($query: String, $first: Int) {\n        products(query: $query, first: $first) {\n          edges {\n            node {\n              id\n              category {\n                id\n              }\n              productType\n              description\n              descriptionHtml\n              seo {\n                description\n                title\n              }\n              status\n              vendor\n              images(first: 10) {\n                edges {\n                  node {\n                    ...ImageFields\n                  }\n                }\n              }\n              media(first: 10) {\n                edges {\n                  node {\n                    ...Model3dFields\n                    ...VideoFields\n                  }\n                }\n              }\n            }\n          }\n        }\n      }\n    ": {return: ProductInformationForPrismaQueryQuery, variables: ProductInformationForPrismaQueryQueryVariables},
+  "\n      query profileQuery {\n        shop {\n          name\n          contactEmail\n          description\n          url\n          billingAddress {\n            city\n            provinceCode\n            country\n          }\n        }\n      }\n    ": {return: ProfileQueryQuery, variables: ProfileQueryQueryVariables},
 }
 
 interface GeneratedMutationTypes {
