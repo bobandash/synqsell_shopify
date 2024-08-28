@@ -13,6 +13,7 @@ import {
   type SupplierPaginatedInfoProps,
 } from './loader/getSupplierPaginatedInfo';
 import { SupplierCardMock } from './components';
+import { PaddedBox } from '~/components';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
@@ -39,8 +40,6 @@ const SupplierNetwork = () => {
     typeof loader
   >() as SupplierPaginatedInfoProps;
 
-  console.log(suppliers);
-
   return (
     <Page
       title="Supplier Network"
@@ -52,6 +51,7 @@ const SupplierNetwork = () => {
         ))}
         <SupplierCardMock />
       </Layout>
+      <PaddedBox />
     </Page>
   );
 };

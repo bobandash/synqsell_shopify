@@ -13,7 +13,7 @@ import type { Supplier } from '../../loader/getSupplierPaginatedInfo';
 import { useCallback, type FC } from 'react';
 import { ImageIcon } from '~/assets';
 import { useNavigate } from '@remix-run/react';
-
+import { v4 as uuidv4 } from 'uuid';
 import sharedStyles from '~/shared.module.css';
 import styles from '../../styles.module.css';
 import ApprovalStatusButton from './ApprovalStatusBtn';
@@ -24,8 +24,19 @@ type Props = {
 const SupplierCard: FC<Props> = ({ supplier }) => {
   const { profile, priceList } = supplier;
   const { name, website, address, email, logo, biography } = profile;
+  const {
+    socialMediaLink: { facebook, twitter, instagram, tiktok, youtube },
+  } = profile;
   const { requiresApprovalToImport, id: priceListId } = priceList;
   const navigate = useNavigate();
+
+  const allSocialMediaLinks = [
+    facebook,
+    twitter,
+    instagram,
+    tiktok,
+    youtube,
+  ].filter((link) => link !== '');
 
   const handleSeeProducts = useCallback(() => {
     navigate(`/app/price-list/${priceListId}/products`);
@@ -63,16 +74,14 @@ const SupplierCard: FC<Props> = ({ supplier }) => {
                   {address ?? ''}
                 </Text>
                 <InlineStack gap={'150'} align={'start'}>
-                  <SocialIcon
-                    url="https://twitter.com"
-                    target="_blank"
-                    className={`${styles['logo']}`}
-                  />
-                  <SocialIcon
-                    url="https://pinterest.com"
-                    target="_blank"
-                    className={`${styles['logo']}`}
-                  />
+                  {allSocialMediaLinks.map((link) => (
+                    <SocialIcon
+                      key={uuidv4()}
+                      url={link}
+                      target="_blank"
+                      className={styles['logo']}
+                    />
+                  ))}
                 </InlineStack>
               </BlockStack>
             </InlineStack>

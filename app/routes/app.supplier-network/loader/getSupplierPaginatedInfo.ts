@@ -13,21 +13,34 @@ export type SupplierPaginatedInfoProps = {
 
 export type Supplier = {
   id: string;
-  profile: {
-    id: string;
-    name: string;
-    website: string;
-    address: string | null;
-    email: string;
-    logo: string | null;
-    biography: string | null;
-    desiredProducts: string | null;
-    sessionId: string;
-  };
+  profile: Profile;
   priceList: {
     id: string;
     requiresApprovalToImport: boolean;
   };
+};
+
+type Profile = {
+  id: string;
+  name: string;
+  website: string;
+  address: string | null;
+  email: string;
+  logo: string | null;
+  biography: string | null;
+  desiredProducts: string | null;
+  sessionId: string;
+  socialMediaLink: SocialMediaLink;
+};
+
+type SocialMediaLink = {
+  id: string;
+  facebook: string;
+  twitter: string;
+  instagram: string;
+  youtube: string;
+  tiktok: string;
+  userProfileId: string;
 };
 
 const getSupplierInfoSchema = object({
@@ -84,7 +97,10 @@ export async function getSupplierPaginatedInfo(
           },
         },
         Profile: {
-          isNot: null,
+          NOT: undefined,
+          SocialMediaLink: {
+            NOT: undefined,
+          },
         },
         PriceList: {
           some: {
@@ -102,7 +118,11 @@ export async function getSupplierPaginatedInfo(
       },
       select: {
         id: true,
-        Profile: true,
+        Profile: {
+          include: {
+            SocialMediaLink: true,
+          },
+        },
         PriceList: {
           select: {
             id: true,
@@ -116,17 +136,24 @@ export async function getSupplierPaginatedInfo(
     // clean up data
     const suppliers = suppliersRawData.map((supplier) => {
       const { Profile } = supplier;
+      // TODO: add error handlers
+      if (!Profile) {
+        throw new Error('Profile does not exist');
+      }
+      const { SocialMediaLink, ...profileRest } = Profile;
+      if (!SocialMediaLink) {
+        throw new Error('Social media link does not exist');
+      }
       const generalPriceList = supplier.PriceList.filter(
         (priceList) => priceList.isGeneral === true,
       )[0];
 
       return {
         id: supplier.id,
-        profile: Profile
-          ? {
-              ...Profile,
-            }
-          : null, // prisma's typescript has a bug, profile should always be not nullable based on the query
+        profile: {
+          ...profileRest,
+          socialMediaLink: { ...SocialMediaLink },
+        },
         priceList: {
           id: generalPriceList.id,
           requiresApprovalToImport: generalPriceList.requiresApprovalToImport,
