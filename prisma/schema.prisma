@@ -159,6 +159,7 @@ model Product {
   status          String
   vendor          String
   title           String
+  variantsCount   Int               @default(1)
   PriceList       PriceList         @relation(fields: [priceListId], references: [id])
   priceListId     String
   ImportedProduct ImportedProduct[]
@@ -168,7 +169,7 @@ model Product {
 
 model Image {
   id               String  @id @default(uuid())
-  Product          Product @relation(fields: [productId], references: [id])
+  Product          Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   productId        String
   url              String
   alt              String

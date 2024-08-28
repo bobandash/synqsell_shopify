@@ -72,16 +72,20 @@ import {
   userHasPriceList,
 } from '~/services/models/priceList';
 import { updateAllPriceListInformation } from '~/services/transactions/updatePriceList';
+import { getInitialProductData } from './loader/getInitialProductData';
 
 type LoaderDataProps = {
-  id: string;
-  createdAt: string;
-  name: string;
-  isGeneral: boolean;
-  requiresApprovalToImport: boolean;
-  pricingStrategy: PriceListPricingStrategyProps;
-  supplierId: string;
-  margin: number;
+  initialSettings: {
+    id: string;
+    createdAt: string;
+    name: string;
+    isGeneral: boolean;
+    requiresApprovalToImport: boolean;
+    pricingStrategy: PriceListPricingStrategyProps;
+    supplierId: string;
+    margin: number;
+  };
+  initialProductData: ProductPropsWithPositions[];
 };
 
 type PartneredRetailersProps = {
@@ -130,7 +134,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   try {
-    const { session } = await authenticate.admin(request);
+    const { session, admin } = await authenticate.admin(request);
     const { id: sessionId } = session;
     const { id: priceListId } = params;
 
@@ -146,24 +150,31 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
         status: StatusCodes.UNAUTHORIZED,
       });
     }
-
-    const visibleProfiles = await getPriceListDetailedInfo(
+    const initialProductData = await getInitialProductData(
+      priceListId,
+      sessionId,
+      admin.graphql,
+    );
+    const initialSettings = await getPriceListDetailedInfo(
       sessionId,
       priceListId,
     );
-    return json(visibleProfiles);
+    return json({ initialSettings, initialProductData }, StatusCodes.OK);
   } catch (error) {
     throw getJSONError(error, 'retailer network');
   }
 };
 
 const EditPriceList = () => {
-  const initialData = useLoaderData<typeof loader>() as LoaderDataProps;
+  const { initialSettings, initialProductData } = useLoaderData<
+    typeof loader
+  >() as LoaderDataProps;
   const { pathname } = useLocation();
   const backActionUrl = pathname.substring(0, pathname.lastIndexOf('/'));
   const shopify = useAppBridge();
   const remixSubmit = useRemixSubmit();
-  const [products, setProducts] = useState<ProductPropsWithPositions[]>([]);
+  const [products, setProducts] =
+    useState<ProductPropsWithPositions[]>(initialProductData);
 
   // todo: fetch this information
   const allPartneredRetailers: PartneredRetailersProps[] = useMemo(
@@ -291,24 +302,24 @@ const EditPriceList = () => {
   const { fields, submit } = useForm({
     fields: {
       name: useField({
-        value: initialData.name,
+        value: initialSettings.name,
         validates: [notEmpty('Price list name is required')],
       }),
       category: useField(
-        initialData.isGeneral
+        initialSettings.isGeneral
           ? PRICE_LIST_CATEGORY.GENERAL
           : PRICE_LIST_CATEGORY.PRIVATE,
       ),
       generalPriceListImportSettings: useField(
-        initialData.requiresApprovalToImport
+        initialSettings.requiresApprovalToImport
           ? PRICE_LIST_IMPORT_SETTINGS.APPROVAL
           : PRICE_LIST_IMPORT_SETTINGS.NO_APPROVAL,
       ),
       pricingStrategy: useField<PriceListPricingStrategyProps>(
-        initialData.pricingStrategy,
+        initialSettings.pricingStrategy,
       ),
       margin: useField({
-        value: initialData.margin.toString() ?? '10',
+        value: initialSettings.margin.toString() ?? '10',
         validates: (value) => {
           const valueFloat = parseFloat(value);
           if (!value) {

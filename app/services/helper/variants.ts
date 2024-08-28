@@ -28,7 +28,6 @@ function getFormattedAddVariantData(
   data: VariantInformationForPrismaQueryQuery,
   variants: BasicVariantInfo[],
 ) {
-  console.log(variants);
   const variantIdToOtherFieldsMap = getMapVariantIdToOtherFields(variants);
   const productVariants = data.productVariants.edges;
 

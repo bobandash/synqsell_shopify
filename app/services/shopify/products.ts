@@ -116,6 +116,7 @@ function convertProductInfoQueryToMatchPrismaModel(
       status,
       vendor,
       title,
+      variantsCount,
     } = product;
 
     const imagesFormatted: ImageProps[] = [];
@@ -153,6 +154,7 @@ function convertProductInfoQueryToMatchPrismaModel(
       status,
       vendor,
       title,
+      variantsCount: variantsCount?.count ?? 1,
       ...(imagesFormatted.length > 0 && { Image: { create: imagesFormatted } }),
     };
   });
@@ -185,6 +187,9 @@ export const getRelevantProductInformationForPrisma = async (
               status
               vendor
               title
+              variantsCount {
+                count
+              }
               images(first: 10) {
                 edges {
                   node {
