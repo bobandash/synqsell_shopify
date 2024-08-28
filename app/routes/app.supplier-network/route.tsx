@@ -1,20 +1,21 @@
-import { Layout, Page } from '@shopify/polaris';
+import { Button, InlineStack, Layout, Page } from '@shopify/polaris';
 import SupplierCard from './components/SupplierCard';
 import { json, type LoaderFunctionArgs } from '@remix-run/node';
 import { StatusCodes } from 'http-status-codes';
 import { getJSONError } from '~/util';
-
 import { authenticate } from '~/shopify.server';
 import { hasRole } from '~/services/models/roles';
 import { ROLES } from '~/constants';
 import { useLoaderData } from '@remix-run/react';
-import {
-  getSupplierPaginatedInfo,
-  type SupplierPaginatedInfoProps,
+import { getSupplierPaginatedInfo } from './loader/getSupplierPaginatedInfo';
+import type {
+  Supplier,
+  SupplierPaginatedInfoProps,
 } from './loader/getSupplierPaginatedInfo';
 import { SupplierCardMock } from './components';
 import { PaddedBox } from '~/components';
-
+import { ChevronLeftIcon, ChevronRightIcon } from '@shopify/polaris-icons';
+import { useState } from 'react';
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
     const { session } = await authenticate.admin(request);
@@ -36,9 +37,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 const SupplierNetwork = () => {
-  const { suppliers, nextCursor, prevCursor } = useLoaderData<
-    typeof loader
-  >() as SupplierPaginatedInfoProps;
+  const {
+    suppliers: suppliersData,
+    nextCursor,
+    prevCursor,
+  } = useLoaderData<typeof loader>() as SupplierPaginatedInfoProps;
+
+  // TODO: add cursor navigation with useParams
+  const [suppliers, setSuppliers] = useState<Supplier[]>(suppliersData);
 
   return (
     <Page
@@ -51,6 +57,11 @@ const SupplierNetwork = () => {
         ))}
         <SupplierCardMock />
       </Layout>
+      <PaddedBox />
+      <InlineStack gap={'200'} align={'center'}>
+        <Button icon={ChevronLeftIcon} disabled={!prevCursor} />
+        <Button icon={ChevronRightIcon} disabled={!nextCursor} />
+      </InlineStack>
       <PaddedBox />
     </Page>
   );
