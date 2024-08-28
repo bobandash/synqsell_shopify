@@ -115,11 +115,11 @@ model UserProfile {
 
 model SocialMediaLink {
   id            String      @id @default(uuid())
-  facebook      String      @default("")
-  twitter       String      @default("")
-  instagram     String      @default("")
-  youtube       String      @default("")
-  tiktok        String      @default("")
+  facebook      String?
+  twitter       String?
+  instagram     String?
+  youtube       String?
+  tiktok        String?
   UserProfile   UserProfile @relation(fields: [userProfileId], references: [id])
   userProfileId String      @unique
 }

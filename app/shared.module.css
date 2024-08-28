@@ -32,7 +32,8 @@
 
 .blue > p,
 .yellow > p,
-.orange > p {
+.orange > p,
+.green > p {
   color: white;
 }
 
@@ -53,4 +54,12 @@
 .center-right {
   display: grid;
   justify-items: end;
+}
+
+.disabled:hover {
+  cursor: not-allowed !important;
+}
+
+.disabled.green:hover {
+  background-color: #29845a;
 }
