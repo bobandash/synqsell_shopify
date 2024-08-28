@@ -89,7 +89,8 @@ type PartneredRetailersProps = {
 
 // TODO: add success message for updating price list
 // TODO: allow creation of products and retailers through creating a price list
-// TODO: Trim product tiel so only a certain amount can be shown to prevent UI form looking bad
+// TODO: update createPriceListAndCompleteChecklistItem
+// TODO: Trim product title so only a certain amount can be shown to prevent UI form looking bad
 export const action = async ({ request, params }: ActionFunctionArgs) => {
   try {
     const { session, admin } = await authenticate.admin(request);
