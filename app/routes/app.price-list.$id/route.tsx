@@ -95,6 +95,9 @@ type PartneredRetailersProps = {
   selected: boolean;
 };
 
+// TODO: add success message for updating price list
+// TODO: allow creation of products and retailers through creating a price list
+// TODO: Trim product tiel so only a certain amount can be shown to prevent UI form looking bad
 export const action = async ({ request, params }: ActionFunctionArgs) => {
   try {
     const { session, admin } = await authenticate.admin(request);
@@ -117,15 +120,13 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       return redirect(`/app/price-list/${newPriceList.id}`);
     }
     if (priceListId) {
-      const updatedPriceList = await updateAllPriceListInformation(
+      await updateAllPriceListInformation(
         priceListId,
         data,
         sessionId,
         graphql,
       );
-      return json(updatedPriceList, StatusCodes.OK);
     }
-
     return json({ message: 'success' }, StatusCodes.OK);
   } catch (error) {
     throw getJSONError(error, 'settings');
