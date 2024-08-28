@@ -3,6 +3,7 @@ import { errorHandler } from '~/services/util';
 import db from '~/db.server';
 import { getIdMappedToStoreUrl } from '~/services/shopify/products';
 import type { GraphQL } from '~/types';
+import { getPriceListSettings } from '~/services/models/priceList';
 
 const isValidPriceListIdSchema = string()
   .required()
@@ -26,7 +27,7 @@ const isValidPriceListIdSchema = string()
   );
 
 // fetches initial product data from loader
-export async function getInitialProductData(
+async function getInitialProductData(
   priceListId: string,
   sessionId: string,
   graphql: GraphQL,
@@ -98,6 +99,28 @@ export async function getInitialProductData(
     throw errorHandler(
       error,
       'Failed to get product data for price list form.',
+      getInitialProductData,
+      { priceListId },
+    );
+  }
+}
+
+export async function getExistingPriceListData(
+  sessionId: string,
+  priceListId: string,
+  graphql: GraphQL,
+) {
+  try {
+    const [productsData, settingsData] = await Promise.all([
+      getInitialProductData(priceListId, sessionId, graphql),
+      getPriceListSettings(sessionId, priceListId),
+    ]);
+
+    return { productsData, settingsData };
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to get existing price list data.',
       getInitialProductData,
       { priceListId },
     );

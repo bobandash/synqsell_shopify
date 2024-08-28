@@ -3,9 +3,6 @@ import { type Prisma } from '@prisma/client';
 import { errorHandler } from '~/services/util';
 import { priceListDataSchema } from './schemas';
 import type { CoreProductProps } from '~/services/types';
-import { type GraphQL } from '~/types';
-import { getRelevantProductInformationForPrisma } from '~/services/shopify/products';
-import { Settings } from 'http2';
 
 export type PriceListProps = {
   id: string;
@@ -291,7 +288,7 @@ export async function userHasPriceList(sessionId: string, priceListId: string) {
   }
 }
 
-export async function getPriceListDetailedInfo(
+export async function getPriceListSettings(
   sessionId: string,
   priceListId: string,
 ) {
@@ -300,9 +297,6 @@ export async function getPriceListDetailedInfo(
       where: {
         supplierId: sessionId,
         id: priceListId,
-      },
-      include: {
-        Product: true,
       },
     });
     return priceList;

@@ -1,3 +1,5 @@
+import type { PriceListPricingStrategyProps } from './formData/pricelist';
+
 export type Variant = {
   id: string;
   title: string | null;
@@ -33,3 +35,14 @@ export type UpdateProductWholesalePrice = (
   variantId: string,
   wholesalePrice: number,
 ) => void;
+
+export type Settings = {
+  id: string;
+  createdAt: string;
+  name: string;
+  isGeneral: boolean;
+  requiresApprovalToImport: boolean;
+  pricingStrategy: PriceListPricingStrategyProps;
+  supplierId: string;
+  margin: number;
+};

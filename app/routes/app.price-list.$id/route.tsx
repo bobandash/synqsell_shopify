@@ -60,6 +60,7 @@ import type {
   ProductPropsWithPositions,
   ProductProps,
   VariantWithPosition,
+  Settings,
 } from './types';
 import ProductTableRow from './components/ProductTableRow';
 import { type BulkActionsProps } from '@shopify/polaris/build/ts/src/components/BulkActions';
@@ -68,24 +69,15 @@ import styles from '~/shared.module.css';
 import { createPriceListAndCompleteChecklistItem } from '~/services/transactions';
 import {
   type CreatePriceListDataProps,
-  getPriceListDetailedInfo,
   userHasPriceList,
 } from '~/services/models/priceList';
 import { updateAllPriceListInformation } from '~/services/transactions/updatePriceList';
-import { getInitialProductData } from './loader/getInitialProductData';
+import { getExistingPriceListData } from './loader/getExistingPriceListData';
+import { getNewPriceListData } from './loader/getNewPriceListData';
 
 type LoaderDataProps = {
-  initialSettings: {
-    id: string;
-    createdAt: string;
-    name: string;
-    isGeneral: boolean;
-    requiresApprovalToImport: boolean;
-    pricingStrategy: PriceListPricingStrategyProps;
-    supplierId: string;
-    margin: number;
-  };
-  initialProductData: ProductPropsWithPositions[];
+  settingsData: Settings;
+  productsData: ProductPropsWithPositions[];
 };
 
 type PartneredRetailersProps = {
@@ -135,9 +127,14 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   try {
-    const { session, admin } = await authenticate.admin(request);
+    const {
+      session,
+      admin: { graphql },
+    } = await authenticate.admin(request);
     const { id: sessionId } = session;
     const { id: priceListId } = params;
+    const isNew = priceListId === 'new';
+    let data = null;
 
     if (!priceListId) {
       throw json('Price list id is empty', {
@@ -146,36 +143,35 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     }
 
     const hasPriceList = await userHasPriceList(sessionId, priceListId);
-    if (!hasPriceList) {
+    if (!isNew && !hasPriceList) {
       throw json('User does not have price list.', {
-        status: StatusCodes.UNAUTHORIZED,
+        status: StatusCodes.BAD_REQUEST,
       });
     }
-    const initialProductData = await getInitialProductData(
-      priceListId,
-      sessionId,
-      admin.graphql,
-    );
-    const initialSettings = await getPriceListDetailedInfo(
-      sessionId,
-      priceListId,
-    );
-    return json({ initialSettings, initialProductData }, StatusCodes.OK);
+
+    // TODO: add type safety
+    if (!isNew) {
+      data = await getExistingPriceListData(sessionId, priceListId, graphql);
+    } else {
+      data = getNewPriceListData();
+    }
+    return json(data, StatusCodes.OK);
   } catch (error) {
-    throw getJSONError(error, 'retailer network');
+    throw getJSONError(error, 'price list');
   }
 };
 
 const EditPriceList = () => {
-  const { initialSettings, initialProductData } = useLoaderData<
+  const { settingsData, productsData } = useLoaderData<
     typeof loader
   >() as LoaderDataProps;
+
   const { pathname } = useLocation();
   const backActionUrl = pathname.substring(0, pathname.lastIndexOf('/'));
   const shopify = useAppBridge();
   const remixSubmit = useRemixSubmit();
   const [products, setProducts] =
-    useState<ProductPropsWithPositions[]>(initialProductData);
+    useState<ProductPropsWithPositions[]>(productsData);
 
   // todo: fetch this information
   const allPartneredRetailers: PartneredRetailersProps[] = useMemo(
@@ -303,24 +299,24 @@ const EditPriceList = () => {
   const { fields, submit } = useForm({
     fields: {
       name: useField({
-        value: initialSettings.name,
+        value: settingsData.name,
         validates: [notEmpty('Price list name is required')],
       }),
       category: useField(
-        initialSettings.isGeneral
+        settingsData.isGeneral
           ? PRICE_LIST_CATEGORY.GENERAL
           : PRICE_LIST_CATEGORY.PRIVATE,
       ),
       generalPriceListImportSettings: useField(
-        initialSettings.requiresApprovalToImport
+        settingsData.requiresApprovalToImport
           ? PRICE_LIST_IMPORT_SETTINGS.APPROVAL
           : PRICE_LIST_IMPORT_SETTINGS.NO_APPROVAL,
       ),
       pricingStrategy: useField<PriceListPricingStrategyProps>(
-        initialSettings.pricingStrategy,
+        settingsData.pricingStrategy,
       ),
       margin: useField({
-        value: initialSettings.margin.toString() ?? '10',
+        value: settingsData.margin.toString() ?? '10',
         validates: (value) => {
           const valueFloat = parseFloat(value);
           if (!value) {

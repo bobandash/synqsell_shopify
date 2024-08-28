@@ -3,7 +3,7 @@
 client_id = "c2ff24913d6d89792234763f0830c676"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://russia-adapters-reno-mad.trycloudflare.com"
+application_url = "https://decline-enabled-camp-char.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read_assigned_fulfillment_orders,read_inventory,read_orders,read_produ
 
 [auth]
 redirect_urls = [
-  "https://russia-adapters-reno-mad.trycloudflare.com/auth/callback",
-  "https://russia-adapters-reno-mad.trycloudflare.com/auth/shopify/callback",
-  "https://russia-adapters-reno-mad.trycloudflare.com/api/auth/callback"
+  "https://decline-enabled-camp-char.trycloudflare.com/auth/callback",
+  "https://decline-enabled-camp-char.trycloudflare.com/auth/shopify/callback",
+  "https://decline-enabled-camp-char.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]
