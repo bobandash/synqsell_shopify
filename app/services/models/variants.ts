@@ -27,17 +27,17 @@ export async function getShopifyVariantIdsInPriceListTx(
           priceListId,
         },
         include: {
-          Variant: {
+          variants: {
             select: {
               id: true,
-              variantId: true,
+              shopifyVariantId: true,
             },
           },
         },
       })
-    ).flatMap(({ Variant }) =>
-      Variant.map(({ id, variantId }) => {
-        return { id, variantId };
+    ).flatMap(({ variants }) =>
+      variants.map(({ id, shopifyVariantId }) => {
+        return { id, shopifyVariantId };
       }),
     );
     return variantIds;

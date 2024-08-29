@@ -90,40 +90,40 @@ export async function getSupplierPaginatedInfo(
       ...(cursor && { cursor: { id: cursor } }),
       ...(cursor && { skip: 1 }),
       where: {
-        Role: {
+        roles: {
           some: {
             name: ROLES.SUPPLIER,
             isVisibleInNetwork: true,
           },
         },
-        Profile: {
+        userProfile: {
           NOT: undefined,
-          SocialMediaLink: {
+          socialMediaLink: {
             NOT: undefined,
           },
         },
-        PriceList: {
+        priceLists: {
           some: {
             isGeneral: true,
-            Product: {
+            products: {
               some: {},
             },
           },
         },
       },
       orderBy: {
-        Profile: {
+        userProfile: {
           name: 'asc',
         },
       },
       select: {
         id: true,
-        Profile: {
+        userProfile: {
           include: {
-            SocialMediaLink: true,
+            socialMediaLink: true,
           },
         },
-        PriceList: {
+        priceLists: {
           select: {
             id: true,
             isGeneral: true,
@@ -135,16 +135,16 @@ export async function getSupplierPaginatedInfo(
 
     // clean up data
     const suppliers = suppliersRawData.map((supplier) => {
-      const { Profile } = supplier;
+      const { userProfile } = supplier;
       // TODO: add error handlers
-      if (!Profile) {
+      if (!userProfile) {
         throw new Error('Profile does not exist');
       }
-      const { SocialMediaLink, ...profileRest } = Profile;
-      if (!SocialMediaLink) {
+      const { socialMediaLink, ...profileRest } = userProfile;
+      if (!socialMediaLink) {
         throw new Error('Social media link does not exist');
       }
-      const generalPriceList = supplier.PriceList.filter(
+      const generalPriceList = supplier.priceLists.filter(
         (priceList) => priceList.isGeneral === true,
       )[0];
 
@@ -152,7 +152,7 @@ export async function getSupplierPaginatedInfo(
         id: supplier.id,
         profile: {
           ...profileRest,
-          socialMediaLink: { ...SocialMediaLink },
+          socialMediaLink: { ...socialMediaLink },
         },
         priceList: {
           id: generalPriceList.id,

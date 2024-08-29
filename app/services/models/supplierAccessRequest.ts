@@ -140,21 +140,21 @@ export async function getAllSupplierAccessRequests(): Promise<
   try {
     const allSupplierAccessRequests = await db.supplierAccessRequest.findMany({
       include: {
-        Session: {
+        session: {
           select: {
-            Profile: true,
+            userProfile: true,
           },
         },
       },
     });
 
     const allSupplierAccessRequestsFormatted = allSupplierAccessRequests.map(
-      ({ Session: { Profile }, ...rest }) => {
+      ({ session: { userProfile }, ...rest }) => {
         return {
           ...rest,
-          name: Profile?.name || '',
-          website: Profile?.website || '',
-          email: Profile?.email || '',
+          name: userProfile?.name || '',
+          website: userProfile?.website || '',
+          email: userProfile?.email || '',
         };
       },
     );

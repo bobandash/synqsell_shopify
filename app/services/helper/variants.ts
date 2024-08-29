@@ -33,7 +33,7 @@ function getFormattedAddVariantData(
 
   return productVariants.map(({ node: variant }) => {
     const {
-      id: variantId,
+      id: shopifyVariantId,
       compareAtPrice,
       price,
       inventoryQuantity,
@@ -42,21 +42,21 @@ function getFormattedAddVariantData(
       taxable,
       inventoryItem,
     } = variant;
-    const otherFields = variantIdToOtherFieldsMap.get(variantId);
+    const otherFields = variantIdToOtherFieldsMap.get(shopifyVariantId);
     // TODO: Determine logging strategy for inline error throws
     if (!otherFields) {
       logger.error(
-        `Invalid data. ${variantId} does not exist in provided data in function getFormattedAddVariantData`,
+        `Invalid data. ${shopifyVariantId} does not exist in provided data in function getFormattedAddVariantData`,
         { data, variants },
       );
       throw new createHttpError.BadRequest(
-        'Invalid data: variantId does not exist.',
+        'Invalid data: shopifyVariantId does not exist.',
       );
     }
     const { prismaProductId, wholesalePrice } = otherFields;
 
     return {
-      variantId,
+      shopifyVariantId,
       compareAtPrice,
       productId: prismaProductId,
       wholesalePrice,
@@ -65,7 +65,7 @@ function getFormattedAddVariantData(
       price,
       taxCode,
       taxable,
-      InventoryItem: {
+      inventoryItem: {
         create: {
           countryCodeOfOrigin: inventoryItem.countryCodeOfOrigin,
           harmonizedSystemCode: inventoryItem.harmonizedSystemCode,
@@ -77,7 +77,7 @@ function getFormattedAddVariantData(
           tracked: inventoryItem.tracked,
         },
       },
-      VariantOption: {
+      variantOptions: {
         create: variant.selectedOptions.map((option) => {
           return {
             name: option.name,

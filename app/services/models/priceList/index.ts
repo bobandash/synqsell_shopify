@@ -1,7 +1,7 @@
 import db from '~/db.server';
 import { type Prisma } from '@prisma/client';
 import { errorHandler } from '~/services/util';
-import { priceListDataSchema, priceListExistsSchema } from './schemas';
+import { priceListDataSchema } from './schemas';
 import type { CoreProductProps } from '~/services/types';
 
 // TODO: remove price list table and put it where it belongs in the frontend
@@ -250,15 +250,15 @@ export async function getPriceListTableInfo(
         margin: true,
         _count: {
           select: {
-            Product: true,
-            PriceListRetailer: true,
+            products: true,
+            priceListRetailers: true,
           },
         },
-        Product: {
+        products: {
           select: {
-            ImportedProduct: {
+            importedProducts: {
               select: {
-                ImportedProductTransaction: {
+                importedProductTransactions: {
                   select: {
                     unitSales: true,
                   },
@@ -271,11 +271,11 @@ export async function getPriceListTableInfo(
     });
 
     const priceListInfoFormatted = priceListsInfo.map(
-      ({ _count, Product, ...priceListInfo }) => {
-        const totalSales = Product.reduce((acc, { ImportedProduct }) => {
-          const productSales = ImportedProduct.reduce(
-            (productAcc, { ImportedProductTransaction }) => {
-              const transactionSales = ImportedProductTransaction.reduce(
+      ({ _count, products, ...priceListInfo }) => {
+        const totalSales = products.reduce((acc, { importedProducts }) => {
+          const productSales = importedProducts.reduce(
+            (productAcc, { importedProductTransactions }) => {
+              const transactionSales = importedProductTransactions.reduce(
                 (transactionAcc, { unitSales }) => {
                   return transactionAcc + unitSales;
                 },
@@ -290,8 +290,8 @@ export async function getPriceListTableInfo(
 
         return {
           ...priceListInfo,
-          numProducts: _count.Product,
-          numRetailers: _count.PriceListRetailer,
+          numProducts: _count.products,
+          numRetailers: _count.priceListRetailers,
           sales: totalSales,
         };
       },

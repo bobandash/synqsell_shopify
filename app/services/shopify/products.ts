@@ -145,7 +145,7 @@ function convertProductInfoQueryToMatchPrismaModel(
     });
 
     return {
-      productId: id,
+      shopifyProductId: id,
       priceListId,
       categoryId: category?.id ?? null,
       productType: productType,
@@ -155,7 +155,9 @@ function convertProductInfoQueryToMatchPrismaModel(
       vendor,
       title,
       variantsCount: variantsCount?.count ?? 1,
-      ...(imagesFormatted.length > 0 && { Image: { create: imagesFormatted } }),
+      ...(imagesFormatted.length > 0 && {
+        images: { create: imagesFormatted },
+      }),
     };
   });
 }

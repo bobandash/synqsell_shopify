@@ -33,17 +33,17 @@ model Session {
   locale                String?
   collaborator          Boolean?               @default(false)
   emailVerified         Boolean?               @default(false)
-  Role                  Role[]
-  Profile               UserProfile?
-  ChecklistStatus       ChecklistStatus[]
-  UserPreference        UserPreference?
-  FulfillmentService    FulfillmentService?
-  PriceList             PriceList[]
-  ImportedProduct       ImportedProduct[]
-  PriceListRetailer     PriceListRetailer[]
-  RetailerPartnership   Partnership[]          @relation("RetailerPartnership")
-  SupplierPartnership   Partnership[]          @relation("SupplierPartnership")
-  SupplierAccessRequest SupplierAccessRequest?
+  userPreference        UserPreference?
+  fulfillmentService    FulfillmentService?
+  supplierAccessRequest SupplierAccessRequest?
+  userProfile           UserProfile?
+  roles                 Role[]
+  checklistStatuses     ChecklistStatus[]
+  priceLists            PriceList[]
+  importedProducts      ImportedProduct[]
+  priceListRetailers    PriceListRetailer[]
+  retailerPartnerships  Partnership[]          @relation("RetailerPartnership")
+  supplierPartnerships  Partnership[]          @relation("SupplierPartnership")
 }
 
 model FulfillmentService {
@@ -69,31 +69,31 @@ model ChecklistTable {
 }
 
 model ChecklistItem {
-  id               String            @id @default(uuid())
-  key              String            @unique
-  ChecklistTable   ChecklistTable    @relation(fields: [checklistTableId], references: [id])
-  checklistTableId String
-  position         Int
-  header           String
-  subheader        String?
-  buttonText       String?
-  checklistStatus  ChecklistStatus[]
+  id                String            @id @default(uuid())
+  key               String            @unique
+  checklistTable    ChecklistTable    @relation(fields: [checklistTableId], references: [id])
+  checklistTableId  String
+  position          Int
+  header            String
+  subheader         String?
+  buttonText        String?
+  checklistStatuses ChecklistStatus[]
 }
 
 model ChecklistStatus {
   id                    String                 @id @default(uuid())
-  Session               Session                @relation(fields: [sessionId], references: [id])
+  session               Session                @relation(fields: [sessionId], references: [id])
   sessionId             String
-  ChecklistItem         ChecklistItem          @relation(fields: [checklistItemId], references: [id])
+  checklistItem         ChecklistItem          @relation(fields: [checklistItemId], references: [id])
   checklistItemId       String
   isCompleted           Boolean
-  SupplierAccessRequest SupplierAccessRequest?
+  supplierAccessRequest SupplierAccessRequest?
 }
 
 model Role {
   id                 String   @id @default(uuid())
   name               String
-  Session            Session  @relation(fields: [sessionId], references: [id])
+  session            Session  @relation(fields: [sessionId], references: [id])
   sessionId          String
   createdAt          DateTime @default(now())
   isVisibleInNetwork Boolean  @default(true)
@@ -108,9 +108,9 @@ model UserProfile {
   logo            String?
   biography       String?
   desiredProducts String?
-  Session         Session          @relation(fields: [sessionId], references: [id])
   sessionId       String           @unique
-  SocialMediaLink SocialMediaLink?
+  session         Session          @relation(fields: [sessionId], references: [id])
+  socialMediaLink SocialMediaLink?
 }
 
 model SocialMediaLink {
@@ -120,7 +120,7 @@ model SocialMediaLink {
   instagram     String?
   youtube       String?
   tiktok        String?
-  UserProfile   UserProfile @relation(fields: [userProfileId], references: [id])
+  userProfile   UserProfile @relation(fields: [userProfileId], references: [id])
   userProfileId String      @unique
 }
 
@@ -133,48 +133,48 @@ model PriceList {
   isGeneral                Boolean // There can only be one general price list, this is what products are visible on the products page
   requiresApprovalToImport Boolean? // if the price list is a general price list, suppliers can decide whether or not retailers have to request permission to import their products
   pricingStrategy          String
-  Session                  Session             @relation(fields: [supplierId], references: [id])
   supplierId               String
   margin                   Int?
-  Product                  Product[]
-  PriceListRetailer        PriceListRetailer[]
+  session                  Session             @relation(fields: [supplierId], references: [id])
+  products                 Product[]
+  priceListRetailers       PriceListRetailer[]
 }
 
 // Keeps track of the retailers in the price list
 model PriceListRetailer {
   id          String    @id @default(uuid())
-  PriceList   PriceList @relation(fields: [priceListId], references: [id])
   priceListId String
-  Session     Session   @relation(fields: [retailerId], references: [id])
   retailerId  String
+  priceList   PriceList @relation(fields: [priceListId], references: [id])
+  retailer    Session   @relation(fields: [retailerId], references: [id])
 }
 
 model Product {
-  id              String            @id @default(uuid())
-  productId       String
-  categoryId      String?
-  productType     String
-  description     String
-  descriptionHtml String
-  status          String
-  vendor          String
-  title           String
-  variantsCount   Int               @default(1)
-  PriceList       PriceList         @relation(fields: [priceListId], references: [id])
-  priceListId     String
-  ImportedProduct ImportedProduct[]
-  Image           Image[]
-  Variant         Variant[]
+  id               String            @id @default(uuid())
+  shopifyProductId String
+  categoryId       String?
+  productType      String
+  description      String
+  descriptionHtml  String
+  status           String
+  vendor           String
+  title            String
+  variantsCount    Int               @default(1)
+  priceListId      String
+  priceList        PriceList         @relation(fields: [priceListId], references: [id])
+  importedProducts ImportedProduct[]
+  images           Image[]
+  variants         Variant[]
 }
 
 model Image {
   id               String  @id @default(uuid())
-  Product          Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   productId        String
   url              String
   alt              String
   mediaContentType String
   position         Int
+  product          Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 // Fields for variants
@@ -186,18 +186,18 @@ model Image {
 // Ignored metaFields as well
 model Variant {
   id                String          @id @default(uuid())
-  variantId         String
+  shopifyVariantId  String
   compareAtPrice    String?
-  Product           Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
   productId         String // !!! NOTE: productId refers to product's id, not product's productId
-  InventoryItem     InventoryItem?
   inventoryPolicy   String
   inventoryQuantity Int?
   price             String
   wholesalePrice    Int?
   taxCode           String?
   taxable           Boolean
-  VariantOption     VariantOption[]
+  product           Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  inventoryItem     InventoryItem?
+  variantOptions    VariantOption[]
 }
 
 // Fields removed form shopify: countryHarmonizedSystemCodes
@@ -212,7 +212,7 @@ model InventoryItem {
   requiresShipping     Boolean
   sku                  String?
   tracked              Boolean
-  Variant              Variant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  variant              Variant @relation(fields: [variantId], references: [id], onDelete: Cascade)
   variantId            String  @unique
 }
 
@@ -221,34 +221,35 @@ model VariantOption {
   id        String  @id @default(uuid())
   name      String
   value     String
-  Variant   Variant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  variant   Variant @relation(fields: [variantId], references: [id], onDelete: Cascade)
   variantId String
 }
 
 // End models for variants
 
 model ImportedProduct {
-  id                         String                       @id @default(uuid())
-  Product                    Product                      @relation(fields: [productId], references: [id])
-  productId                  String
-  Session                    Session                      @relation(fields: [retailerId], references: [id])
-  retailerId                 String
-  importedAt                 DateTime                     @default(now())
-  ImportedProductTransaction ImportedProductTransaction[]
+  id                          String                       @id @default(uuid())
+  Product                     Product                      @relation(fields: [productId], references: [id])
+  productId                   String
+  Session                     Session                      @relation(fields: [retailerId], references: [id])
+  retailerId                  String
+  importedAt                  DateTime                     @default(now())
+  importedProductTransactions ImportedProductTransaction[]
 }
 
 model ImportedProductTransaction {
   id                String          @id @default(uuid())
-  ImportedProduct   ImportedProduct @relation(fields: [importedProductId], references: [id])
   importedProductId String
   createdAt         DateTime
   fulfilledAt       DateTime
   // TODO: figure out what fields I need to add
   unitSales         Int
+  importedProduct   ImportedProduct @relation(fields: [importedProductId], references: [id])
 }
 
 model Partnership {
   id         String  @id @default(uuid())
+  // stores the session ids of the retailers and suppliers
   retailerId String
   supplierId String
   retailer   Session @relation("RetailerPartnership", fields: [retailerId], references: [id])
@@ -258,14 +259,14 @@ model Partnership {
 model SupplierAccessRequest {
   id                      String          @id @default(uuid())
   num                     Int             @default(autoincrement())
-  ChecklistStatus         ChecklistStatus @relation(fields: [checklistStatusId], references: [id])
   checklistStatusId       String          @unique
   hasMetSalesThreshold    Boolean
   createdAt               DateTime        @default(now())
   updatedAt               DateTime        @default(now())
   status                  String
-  Session                 Session         @relation(fields: [sessionId], references: [id])
   sessionId               String          @unique
   notes                   String?
   isEligibleForNewRequest Boolean         @default(true) // This variable is just in case we reject a supplier and they are not allowed to relist on our app
+  checklistStatus         ChecklistStatus @relation(fields: [checklistStatusId], references: [id])
+  session                 Session         @relation(fields: [sessionId], references: [id])
 }

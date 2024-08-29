@@ -1,30 +1,29 @@
 import db from '~/db.server';
 import { object, string } from 'yup';
 import { ROLES } from '~/constants';
-import { hasChecklistStatus } from '../models/checklistStatus';
+import { isValidChecklistStatusId } from '../models/checklistStatus';
 import { errorHandler } from '../util';
 
 const roleSchema = object({
   role: string()
     .oneOf(Array.from(Object.values(ROLES)))
     .required(),
-  checklistStatusId: string().required(),
+  checklistStatusId: string()
+    .required()
+    .test(
+      'checklist-status-id-validation',
+      'Checklist status must be in database.',
+      async (checklistStatusId) => {
+        const checklistStatusExists =
+          await isValidChecklistStatusId(checklistStatusId);
+        if (!checklistStatusExists) {
+          return false;
+        }
+        return true;
+      },
+    ),
   sessionId: string().required(),
-}).test(
-  'checklist-status-id-validation',
-  'Checklist status must be in database',
-  async (value) => {
-    const { checklistStatusId, sessionId } = value;
-    const checklistStatusExists = await hasChecklistStatus(
-      sessionId,
-      checklistStatusId,
-    );
-    if (!checklistStatusExists) {
-      return false;
-    }
-    return true;
-  },
-);
+});
 
 async function createRoleAndCompleteChecklistItem(
   sessionId: string,

@@ -72,7 +72,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       getOrCreateProfile(sessionId, admin.graphql),
       getRoles(sessionId),
     ]);
-    const { SocialMediaLink: socialMediaLinks, ...profile } =
+    const { socialMediaLink: socialMediaLinks, ...profile } =
       profileWithSocialMediaLinks;
 
     return json(

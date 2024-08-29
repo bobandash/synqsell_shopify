@@ -99,7 +99,7 @@ export async function getTablesAndStatuses(sessionId: string) {
             position: 'asc',
           },
           include: {
-            checklistStatus: {
+            checklistStatuses: {
               where: {
                 sessionId: sessionId,
               },
@@ -116,8 +116,10 @@ export async function getTablesAndStatuses(sessionId: string) {
     const transformedTables = tables.map((table) => {
       // activeIndex for which checklist item to display
       let activeIndex = table.checklistItems.findIndex(
-        ({ checklistStatus }) => {
-          return checklistStatus.length > 0 && !checklistStatus[0].isCompleted;
+        ({ checklistStatuses }) => {
+          return (
+            checklistStatuses.length > 0 && !checklistStatuses[0].isCompleted
+          );
         },
       );
       activeIndex = activeIndex === -1 ? 0 : activeIndex;
@@ -129,10 +131,10 @@ export async function getTablesAndStatuses(sessionId: string) {
         ...table,
         isHidden: isHidden,
         checklistItems: table.checklistItems.map(
-          ({ checklistStatus, buttonText, ...item }, index) => {
+          ({ checklistStatuses, buttonText, ...item }, index) => {
             const isCompleted =
-              checklistStatus.length > 0
-                ? checklistStatus[0].isCompleted
+              checklistStatuses.length > 0
+                ? checklistStatuses[0].isCompleted
                 : false;
             const isActive = activeIndex === index;
             return {

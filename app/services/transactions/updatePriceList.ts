@@ -123,11 +123,11 @@ async function getVariantStatusTx(
     );
     const variantIdToPrismaIdInOldPriceListMap = new Map<string, string>();
     idsInOldPriceList.forEach((item) => {
-      variantIdToPrismaIdInOldPriceListMap.set(item.variantId, item.id);
+      variantIdToPrismaIdInOldPriceListMap.set(item.shopifyVariantId, item.id);
     });
 
     const shopifyVariantIdsInOldPriceList = idsInOldPriceList.map(
-      ({ variantId }) => variantId,
+      ({ shopifyVariantId }) => shopifyVariantId,
     );
     const shopifyVariantIdsInOldPriceListSet = new Set(
       shopifyVariantIdsInOldPriceList,
@@ -140,7 +140,7 @@ async function getVariantStatusTx(
 
     // variantsToRemove has to be an array of ids in the database
     const prismaIdsToRemoveInVariant = idsInOldPriceList
-      .filter((ids) => !variantIdsInNewPriceListSet.has(ids.variantId))
+      .filter((ids) => !variantIdsInNewPriceListSet.has(ids.shopifyVariantId))
       .map(({ id }) => id);
     const variantsToAdd = variantsWithPrismaProductId.filter(
       ({ variantId: id }) => !shopifyVariantIdsInOldPriceListSet.has(id),

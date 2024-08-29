@@ -64,7 +64,7 @@ export async function getProfile(sessionId: string) {
         sessionId,
       },
       include: {
-        SocialMediaLink: true,
+        socialMediaLink: true,
       },
     });
     return profile;
@@ -98,7 +98,7 @@ export async function createProfile(
             id: newProfile.id,
           },
           include: {
-            SocialMediaLink: true,
+            socialMediaLink: true,
           },
         });
       return newProfileWithSocialMediaLinks;
@@ -130,7 +130,7 @@ export async function updateUserProfileTx(
       },
       data: {
         ...newProfileValues,
-        SocialMediaLink: {
+        socialMediaLink: {
           update: {
             ...socialMediaData,
           },
@@ -157,7 +157,7 @@ async function getPaginatedVisibleProfiles(
   isReverse: boolean,
   role: string,
 ) {
-  const query = {
+  const profilesRawData = await db.role.findMany({
     take: isReverse ? -12 : 12,
     skip: cursor ? 1 : 0,
     where: {
@@ -166,25 +166,24 @@ async function getPaginatedVisibleProfiles(
     },
     select: {
       id: true,
-      Session: {
+      session: {
         include: {
-          Profile: true,
+          userProfile: true,
         },
       },
     },
     ...(cursor && { cursor: { id: cursor } }),
     orderBy: {
-      Session: {
-        Profile: {
+      session: {
+        userProfile: {
           name: 'asc' as Prisma.SortOrder,
         },
       },
     },
-  };
-  const profilesRawData = await db.role.findMany(query);
+  });
   const profiles = profilesRawData
     .map((role) => {
-      return { roleId: role.id, ...role.Session.Profile };
+      return { roleId: role.id, ...role.session.userProfile };
     })
     .filter((profile) => profile.id !== undefined);
   return profiles;

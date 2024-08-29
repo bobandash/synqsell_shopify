@@ -43,11 +43,11 @@ async function getInitialProductData(
         priceListId,
       },
       include: {
-        Image: true,
-        Variant: {
+        images: true,
+        variants: {
           include: {
-            InventoryItem: true,
-            VariantOption: true,
+            inventoryItem: true,
+            variantOptions: true,
           },
         },
       },
@@ -60,31 +60,38 @@ async function getInitialProductData(
     )) as { [key: string]: string };
 
     const cleanProductsData = rawProductsData.map((product, index) => {
-      const { productId, title, variantsCount, Variant, Image } = product;
+      const { shopifyProductId, title, variantsCount, variants, images } =
+        product;
       // totalVariants is deprecated in graphql but not deprecated in the admin picker
       return {
-        id: productId,
+        id: shopifyProductId,
         title,
-        storeUrl: productIdToStoreUrl[productId] ?? '',
+        storeUrl: productIdToStoreUrl[shopifyProductId] ?? '',
         position: index,
         totalVariants: variantsCount,
-        images: Image.map((image) => {
+        images: images.map((image) => {
           return {
             id: image.id,
             altText: image.alt,
             originalSrc: image.url,
           };
         }),
-        variants: Variant.map(
+        variants: variants.map(
           (
-            { variantId, price, wholesalePrice, InventoryItem, VariantOption },
+            {
+              shopifyVariantId,
+              price,
+              wholesalePrice,
+              inventoryItem,
+              variantOptions,
+            },
             index,
           ) => {
-            const title = VariantOption.map(({ value }) => value).join(' ');
+            const title = variantOptions.map(({ value }) => value).join(' ');
             return {
-              id: variantId,
+              id: shopifyVariantId,
               title,
-              sku: InventoryItem?.sku ?? null,
+              sku: inventoryItem?.sku ?? null,
               price,
               wholesalePrice,
               position: index,

@@ -45,7 +45,6 @@ export async function addProductsTx(
     if (!productsFmt) {
       return null;
     }
-
     const newProducts = await Promise.all(
       productsFmt.map((product) =>
         tx.product.create({
@@ -73,20 +72,20 @@ export async function getMapShopifyProductIdToPrismaIdTx(
 ) {
   const idAndProductIds = await tx.product.findMany({
     where: {
-      productId: {
+      shopifyProductId: {
         in: productIds,
       },
       priceListId,
     },
     select: {
       id: true,
-      productId: true,
+      shopifyProductId: true,
     },
   });
 
   const shopifyProductIdToPrismaId = new Map<string, string>();
-  idAndProductIds.forEach(({ id, productId }) => {
-    shopifyProductIdToPrismaId.set(productId, id);
+  idAndProductIds.forEach(({ id, shopifyProductId }) => {
+    shopifyProductIdToPrismaId.set(shopifyProductId, id);
   });
   return shopifyProductIdToPrismaId;
 }

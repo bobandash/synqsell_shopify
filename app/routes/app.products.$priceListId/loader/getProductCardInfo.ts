@@ -46,8 +46,8 @@ async function getProductCardInfoDb({
         ...(priceListId && { priceListId: priceListId }),
       },
       include: {
-        Image: true,
-        Variant: true,
+        images: true,
+        variants: true,
       },
     });
     const hasMore = rawProductsData.length > take || isReverseDirection;

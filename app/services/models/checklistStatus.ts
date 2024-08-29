@@ -11,12 +11,34 @@ export type ChecklistStatusProps = {
   checklistItemId: string;
 };
 
+export async function isValidChecklistStatusId(checklistStatusId: string) {
+  try {
+    const checklistStatus = await db.checklistStatus.findFirst({
+      where: {
+        id: checklistStatusId,
+      },
+    });
+    if (checklistStatus) {
+      return true;
+    }
+    return false;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to check if checklist status is valid.',
+      isValidChecklistStatusId,
+      { checklistStatusId },
+    );
+  }
+}
+
 export async function hasChecklistStatus(
   sessionId: string,
   checklistItemId: string,
 ) {
   try {
-    const checklistStatus = await db.checklistStatus.findFirstOrThrow({
+    console.log(checklistItemId);
+    const checklistStatus = await db.checklistStatus.findFirst({
       where: {
         checklistItemId,
         sessionId,
@@ -52,7 +74,7 @@ export async function getChecklistStatus(
     throw errorHandler(
       error,
       'Failed to retrieve checklist status.',
-      hasChecklistStatus,
+      getChecklistStatus,
       { sessionId, checklistItemId },
     );
   }
