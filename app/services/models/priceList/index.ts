@@ -1,9 +1,10 @@
 import db from '~/db.server';
 import { type Prisma } from '@prisma/client';
 import { errorHandler } from '~/services/util';
-import { priceListDataSchema } from './schemas';
+import { priceListDataSchema, priceListExistsSchema } from './schemas';
 import type { CoreProductProps } from '~/services/types';
 
+// TODO: remove price list table and put it where it belongs in the frontend
 export type PriceListProps = {
   id: string;
   createdAt: string;
@@ -39,6 +40,45 @@ export type PriceListTableInfoProps = {
   numRetailers: number;
   sales: number;
 };
+
+export async function isValidPriceList(priceListId: string) {
+  try {
+    const priceList = await db.priceList.findFirst({
+      where: {
+        id: priceListId,
+      },
+    });
+    if (priceList) {
+      return true;
+    }
+    return false;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to retrieve if price list exists.',
+      isValidPriceList,
+      { priceListId },
+    );
+  }
+}
+
+export async function getPriceList(priceListId: string) {
+  try {
+    const priceList = await db.priceList.findFirstOrThrow({
+      where: {
+        id: priceListId,
+      },
+    });
+    return priceList;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to retrieve price list.',
+      hasGeneralPriceList,
+      { priceListId },
+    );
+  }
+}
 
 export async function hasGeneralPriceList(sessionId: string) {
   try {
@@ -151,6 +191,7 @@ export async function updatePriceListSettingsTx(
   }
 }
 
+// !!! TODO: add products and retailers to create price list
 export async function createPriceListTx(
   tx: Prisma.TransactionClient,
   data: CreatePriceListDataProps,

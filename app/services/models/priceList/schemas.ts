@@ -1,5 +1,6 @@
 import { array, boolean, number, object, string } from 'yup';
 import { PRICE_LIST_PRICING_STRATEGY } from '~/constants';
+import { isValidPriceList } from '.';
 
 export const priceListDataSchema = object({
   settings: object({
@@ -55,3 +56,13 @@ export const priceListDataSchema = object({
   ),
   retailers: array().of(string().required()),
 });
+
+export const priceListExistsSchema = string()
+  .required()
+  .test(
+    'is-valid-price-list-id',
+    'Price list id does not exist',
+    async (value) => {
+      return await isValidPriceList(value);
+    },
+  );

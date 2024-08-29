@@ -39,7 +39,7 @@ const SupplierCard: FC<Props> = ({ supplier }) => {
   ].filter((link) => link !== '');
 
   const handleSeeProducts = useCallback(() => {
-    navigate(`/app/price-list/${priceListId}/products`);
+    navigate(`/app/products/${priceListId}`);
   }, [navigate, priceListId]);
 
   return (

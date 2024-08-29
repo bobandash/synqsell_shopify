@@ -1,7 +1,30 @@
 import type { Prisma } from '@prisma/client';
 import { errorHandler } from '../util';
+import db from '~/db.server';
 
 // schema to verify if inputs are valid
+export async function getPriceListRetailerIds(priceListId: string) {
+  try {
+    const retailers = await db.priceListRetailer.findMany({
+      where: {
+        priceListId,
+      },
+      select: {
+        retailerId: true,
+      },
+    });
+
+    const retailerIds = retailers.map(({ retailerId }) => retailerId);
+    return retailerIds;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to get price list retailer ids.',
+      getPriceListRetailerIds,
+      { priceListId },
+    );
+  }
+}
 
 export async function addPriceListRetailersTx(
   tx: Prisma.TransactionClient,
