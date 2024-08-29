@@ -2,13 +2,7 @@
 // fetching the generic products and fetching the actual products
 
 import { json, type LoaderFunctionArgs } from '@remix-run/node';
-import {
-  Button,
-  InlineGrid,
-  InlineStack,
-  Layout,
-  Page,
-} from '@shopify/polaris';
+import { Button, InlineGrid, InlineStack, Page } from '@shopify/polaris';
 import { StatusCodes } from 'http-status-codes';
 import { authenticate } from '~/shopify.server';
 import { getJSONError } from '~/util';
@@ -67,6 +61,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     const paginatedInfo = await getPaginatedProductCardsInfo({
       priceListId,
       isReverseDirection: false,
+      sessionId,
     });
     return json(paginatedInfo, StatusCodes.OK);
   } catch (error) {

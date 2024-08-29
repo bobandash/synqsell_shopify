@@ -2,6 +2,8 @@ import { boolean, object, string } from 'yup';
 import { errorHandler } from '~/services/util';
 import db from '~/db.server';
 import type { Prisma } from '@prisma/client';
+import { isRetailerInPriceList } from '~/services/models/priceListRetailer';
+import { hasSession } from '~/services/models/session';
 
 type GetProductCardInfoDbProps = {
   priceListId?: string;
@@ -14,6 +16,7 @@ type GetPaginatedProductCardsInfoProps = {
   priceListId?: string;
   cursor?: string;
   isReverseDirection: boolean;
+  sessionId: string;
 };
 
 // example of how strong types work in prisma
@@ -23,7 +26,9 @@ export type ProductWithImageAndVariant = Prisma.ProductGetPayload<{
     variants: true;
     priceList: {
       select: {
-        id: true;
+        requiresApprovalToImport: true;
+        isGeneral: true;
+        margin: true;
         session: {
           select: {
             userProfile: {
@@ -43,12 +48,25 @@ export type ProductCardData = Prisma.ProductGetPayload<{
     images: true;
     variants: true;
   };
-}> & { brandName: string | null };
+}> & {
+  brandName: string | null;
+  priceList: { isGeneral: boolean; requiresApprovalToImport?: boolean };
+};
 
 const getProductCardsSchema = object({
   isReverseDirection: boolean().required(),
   priceListId: string().optional(),
   cursor: string().optional(),
+  sessionId: string()
+    .required()
+    .test(
+      'session-id-valid',
+      'Session id has to exist in database',
+      async (sessionId) => {
+        const sessionIdExists = await hasSession(sessionId);
+        return sessionIdExists;
+      },
+    ),
 }).test(
   'is-reverse-direction-not-true',
   'Cannot fetch information from reverse direction if cursor is not provided',
@@ -81,6 +99,9 @@ async function getProductCardInfoDb({
         priceList: {
           select: {
             id: true,
+            isGeneral: true,
+            requiresApprovalToImport: true,
+            margin: true,
             session: {
               select: {
                 userProfile: {
@@ -112,16 +133,75 @@ async function getProductCardInfoDb({
   }
 }
 
-const formatProductDataForPriceList = (
+async function getPrivatePriceListIdsSet(
   products: ProductWithImageAndVariant[],
+  sessionId: string,
+) {
+  try {
+    const noAccessToSensitiveInfoPriceListIds = new Set<string>();
+    for (const product of products) {
+      const { priceListId, priceList } = product;
+      const { requiresApprovalToImport, isGeneral } = priceList;
+      if (noAccessToSensitiveInfoPriceListIds.has(priceListId)) {
+        continue;
+      }
+      if (!isGeneral || (isGeneral && requiresApprovalToImport)) {
+        const isPartneredRetailer = await isRetailerInPriceList(
+          sessionId,
+          priceListId,
+        );
+        if (!isPartneredRetailer) {
+          noAccessToSensitiveInfoPriceListIds.add(priceListId);
+        }
+      }
+    }
+    return noAccessToSensitiveInfoPriceListIds;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to get private price list ids.',
+      getPrivatePriceListIdsSet,
+      { products, sessionId },
+    );
+  }
+}
+
+// Hide wholesale price (aka profit) and margin if the retailer doesn't have access to the price list
+// Two cases for not having access: not being a partnered retailer in "closed" generic price list or private price list
+const formatProductDataForPriceList = async (
+  products: ProductWithImageAndVariant[],
+  sessionId: string,
 ) => {
-  return products.map(({ images, priceList, ...rest }) => {
-    return {
-      images: images.sort((a, b) => a.position - b.position),
-      brandName: priceList.session.userProfile?.name,
-      ...rest,
-    };
-  });
+  const privatePriceListIdsSet = await getPrivatePriceListIdsSet(
+    products,
+    sessionId,
+  );
+
+  return products.map(
+    ({ images, priceList, variants, priceListId, ...rest }) => {
+      return {
+        images: images.sort((a, b) => a.position - b.position),
+        brandName: priceList.session.userProfile?.name,
+        priceListId,
+        priceList: {
+          isGeneral: priceList.isGeneral,
+          requiresApprovalToImport: priceList.requiresApprovalToImport,
+          margin: privatePriceListIdsSet.has(priceListId)
+            ? null
+            : priceList.margin,
+        },
+        variants: variants.map(({ wholesalePrice, ...rest }) => {
+          return {
+            ...rest,
+            wholesalePrice: privatePriceListIdsSet.has(priceListId)
+              ? null
+              : wholesalePrice,
+          };
+        }),
+        ...rest,
+      };
+    },
+  );
 };
 
 // made this into an object to have easier control on when to pass params
@@ -129,12 +209,14 @@ export async function getPaginatedProductCardsInfo({
   priceListId,
   cursor,
   isReverseDirection,
+  sessionId,
 }: GetPaginatedProductCardsInfoProps) {
   try {
     await getProductCardsSchema.validate({
       isReverseDirection,
       cursor,
       priceListId,
+      sessionId,
     });
     // retrieve first product id in order to check if there's any elements in previous
     const firstProductId = (
@@ -150,7 +232,10 @@ export async function getPaginatedProductCardsInfo({
       take: 12,
       isReverseDirection,
     });
-    const formattedProducts = formatProductDataForPriceList(products);
+    const formattedProducts = await formatProductDataForPriceList(
+      products,
+      sessionId,
+    );
     const hasPrevious = products[0].id !== firstProductId;
     const prevCursor = !hasPrevious ? null : products[0].id;
     return { products: formattedProducts, nextCursor, prevCursor };
