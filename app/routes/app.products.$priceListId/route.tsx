@@ -9,6 +9,7 @@ import { getJSONError } from '~/util';
 import hasAccessToViewPriceList from './loader/hasAccessToViewPriceList';
 import { hasAccessToImportPriceList } from './loader';
 import { isValidPriceList } from '~/services/models/priceList';
+import { getPaginatedProductCardsInfo } from './loader/getProductCardInfo';
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   try {
@@ -26,7 +27,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     const priceListExists = isValidPriceList(priceListId);
     if (!priceListExists) {
       throw json(
-        { error: 'Price list could not be found' },
+        { error: 'Price list could not be found.' },
         StatusCodes.NOT_FOUND,
       );
     }
@@ -38,14 +39,17 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
 
     if (!hasAccessToImport && !hasAccessToView) {
       throw json(
-        { error: 'User is unauthorized to view products with this price list' },
+        {
+          error: 'User is unauthorized to view products with this price list.',
+        },
         StatusCodes.UNAUTHORIZED,
       );
     }
-
-    const products = [];
-
-    return json(products, StatusCodes.OK);
+    const paginatedInfo = await getPaginatedProductCardsInfo({
+      priceListId,
+      isReverseDirection: false,
+    });
+    return json(paginatedInfo, StatusCodes.OK);
   } catch (error) {
     throw getJSONError(error, 'products');
   }

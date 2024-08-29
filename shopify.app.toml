@@ -3,7 +3,7 @@
 client_id = "c2ff24913d6d89792234763f0830c676"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://decline-enabled-camp-char.trycloudflare.com"
+application_url = "https://pocket-afterwards-bomb-advertisers.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read_assigned_fulfillment_orders,read_inventory,read_orders,read_produ
 
 [auth]
 redirect_urls = [
-  "https://decline-enabled-camp-char.trycloudflare.com/auth/callback",
-  "https://decline-enabled-camp-char.trycloudflare.com/auth/shopify/callback",
-  "https://decline-enabled-camp-char.trycloudflare.com/api/auth/callback"
+  "https://pocket-afterwards-bomb-advertisers.trycloudflare.com/auth/callback",
+  "https://pocket-afterwards-bomb-advertisers.trycloudflare.com/auth/shopify/callback",
+  "https://pocket-afterwards-bomb-advertisers.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]
