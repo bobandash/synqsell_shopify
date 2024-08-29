@@ -162,9 +162,13 @@ export async function getSupplierPaginatedInfo(
     });
 
     // calculation for next and prev cursor
-    const firstPageSupplierId = firstSupplierId
-      ? firstSupplierId
-      : suppliers[0].id;
+    const hasSuppliers = suppliers.length > 0;
+    let firstPageSupplierId = null;
+    if (hasSuppliers && !firstSupplierId) {
+      firstPageSupplierId = firstSupplierId;
+    } else {
+      firstPageSupplierId = null;
+    }
     const isFirstPage =
       !cursor || (suppliers[0] && suppliers[0].id === firstPageSupplierId);
 
