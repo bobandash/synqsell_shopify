@@ -30,13 +30,14 @@ const SupplierCard: FC<Props> = ({ supplier }) => {
   const { requiresApprovalToImport, id: priceListId } = priceList;
   const navigate = useNavigate();
 
+  // TODO: change social media links to one to many relationship, otherwise, just handle like this for now
   const allSocialMediaLinks = [
     facebook,
     twitter,
     instagram,
     tiktok,
     youtube,
-  ].filter((link) => link !== '');
+  ].filter((link) => link);
 
   const handleSeeProducts = useCallback(() => {
     navigate(`/app/products/${priceListId}`);

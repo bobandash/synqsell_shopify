@@ -43,6 +43,7 @@ type SocialMediaLink = {
   userProfileId: string;
 };
 
+// TODO: let me actually figure out how prisma type safety works
 const getSupplierInfoSchema = object({
   isReverseDirection: boolean().required(),
   firstSupplierId: string().optional(),
