@@ -1,17 +1,17 @@
-import { BlockStack, Card, Icon, InlineStack, Text } from "@shopify/polaris";
-import styles from "../styles.module.css";
-import sharedStyles from "~/shared.module.css";
-import { EmailIcon, DeliveryFilledIcon } from "@shopify/polaris-icons";
-import { SocialIcon } from "react-social-icons";
+import { BlockStack, Card, Icon, InlineStack, Text } from '@shopify/polaris';
+import styles from '../styles.module.css';
+import sharedStyles from '~/shared.module.css';
+import { EmailIcon, DeliveryFilledIcon } from '@shopify/polaris-icons';
+import { SocialIcon } from 'react-social-icons';
 
 const RetailerCard = () => {
   return (
     <Card>
       <BlockStack gap="200">
         <InlineStack align="space-between" blockAlign="start">
-          <InlineStack gap={"300"}>
+          <InlineStack gap={'300'}>
             <div
-              className={`${styles["black-square"]} ${styles.rounded}`}
+              className={`${styles['black-square']} ${styles.rounded}`}
             ></div>
             <BlockStack>
               <Text variant="headingLg" as="h2" fontWeight="bold">
@@ -21,34 +21,34 @@ const RetailerCard = () => {
                 href="https://www.blankmod.com"
                 target="_blank"
                 rel="noreferrer"
-                className={`${styles["link"]}`}
+                className={`${styles['bold-link']}`}
               >
                 www.blankmod.com
               </a>
               <Text variant="bodyMd" as="p">
                 Los Angeles, CA, USA
               </Text>
-              <InlineStack gap={"150"} align={"start"}>
+              <InlineStack gap={'150'} align={'start'}>
                 <SocialIcon
                   url="https://twitter.com"
                   target="_blank"
-                  className={`${styles["logo"]}`}
+                  className={`${styles['logo']}`}
                 />
                 <SocialIcon
                   url="https://pinterest.com"
                   target="_blank"
-                  className={`${styles["logo"]}`}
+                  className={`${styles['logo']}`}
                 />
               </InlineStack>
             </BlockStack>
           </InlineStack>
-          <InlineStack gap={"200"}>
+          <InlineStack gap={'200'}>
             <a href="mailto:someone@example.com" title="someone@example.com">
               <Icon source={EmailIcon} tone="base" />
             </a>
           </InlineStack>
         </InlineStack>
-        <InlineStack gap={"200"}>
+        <InlineStack gap={'200'}>
           <div className={`${styles.tag}`}>
             <Text as="p" variant="bodySm">
               Plush
@@ -84,23 +84,23 @@ const RetailerCard = () => {
         </BlockStack>
         <InlineStack align="space-between">
           <InlineStack>
-            <div className={`${styles["delivery-tag"]}`}>
+            <div className={`${styles['delivery-tag']}`}>
               <Icon source={DeliveryFilledIcon} />
               <Text as="p" variant="bodySm" fontWeight="medium">
                 5 - 14 Days
               </Text>
             </div>
           </InlineStack>
-          <InlineStack gap={"200"}>
+          <InlineStack gap={'200'}>
             <button
-              className={`${sharedStyles["orange"]} ${sharedStyles["btn"]}`}
+              className={`${sharedStyles['orange']} ${sharedStyles['btn']}`}
             >
               <Text as="p" variant="bodySm" fontWeight="medium">
                 Request Price List
               </Text>
             </button>
             <button
-              className={`${sharedStyles["blue"]} ${sharedStyles["btn"]}`}
+              className={`${sharedStyles['blue']} ${sharedStyles['btn']}`}
             >
               <Text as="p" variant="bodySm" fontWeight="medium">
                 See Products

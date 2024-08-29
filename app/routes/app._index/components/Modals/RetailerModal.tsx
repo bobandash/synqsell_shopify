@@ -21,8 +21,6 @@ const RetailerModal: FC<Props> = ({ checklistItemId, shopify }) => {
     shopify.modal.hide(MODALS.BECOME_RETAILER);
   }, [shopify]);
 
-  console.log(checklistItemId);
-
   if (!checklistItemId) {
     return;
   }

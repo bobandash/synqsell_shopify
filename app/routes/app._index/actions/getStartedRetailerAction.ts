@@ -78,6 +78,7 @@ export async function getStartedRetailerAction(
       const completedFields = await handleCompleted(sessionId, checklistItemId);
       return completedFields;
     }
+
     const newFields = await createOrGetFields(
       checklistStatusCompleted,
       fulfillmentServiceExists,

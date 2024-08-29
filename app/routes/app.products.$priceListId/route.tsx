@@ -2,14 +2,34 @@
 // fetching the generic products and fetching the actual products
 
 import { json, type LoaderFunctionArgs } from '@remix-run/node';
-import { Page } from '@shopify/polaris';
+import {
+  Button,
+  InlineGrid,
+  InlineStack,
+  Layout,
+  Page,
+} from '@shopify/polaris';
 import { StatusCodes } from 'http-status-codes';
 import { authenticate } from '~/shopify.server';
 import { getJSONError } from '~/util';
 import hasAccessToViewPriceList from './loader/hasAccessToViewPriceList';
 import { hasAccessToImportPriceList } from './loader';
 import { isValidPriceList } from '~/services/models/priceList';
-import { getPaginatedProductCardsInfo } from './loader/getProductCardInfo';
+import {
+  getPaginatedProductCardsInfo,
+  type ProductCardData,
+} from './loader/getProductCardInfo';
+import { useLoaderData } from '@remix-run/react';
+import { useState } from 'react';
+import ProductCard from './components/ProductCard';
+import { ChevronLeftIcon, ChevronRightIcon } from '@shopify/polaris-icons';
+import { PaddedBox } from '~/components';
+
+type LoaderDataProps = {
+  products: ProductCardData[];
+  nextCursor: string | null;
+  prevCursor: string | null;
+};
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   try {
@@ -19,10 +39,10 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
       session: { id: sessionId },
     } = admin;
     // TODO: implement fetch all product data
+    // TODO: need to decide how I want to do this though, thinking just calling all the products in general price lists and sorting it by recently created for now
     if (!priceListId) {
       return json({ products: [] }, StatusCodes.NOT_IMPLEMENTED);
     }
-
     // case: searching for products in a specific price list
     const priceListExists = isValidPriceList(priceListId);
     if (!priceListExists) {
@@ -31,7 +51,6 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
         StatusCodes.NOT_FOUND,
       );
     }
-
     const [hasAccessToView, hasAccessToImport] = await Promise.all([
       hasAccessToViewPriceList(priceListId, sessionId),
       hasAccessToImportPriceList(priceListId, sessionId),
@@ -56,11 +75,33 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
 };
 
 const PriceListProducts = () => {
+  const {
+    products: initialProducts,
+    nextCursor: initialNextCursor,
+    prevCursor: initialPrevCursor,
+  } = useLoaderData<typeof loader>() as LoaderDataProps;
+
+  const [products, setProducts] = useState(initialProducts);
+  const [nextCursor, setNextCursor] = useState(initialNextCursor);
+  const [prevCursor, setPrevCursor] = useState(initialPrevCursor);
+
   return (
     <Page
       title="Products"
       subtitle="Discover products that may interest your customers and boost your AOV!"
-    ></Page>
+    >
+      <InlineGrid columns={{ xs: 2, sm: 2, md: 3, lg: 4 }} gap="300">
+        {products.map((product) => (
+          <ProductCard key={product.id} product={product} />
+        ))}
+      </InlineGrid>
+      <PaddedBox />
+      <InlineStack gap={'200'} align={'center'}>
+        <Button icon={ChevronLeftIcon} disabled={!prevCursor} />
+        <Button icon={ChevronRightIcon} disabled={!nextCursor} />
+      </InlineStack>
+      <PaddedBox />
+    </Page>
   );
 };
 
