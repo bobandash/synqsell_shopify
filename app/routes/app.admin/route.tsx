@@ -3,7 +3,7 @@ import {
   type ActionFunctionArgs,
   type LoaderFunctionArgs,
 } from '@remix-run/node';
-import { useLoaderData, useLocation } from '@remix-run/react';
+import { useActionData, useLoaderData, useSubmit } from '@remix-run/react';
 import {
   Badge,
   Card,
@@ -17,7 +17,6 @@ import {
 } from '@shopify/polaris';
 import type { IndexTableHeading } from '@shopify/polaris/build/ts/src/components/IndexTable';
 import type { NonEmptyArray } from '@shopify/polaris/build/ts/src/types';
-import createHttpError from 'http-errors';
 import { StatusCodes } from 'http-status-codes';
 import logger from '~/logger';
 import { type FC, useCallback, useEffect, useMemo, useState } from 'react';
@@ -28,7 +27,7 @@ import {
   type GetSupplierAccessRequestJSONProps,
 } from '~/services/models/supplierAccessRequest';
 import { authenticate } from '~/shopify.server';
-import { getJSONError } from '~/util';
+import { convertFormDataToObject, getJSONError } from '~/util';
 import { type BulkActionsProps } from '@shopify/polaris/build/ts/src/components/BulkActions';
 import {
   type supplierAccessRequestInformationProps,
@@ -60,10 +59,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const isAdmin = await hasRole(sessionId, ROLES.ADMIN);
     if (!isAdmin) {
       logger.error(`${sessionId} is not an admin.`);
-      throw new createHttpError.Unauthorized('User is not an admin.');
+      throw json({ error: 'Unauthorized' }, StatusCodes.UNAUTHORIZED);
     }
     const supplierAccessRequests = await getAllSupplierAccessRequests();
-    return json(supplierAccessRequests);
+    return json(supplierAccessRequests, StatusCodes.OK);
   } catch (error) {
     throw getJSONError(error, 'admin network');
   }
@@ -71,7 +70,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   try {
-    const data = (await request.json()) as ActionData;
+    const formData = await request.formData();
+    const data = convertFormDataToObject(formData) as ActionData;
     const { intent, supplierAccessRequestInfo } = data;
     if (!supplierAccessRequestInfo) {
       return json(
@@ -88,9 +88,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         );
         return json(
           { message: 'Suppliers were successfully approved.' },
-          {
-            status: 200,
-          },
+          StatusCodes.OK,
         );
       case INTENTS.REJECT:
         await updateSupplierAccess(
@@ -99,12 +97,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         );
         return json(
           { message: 'Suppliers were successfully rejected.' },
-          { status: StatusCodes.OK },
+          StatusCodes.OK,
         );
       default:
         return json(
-          { message: 'Invalid intent.' },
-          { status: StatusCodes.BAD_REQUEST },
+          { message: 'Intent not implemented' },
+          StatusCodes.NOT_IMPLEMENTED,
         );
     }
   } catch (error) {
@@ -112,16 +110,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 };
 
-// !!! TODO: After MVP verification, add state management to change rejected and approved status
 const Admin = () => {
   const data = useLoaderData<
     typeof loader
   >() as unknown as GetSupplierAccessRequestJSONProps[];
-  const location = useLocation();
+  const actionData = useActionData<typeof action>();
+
   const resourceName = {
     singular: 'Supplier Request',
     plural: 'Supplier Requests',
   };
+  const submit = useSubmit();
   const shopify = useAppBridge();
   const [requestsData, setRequestsData] = useState(data);
   const [filteredData, setFilteredData] = useState(data);
@@ -142,6 +141,21 @@ const Admin = () => {
       );
     });
   }, [query, requestsData]);
+
+  useEffect(() => {
+    if (actionData?.message) {
+      shopify.toast.show(actionData.message, { duration: 1000 });
+    }
+  }, [actionData, shopify]);
+
+  useEffect(() => {
+    setRequestsData(data);
+    setFilteredData(() => {
+      return data.filter((item) =>
+        item.name.toLowerCase().includes(query.toLowerCase()),
+      );
+    });
+  }, [data, query]);
 
   const tabs: TabProps[] = useMemo(
     () => [
@@ -235,43 +249,27 @@ const Admin = () => {
     return selectedSessionAndAccessIds;
   }, [selectedResources, filteredData]);
 
-  const approveSuppliers = useCallback(async () => {
-    try {
-      const supplierAccessRequestInfo = getSelectedSessionAndAccessIds();
-      await fetch(location.pathname, {
-        method: 'post',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          intent: INTENTS.APPROVE,
-          supplierAccessRequestInfo,
-        }),
-      });
-      shopify.toast.show('Successfully approved suppliers.');
-    } catch (error) {
-      console.error(error);
-    }
-  }, [getSelectedSessionAndAccessIds, location, shopify]);
+  const approveSuppliers = useCallback(() => {
+    const supplierAccessRequestInfo = getSelectedSessionAndAccessIds();
+    submit(
+      {
+        intent: INTENTS.APPROVE,
+        supplierAccessRequestInfo: JSON.stringify(supplierAccessRequestInfo),
+      },
+      { method: 'post' },
+    );
+  }, [getSelectedSessionAndAccessIds, submit]);
 
-  const rejectSuppliers = useCallback(async () => {
-    try {
-      const supplierAccessRequestInfo = getSelectedSessionAndAccessIds();
-      await fetch(location.pathname, {
-        method: 'post',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          intent: INTENTS.REJECT,
-          supplierAccessRequestInfo,
-        }),
-      });
-      shopify.toast.show('Successfully rejected suppliers.');
-    } catch (error) {
-      console.error(error);
-    }
-  }, [getSelectedSessionAndAccessIds, location, shopify]);
+  const rejectSuppliers = useCallback(() => {
+    const supplierAccessRequestInfo = getSelectedSessionAndAccessIds();
+    submit(
+      {
+        intent: INTENTS.REJECT,
+        supplierAccessRequestInfo: JSON.stringify(supplierAccessRequestInfo),
+      },
+      { method: 'post' },
+    );
+  }, [getSelectedSessionAndAccessIds, submit]);
 
   const promotedBulkActions: BulkActionsProps['promotedActions'] = [
     {
@@ -333,7 +331,6 @@ const Admin = () => {
   );
 };
 
-// !!! TODO: FORMAT DATE PROPERLY
 const Row: FC<RowMarkupProps> = ({ data, index, selected }) => {
   const {
     id,
