@@ -6,14 +6,14 @@ import {
   Button,
   ProgressBar,
   Divider,
-} from "@shopify/polaris";
-import { ChevronUpIcon, ChevronDownIcon } from "@shopify/polaris-icons";
-import styles from "./styles.module.css";
-import type { FormEvent, FC } from "react";
-import { CheckListItem } from "./ChecklistItem";
-import { useFetcher } from "@remix-run/react";
-import { INTENTS, FETCHER_KEYS } from "../../constants";
-import type { TransformedChecklistTableData } from "~/services/models/types";
+} from '@shopify/polaris';
+import { ChevronUpIcon, ChevronDownIcon } from '@shopify/polaris-icons';
+import styles from './styles.module.css';
+import type { FormEvent, FC } from 'react';
+import { CheckListItem } from './ChecklistItem';
+import { useFetcher } from '@remix-run/react';
+import { INTENTS, FETCHER_KEYS } from '../../constants';
+import type { TransformedChecklistTableData } from '../../types';
 
 export type toggleActiveChecklistItemProps = (
   checklistItemIndex: number,
@@ -38,12 +38,11 @@ const ChecklistTable: FC<Props> = (props) => {
 
   const handleSubmitToggleVisibility = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (fetcher.state !== "idle") {
+    if (fetcher.state !== 'idle') {
       return;
     }
     let formData = new FormData(event.currentTarget);
-    // TODO: add yup validation / client-side validation to this
-    fetcher.submit(formData, { method: "patch" });
+    fetcher.submit(formData, { method: 'patch' });
   };
 
   return (
@@ -75,7 +74,7 @@ const ChecklistTable: FC<Props> = (props) => {
           <Text as="p" variant="bodyMd">
             {subheader}
           </Text>
-          <InlineStack gap={"200"}>
+          <InlineStack gap={'200'}>
             <Text as="p" variant="bodyMd">
               {`${numTasksCompleted} of ${numTasks} tasks complete`}
             </Text>

@@ -47,6 +47,6 @@ export type TransformedChecklistItemData = {
   header: string;
   subheader: string | null;
   isCompleted: boolean;
-  button?: { content: string; action: BtnAction };
+  button?: { content: string; action: BtnAction; disabled: boolean };
   isActive: boolean;
 };

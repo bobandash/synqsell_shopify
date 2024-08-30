@@ -1,10 +1,10 @@
-import { BlockStack, Icon, Text, Box, Button } from "@shopify/polaris";
-import styles from "./styles.module.css";
-import { CheckCircleIcon } from "@shopify/polaris-icons";
-import { type FC } from "react";
-import { IncompleteCircle } from "~/assets";
-import type { toggleActiveChecklistItemProps } from ".";
-import type { TransformedChecklistItemData } from "../../types";
+import { BlockStack, Icon, Text, Box, Button } from '@shopify/polaris';
+import styles from './styles.module.css';
+import { CheckCircleIcon } from '@shopify/polaris-icons';
+import { type FC } from 'react';
+import { IncompleteCircle } from '~/assets';
+import type { toggleActiveChecklistItemProps } from '.';
+import type { TransformedChecklistItemData } from '../../types';
 
 type Props = {
   task: TransformedChecklistItemData;
@@ -16,21 +16,21 @@ type Props = {
 export const CheckListItem: FC<Props> = (props) => {
   const { task, toggleActiveChecklistItem, checklistIndex, tableIndex } = props;
   const { header, subheader, isCompleted, isActive } = task;
-  const { content, action } = task.button || {};
+  const { content, action, disabled } = task.button || {};
 
   return (
     <div
       role="group"
-      className={` ${styles["checklist-item"]} ${isActive ? `${styles["focused"]}` : `${styles["unfocused"]}`} `}
+      className={` ${styles['checklist-item']} ${isActive ? `${styles['focused']}` : `${styles['unfocused']}`} `}
       onClick={() => {
         if (!isActive) {
           toggleActiveChecklistItem(checklistIndex, tableIndex);
         }
       }}
     >
-      <Box paddingBlock={"200"} paddingInline={"100"}>
-        <BlockStack gap={"200"}>
-          <div className={styles["icon-grid"]}>
+      <Box paddingBlock={'200'} paddingInline={'100'}>
+        <BlockStack gap={'200'}>
+          <div className={styles['icon-grid']}>
             <div className={styles.checkmark}>
               {isCompleted ? (
                 <Icon source={CheckCircleIcon} />
@@ -42,7 +42,7 @@ export const CheckListItem: FC<Props> = (props) => {
                 />
               )}
             </div>
-            <BlockStack gap={"100"}>
+            <BlockStack gap={'100'}>
               {isActive ? (
                 <Text as="h3" variant="headingMd" fontWeight="semibold">
                   {header}
@@ -58,7 +58,11 @@ export const CheckListItem: FC<Props> = (props) => {
                   {subheader && <Text as="p">{subheader}</Text>}
                   {content && action && (
                     <Box>
-                      <Button variant="primary" onClick={action}>
+                      <Button
+                        variant="primary"
+                        onClick={action}
+                        disabled={disabled}
+                      >
                         {content}
                       </Button>
                     </Box>
