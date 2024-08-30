@@ -8,36 +8,36 @@ import {
   Page,
   Text,
   useIndexResourceState,
-} from "@shopify/polaris";
-import { type IndexTableHeading } from "@shopify/polaris/build/ts/src/components/IndexTable";
-import { type NonEmptyArray } from "@shopify/polaris/build/ts/src/types";
-import { ToolsIcon } from "~/assets";
-import styles from "./styles.module.css";
+} from '@shopify/polaris';
+import { type IndexTableHeading } from '@shopify/polaris/build/ts/src/components/IndexTable';
+import { type NonEmptyArray } from '@shopify/polaris/build/ts/src/types';
+import { ToolsIcon } from '~/assets';
+import styles from './styles.module.css';
 import {
   useFetcher,
   useLoaderData,
   useLocation,
   useNavigate,
-} from "@remix-run/react";
+} from '@remix-run/react';
 import {
   json,
   type ActionFunctionArgs,
   type LoaderFunctionArgs,
-} from "@remix-run/node";
-import logger from "~/logger";
-import { convertFormDataToObject, getJSONError } from "~/util";
-import { authenticate } from "~/shopify.server";
+} from '@remix-run/node';
+import logger from '~/logger';
+import { convertFormDataToObject, getJSONError } from '~/util';
+import { authenticate } from '~/shopify.server';
 import {
   getPriceListTableInfo,
   type PriceListTableInfoProps,
-} from "~/services/models/priceList";
-import { StatusCodes } from "http-status-codes";
-import { useEffect, useState, type FC } from "react";
-import { convertToTitleCase } from "../util";
-import { useAppBridge } from "@shopify/app-bridge-react";
-import { MODALS } from "./constants";
-import DeletePriceListModal from "./_components/DeletePriceListModal";
-import { deletePriceListAction } from "./actions/deletePriceListAction";
+} from '~/services/models/priceList';
+import { StatusCodes } from 'http-status-codes';
+import { useEffect, useState, type FC } from 'react';
+import { convertToTitleCase } from '../util';
+import { useAppBridge } from '@shopify/app-bridge-react';
+import { MODALS } from './constants';
+import DeletePriceListModal from './_components/DeletePriceListModal';
+import { deletePriceListAction } from './actions/deletePriceListAction';
 
 type RowProps = {
   data: PriceListTableInfoProps;
@@ -53,7 +53,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     return json(priceListTableInfo, { status: StatusCodes.OK });
   } catch (error) {
     logger.error(error);
-    throw getJSONError(error, "price list");
+    throw getJSONError(error, 'price list');
   }
 };
 
@@ -62,7 +62,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const { session } = await authenticate.admin(request);
     const { id: sessionId } = session;
     let formData = await request.formData();
-    const intent = formData.get("intent");
+    const intent = formData.get('intent');
     const formDataObject = convertFormDataToObject(formData);
     switch (intent) {
       case MODALS.DELETE_PRICE_LIST:
@@ -86,16 +86,16 @@ const PriceList = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const headings: NonEmptyArray<IndexTableHeading> = [
-    { title: "Name" },
-    { title: "Type" },
-    { title: "Products" },
-    { title: "Retailers" },
-    { title: "Sales Generated" },
-    { title: "Pricing Strategy" },
+    { title: 'Name' },
+    { title: 'Type' },
+    { title: 'Products' },
+    { title: 'Retailers' },
+    { title: 'Sales Generated' },
+    { title: 'Pricing Strategy' },
   ];
   const resourceName = {
-    singular: "Price List",
-    plural: "Price Lists",
+    singular: 'Price List',
+    plural: 'Price Lists',
   };
   const deletePriceListFetcher = useFetcher({ key: MODALS.DELETE_PRICE_LIST });
   const {
@@ -122,8 +122,8 @@ const PriceList = () => {
   // !!! Some people just read the json responses, but figure out what approach to handle errors works best for you
 
   useEffect(() => {
-    if (deletePriceListFetcher.state === "loading" && deletePriceListFetcher) {
-      shopify.toast.show("Successfully deleted the price lists.");
+    if (deletePriceListFetcher.state === 'loading' && deletePriceListFetcher) {
+      shopify.toast.show('Successfully deleted the price lists.');
       shopify.modal.hide(MODALS.DELETE_PRICE_LIST);
     }
   }, [deletePriceListFetcher, shopify]);
@@ -131,11 +131,11 @@ const PriceList = () => {
   useEffect(() => {
     if (
       deletePriceListFetcher.formData &&
-      deletePriceListFetcher.formData.get("priceListIds") &&
-      deletePriceListFetcher.state === "submitting"
+      deletePriceListFetcher.formData.get('priceListIds') &&
+      deletePriceListFetcher.state === 'submitting'
     ) {
       const priceListIdString = deletePriceListFetcher.formData.get(
-        "priceListIds",
+        'priceListIds',
       ) as string;
       const deletedPriceListIds = new Set(
         JSON.parse(priceListIdString) as string[],
@@ -156,7 +156,7 @@ const PriceList = () => {
         title="Price lists"
         subtitle="Create and edit price lists for retailers to import your products!"
         primaryAction={{
-          content: "Create Price List",
+          content: 'Create Price List',
           onAction: navigateCreatePriceList,
         }}
         secondaryActions={
@@ -170,13 +170,13 @@ const PriceList = () => {
           </Button>
         }
       >
-        <Card padding={"0"}>
+        <Card padding={'0'}>
           <IndexTable
             resourceName={resourceName}
             headings={headings}
             itemCount={priceListTableData.length}
             selectedItemsCount={
-              allResourcesSelected ? "All" : selectedResources.length
+              allResourcesSelected ? 'All' : selectedResources.length
             }
             onSelectionChange={handleSelectionChange}
             emptyState={<EmptyState />}
@@ -198,8 +198,8 @@ const PriceList = () => {
 
 const EmptyState = () => {
   return (
-    <Box paddingBlock={"200"}>
-      <BlockStack inlineAlign={"center"} gap={"300"}>
+    <Box paddingBlock={'200'}>
+      <BlockStack inlineAlign={'center'} gap={'300'}>
         <img
           src={ToolsIcon}
           alt="create price list icon"
@@ -208,7 +208,7 @@ const EmptyState = () => {
         <Text as="h2" variant="headingLg">
           Build Your Price List
         </Text>
-        <Text as="p" variant={"bodyMd"}>
+        <Text as="p" variant={'bodyMd'}>
           Start inviting retailers to import your products today!
         </Text>
       </BlockStack>

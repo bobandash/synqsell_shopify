@@ -19,6 +19,7 @@ type Props = {
 
 // TODO: add pending request status and fix status for this to instead just fetch and check for permissions
 // TODO: the case that it's a general price list that the supplier granted permission
+// TODO: also if the product has been imported before, I need to denote that it's been imported before
 const ProductCard: FC<Props> = ({ product }) => {
   const { images, brandName, title, priceListId, variants } = product;
   const primaryImage =

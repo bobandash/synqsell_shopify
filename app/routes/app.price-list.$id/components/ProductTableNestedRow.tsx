@@ -1,16 +1,16 @@
 // component for product variants' nested row
-import { BlockStack, IndexTable, Text, TextField } from "@shopify/polaris";
+import { BlockStack, IndexTable, Text, TextField } from '@shopify/polaris';
 import type {
   ProductPropsWithPositions,
   UpdateProductWholesalePrice,
   VariantWithPosition,
-} from "../types";
-import { useCallback, useMemo, type FC } from "react";
-import { useField } from "@shopify/react-form";
+} from '../types';
+import { useCallback, useMemo, type FC } from 'react';
+import { useField } from '@shopify/react-form';
 import {
   calculatePriceDifference,
   calculateRetailerPaymentGivenMargin,
-} from "../util";
+} from '~/routes/util';
 
 type Props = {
   product: ProductPropsWithPositions;
@@ -32,16 +32,16 @@ const ProductTableNestedRow: FC<Props> = ({
   const { id, title, sku, price, wholesalePrice } = variant;
   const { position } = product;
   const variantWholesalePrice = useField({
-    value: wholesalePrice?.toString() ?? "",
+    value: wholesalePrice?.toString() ?? '',
     validates: [
       (value) => {
         const valueFloat = parseFloat(value);
         if (valueFloat < 0) {
-          return "Must not be less than 0.";
+          return 'Must not be less than 0.';
         } else if (valueFloat > parseFloat(price)) {
-          return "Cannot exceed retail price.";
+          return 'Cannot exceed retail price.';
         } else if (!value) {
-          return "Not a valid price.";
+          return 'Not a valid price.';
         }
       },
     ],
@@ -52,14 +52,14 @@ const ProductTableNestedRow: FC<Props> = ({
       return calculateRetailerPaymentGivenMargin(price, margin);
     }
     if (variantWholesalePrice.error) {
-      return "N/A";
+      return 'N/A';
     }
     return calculatePriceDifference(price, variantWholesalePrice.value);
   }, [isWholesalePricing, margin, price, variantWholesalePrice]);
 
   const marginPricingProfit = useMemo(() => {
     if (isWholesalePricing) {
-      return "N/A";
+      return 'N/A';
     }
     return calculatePriceDifference(price, retailerPayment);
   }, [isWholesalePricing, price, retailerPayment]);
