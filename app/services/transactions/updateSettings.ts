@@ -12,6 +12,7 @@ type ProfileDataProps = {
   email: string;
   biography: string;
   desiredProducts: string;
+  logoUrl: string | null;
 };
 
 type SocialMediaDataProps = {

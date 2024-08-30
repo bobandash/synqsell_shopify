@@ -27,6 +27,7 @@
     "node": "^18.20 || ^20.10 || >=21.0.0"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.637.0",
     "@prisma/client": "^5.18.0",
     "@remix-run/dev": "^2.7.1",
     "@remix-run/node": "^2.7.1",

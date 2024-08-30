@@ -22,12 +22,11 @@ export type ProfileProps = {
 };
 
 type ProfileUpdateProps = {
-  name?: string;
-  email?: string;
-  logo?: string;
-  biography?: string;
-  productsWant?: string;
-  socialMediaUrls?: string[];
+  name: string;
+  email: string;
+  biography: string;
+  desiredProducts: string;
+  logoUrl: string | null;
 };
 
 export type SocialMediaDataProps = {
@@ -124,12 +123,14 @@ export async function updateUserProfileTx(
   socialMediaData: SocialMediaDataProps,
 ) {
   try {
+    const { logoUrl, ...newProfileValuesRest } = newProfileValues;
     const updatedProfile = await tx.userProfile.update({
       where: {
         sessionId,
       },
       data: {
-        ...newProfileValues,
+        ...newProfileValuesRest,
+        ...(logoUrl && { logo: logoUrl }),
         socialMediaLink: {
           update: {
             ...socialMediaData,

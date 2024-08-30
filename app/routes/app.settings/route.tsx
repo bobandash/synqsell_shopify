@@ -28,7 +28,11 @@ import {
   type ProfileProps,
 } from '~/services/models/userProfile';
 import { convertFormDataToObject, getJSONError } from '~/util';
-import { useLoaderData, useLocation } from '@remix-run/react';
+import {
+  useLoaderData,
+  useLocation,
+  useSubmit as useRemixSubmit,
+} from '@remix-run/react';
 import { isEmail } from './util/customValidation';
 import logger from '~/logger';
 import styles from '~/shared.module.css';
@@ -36,8 +40,13 @@ import { useAppBridge } from '@shopify/app-bridge-react';
 import { getRoles, type RolePropsJSON } from '~/services/models/roles';
 import { useCallback, useState } from 'react';
 import { updateSettings } from '~/services/transactions';
-import { ImageDropZone, type DropZoneImageFileProps } from '~/components';
+import {
+  ImageDropZone,
+  PaddedBox,
+  type DropZoneImageFileProps,
+} from '~/components';
 import { getOrCreateProfile } from '~/services/helper/userProfile';
+import { uploadFile } from '~/services/aws/s3';
 
 type FormDataProps = {
   name: string;
@@ -55,6 +64,7 @@ type FormDataProps = {
 
 type FormDataObjProps = {
   data: string;
+  logo?: File;
 };
 
 type LoaderDataProps = {
@@ -97,6 +107,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       formData,
     ) as unknown as FormDataObjProps;
     const jsonData: FormDataProps = JSON.parse(formDataObject.data);
+    const logo = formDataObject.logo ?? null;
+    const logoUrl = logo ? await uploadFile(logo) : null;
+
     const { name, email, biography, desiredProducts } = jsonData;
     const {
       facebookLink,
@@ -120,6 +133,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       email,
       biography,
       desiredProducts,
+      logoUrl,
     };
     const visibilityObj = {
       isVisibleRetailerNetwork,
@@ -152,7 +166,10 @@ const Settings = () => {
   const { isRetailer, isSupplier } = useRoleContext();
   const location = useLocation();
   const shopify = useAppBridge();
-  const [logo, setLogo] = useState<DropZoneImageFileProps>(null);
+  const [logo, setLogo] = useState<DropZoneImageFileProps>(
+    profileData.logo ? { url: profileData.logo, altText: 'Logo' } : null,
+  );
+  const remixSubmit = useRemixSubmit();
 
   const isVisibleInNetwork = useCallback(
     (role: string, rolesData: RolePropsJSON[]) => {
@@ -234,9 +251,12 @@ const Settings = () => {
       try {
         const formData = new FormData();
         formData.append('data', JSON.stringify(fieldValues));
-        await fetch(location.pathname, {
-          body: formData,
+        if (logo && logo instanceof File) {
+          formData.append('logo', logo);
+        }
+        remixSubmit(formData, {
           method: 'post',
+          encType: 'multipart/form-data',
         });
         shopify.toast.show('Settings successfully saved');
         return { status: 'success' };
@@ -286,7 +306,7 @@ const Settings = () => {
                   <ImageDropZone
                     file={logo}
                     setFile={setLogo}
-                    label={'Logo (Recommended 400 x 400px):'}
+                    label={'Logo (Recommended: 400x400 px):'}
                   />
                   <TextField
                     label="Products You’re Searching For:"
@@ -356,40 +376,12 @@ const Settings = () => {
                       {...asChoiceField(fields.isVisibleRetailerNetwork)}
                     />
                   )}
-
                   {isSupplier && (
                     <Checkbox
                       label="Visible on supplier network (must at least have a general price list)."
                       checked={true}
                     />
                   )}
-                  {/* // !!! TODO: add email preferences, not important for MVP */}
-                  {/* <Text as="h2" variant="headingSm">
-                    Email Notifications
-                  </Text>
-                  {isRetailer && (
-                    <>
-                      <Checkbox
-                        label="New incoming partnership requests."
-                        checked={true}
-                      />
-                      <Checkbox
-                        label="Updates to partnered suppliers, such as price changes and new products."
-                        checked={true}
-                      />
-                      <Checkbox
-                        label="New suppliers that joined SynqSell you might be interested in."
-                        checked={true}
-                      />
-                    </>
-                  )}
-
-                  {isSupplier && (
-                    <Checkbox
-                      label="New retailers that join SynqSell that you may be interested in partnering with."
-                      checked={true}
-                    />
-                  )} */}
                 </BlockStack>
               </Card>
             </Layout.AnnotatedSection>
@@ -400,9 +392,38 @@ const Settings = () => {
             Save
           </Button>
         </div>
+        <PaddedBox />
       </Page>
     </Form>
   );
 };
 
 export default Settings;
+
+// !!! TODO: add email preferences, not important for MVP */}
+/* <Text as="h2" variant="headingSm">
+Email Notifications
+</Text>
+{isRetailer && (
+<>
+  <Checkbox
+    label="New incoming partnership requests."
+    checked={true}
+  />
+  <Checkbox
+    label="Updates to partnered suppliers, such as price changes and new products."
+    checked={true}
+  />
+  <Checkbox
+    label="New suppliers that joined SynqSell you might be interested in."
+    checked={true}
+  />
+</>
+)}
+
+{isSupplier && (
+<Checkbox
+  label="New retailers that join SynqSell that you may be interested in partnering with."
+  checked={true}
+/>
+)} */

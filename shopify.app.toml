@@ -3,7 +3,7 @@
 client_id = "c2ff24913d6d89792234763f0830c676"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://cooking-sage-acre-magnitude.trycloudflare.com"
+application_url = "https://available-today-cant-cattle.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read_assigned_fulfillment_orders,read_inventory,read_orders,read_produ
 
 [auth]
 redirect_urls = [
-  "https://cooking-sage-acre-magnitude.trycloudflare.com/auth/callback",
-  "https://cooking-sage-acre-magnitude.trycloudflare.com/auth/shopify/callback",
-  "https://cooking-sage-acre-magnitude.trycloudflare.com/api/auth/callback"
+  "https://available-today-cant-cattle.trycloudflare.com/auth/callback",
+  "https://available-today-cant-cattle.trycloudflare.com/auth/shopify/callback",
+  "https://available-today-cant-cattle.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]
