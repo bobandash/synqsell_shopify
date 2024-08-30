@@ -44,7 +44,7 @@ const ProductCard: FC<Props> = ({ product }) => {
             <BlockStack>
               {brandName && (
                 <div className={`${sharedStyles['bold-link-container']}`}>
-                  <UnstyledLink url={priceListUrl} truncate={true}>
+                  <UnstyledLink url={priceListUrl} truncate={'true'}>
                     {brandName}
                   </UnstyledLink>
                 </div>

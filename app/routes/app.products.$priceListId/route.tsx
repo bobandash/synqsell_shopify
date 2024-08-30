@@ -10,8 +10,12 @@ import {
   getPaginatedProductCardsInfo,
   type ProductCardData,
 } from './loader/getProductCardInfo';
-import { useLoaderData } from '@remix-run/react';
-import { useState } from 'react';
+import {
+  useLoaderData,
+  useSearchParams,
+  useRevalidator,
+} from '@remix-run/react';
+import { useCallback, useEffect, useState } from 'react';
 import ProductCard from './components/ProductCard';
 import { ChevronLeftIcon, ChevronRightIcon } from '@shopify/polaris-icons';
 import { PaddedBox } from '~/components';
@@ -29,8 +33,18 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     const {
       session: { id: sessionId },
     } = admin;
+    const { searchParams } = new URL(request.url);
+    const next = searchParams.get('next');
+    const prev = searchParams.get('prev');
+    const isReverseDirection = prev ? true : false;
+    let cursor = null;
+    if (next) {
+      cursor = next;
+    } else if (prev) {
+      cursor = prev;
+    }
+
     // TODO: implement fetch all product data
-    // TODO: need to decide how I want to do this though, thinking just calling all the products in general price lists and sorting it by recently created for now
     if (!priceListId) {
       return json({ products: [] }, StatusCodes.NOT_IMPLEMENTED);
     }
@@ -55,10 +69,12 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
         StatusCodes.UNAUTHORIZED,
       );
     }
+
     const paginatedInfo = await getPaginatedProductCardsInfo({
       priceListId,
-      isReverseDirection: false,
+      isReverseDirection,
       sessionId,
+      ...(cursor && { cursor }),
     });
     return json(paginatedInfo, StatusCodes.OK);
   } catch (error) {
@@ -76,6 +92,28 @@ const PriceListProducts = () => {
   const [products, setProducts] = useState(initialProducts);
   const [nextCursor, setNextCursor] = useState(initialNextCursor);
   const [prevCursor, setPrevCursor] = useState(initialPrevCursor);
+  const [, setSearchParams] = useSearchParams();
+  const revalidator = useRevalidator();
+
+  useEffect(() => {
+    setProducts(initialProducts);
+    setNextCursor(initialNextCursor);
+    setPrevCursor(initialPrevCursor);
+  }, [initialProducts, initialNextCursor, initialPrevCursor]);
+
+  const navigateNextCursor = useCallback(() => {
+    if (nextCursor) {
+      setSearchParams({ next: nextCursor });
+      revalidator.revalidate();
+    }
+  }, [nextCursor, setSearchParams, revalidator]);
+
+  const navigatePrevCursor = useCallback(() => {
+    if (prevCursor) {
+      setSearchParams({ prev: prevCursor });
+      revalidator.revalidate();
+    }
+  }, [prevCursor, setSearchParams, revalidator]);
 
   return (
     <Page
@@ -89,8 +127,16 @@ const PriceListProducts = () => {
       </InlineGrid>
       <PaddedBox />
       <InlineStack gap={'200'} align={'center'}>
-        <Button icon={ChevronLeftIcon} disabled={!prevCursor} />
-        <Button icon={ChevronRightIcon} disabled={!nextCursor} />
+        <Button
+          icon={ChevronLeftIcon}
+          disabled={!prevCursor}
+          onClick={navigatePrevCursor}
+        />
+        <Button
+          icon={ChevronRightIcon}
+          disabled={!nextCursor}
+          onClick={navigateNextCursor}
+        />
       </InlineStack>
       <PaddedBox />
     </Page>
