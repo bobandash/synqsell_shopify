@@ -17,18 +17,23 @@ import { v4 as uuidv4 } from 'uuid';
 import sharedStyles from '~/shared.module.css';
 import styles from '../../styles.module.css';
 import ApprovalStatusButton from './ApprovalStatusBtn';
+import { useAppBridge } from '@shopify/app-bridge-react';
+import { MODALS } from '../../constants';
+
 type Props = {
   supplier: Supplier;
+  setSelectedSupplierId: React.Dispatch<React.SetStateAction<string>>;
 };
 
-const SupplierCard: FC<Props> = ({ supplier }) => {
-  const { profile, priceList } = supplier;
+const SupplierCard: FC<Props> = ({ supplier, setSelectedSupplierId }) => {
+  const { profile, priceList, id } = supplier;
   const { name, website, address, email, logo, biography } = profile;
   const {
     socialMediaLink: { facebook, twitter, instagram, tiktok, youtube },
   } = profile;
   const { requiresApprovalToImport, id: priceListId } = priceList;
   const navigate = useNavigate();
+  const shopify = useAppBridge();
 
   // TODO: change social media links to one to many relationship, otherwise, just handle like this for now
   const allSocialMediaLinks = [
@@ -42,6 +47,11 @@ const SupplierCard: FC<Props> = ({ supplier }) => {
   const handleSeeProducts = useCallback(() => {
     navigate(`/app/products/${priceListId}`);
   }, [navigate, priceListId]);
+
+  const handleRequestAccess = useCallback(() => {
+    shopify.modal.show(MODALS.REQUEST_ACCESS_MODAL);
+    setSelectedSupplierId(id);
+  }, [shopify, setSelectedSupplierId, id]);
 
   return (
     <Layout.Section variant="oneHalf">
@@ -58,7 +68,6 @@ const SupplierCard: FC<Props> = ({ supplier }) => {
                   alt="Default logo image"
                 />
               )}
-
               <BlockStack>
                 <Text variant="headingLg" as="h2" fontWeight="bold">
                   {name}
@@ -104,6 +113,7 @@ const SupplierCard: FC<Props> = ({ supplier }) => {
             <InlineStack gap={'200'}>
               <ApprovalStatusButton
                 requiresApprovalToImport={requiresApprovalToImport}
+                handleRequestAccess={handleRequestAccess}
               />
               <button
                 className={`${sharedStyles['blue']} ${sharedStyles['btn']}`}

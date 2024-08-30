@@ -12,7 +12,7 @@ import type {
   Supplier,
   SupplierPaginatedInfoProps,
 } from './loader/getSupplierPaginatedInfo';
-import { SupplierCardMock } from './components';
+import { PriceListRequestModal, SupplierCardMock } from './components';
 import { PaddedBox } from '~/components';
 import { ChevronLeftIcon, ChevronRightIcon } from '@shopify/polaris-icons';
 import { useState } from 'react';
@@ -45,15 +45,21 @@ const SupplierNetwork = () => {
 
   // TODO: add cursor navigation with useParams
   const [suppliers, setSuppliers] = useState<Supplier[]>(suppliersData);
+  const [selectedSupplierId, setSelectedSupplierId] = useState('');
 
   return (
     <Page
       title="Supplier Network"
       subtitle="Discover potential suppliers to partner with!"
     >
+      <PriceListRequestModal priceListSupplierId={selectedSupplierId} />
       <Layout>
         {suppliers.map((supplier) => (
-          <SupplierCard key={supplier.id} supplier={supplier} />
+          <SupplierCard
+            key={supplier.id}
+            supplier={supplier}
+            setSelectedSupplierId={setSelectedSupplierId}
+          />
         ))}
         <SupplierCardMock />
       </Layout>

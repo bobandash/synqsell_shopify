@@ -38,7 +38,7 @@ const ProductTableNestedRow: FC<Props> = ({
         const valueFloat = parseFloat(value);
         if (valueFloat < 0) {
           return 'Must not be less than 0.';
-        } else if (valueFloat > parseFloat(price)) {
+        } else if (valueFloat > parseFloat(price ?? '0')) {
           return 'Cannot exceed retail price.';
         } else if (!value) {
           return 'Not a valid price.';

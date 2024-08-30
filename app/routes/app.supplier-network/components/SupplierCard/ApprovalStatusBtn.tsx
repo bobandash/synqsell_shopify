@@ -4,9 +4,13 @@ import sharedStyles from '~/shared.module.css';
 
 type Props = {
   requiresApprovalToImport: boolean;
+  handleRequestAccess: () => void;
 };
 
-const ApprovalStatusButton: FC<Props> = ({ requiresApprovalToImport }) => {
+const ApprovalStatusButton: FC<Props> = ({
+  requiresApprovalToImport,
+  handleRequestAccess,
+}) => {
   if (!requiresApprovalToImport) {
     return (
       <button
@@ -21,7 +25,10 @@ const ApprovalStatusButton: FC<Props> = ({ requiresApprovalToImport }) => {
 
   // TODO: add remaining status: Pending, granted access
   return (
-    <button className={`${sharedStyles['orange']} ${sharedStyles['btn']}`}>
+    <button
+      className={`${sharedStyles['orange']} ${sharedStyles['btn']}`}
+      onClick={handleRequestAccess}
+    >
       <Text as="p" variant="bodySm" fontWeight="medium">
         Request Access
       </Text>
