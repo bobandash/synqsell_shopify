@@ -11,25 +11,22 @@ import {
 } from '@shopify/polaris';
 import { ImageIcon } from '~/assets';
 import sharedStyles from '~/shared.module.css';
+import PricingDetails from './PricingDetails';
 
 type Props = {
   product: ProductCardData;
 };
 
+// TODO: add pending request status and fix status for this to instead just fetch and check for permissions
+// TODO: the case that it's a general price list that the supplier granted permission
 const ProductCard: FC<Props> = ({ product }) => {
-  const { images, brandName, title, priceListId, variants, priceList } =
-    product;
-
+  const { images, brandName, title, priceListId, variants } = product;
   const primaryImage =
     images.length > 0 && images[0].url
       ? { url: images[0].url, alt: images[0].alt }
       : null;
   const priceListUrl = `/app/products/${priceListId}`;
-  // TODO: add pending request status and fix status for this to instead just fetch and check for permissions
-  // TODO: the case that it's a general price list that the supplier granted permission
-  const canImport =
-    !priceList.isGeneral ||
-    (priceList.isGeneral && priceList.requiresApprovalToImport === false);
+  const numVariants = variants.length;
 
   return (
     <Card padding="0">
@@ -52,31 +49,11 @@ const ProductCard: FC<Props> = ({ product }) => {
                 </div>
               )}
               <Text as="h2" variant="headingMd" truncate={true}>
-                {title}
+                {title} {numVariants > 1 && `(${numVariants} variants)`}
               </Text>
             </BlockStack>
             <Divider />
-            <BlockStack gap="025">
-              <Text as="p" fontWeight="medium">
-                Retail:
-              </Text>
-              <Text as="p" fontWeight="medium">
-                Cost:
-              </Text>
-            </BlockStack>
-            <Divider />
-            <div className={`${sharedStyles['orange-container']}`}>
-              <Text as="p" fontWeight="medium">
-                Your Profit:
-              </Text>
-            </div>
-            <button
-              className={`${sharedStyles['orange']} ${sharedStyles['btn']}`}
-            >
-              <Text as="p" variant="bodySm" fontWeight="medium">
-                Request Price List
-              </Text>
-            </button>
+            <PricingDetails product={product} />
           </BlockStack>
         </Box>
       </BlockStack>

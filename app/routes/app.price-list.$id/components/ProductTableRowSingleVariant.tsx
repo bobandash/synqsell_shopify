@@ -1,9 +1,9 @@
-import { useEffect, useMemo, type FC } from "react";
+import { useEffect, useMemo, type FC } from 'react';
 import type {
   ProductPropsWithPositions,
   UpdateProductWholesalePrice,
   VariantWithPosition,
-} from "../types";
+} from '../types';
 import {
   BlockStack,
   IndexTable,
@@ -11,12 +11,12 @@ import {
   Text,
   TextField,
   Thumbnail,
-} from "@shopify/polaris";
+} from '@shopify/polaris';
+import { useField } from '@shopify/react-form';
 import {
   calculatePriceDifference,
   calculateRetailerPaymentGivenMargin,
-} from "../util";
-import { useField } from "@shopify/react-form";
+} from '~/routes/util';
 
 type Props = {
   variant: VariantWithPosition;
@@ -40,16 +40,16 @@ const ProductTableRowSingleVariant: FC<Props> = ({
   const { title } = product;
   const { id, position, price, sku, wholesalePrice } = variant;
   const variantWholesalePrice = useField({
-    value: wholesalePrice?.toString() ?? "",
+    value: wholesalePrice?.toString() ?? '',
     validates: [
       (value) => {
         const valueFloat = parseFloat(value);
         if (valueFloat < 0) {
-          return "Must not be less than 0.";
-        } else if (valueFloat > parseFloat(price)) {
-          return "Cannot exceed retail price.";
+          return 'Must not be less than 0.';
+        } else if (price && valueFloat > parseFloat(price)) {
+          return 'Cannot exceed retail price.';
         } else if (!value) {
-          return "Not a valid price.";
+          return 'Not a valid price.';
         }
       },
     ],
@@ -66,18 +66,19 @@ const ProductTableRowSingleVariant: FC<Props> = ({
   }, [variantWholesalePrice, id, product.id, updateProductWholesalePrice]);
 
   const retailerPayment = useMemo(() => {
+    if (!price || variantWholesalePrice.error) {
+      return 'N/A';
+    }
+
     if (!isWholesalePricing) {
       return calculateRetailerPaymentGivenMargin(price, margin);
-    }
-    if (variantWholesalePrice.error) {
-      return "N/A";
     }
     return calculatePriceDifference(price, variantWholesalePrice.value);
   }, [isWholesalePricing, margin, price, variantWholesalePrice]);
 
   const marginPricingProfit = useMemo(() => {
-    if (isWholesalePricing) {
-      return "N/A";
+    if (!price || isWholesalePricing) {
+      return 'N/A';
     }
     return calculatePriceDifference(price, retailerPayment);
   }, [isWholesalePricing, price, retailerPayment]);
@@ -89,12 +90,12 @@ const ProductTableRowSingleVariant: FC<Props> = ({
       position={position}
       selected={selectedResources.includes(id)}
     >
-      <IndexTable.Cell scope={"row"}>
+      <IndexTable.Cell scope={'row'}>
         <InlineStack gap="200" blockAlign="center" wrap={false}>
           <Thumbnail
             source={primaryImage}
             alt={`${title} image`}
-            size={"small"}
+            size={'small'}
           />
           <BlockStack>
             <Text as="span" variant="headingSm">

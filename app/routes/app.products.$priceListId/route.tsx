@@ -1,6 +1,3 @@
-// there's a few things that need to be done
-// fetching the generic products and fetching the actual products
-
 import { json, type LoaderFunctionArgs } from '@remix-run/node';
 import { Button, InlineGrid, InlineStack, Page } from '@shopify/polaris';
 import { StatusCodes } from 'http-status-codes';

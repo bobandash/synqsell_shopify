@@ -50,7 +50,11 @@ export type ProductCardData = Prisma.ProductGetPayload<{
   };
 }> & {
   brandName: string | null;
-  priceList: { isGeneral: boolean; requiresApprovalToImport?: boolean };
+  priceList: {
+    isGeneral: boolean;
+    requiresApprovalToImport?: boolean;
+    margin?: number;
+  };
 };
 
 const getProductCardsSchema = object({

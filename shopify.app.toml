@@ -3,7 +3,7 @@
 client_id = "c2ff24913d6d89792234763f0830c676"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://dentists-scenes-chronic-calculators.trycloudflare.com"
+application_url = "https://cooking-sage-acre-magnitude.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read_assigned_fulfillment_orders,read_inventory,read_orders,read_produ
 
 [auth]
 redirect_urls = [
-  "https://dentists-scenes-chronic-calculators.trycloudflare.com/auth/callback",
-  "https://dentists-scenes-chronic-calculators.trycloudflare.com/auth/shopify/callback",
-  "https://dentists-scenes-chronic-calculators.trycloudflare.com/api/auth/callback"
+  "https://cooking-sage-acre-magnitude.trycloudflare.com/auth/callback",
+  "https://cooking-sage-acre-magnitude.trycloudflare.com/auth/shopify/callback",
+  "https://cooking-sage-acre-magnitude.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]
