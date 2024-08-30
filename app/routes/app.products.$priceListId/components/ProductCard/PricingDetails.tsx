@@ -1,4 +1,4 @@
-import { BlockStack, Divider, Text } from '@shopify/polaris';
+import { BlockStack, Divider, Icon, InlineStack, Text } from '@shopify/polaris';
 import type { ProductCardData } from '../../loader/getProductCardInfo';
 import type { FC } from 'react';
 import sharedStyles from '~/shared.module.css';
@@ -6,6 +6,7 @@ import {
   calculatePriceDifference,
   calculateRetailerPaymentGivenMargin,
 } from '~/routes/util';
+import { LockIcon } from '@shopify/polaris-icons';
 
 type Props = {
   product: ProductCardData;
@@ -39,15 +40,25 @@ const PricingDetails: FC<Props> = ({ product }) => {
           <Text as="p" fontWeight="medium">
             Retail: ${price}
           </Text>
-          <Text as="p" fontWeight="medium">
-            Cost:
-          </Text>
+          <InlineStack>
+            <Text as="p" fontWeight="medium">
+              Cost:
+            </Text>
+            <div>
+              <Icon source={LockIcon} tone="base" />
+            </div>
+          </InlineStack>
         </BlockStack>
         <Divider />
         <div className={`${sharedStyles['orange-container']}`}>
-          <Text as="p" fontWeight="medium">
-            Your Profit:
-          </Text>
+          <InlineStack>
+            <Text as="p" fontWeight="medium">
+              Your Profit:
+            </Text>
+            <div>
+              <Icon source={LockIcon} tone="base" />
+            </div>
+          </InlineStack>
         </div>
         <button className={`${sharedStyles['orange']} ${sharedStyles['btn']}`}>
           <Text as="p" variant="bodySm" fontWeight="medium">

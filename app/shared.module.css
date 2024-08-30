@@ -53,11 +53,11 @@
 }
 
 /* for text containers */
-.orange-container > p {
+.orange-container * {
   color: #fb6514;
 }
 
-.green-container > p {
+.green-container * {
   color: #1d5f42;
 }
 
