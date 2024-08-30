@@ -1,4 +1,4 @@
-import { useEffect, useMemo, type FC } from 'react';
+import { useCallback, useMemo, type FC } from 'react';
 import type {
   ProductPropsWithPositions,
   UpdateProductWholesalePrice,
@@ -46,7 +46,7 @@ const ProductTableRowSingleVariant: FC<Props> = ({
         const valueFloat = parseFloat(value);
         if (valueFloat < 0) {
           return 'Must not be less than 0.';
-        } else if (price && valueFloat > parseFloat(price)) {
+        } else if (valueFloat > parseFloat(price ?? '0')) {
           return 'Cannot exceed retail price.';
         } else if (!value) {
           return 'Not a valid price.';
@@ -54,16 +54,6 @@ const ProductTableRowSingleVariant: FC<Props> = ({
       },
     ],
   });
-
-  useEffect(() => {
-    if (!variantWholesalePrice.error && variantWholesalePrice.dirty) {
-      updateProductWholesalePrice(
-        product.id,
-        id,
-        parseFloat(variantWholesalePrice.value),
-      );
-    }
-  }, [variantWholesalePrice, id, product.id, updateProductWholesalePrice]);
 
   const retailerPayment = useMemo(() => {
     if (!price || variantWholesalePrice.error) {
@@ -82,6 +72,17 @@ const ProductTableRowSingleVariant: FC<Props> = ({
     }
     return calculatePriceDifference(price, retailerPayment);
   }, [isWholesalePricing, price, retailerPayment]);
+
+  const handleBlur = useCallback(() => {
+    const error = variantWholesalePrice.runValidation();
+    if (!error) {
+      updateProductWholesalePrice(
+        product.id,
+        id,
+        parseFloat(variantWholesalePrice.value),
+      );
+    }
+  }, [id, product.id, updateProductWholesalePrice, variantWholesalePrice]);
 
   return (
     <IndexTable.Row
@@ -128,6 +129,7 @@ const ProductTableRowSingleVariant: FC<Props> = ({
               labelHidden
               autoComplete="off"
               {...variantWholesalePrice}
+              onBlur={handleBlur}
             />
           </div>
         )}
