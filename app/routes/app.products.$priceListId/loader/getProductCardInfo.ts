@@ -233,7 +233,7 @@ export async function getPaginatedProductCardsInfo({
     const { products, nextCursor } = await getProductCardInfoDb({
       priceListId,
       cursor,
-      take: 12,
+      take: 16,
       isReverseDirection,
     });
     const formattedProducts = await formatProductDataForPriceList(
