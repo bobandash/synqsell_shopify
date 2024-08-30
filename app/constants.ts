@@ -61,3 +61,19 @@ export const FULFILLMENT_SERVICE = {
 } as const;
 
 export const MARKETPLACE_FEE = 0.03;
+
+export const PARTNERSHIP_REQUEST_TYPE = {
+  SUPPLIER: 'SUPPLIER',
+  RETAILER: 'RETAILER',
+} as const;
+
+export type PartnershipRequestTypeProps =
+  (typeof PARTNERSHIP_REQUEST_TYPE)[keyof typeof PARTNERSHIP_REQUEST_TYPE];
+
+export const PARTNERSHIP_REQUEST_STATUS = {
+  REJECTED: 'REJECTED',
+  PENDING: 'PENDING',
+} as const;
+
+export type PartnershipRequestStatusProps =
+  (typeof PARTNERSHIP_REQUEST_STATUS)[keyof typeof PARTNERSHIP_REQUEST_STATUS];

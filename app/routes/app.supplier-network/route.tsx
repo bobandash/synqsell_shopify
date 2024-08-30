@@ -1,8 +1,12 @@
-import { Button, InlineStack, Layout, Page } from '@shopify/polaris';
+import { Button, InlineGrid, InlineStack, Page } from '@shopify/polaris';
 import SupplierCard from './components/SupplierCard';
-import { json, type LoaderFunctionArgs } from '@remix-run/node';
+import {
+  json,
+  type ActionFunctionArgs,
+  type LoaderFunctionArgs,
+} from '@remix-run/node';
 import { StatusCodes } from 'http-status-codes';
-import { getJSONError } from '~/util';
+import { convertFormDataToObject, getJSONError } from '~/util';
 import { authenticate } from '~/shopify.server';
 import { hasRole } from '~/services/models/roles';
 import { ROLES } from '~/constants';
@@ -12,10 +16,14 @@ import type {
   Supplier,
   SupplierPaginatedInfoProps,
 } from './loader/getSupplierPaginatedInfo';
-import { PriceListRequestModal, SupplierCardMock } from './components';
+import { PriceListRequestModal } from './components';
 import { PaddedBox } from '~/components';
 import { ChevronLeftIcon, ChevronRightIcon } from '@shopify/polaris-icons';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { INTENTS } from './constants';
+import { requestAccessAction } from './action';
+import type { RequestAccessFormData } from './action/requestAccessAction';
+
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
     const { session } = await authenticate.admin(request);
@@ -36,6 +44,26 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   }
 };
 
+export const action = async ({ request }: ActionFunctionArgs) => {
+  try {
+    const { session } = await authenticate.admin(request);
+    const { id: sessionId } = session;
+    let formData = await request.formData();
+    const intent = formData.get('intent');
+    const formDataObject = convertFormDataToObject(formData);
+    switch (intent) {
+      case INTENTS.REQUEST_ACCESS:
+        return requestAccessAction(
+          formDataObject as RequestAccessFormData,
+          sessionId,
+        );
+    }
+    return json({ error: 'Not implemented' }, StatusCodes.NOT_IMPLEMENTED);
+  } catch (error) {
+    throw getJSONError(error, 'supplier-network');
+  }
+};
+
 const SupplierNetwork = () => {
   const {
     suppliers: suppliersData,
@@ -47,13 +75,21 @@ const SupplierNetwork = () => {
   const [suppliers, setSuppliers] = useState<Supplier[]>(suppliersData);
   const [selectedSupplierId, setSelectedSupplierId] = useState('');
 
+  useEffect(() => {
+    setSuppliers(suppliersData);
+  }, [suppliersData, setSuppliers]);
+
   return (
     <Page
       title="Supplier Network"
       subtitle="Discover potential suppliers to partner with!"
     >
-      <PriceListRequestModal priceListSupplierId={selectedSupplierId} />
-      <Layout>
+      <InlineGrid
+        columns={{
+          sm: 1,
+          md: 2,
+        }}
+      >
         {suppliers.map((supplier) => (
           <SupplierCard
             key={supplier.id}
@@ -61,8 +97,9 @@ const SupplierNetwork = () => {
             setSelectedSupplierId={setSelectedSupplierId}
           />
         ))}
-        <SupplierCardMock />
-      </Layout>
+      </InlineGrid>
+      <PriceListRequestModal priceListSupplierId={selectedSupplierId} />
+
       <PaddedBox />
       <InlineStack gap={'200'} align={'center'}>
         <Button icon={ChevronLeftIcon} disabled={!prevCursor} />

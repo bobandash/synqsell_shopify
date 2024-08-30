@@ -1,8 +1,8 @@
 import { Modal, TitleBar } from '@shopify/app-bridge-react';
-import { MODALS } from '../constants';
+import { INTENTS, MODALS } from '../constants';
 import type { FC } from 'react';
-import { useFetcher } from '@remix-run/react';
-import { TextField } from '@shopify/polaris';
+import { useSubmit as useRemixSubmit } from '@remix-run/react';
+import { Form, TextField } from '@shopify/polaris';
 import { notEmpty, useField, useForm, useSubmit } from '@shopify/react-form';
 
 type Props = {
@@ -10,12 +10,11 @@ type Props = {
 };
 
 const PriceListRequestModal: FC<Props> = ({ priceListSupplierId }) => {
-  const fetcher = useFetcher();
+  const remixSubmit = useRemixSubmit();
   // priceListSupplierId denotes the session Id of the price list owner
-
   const { fields } = useForm({
     fields: {
-      intent: useField(MODALS.REQUEST_ACCESS_MODAL),
+      intent: useField(INTENTS.REQUEST_ACCESS),
       priceListSupplierId: useField(priceListSupplierId),
       message: useField({
         value: '',
@@ -24,18 +23,18 @@ const PriceListRequestModal: FC<Props> = ({ priceListSupplierId }) => {
     },
   });
 
-  const { submit, submitting, errors, setErrors } = useSubmit(
-    async (fieldValues) => {
-      const remoteErrors = [];
-      console.log('test');
-      if (remoteErrors.length > 0) {
-        return { status: 'fail', errors: [] };
-      }
-
+  const { submit, submitting } = useSubmit(async (fieldValues) => {
+    try {
+      remixSubmit(fieldValues, { method: 'post' });
       return { status: 'success' };
-    },
-    fields,
-  );
+    } catch (error) {
+      console.error('Submission error:', error);
+      return {
+        status: 'fail',
+        errors: [{ message: 'An unexpected error occurred' }],
+      };
+    }
+  }, fields);
 
   return (
     <Modal id={MODALS.REQUEST_ACCESS_MODAL}>
@@ -44,17 +43,18 @@ const PriceListRequestModal: FC<Props> = ({ priceListSupplierId }) => {
           Explain how this partnership will create value and benefits for both
           parties involved!
         </p>
-        <fetcher.Form onSubmit={submit}>
+        <Form onSubmit={submit}>
           <TextField
             label="Message:"
+            labelHidden
             autoComplete="off"
             multiline={4}
             {...fields.message}
           />
-        </fetcher.Form>
+        </Form>
       </div>
       <TitleBar title="Request Access">
-        <button variant="primary" onClick={submit}>
+        <button variant="primary" onClick={submit} disabled={submitting}>
           Request Access
         </button>
       </TitleBar>

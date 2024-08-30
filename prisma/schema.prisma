@@ -18,32 +18,34 @@ datasource db {
 // this is offline access, which does not expire until the user removes the application
 // Before deployment, refactor so that all the database items are connected to the session instead of having its own shop field
 model Session {
-  id                    String                 @id
-  shop                  String
-  state                 String
-  isOnline              Boolean                @default(false)
-  scope                 String?
-  expires               DateTime?              @db.Timestamp
-  accessToken           String
-  userId                BigInt?
-  firstName             String?
-  lastName              String?
-  email                 String?
-  accountOwner          Boolean                @default(false)
-  locale                String?
-  collaborator          Boolean?               @default(false)
-  emailVerified         Boolean?               @default(false)
-  userPreference        UserPreference?
-  fulfillmentService    FulfillmentService?
-  supplierAccessRequest SupplierAccessRequest?
-  userProfile           UserProfile?
-  roles                 Role[]
-  checklistStatuses     ChecklistStatus[]
-  priceLists            PriceList[]
-  importedProducts      ImportedProduct[]
-  priceListRetailers    PriceListRetailer[]
-  retailerPartnerships  Partnership[]          @relation("RetailerPartnership")
-  supplierPartnerships  Partnership[]          @relation("SupplierPartnership")
+  id                           String                 @id
+  shop                         String
+  state                        String
+  isOnline                     Boolean                @default(false)
+  scope                        String?
+  expires                      DateTime?              @db.Timestamp
+  accessToken                  String
+  userId                       BigInt?
+  firstName                    String?
+  lastName                     String?
+  email                        String?
+  accountOwner                 Boolean                @default(false)
+  locale                       String?
+  collaborator                 Boolean?               @default(false)
+  emailVerified                Boolean?               @default(false)
+  userPreference               UserPreference?
+  fulfillmentService           FulfillmentService?
+  supplierAccessRequest        SupplierAccessRequest?
+  userProfile                  UserProfile?
+  roles                        Role[]
+  checklistStatuses            ChecklistStatus[]
+  priceLists                   PriceList[]
+  importedProducts             ImportedProduct[]
+  priceListRetailers           PriceListRetailer[]
+  retailerPartnerships         Partnership[]          @relation("RetailerPartnership")
+  supplierPartnerships         Partnership[]          @relation("SupplierPartnership")
+  senderPartnershipRequests    PartnershipRequest[]   @relation("SenderPartnershipRequest")
+  recipientPartnershipRequests PartnershipRequest[]   @relation("RecipientPartnershipRequest")
 }
 
 model FulfillmentService {
@@ -127,17 +129,18 @@ model SocialMediaLink {
 // Supplier and Retailer Functionality
 // Price list and product
 model PriceList {
-  id                       String              @id @default(uuid())
-  createdAt                DateTime            @default(now())
+  id                       String               @id @default(uuid())
+  createdAt                DateTime             @default(now())
   name                     String
   isGeneral                Boolean // There can only be one general price list, this is what products are visible on the products page
   requiresApprovalToImport Boolean? // if the price list is a general price list, suppliers can decide whether or not retailers have to request permission to import their products
   pricingStrategy          String
   supplierId               String
   margin                   Int?
-  session                  Session             @relation(fields: [supplierId], references: [id])
+  session                  Session              @relation(fields: [supplierId], references: [id])
   products                 Product[]
   priceListRetailers       PriceListRetailer[]
+  partnershipRequests      PartnershipRequest[]
 }
 
 // Keeps track of the retailers in the price list
@@ -269,4 +272,16 @@ model SupplierAccessRequest {
   isEligibleForNewRequest Boolean         @default(true) // This variable is just in case we reject a supplier and they are not allowed to relist on our app
   checklistStatus         ChecklistStatus @relation(fields: [checklistStatusId], references: [id])
   session                 Session         @relation(fields: [sessionId], references: [id])
+}
+
+model PartnershipRequest {
+  id           String      @id @default(uuid())
+  senderId     String
+  recipientId  String
+  sender       Session     @relation("SenderPartnershipRequest", fields: [senderId], references: [id])
+  recipient    Session     @relation("RecipientPartnershipRequest", fields: [recipientId], references: [id])
+  message      String
+  priceListIds PriceList[]
+  type         String // two types, retailer request and supplier request
+  status       String // can only be rejected or pending; if it is accepted already, it willk just make the user into a price list retailer
 }

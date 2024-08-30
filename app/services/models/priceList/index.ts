@@ -102,6 +102,25 @@ export async function hasGeneralPriceList(sessionId: string) {
   }
 }
 
+export async function getGeneralPriceList(sessionId: string) {
+  try {
+    const generalPriceList = await db.priceList.findFirstOrThrow({
+      where: {
+        isGeneral: true,
+        supplierId: sessionId,
+      },
+    });
+    return generalPriceList;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to get general price list.',
+      getGeneralPriceList,
+      { sessionId },
+    );
+  }
+}
+
 export async function updatePriceListSettings(
   sessionId: string,
   priceListId: string,
