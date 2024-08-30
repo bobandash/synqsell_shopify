@@ -98,12 +98,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
     const { graphql } = admin;
     const formData = await request.formData();
     const { id: priceListId } = params;
-    const rawData = convertFormDataToObject(formData);
-    const data = {
-      settings: JSON.parse(rawData.settings),
-      products: JSON.parse(rawData.products),
-      retailers: JSON.parse(rawData.retailers),
-    } as CreatePriceListDataProps;
+    const data = convertFormDataToObject(formData) as CreatePriceListDataProps;
 
     if (priceListId === 'new') {
       const newPriceList = await createPriceListAndCompleteChecklistItem(
@@ -459,193 +454,187 @@ const EditPriceList = () => {
 
   return (
     <Form onSubmit={submit}>
-      <Page
-        title="Edit Price List"
-        backAction={{ content: 'Price Lists', url: backActionUrl }}
-      >
-        <Box paddingBlockEnd={'400'}>
-          <Layout>
-            <Layout.Section variant="oneThird">
-              <BlockStack gap={'300'}>
-                <Card>
-                  <TextField label="Name" autoComplete="off" {...fields.name} />
-                </Card>
-              </BlockStack>
-            </Layout.Section>
-            <Layout.Section>
-              <BlockStack gap="400">
-                <Card>
-                  <FormLayout>
-                    <Box>
-                      <Text as="h2" variant="headingMd">
-                        Category
-                      </Text>
-                      <ChoiceList
-                        {...asChoiceList(fields.category)}
-                        title="Category"
-                        choices={categoryChoices}
-                        titleHidden
-                      />
-                    </Box>
-                    {fields.category.value === PRICE_LIST_CATEGORY.GENERAL && (
-                      <ChoiceList
-                        {...asChoiceList(fields.generalPriceListImportSettings)}
-                        title="Product Import Settings"
-                        choices={generalPriceListImportSettingChoices}
-                      />
-                    )}
-                  </FormLayout>
-                </Card>
-                <Card>
-                  <FormLayout>
-                    <Box>
-                      <Text as="h2" variant="headingMd">
-                        Pricing Strategy
-                      </Text>
-                      <ChoiceList
-                        {...asChoiceList(fields.pricingStrategy)}
-                        title="Pricing Strategy"
-                        titleHidden
-                        choices={pricingStrategyChoices}
-                      />
-                    </Box>
-                    {fields.pricingStrategy.value ===
-                      PRICE_LIST_PRICING_STRATEGY.MARGIN && (
-                      <TextField
-                        type="number"
-                        label="Margin (%) that Retailer Generates on Sale"
-                        autoComplete="off"
-                        {...fields.margin}
-                      />
-                    )}
-                  </FormLayout>
-                </Card>
-                <Card>
-                  <BlockStack gap="200">
+      <Layout>
+        <Page
+          title="Edit Price List"
+          backAction={{ content: 'Price Lists', url: backActionUrl }}
+        >
+          <Box paddingBlockEnd={'400'}>
+            <BlockStack gap="400">
+              <Card>
+                <TextField label="Name" autoComplete="off" {...fields.name} />
+              </Card>
+              <Card>
+                <FormLayout>
+                  <Box>
                     <Text as="h2" variant="headingMd">
-                      Retailers Connected
+                      Category
                     </Text>
-                    <Combobox
-                      allowMultiple
-                      activator={
-                        <Combobox.TextField
-                          prefix={<Icon source={SearchIcon} />}
-                          onChange={filterRetailerOptions}
-                          label="Search retailers"
-                          labelHidden
-                          value={retailerSearchValue}
-                          placeholder="Search retailers"
-                          autoComplete="off"
-                        />
-                      }
-                    >
-                      {visibleRetailerOptions.length > 0 ? (
-                        <Listbox onSelect={updateRetailerSelection}>
-                          {visibleRetailerOptions.map(({ id, name }) => {
-                            return (
-                              <Listbox.Option
-                                key={id}
-                                value={id}
-                                selected={selectedRetailerIds.includes(id)}
-                                accessibilityLabel={name}
-                              >
-                                {name}
-                              </Listbox.Option>
-                            );
-                          })}
-                        </Listbox>
-                      ) : null}
-                    </Combobox>
-                    <ResourceList
-                      resourceName={{
-                        singular: 'customer',
-                        plural: 'customers',
-                      }}
-                      items={allPartneredRetailers.filter(({ id }) =>
-                        selectedRetailerIds.includes(id),
-                      )}
-                      renderItem={(item) => {
-                        const { id, name, website } = item;
-                        return (
-                          <ResourceItem
-                            id={id}
-                            url={website}
-                            accessibilityLabel={`View details for ${name}`}
-                          >
-                            <InlineStack
-                              blockAlign="center"
-                              align="space-between"
-                            >
-                              <Text variant="bodyMd" fontWeight="bold" as="h3">
-                                {name}
-                              </Text>
-                              <div
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                }}
-                              >
-                                <Button
-                                  icon={XIcon}
-                                  onClick={() => {
-                                    updateRetailerSelection(id);
-                                  }}
-                                />
-                              </div>
-                            </InlineStack>
-                          </ResourceItem>
-                        );
-                      }}
+                    <ChoiceList
+                      {...asChoiceList(fields.category)}
+                      title="Category"
+                      choices={categoryChoices}
+                      titleHidden
                     />
-                  </BlockStack>
-                </Card>
-                <Card padding={'200'}>
-                  <Box paddingInline={'200'} paddingBlockStart={'100'}>
-                    <Text as="h2" variant="headingMd">
-                      Products
-                    </Text>
                   </Box>
-                  <ProductFilterControl onQueryFocus={handleSelectProducts} />
-                  {products.length > 0 && (
-                    <IndexTable
-                      onSelectionChange={handleSelectionChange}
-                      selectedItemsCount={
-                        allResourcesSelected ? 'All' : selectedResources.length
-                      }
-                      resourceName={resourceName}
-                      itemCount={numRows}
-                      headings={headings}
-                      promotedBulkActions={productsBulkAction}
-                    >
-                      {products.map((product) => (
-                        <ProductTableRow
-                          key={product.id}
-                          product={product}
-                          margin={fields.margin.value}
-                          isWholesalePricing={
-                            fields.pricingStrategy.value === 'WHOLESALE'
-                          }
-                          selectedResources={selectedResources}
-                          tableRows={tableRows}
-                          updateProductWholesalePrice={
-                            updateProductWholesalePrice
-                          }
-                        />
-                      ))}
-                    </IndexTable>
+                  {fields.category.value === PRICE_LIST_CATEGORY.GENERAL && (
+                    <ChoiceList
+                      {...asChoiceList(fields.generalPriceListImportSettings)}
+                      title="Product Import Settings"
+                      choices={generalPriceListImportSettingChoices}
+                    />
                   )}
-                  <Box paddingBlockEnd={'100'} />
-                </Card>
-              </BlockStack>
-            </Layout.Section>
-          </Layout>
-        </Box>
-        <div className={styles['center-right']}>
-          <Button submit variant="primary">
-            Save
-          </Button>
-        </div>
-        <PaddedBox />
-      </Page>
+                </FormLayout>
+              </Card>
+              <Card>
+                <FormLayout>
+                  <Box>
+                    <Text as="h2" variant="headingMd">
+                      Pricing Strategy
+                    </Text>
+                    <ChoiceList
+                      {...asChoiceList(fields.pricingStrategy)}
+                      title="Pricing Strategy"
+                      titleHidden
+                      choices={pricingStrategyChoices}
+                    />
+                  </Box>
+                  {fields.pricingStrategy.value ===
+                    PRICE_LIST_PRICING_STRATEGY.MARGIN && (
+                    <TextField
+                      type="number"
+                      label="Margin (%) that Retailer Generates on Sale"
+                      autoComplete="off"
+                      {...fields.margin}
+                    />
+                  )}
+                </FormLayout>
+              </Card>
+              <Card>
+                <BlockStack gap="200">
+                  <Text as="h2" variant="headingMd">
+                    Retailers Connected
+                  </Text>
+                  <Combobox
+                    allowMultiple
+                    activator={
+                      <Combobox.TextField
+                        prefix={<Icon source={SearchIcon} />}
+                        onChange={filterRetailerOptions}
+                        label="Search retailers"
+                        labelHidden
+                        value={retailerSearchValue}
+                        placeholder="Search retailers"
+                        autoComplete="off"
+                      />
+                    }
+                  >
+                    {visibleRetailerOptions.length > 0 ? (
+                      <Listbox onSelect={updateRetailerSelection}>
+                        {visibleRetailerOptions.map(({ id, name }) => {
+                          return (
+                            <Listbox.Option
+                              key={id}
+                              value={id}
+                              selected={selectedRetailerIds.includes(id)}
+                              accessibilityLabel={name}
+                            >
+                              {name}
+                            </Listbox.Option>
+                          );
+                        })}
+                      </Listbox>
+                    ) : null}
+                  </Combobox>
+                  <ResourceList
+                    resourceName={{
+                      singular: 'customer',
+                      plural: 'customers',
+                    }}
+                    items={allPartneredRetailers.filter(({ id }) =>
+                      selectedRetailerIds.includes(id),
+                    )}
+                    renderItem={(item) => {
+                      const { id, name, website } = item;
+                      return (
+                        <ResourceItem
+                          id={id}
+                          url={website}
+                          accessibilityLabel={`View details for ${name}`}
+                        >
+                          <InlineStack
+                            blockAlign="center"
+                            align="space-between"
+                          >
+                            <Text variant="bodyMd" fontWeight="bold" as="h3">
+                              {name}
+                            </Text>
+                            <div
+                              onClick={(e) => {
+                                e.stopPropagation();
+                              }}
+                            >
+                              <Button
+                                icon={XIcon}
+                                onClick={() => {
+                                  updateRetailerSelection(id);
+                                }}
+                              />
+                            </div>
+                          </InlineStack>
+                        </ResourceItem>
+                      );
+                    }}
+                  />
+                </BlockStack>
+              </Card>
+              <Card padding={'200'}>
+                <Box paddingInline={'200'} paddingBlockStart={'100'}>
+                  <Text as="h2" variant="headingMd">
+                    Products
+                  </Text>
+                </Box>
+                <ProductFilterControl onQueryFocus={handleSelectProducts} />
+                {products.length > 0 && (
+                  <IndexTable
+                    onSelectionChange={handleSelectionChange}
+                    selectedItemsCount={
+                      allResourcesSelected ? 'All' : selectedResources.length
+                    }
+                    resourceName={resourceName}
+                    itemCount={numRows}
+                    headings={headings}
+                    promotedBulkActions={productsBulkAction}
+                  >
+                    {products.map((product) => (
+                      <ProductTableRow
+                        key={product.id}
+                        product={product}
+                        margin={fields.margin.value}
+                        isWholesalePricing={
+                          fields.pricingStrategy.value === 'WHOLESALE'
+                        }
+                        selectedResources={selectedResources}
+                        tableRows={tableRows}
+                        updateProductWholesalePrice={
+                          updateProductWholesalePrice
+                        }
+                      />
+                    ))}
+                  </IndexTable>
+                )}
+                <Box paddingBlockEnd={'100'} />
+              </Card>
+            </BlockStack>
+          </Box>
+          <div className={styles['center-right']}>
+            <Button submit variant="primary">
+              Save
+            </Button>
+          </div>
+          <PaddedBox />
+        </Page>
+      </Layout>
     </Form>
   );
 };
