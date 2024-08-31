@@ -6,6 +6,7 @@ import {
 import {
   useLoaderData,
   useLocation,
+  useParams,
   useSubmit as useRemixSubmit,
 } from '@remix-run/react';
 import {
@@ -155,10 +156,17 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   }
 };
 
-const EditPriceList = () => {
+// TODO: Figure out how to display shopify toast before redirect, might need to just handle in the client
+// TODO: add status badge at the top of form too to denote that a price list was created
+// TODO: fetch all potential retailer information
+
+const CreateEditPriceList = () => {
   const { settingsData, productsData } = useLoaderData<
     typeof loader
   >() as LoaderDataProps;
+
+  const params = useParams();
+  const isCreatingNewPriceList = params.id && params.id === 'new';
 
   const { pathname } = useLocation();
   const backActionUrl = pathname.substring(0, pathname.lastIndexOf('/'));
@@ -167,7 +175,6 @@ const EditPriceList = () => {
   const [products, setProducts] =
     useState<ProductPropsWithPositions[]>(productsData);
 
-  // todo: fetch this information
   const allPartneredRetailers: PartneredRetailersProps[] = useMemo(
     () => [
       // {
@@ -454,7 +461,7 @@ const EditPriceList = () => {
     <Form onSubmit={submit}>
       <Layout>
         <Page
-          title="Edit Price List"
+          title={isCreatingNewPriceList ? `New Price List` : `Edit Price List`}
           backAction={{ content: 'Price Lists', url: backActionUrl }}
         >
           <Box paddingBlockEnd={'400'}>
@@ -637,4 +644,4 @@ const EditPriceList = () => {
   );
 };
 
-export default EditPriceList;
+export default CreateEditPriceList;
