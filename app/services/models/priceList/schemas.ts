@@ -58,19 +58,21 @@ export const priceListDataSchema = object({
 });
 
 // You are not allowed to create more than one general price list
-export const noMoreThanOneGeneralPriceListSchema = string()
-  .required()
-  .test(
-    'max-one-general-price-list',
-    'A supplier can only have one general price list at a time.',
-    async (sessionId) => {
-      const generalPriceListExists = await hasGeneralPriceList(sessionId);
-      if (generalPriceListExists) {
-        return false;
-      }
-      return true;
-    },
-  );
+export const noMoreThanOneGeneralPriceListSchema = object({
+  isGeneral: boolean().required(),
+  sessionId: string().required(),
+}).test(
+  'max-one-general-price-list',
+  'A supplier can only have one general price list at a time.',
+  async (values) => {
+    const { isGeneral, sessionId } = values;
+    const generalPriceListExists = await hasGeneralPriceList(sessionId);
+    if (generalPriceListExists && isGeneral) {
+      return false;
+    }
+    return true;
+  },
+);
 
 export const priceListExistsSchema = string()
   .required()

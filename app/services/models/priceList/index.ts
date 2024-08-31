@@ -221,7 +221,10 @@ export async function createPriceListTx(
 ) {
   try {
     await priceListDataSchema.validate(data);
-    await noMoreThanOneGeneralPriceListSchema.validate(sessionId);
+    await noMoreThanOneGeneralPriceListSchema.validate({
+      sessionId,
+      isGeneral: data.settings.isGeneral,
+    });
     const { settings } = data;
     const {
       margin,
