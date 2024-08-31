@@ -15,6 +15,7 @@ const ApprovalStatusButton: FC<Props> = ({
     return (
       <button
         className={`${sharedStyles['green']} ${sharedStyles['btn']} ${sharedStyles['disabled']}`}
+        disabled={true}
       >
         <Text as="p" variant="bodySm" fontWeight="medium">
           No Access Needed

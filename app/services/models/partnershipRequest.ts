@@ -1,4 +1,4 @@
-import {
+import type {
   PartnershipRequestStatusProps,
   PartnershipRequestTypeProps,
 } from '~/constants';
