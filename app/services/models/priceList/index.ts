@@ -1,9 +1,11 @@
 import db from '~/db.server';
 import { type Prisma } from '@prisma/client';
 import { errorHandler } from '~/services/util';
-import { priceListDataSchema } from './schemas';
+import {
+  noMoreThanOneGeneralPriceListSchema,
+  priceListDataSchema,
+} from './schemas';
 import type { CoreProductProps } from '~/services/types';
-import { GraphQL } from '~/types';
 
 // TODO: remove price list table and put it where it belongs in the frontend
 export type PriceListProps = {
@@ -216,10 +218,10 @@ export async function createPriceListTx(
   tx: Prisma.TransactionClient,
   data: CreatePriceListDataProps,
   sessionId: string,
-  graphql: GraphQL,
 ) {
   try {
     await priceListDataSchema.validate(data);
+    await noMoreThanOneGeneralPriceListSchema.validate(sessionId);
     const { settings } = data;
     const {
       margin,

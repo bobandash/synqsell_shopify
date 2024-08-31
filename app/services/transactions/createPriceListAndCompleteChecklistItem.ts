@@ -20,7 +20,6 @@ async function createPriceListAndCompleteChecklistItem(
 ) {
   const { products } = data;
   const productIdsToAdd = products.map((product) => product.id);
-
   try {
     const newPriceList = await db.$transaction(async (tx) => {
       await updateChecklistStatusTx(
@@ -29,12 +28,7 @@ async function createPriceListAndCompleteChecklistItem(
         CHECKLIST_ITEM_KEYS.SUPPLIER_CREATE_PRICE_LIST,
         true,
       );
-      const newPriceList = await createPriceListTx(
-        tx,
-        data,
-        sessionId,
-        graphql,
-      );
+      const newPriceList = await createPriceListTx(tx, data, sessionId);
       const priceListId = newPriceList.id;
       await addProductsTx(tx, sessionId, priceListId, productIdsToAdd, graphql);
       const mapShopifyProductIdToPrismaId =

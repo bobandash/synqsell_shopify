@@ -1,6 +1,6 @@
 import { array, boolean, number, object, string } from 'yup';
 import { PRICE_LIST_PRICING_STRATEGY } from '~/constants';
-import { isValidPriceList } from '.';
+import { hasGeneralPriceList, isValidPriceList } from '.';
 
 export const priceListDataSchema = object({
   settings: object({
@@ -56,6 +56,21 @@ export const priceListDataSchema = object({
   ),
   retailers: array().of(string().required()),
 });
+
+// You are not allowed to create more than one general price list
+export const noMoreThanOneGeneralPriceListSchema = string()
+  .required()
+  .test(
+    'max-one-general-price-list',
+    'A supplier can only have one general price list at a time.',
+    async (sessionId) => {
+      const generalPriceListExists = await hasGeneralPriceList(sessionId);
+      if (generalPriceListExists) {
+        return false;
+      }
+      return true;
+    },
+  );
 
 export const priceListExistsSchema = string()
   .required()
