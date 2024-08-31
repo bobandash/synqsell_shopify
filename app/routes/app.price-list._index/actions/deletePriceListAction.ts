@@ -3,7 +3,6 @@ import { array, object, string, type InferType } from 'yup';
 import { deletePriceListBatch } from '~/services/models/priceList';
 import { getJSONError } from '~/util';
 import { MODALS } from '../constants';
-
 type deletePriceListData = InferType<typeof deletePriceListSchema>;
 
 const deletePriceListSchema = object({
@@ -11,7 +10,7 @@ const deletePriceListSchema = object({
   priceListIds: array().of(string().required()).required(),
 });
 
-export async function deletePriceListAction(
+async function deletePriceListAction(
   formDataObject: FormDataObject,
   sessionId: string,
 ) {
@@ -28,3 +27,5 @@ export async function deletePriceListAction(
     throw getJSONError(error, 'Price List');
   }
 }
+
+export default deletePriceListAction;

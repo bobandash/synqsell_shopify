@@ -14,6 +14,7 @@ import { type NonEmptyArray } from '@shopify/polaris/build/ts/src/types';
 import { ToolsIcon } from '~/assets';
 import styles from './styles.module.css';
 import {
+  useActionData,
   useFetcher,
   useLoaderData,
   useLocation,
@@ -36,8 +37,8 @@ import { useEffect, useState, type FC } from 'react';
 import { convertToTitleCase } from '../util';
 import { useAppBridge } from '@shopify/app-bridge-react';
 import { MODALS } from './constants';
-import DeletePriceListModal from './_components/DeletePriceListModal';
-import { deletePriceListAction } from './actions/deletePriceListAction';
+import { DeletePriceListModal } from './components';
+import { deletePriceListAction } from './actions';
 
 type RowProps = {
   data: PriceListTableInfoProps;
@@ -66,7 +67,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const formDataObject = convertFormDataToObject(formData);
     switch (intent) {
       case MODALS.DELETE_PRICE_LIST:
-        return deletePriceListAction(formDataObject, sessionId);
+        await deletePriceListAction(formDataObject, sessionId);
+        return json(
+          { message: `Successfully deleted the price list(s).` },
+          StatusCodes.OK,
+        );
     }
     return json(
       { error: { message: 'Not Implemented. Please contact support.' } },
@@ -74,20 +79,23 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     );
   } catch (error) {
     logger.error(error);
+    throw json('error');
   }
-
-  return null;
 };
 
 const PriceList = () => {
   const data = useLoaderData<
     typeof loader
   >() as unknown as PriceListTableInfoProps[];
+  const actionData = useActionData<typeof action>();
+  console.log(actionData);
+
   const [priceListTableData, setPriceListTableData] = useState(data);
-  const [, setPrevPriceListTableData] = useState(data);
   const shopify = useAppBridge();
   const navigate = useNavigate();
   const location = useLocation();
+  const deletePriceListFetcher = useFetcher({ key: MODALS.DELETE_PRICE_LIST });
+
   const headings: NonEmptyArray<IndexTableHeading> = [
     { title: 'Name' },
     { title: 'Type' },
@@ -100,7 +108,6 @@ const PriceList = () => {
     singular: 'Price List',
     plural: 'Price Lists',
   };
-  const deletePriceListFetcher = useFetcher({ key: MODALS.DELETE_PRICE_LIST });
   const {
     selectedResources,
     allResourcesSelected,
@@ -121,26 +128,25 @@ const PriceList = () => {
     shopify.modal.show(MODALS.DELETE_PRICE_LIST);
   }
 
-  // useEffect(() => {
-  //   if (
-  //     deletePriceListFetcher.formData &&
-  //     deletePriceListFetcher.formData.get('priceListIds') &&
-  //     deletePriceListFetcher.state === 'submitting'
-  //   ) {
-  //     const priceListIdString = deletePriceListFetcher.formData.get(
-  //       'priceListIds',
-  //     ) as string;
-  //     const deletedPriceListIds = new Set(
-  //       JSON.parse(priceListIdString) as string[],
-  //     );
-  //     // optimistic render for deleting the price list
-  //     setPrevPriceListTableData([...priceListTableData]);
-  //     setPriceListTableData((prev) => {
-  //       return prev.filter((item) => !deletedPriceListIds.has(item.id));
-  //     });
-  //     clearSelection();
-  //   }
-  // }, [deletePriceListFetcher, priceListTableData, clearSelection]);
+  useEffect(() => {
+    if (data.length < priceListTableData.length) {
+      setPriceListTableData(data);
+      clearSelection();
+      shopify.modal.hide(MODALS.DELETE_PRICE_LIST);
+    }
+  }, [data, clearSelection, priceListTableData, shopify]);
+
+  // render the status message as a shopify toast
+  // shopify recommends using a banner instead of toast for error messages
+  console.log(actionData);
+  useEffect(() => {
+    if (!actionData) {
+      return;
+    }
+    if ('message' in actionData) {
+      shopify.toast.show(actionData.message);
+    }
+  }, [actionData, shopify]);
 
   return (
     <>
@@ -157,6 +163,7 @@ const PriceList = () => {
             variant="primary"
             tone="critical"
             disabled={selectedResources.length === 0}
+            loading={deletePriceListFetcher.state === 'submitting'}
             onClick={openDeleteModal}
           >
             {deleteText}
