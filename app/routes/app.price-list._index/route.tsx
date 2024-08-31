@@ -68,7 +68,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       case MODALS.DELETE_PRICE_LIST:
         return deletePriceListAction(formDataObject, sessionId);
     }
-    return json(null, { status: StatusCodes.NOT_IMPLEMENTED });
+    return json(
+      { error: { message: 'Not Implemented. Please contact support.' } },
+      { status: StatusCodes.NOT_IMPLEMENTED },
+    );
   } catch (error) {
     logger.error(error);
   }
@@ -81,7 +84,7 @@ const PriceList = () => {
     typeof loader
   >() as unknown as PriceListTableInfoProps[];
   const [priceListTableData, setPriceListTableData] = useState(data);
-  const [, setPrevPriceListTableData] = useState(data); // TODO: handle rollback
+  const [, setPrevPriceListTableData] = useState(data);
   const shopify = useAppBridge();
   const navigate = useNavigate();
   const location = useLocation();
@@ -118,36 +121,26 @@ const PriceList = () => {
     shopify.modal.show(MODALS.DELETE_PRICE_LIST);
   }
 
-  // !!! TODO: There is no way to ensure that the fetcher has failed
-  // !!! Some people just read the json responses, but figure out what approach to handle errors works best for you
-
-  useEffect(() => {
-    if (deletePriceListFetcher.state === 'loading' && deletePriceListFetcher) {
-      shopify.toast.show('Successfully deleted the price lists.');
-      shopify.modal.hide(MODALS.DELETE_PRICE_LIST);
-    }
-  }, [deletePriceListFetcher, shopify]);
-
-  useEffect(() => {
-    if (
-      deletePriceListFetcher.formData &&
-      deletePriceListFetcher.formData.get('priceListIds') &&
-      deletePriceListFetcher.state === 'submitting'
-    ) {
-      const priceListIdString = deletePriceListFetcher.formData.get(
-        'priceListIds',
-      ) as string;
-      const deletedPriceListIds = new Set(
-        JSON.parse(priceListIdString) as string[],
-      );
-      // optimistic render for deleting the price list
-      setPrevPriceListTableData([...priceListTableData]);
-      setPriceListTableData((prev) => {
-        return prev.filter((item) => !deletedPriceListIds.has(item.id));
-      });
-      clearSelection();
-    }
-  }, [deletePriceListFetcher, priceListTableData, clearSelection]);
+  // useEffect(() => {
+  //   if (
+  //     deletePriceListFetcher.formData &&
+  //     deletePriceListFetcher.formData.get('priceListIds') &&
+  //     deletePriceListFetcher.state === 'submitting'
+  //   ) {
+  //     const priceListIdString = deletePriceListFetcher.formData.get(
+  //       'priceListIds',
+  //     ) as string;
+  //     const deletedPriceListIds = new Set(
+  //       JSON.parse(priceListIdString) as string[],
+  //     );
+  //     // optimistic render for deleting the price list
+  //     setPrevPriceListTableData([...priceListTableData]);
+  //     setPriceListTableData((prev) => {
+  //       return prev.filter((item) => !deletedPriceListIds.has(item.id));
+  //     });
+  //     clearSelection();
+  //   }
+  // }, [deletePriceListFetcher, priceListTableData, clearSelection]);
 
   return (
     <>

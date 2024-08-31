@@ -164,7 +164,7 @@ model Product {
   title            String
   variantsCount    Int               @default(1)
   priceListId      String
-  priceList        PriceList         @relation(fields: [priceListId], references: [id])
+  priceList        PriceList         @relation(fields: [priceListId], references: [id], onDelete: Cascade)
   importedProducts ImportedProduct[]
   images           Image[]
   variants         Variant[]

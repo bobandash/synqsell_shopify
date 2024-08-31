@@ -1,12 +1,16 @@
 import { type FormDataObject } from '~/types';
-import { deletePriceListSchema } from './_schema';
-import { type InferType } from 'yup';
+import { array, object, string, type InferType } from 'yup';
 import { deletePriceListBatch } from '~/services/models/priceList';
 import { getJSONError } from '~/util';
+import { MODALS } from '../constants';
 
 type deletePriceListData = InferType<typeof deletePriceListSchema>;
 
-// !!! Decide whether or not you should have validation (correct sessionId) to call these functions
+const deletePriceListSchema = object({
+  intent: string().oneOf([MODALS.DELETE_PRICE_LIST]).required(),
+  priceListIds: array().of(string().required()).required(),
+});
+
 export async function deletePriceListAction(
   formDataObject: FormDataObject,
   sessionId: string,
@@ -14,7 +18,7 @@ export async function deletePriceListAction(
   try {
     await deletePriceListSchema.validate(formDataObject);
     const { priceListIds } = formDataObject as unknown as deletePriceListData;
-    const priceListIdsArr = JSON.parse(priceListIds) as string[];
+    const priceListIdsArr = priceListIds;
     const deletedPriceLists = await deletePriceListBatch(
       priceListIdsArr,
       sessionId,
