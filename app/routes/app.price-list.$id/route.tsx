@@ -90,7 +90,6 @@ type PartneredRetailersProps = {
 // TODO: add success message for updating price list
 // TODO: allow creation of products and retailers through creating a price list
 // TODO: update createPriceListAndCompleteChecklistItem
-// TODO: Trim product title so only a certain amount can be shown to prevent UI form looking bad
 export const action = async ({ request, params }: ActionFunctionArgs) => {
   try {
     const { session, admin } = await authenticate.admin(request);
@@ -99,11 +98,11 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
     const formData = await request.formData();
     const { id: priceListId } = params;
     const data = convertFormDataToObject(formData) as CreatePriceListDataProps;
-
     if (priceListId === 'new') {
       const newPriceList = await createPriceListAndCompleteChecklistItem(
         data,
         sessionId,
+        graphql,
       );
       return redirect(`/app/price-list/${newPriceList.id}`);
     }
@@ -145,7 +144,6 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
       });
     }
 
-    // TODO: add type safety
     if (!isNew) {
       data = await getExistingPriceListData(sessionId, priceListId, graphql);
     } else {

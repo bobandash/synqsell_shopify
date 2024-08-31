@@ -32,12 +32,12 @@ export async function addProductsTx(
   tx: Prisma.TransactionClient,
   sessionId: string,
   priceListId: string,
-  productsToAdd: string[],
+  productIdsToAdd: string[],
   graphql: GraphQL,
 ) {
   try {
     const productsFmt = await getRelevantProductInformationForPrisma(
-      productsToAdd,
+      productIdsToAdd,
       sessionId,
       priceListId,
       graphql,
@@ -59,7 +59,7 @@ export async function addProductsTx(
       error,
       'Failed to add products to price list.',
       deleteProductsTx,
-      { sessionId, priceListId, productsToAdd },
+      { sessionId, priceListId, productIdsToAdd },
     );
   }
 }
