@@ -11,6 +11,7 @@ import { authenticate } from '~/shopify.server';
 import { hasRole } from '~/services/models/roles';
 import { ROLES } from '~/constants';
 import {
+  useActionData,
   useLoaderData,
   useRevalidator,
   useSearchParams,
@@ -24,7 +25,7 @@ import { PriceListRequestModal } from './components';
 import { PaddedBox } from '~/components';
 import { ChevronLeftIcon, ChevronRightIcon } from '@shopify/polaris-icons';
 import { useCallback, useEffect, useState } from 'react';
-import { INTENTS } from './constants';
+import { INTENTS, MODALS } from './constants';
 import { requestAccessAction } from './action';
 import type { RequestAccessFormData } from './action/requestAccessAction';
 
@@ -82,9 +83,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 };
 
-// TODO: add cursor navigation with useParams
 const SupplierNetwork = () => {
   const data = useLoaderData<typeof loader>() as SupplierPaginatedInfoProps;
+  const actionData = useActionData<typeof action>();
   const [suppliers, setSuppliers] = useState<Supplier[]>(data.suppliers);
   const [selectedSupplierId, setSelectedSupplierId] = useState('');
   const [nextCursor, setNextCursor] = useState(data.nextCursor);
@@ -96,7 +97,14 @@ const SupplierNetwork = () => {
     setSuppliers(data.suppliers);
     setNextCursor(data.nextCursor);
     setPrevCursor(data.prevCursor);
+    shopify.modal.hide(MODALS.REQUEST_ACCESS_MODAL);
   }, [data]);
+
+  useEffect(() => {
+    if (actionData && 'message' in actionData) {
+      shopify.toast.show(actionData.message);
+    }
+  }, [actionData]);
 
   const navigateNextCursor = useCallback(() => {
     if (nextCursor) {
@@ -133,18 +141,23 @@ const SupplierNetwork = () => {
       </InlineGrid>
       <PriceListRequestModal priceListSupplierId={selectedSupplierId} />
       <PaddedBox />
-      <InlineStack gap={'200'} align={'center'}>
-        <Button
-          icon={ChevronLeftIcon}
-          disabled={!prevCursor}
-          onClick={navigatePrevCursor}
-        />
-        <Button
-          icon={ChevronRightIcon}
-          disabled={!nextCursor}
-          onClick={navigateNextCursor}
-        />
-      </InlineStack>
+      {prevCursor ||
+        (nextCursor && (
+          <>
+            <InlineStack gap={'200'} align={'center'}>
+              <Button
+                icon={ChevronLeftIcon}
+                disabled={!prevCursor}
+                onClick={navigatePrevCursor}
+              />
+              <Button
+                icon={ChevronRightIcon}
+                disabled={!nextCursor}
+                onClick={navigateNextCursor}
+              />
+            </InlineStack>
+          </>
+        ))}
       <PaddedBox />
     </Page>
   );
