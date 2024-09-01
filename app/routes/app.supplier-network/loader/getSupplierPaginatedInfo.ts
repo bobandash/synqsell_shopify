@@ -83,7 +83,6 @@ type GetPrismaUnformattedSupplierInfo = GetSupplierPaginatedInfoProps & {
   take: number;
 };
 
-// TODO: let me actually figure out how prisma type safety works
 const getSupplierInfoSchema = object({
   isReverseDirection: boolean().required(),
   cursor: string().nullable(),
@@ -117,8 +116,7 @@ async function getPrismaUnformattedSupplierInfo({
   try {
     // the only suppliers that should show up are suppliers with a general price list and at least one product in the price list
     // NOTE: this takes one more than usual in order to check if has more
-    // TODO: should be possible to refactor the take one more logic out because it's confusing if the someone doesn't read the implementation
-    const prismaData = await db.session.findMany({
+    const data = await db.session.findMany({
       take: isReverseDirection ? -1 * take : take + 1,
       ...(cursor && { cursor: { id: cursor } }),
       ...(cursor && { skip: 1 }),
@@ -165,7 +163,12 @@ async function getPrismaUnformattedSupplierInfo({
         },
       },
     });
-    return prismaData;
+    const hasMore = data.length > take || isReverseDirection;
+    if (isReverseDirection || !hasMore) {
+      return { data, hasMore };
+    }
+    const dataWithoutExtraTake = hasMore ? data.slice(0, -1) : data;
+    return { data: dataWithoutExtraTake, hasMore };
   } catch (error) {
     throw errorHandler(
       error,
@@ -298,41 +301,36 @@ export async function getSupplierPaginatedInfo({
     });
 
     const take = 8;
-    const [firstSupplier, suppliersRawData] = await Promise.all([
-      getPrismaUnformattedSupplierInfo({
-        isReverseDirection: false,
-        sessionId,
-        take: 1,
-        cursor: null,
-      }),
-      getPrismaUnformattedSupplierInfo({
-        isReverseDirection,
-        sessionId,
-        take,
-        cursor,
-      }),
-    ]);
+    const [firstSupplier, { data: suppliersRawData, hasMore }] =
+      await Promise.all([
+        getPrismaUnformattedSupplierInfo({
+          isReverseDirection: false,
+          sessionId,
+          take: 1,
+          cursor: null,
+        }),
+        getPrismaUnformattedSupplierInfo({
+          isReverseDirection,
+          sessionId,
+          take,
+          cursor,
+        }),
+      ]);
 
     const firstSupplierId =
-      firstSupplier.length > 0 ? firstSupplier[0].id : null;
+      firstSupplier.data.length > 0 ? firstSupplier.data[0].id : null;
     const suppliers = await cleanUpSupplierPrismaData(
       suppliersRawData,
       sessionId,
     );
     const isFirstPage =
       suppliers[0] && suppliers[0].id === firstSupplierId ? true : false;
-    const hasMore = suppliers.length > take || isReverseDirection;
-
-    // for next direction, we took one extra to check if there are more elements are the cursor
-    // this element has to be removed from the data that's returned
-    const suppliersArr =
-      !isReverseDirection && hasMore ? suppliers.slice(0, -1) : suppliers;
-    const prevCursor = isFirstPage ? null : suppliersArr[0].id;
-    const nextCursor = hasMore ? suppliersArr[take - 1].id : null;
+    const prevCursor = isFirstPage ? null : suppliers[0].id;
+    const nextCursor = hasMore ? suppliers[take - 1].id : null;
     return {
       nextCursor,
       prevCursor,
-      suppliers: suppliersArr,
+      suppliers,
     };
   } catch (error) {
     throw errorHandler(
