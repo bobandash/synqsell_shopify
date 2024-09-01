@@ -67,13 +67,13 @@ export const PARTNERSHIP_REQUEST_TYPE = {
   RETAILER: 'RETAILER',
 } as const;
 
-export type PartnershipRequestTypeProps =
-  (typeof PARTNERSHIP_REQUEST_TYPE)[keyof typeof PARTNERSHIP_REQUEST_TYPE];
-
 export const PARTNERSHIP_REQUEST_STATUS = {
   REJECTED: 'REJECTED',
   PENDING: 'PENDING',
 } as const;
+
+export type PartnershipRequestTypeProps =
+  (typeof PARTNERSHIP_REQUEST_TYPE)[keyof typeof PARTNERSHIP_REQUEST_TYPE];
 
 export type PartnershipRequestStatusProps =
   (typeof PARTNERSHIP_REQUEST_STATUS)[keyof typeof PARTNERSHIP_REQUEST_STATUS];

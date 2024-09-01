@@ -30,7 +30,7 @@ const SupplierCard: FC<Props> = ({ supplier, setSelectedSupplierId }) => {
   const {
     socialMediaLink: { facebook, twitter, instagram, tiktok, youtube },
   } = profile;
-  const { requiresApprovalToImport, id: priceListId } = priceList;
+  const { approvalStatus, id: priceListId } = priceList;
   const navigate = useNavigate();
   const shopify = useAppBridge();
 
@@ -110,7 +110,7 @@ const SupplierCard: FC<Props> = ({ supplier, setSelectedSupplierId }) => {
         <InlineStack align="end">
           <InlineStack gap={'200'}>
             <ApprovalStatusButton
-              requiresApprovalToImport={requiresApprovalToImport}
+              approvalStatus={approvalStatus}
               handleRequestAccess={handleRequestAccess}
             />
             <button

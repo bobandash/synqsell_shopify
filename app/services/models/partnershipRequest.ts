@@ -5,18 +5,6 @@ import type {
 import { errorHandler } from '../util';
 import db from '~/db.server';
 
-// model PartnershipRequest {
-//   id           String      @id @default(uuid())
-//   senderId     String
-//   recipientId  String
-//   sender       Session     @relation("SenderPartnershipRequest", fields: [senderId], references: [id])
-//   recipient    Session     @relation("RecipientPartnershipRequest", fields: [recipientId], references: [id])
-//   message      String
-//   priceListIds PriceList[]
-//   type         String // two types, retailer request and supplier request
-//   status       String // can only be rejected or pending; if it is accepted already, it willk just make the user into a price list retailer
-// }
-
 type CreatePartnershipRequestProps = {
   priceListIds: string[];
   recipientId: string;
@@ -40,7 +28,7 @@ export async function createPartnershipRequest(
         message,
         type,
         status,
-        priceListIds: {
+        priceLists: {
           connect: priceListIds.map((id) => ({ id })),
         },
       },
@@ -52,6 +40,67 @@ export async function createPartnershipRequest(
       'Failed to create partnership request.',
       createPartnershipRequest,
       { props },
+    );
+  }
+}
+
+export async function hasPartnershipRequest(
+  priceListId: string,
+  senderId: string,
+  type: PartnershipRequestTypeProps,
+) {
+  try {
+    const partnershipRequest = await db.partnershipRequest.findFirst({
+      where: {
+        senderId,
+        type,
+        priceLists: {
+          some: {
+            id: priceListId,
+          },
+        },
+      },
+    });
+
+    if (partnershipRequest) {
+      return true;
+    }
+    return false;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to check if partnership request exists.',
+      hasPartnershipRequest,
+      { priceListId, senderId },
+    );
+  }
+}
+
+export async function getPartnershipRequest(
+  priceListId: string,
+  senderId: string,
+  type: PartnershipRequestTypeProps,
+) {
+  try {
+    const partnershipRequest = await db.partnershipRequest.findFirstOrThrow({
+      where: {
+        senderId,
+        type,
+        priceLists: {
+          some: {
+            id: priceListId,
+          },
+        },
+      },
+    });
+
+    return partnershipRequest;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to retrieve partnership request.',
+      getPartnershipRequest,
+      { priceListId, senderId },
     );
   }
 }
