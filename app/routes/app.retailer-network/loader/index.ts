@@ -1,0 +1,1 @@
+export { getRetailerPaginatedInfo } from './getRetailerPaginatedInfo';

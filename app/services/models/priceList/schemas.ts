@@ -1,6 +1,7 @@
 import { array, boolean, number, object, string } from 'yup';
-import { PRICE_LIST_PRICING_STRATEGY } from '~/constants';
+import { PRICE_LIST_PRICING_STRATEGY, ROLES } from '~/constants';
 import { hasGeneralPriceList, isValidPriceList } from '.';
+import { hasRole } from '../roles';
 
 export const priceListDataSchema = object({
   settings: object({
@@ -83,3 +84,9 @@ export const priceListExistsSchema = string()
       return await isValidPriceList(value);
     },
   );
+
+export const isSupplierSchema = string()
+  .required()
+  .test('is-supplier', 'Session id must be a supplier', async (supplierId) => {
+    return await hasRole(supplierId, ROLES.SUPPLIER);
+  });

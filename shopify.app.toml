@@ -3,7 +3,7 @@
 client_id = "c2ff24913d6d89792234763f0830c676"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://humor-mil-rica-tahoe.trycloudflare.com"
+application_url = "https://as-academics-kiss-monthly.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read_assigned_fulfillment_orders,read_inventory,read_orders,read_produ
 
 [auth]
 redirect_urls = [
-  "https://humor-mil-rica-tahoe.trycloudflare.com/auth/callback",
-  "https://humor-mil-rica-tahoe.trycloudflare.com/auth/shopify/callback",
-  "https://humor-mil-rica-tahoe.trycloudflare.com/api/auth/callback"
+  "https://as-academics-kiss-monthly.trycloudflare.com/auth/callback",
+  "https://as-academics-kiss-monthly.trycloudflare.com/auth/shopify/callback",
+  "https://as-academics-kiss-monthly.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]

@@ -2,6 +2,7 @@ import db from '~/db.server';
 import { type Prisma } from '@prisma/client';
 import { errorHandler } from '~/services/util';
 import {
+  isSupplierSchema,
   noMoreThanOneGeneralPriceListSchema,
   priceListDataSchema,
 } from './schemas';
@@ -397,6 +398,27 @@ export async function deletePriceListBatch(
       'Failed to delete price lists in batch.',
       deletePriceListBatch,
       { priceListsIds, sessionId },
+    );
+  }
+}
+
+export async function getAllPriceListIds(supplierId: string) {
+  try {
+    // retrieves all price list ids the supplier has
+    await isSupplierSchema.validate(supplierId);
+    const priceLists = await db.priceList.findMany({
+      where: {
+        supplierId,
+      },
+    });
+    const priceListIds = priceLists.map(({ id }) => id);
+    return priceListIds;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to get all price list ids.',
+      getAllPriceListIds,
+      { supplierId },
     );
   }
 }

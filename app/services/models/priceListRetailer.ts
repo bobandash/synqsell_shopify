@@ -51,6 +51,33 @@ export async function isRetailerInPriceList(
   }
 }
 
+export async function isRetailerInPriceLists(
+  retailerId: string,
+  priceListIds: string[],
+) {
+  try {
+    const retailer = await db.priceListRetailer.findFirst({
+      where: {
+        retailerId,
+        priceListId: {
+          in: priceListIds,
+        },
+      },
+    });
+    if (!retailer) {
+      return false;
+    }
+    return true;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to see if retailer is in the multiple price list ids provided.',
+      isRetailerInPriceList,
+      { retailerId, priceListIds },
+    );
+  }
+}
+
 export async function addPriceListRetailersTx(
   tx: Prisma.TransactionClient,
   priceListId: string,
