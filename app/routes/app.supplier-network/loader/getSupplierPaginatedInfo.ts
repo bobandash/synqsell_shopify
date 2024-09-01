@@ -76,7 +76,7 @@ type GetPrismaUnformattedSupplierInfo = GetSupplierPaginatedInfoProps & {
 // TODO: let me actually figure out how prisma type safety works
 const getSupplierInfoSchema = object({
   isReverseDirection: boolean().required(),
-  cursor: string().nullable().required(),
+  cursor: string().nullable(),
   sessionId: string()
     .required()
     .test(
