@@ -126,18 +126,20 @@ const PriceListProducts = () => {
         ))}
       </InlineGrid>
       <PaddedBox />
-      <InlineStack gap={'200'} align={'center'}>
-        <Button
-          icon={ChevronLeftIcon}
-          disabled={!prevCursor}
-          onClick={navigatePrevCursor}
-        />
-        <Button
-          icon={ChevronRightIcon}
-          disabled={!nextCursor}
-          onClick={navigateNextCursor}
-        />
-      </InlineStack>
+      {(prevCursor || nextCursor) && (
+        <InlineStack gap={'200'} align={'center'}>
+          <Button
+            icon={ChevronLeftIcon}
+            disabled={!prevCursor}
+            onClick={navigatePrevCursor}
+          />
+          <Button
+            icon={ChevronRightIcon}
+            disabled={!nextCursor}
+            onClick={navigateNextCursor}
+          />
+        </InlineStack>
+      )}
       <PaddedBox />
     </Page>
   );

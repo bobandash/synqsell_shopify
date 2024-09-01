@@ -26,6 +26,7 @@ export type ProductWithImageAndVariant = Prisma.ProductGetPayload<{
     variants: true;
     priceList: {
       select: {
+        id: true;
         requiresApprovalToImport: true;
         isGeneral: true;
         margin: true;
@@ -51,6 +52,7 @@ export type ProductCardData = Prisma.ProductGetPayload<{
 }> & {
   brandName: string | null;
   priceList: {
+    id: string;
     isGeneral: boolean;
     requiresApprovalToImport?: boolean;
     margin?: number;
@@ -137,7 +139,7 @@ async function getProductCardInfoDb({
   }
 }
 
-async function getPrivatePriceListIdsSet(
+async function getNoAccessPriceListIds(
   products: ProductWithImageAndVariant[],
   sessionId: string,
 ) {
@@ -164,7 +166,7 @@ async function getPrivatePriceListIdsSet(
     throw errorHandler(
       error,
       'Failed to get private price list ids.',
-      getPrivatePriceListIdsSet,
+      getNoAccessPriceListIds,
       { products, sessionId },
     );
   }
@@ -176,36 +178,45 @@ const formatProductDataForPriceList = async (
   products: ProductWithImageAndVariant[],
   sessionId: string,
 ) => {
-  const privatePriceListIdsSet = await getPrivatePriceListIdsSet(
-    products,
-    sessionId,
-  );
+  try {
+    const noAccessPriceListIds = await getNoAccessPriceListIds(
+      products,
+      sessionId,
+    );
 
-  return products.map(
-    ({ images, priceList, variants, priceListId, ...rest }) => {
-      return {
-        images: images.sort((a, b) => a.position - b.position),
-        brandName: priceList.session.userProfile?.name,
-        priceListId,
-        priceList: {
-          isGeneral: priceList.isGeneral,
-          requiresApprovalToImport: priceList.requiresApprovalToImport,
-          margin: privatePriceListIdsSet.has(priceListId)
-            ? null
-            : priceList.margin,
-        },
-        variants: variants.map(({ wholesalePrice, ...rest }) => {
-          return {
-            ...rest,
-            wholesalePrice: privatePriceListIdsSet.has(priceListId)
+    return products.map(
+      ({ images, priceList, variants, priceListId, ...rest }) => {
+        return {
+          images: images.sort((a, b) => a.position - b.position),
+          brandName: priceList.session.userProfile?.name,
+          priceList: {
+            id: priceList.id,
+            isGeneral: priceList.isGeneral,
+            requiresApprovalToImport: priceList.requiresApprovalToImport,
+            margin: noAccessPriceListIds.has(priceList.id)
               ? null
-              : wholesalePrice,
-          };
-        }),
-        ...rest,
-      };
-    },
-  );
+              : priceList.margin,
+          },
+          variants: variants.map(({ wholesalePrice, ...rest }) => {
+            return {
+              ...rest,
+              wholesalePrice: noAccessPriceListIds.has(priceList.id)
+                ? null
+                : wholesalePrice,
+            };
+          }),
+          ...rest,
+        };
+      },
+    );
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to clean up product data format.',
+      formatProductDataForPriceList,
+      { products, sessionId },
+    );
+  }
 };
 
 // made this into an object to have easier control on when to pass params
