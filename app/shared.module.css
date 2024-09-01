@@ -1,41 +1,50 @@
-/* TODO: refactor using CSS vars */
-
-.orange {
-  background-color: #fb6514;
+:root {
+  --orange: #fb6514;
+  --blue: #0066fe;
+  --yellow: #ffb800;
+  --green: #29845a;
 }
 
-.orange:hover {
-  background-color: #ec4a0a;
+button:disabled:hover {
+  cursor: not-allowed;
 }
 
-.blue {
-  background-color: #0066fe;
+button.orange {
+  background-color: var(--orange);
 }
 
-.blue:hover {
-  background-color: #1e9aff;
+button.orange.disabled:hover {
+  background-color: var(--orange) !important;
 }
 
-.yellow {
-  background-color: #ffb800;
+button.blue {
+  background-color: var(--blue);
 }
 
-.yellow:hover {
-  background-color: #e28d00;
+button.blue:disabled:hover {
+  background-color: var(--blue) !important;
 }
 
-.green {
-  background-color: #29845a;
+button.yellow {
+  background-color: var(--yellow);
 }
 
-.green:hover {
-  background-color: #1d5f42;
+button.yellow:disabled:hover {
+  background-color: var(--yellow) !important;
 }
 
-.blue > p,
-.yellow > p,
-.orange > p,
-.green > p {
+button.green {
+  background-color: var(--green);
+}
+
+button.green:disabled:hover {
+  background-color: var(--yellow) !important;
+}
+
+button.blue > p,
+button.yellow > p,
+button.orange > p,
+button.green > p {
   color: white;
 }
 
@@ -52,13 +61,29 @@
   transition-duration: 150ms;
 }
 
+.orange:hover {
+  background-color: #ec4a0a;
+}
+
+.blue:hover {
+  background-color: #1e9aff;
+}
+
+.yellow:hover {
+  background-color: #e28d00;
+}
+
+.green:hover {
+  background-color: #1d5f42;
+}
+
 /* for text containers */
 .orange-container * {
-  color: #fb6514;
+  color: var(--orange);
 }
 
 .green-container * {
-  color: #1d5f42;
+  color: var(--green);
 }
 
 /* for card containers */

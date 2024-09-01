@@ -1,7 +1,7 @@
 import { object, string } from 'yup';
 import { INTENTS, type IntentsProps } from '../constants';
 import { hasSession } from '~/services/models/session';
-import { createPartnershipRequest } from '~/services/models/partnershipRequest';
+import { createOrUpdatePartnershipRequest } from '~/services/models/partnershipRequest';
 import {
   getGeneralPriceList,
   hasGeneralPriceList,
@@ -65,7 +65,7 @@ export async function requestAccessAction(
     ]);
     const { priceListSupplierId, message } = formDataObject;
     const generalPriceListId = (await getGeneralPriceList(sessionId)).id;
-    await createPartnershipRequest({
+    await createOrUpdatePartnershipRequest({
       priceListIds: [generalPriceListId],
       recipientId: priceListSupplierId,
       senderId: sessionId,
