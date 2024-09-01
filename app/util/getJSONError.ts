@@ -3,7 +3,6 @@ import * as createHttpError from 'http-errors';
 import { ValidationError } from 'yup';
 import logger from '~/logger';
 
-// !!! TODO: have to fix this
 function getJSONError(error: unknown, route: string) {
   if (error instanceof ValidationError) {
     logger.error(`Validation Error: ${error.message}`);

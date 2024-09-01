@@ -2,10 +2,12 @@ import { errorHandler } from '~/services/util';
 import db from '~/db.server';
 import { ROLES } from '~/constants';
 import { boolean, object, string } from 'yup';
+import { hasSession } from '~/services/models/session';
+import type { Prisma } from '@prisma/client';
+import logger from '~/logger';
+import createHttpError from 'http-errors';
 
 export type SupplierPaginatedInfoProps = {
-  firstSupplierId: string;
-  hasMore: boolean;
   nextCursor: string | null;
   prevCursor: string | null;
   suppliers: Supplier[];
@@ -43,50 +45,70 @@ type SocialMediaLink = {
   userProfileId: string;
 };
 
+type SupplierPaginatedInfoPrisma = Prisma.SessionGetPayload<{
+  select: {
+    id: true;
+    userProfile: {
+      include: {
+        socialMediaLink: true;
+      };
+    };
+    priceLists: {
+      select: {
+        id: true;
+        isGeneral: true;
+        requiresApprovalToImport: true;
+      };
+    };
+  };
+}>;
+
+type GetSupplierPaginatedInfoProps = {
+  isReverseDirection: boolean;
+  sessionId: string;
+  cursor: string | null;
+};
+
+type GetPrismaUnformattedSupplierInfo = GetSupplierPaginatedInfoProps & {
+  take: number;
+};
+
 // TODO: let me actually figure out how prisma type safety works
 const getSupplierInfoSchema = object({
   isReverseDirection: boolean().required(),
-  firstSupplierId: string().optional(),
-  cursor: string().optional(),
-})
-  .test(
-    'cursor-first-supplier-id-not-nullable',
-    'Both supplier ID and cursor must be provided together or not at all.',
-    (values) => {
-      const { firstSupplierId, cursor } = values;
-      if ((!firstSupplierId && cursor) || (firstSupplierId && !cursor)) {
-        return false;
-      }
-      return true;
-    },
-  )
-  .test(
-    'is-reverse-direction-not-true',
-    'Cannot fetch information from reverse direction if cursor is not provided',
-    (values) => {
-      const { isReverseDirection, cursor } = values;
-      if (!cursor && isReverseDirection) {
-        return false;
-      }
-      return true;
-    },
-  );
+  cursor: string().nullable().required(),
+  sessionId: string()
+    .required()
+    .test(
+      'session-id-is-valid',
+      'Session id has to be in database',
+      async (sessionId) => {
+        return await hasSession(sessionId);
+      },
+    ),
+}).test(
+  'is-reverse-direction-not-true',
+  'Cannot fetch information from reverse direction if cursor is not provided',
+  (values) => {
+    const { isReverseDirection, cursor } = values;
+    if (!cursor && isReverseDirection) {
+      return false;
+    }
+    return true;
+  },
+);
 
-export async function getSupplierPaginatedInfo(
-  isReverseDirection: boolean,
-  firstSupplierId?: string,
-  cursor?: string,
-) {
+async function getPrismaUnformattedSupplierInfo({
+  isReverseDirection,
+  sessionId,
+  take,
+  cursor,
+}: GetPrismaUnformattedSupplierInfo) {
   try {
-    await getSupplierInfoSchema.validate({
-      isReverseDirection,
-      firstSupplierId,
-      cursor,
-    });
     // the only suppliers that should show up are suppliers with a general price list and at least one product in the price list
-    // and they purposely set themselves as visible in the supplier network
-    const take = 8;
-    const suppliersRawData = await db.session.findMany({
+    // NOTE: this takes one more than usual in order to check if has more
+    // TODO: should be possible to refactor the take one more logic out because it's confusing if the someone doesn't read the implementation
+    const prismaData = await db.session.findMany({
       take: isReverseDirection ? -1 * take : take + 1,
       ...(cursor && { cursor: { id: cursor } }),
       ...(cursor && { skip: 1 }),
@@ -133,46 +155,94 @@ export async function getSupplierPaginatedInfo(
         },
       },
     });
+    return prismaData;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to retrieve supplier data from databse',
+      getPrismaUnformattedSupplierInfo,
+      {
+        isReverseDirection,
+        sessionId,
+        take,
+        cursor,
+      },
+    );
+  }
+}
 
-    // clean up data
-    const suppliers = suppliersRawData.map((supplier) => {
-      const { userProfile } = supplier;
-      // TODO: add error handlers
-      if (!userProfile) {
-        throw new Error('Profile does not exist');
-      }
-      const { socialMediaLink, ...profileRest } = userProfile;
-      if (!socialMediaLink) {
-        throw new Error('Social media link does not exist');
-      }
-      const generalPriceList = supplier.priceLists.filter(
-        (priceList) => priceList.isGeneral === true,
-      )[0];
+function cleanUpSupplierPrismaData(
+  suppliersRawData: SupplierPaginatedInfoPrisma[],
+) {
+  const suppliers = suppliersRawData.map((supplier) => {
+    const { userProfile } = supplier;
+    if (!userProfile) {
+      logger.error('User profile does not exist in session.');
+      throw new createHttpError.InternalServerError(
+        `A supplier's user profile does not exist.`,
+      );
+    }
+    const { socialMediaLink, ...profileRest } = userProfile;
+    if (!socialMediaLink) {
+      logger.error('Social media links does not exist in session.');
+      throw new createHttpError.InternalServerError(
+        `A supplier's socials does not exist.`,
+      );
+    }
+    const generalPriceList = supplier.priceLists.filter(
+      (priceList) => priceList.isGeneral === true,
+    )[0];
 
-      return {
-        id: supplier.id,
-        profile: {
-          ...profileRest,
-          socialMediaLink: { ...socialMediaLink },
-        },
-        priceList: {
-          id: generalPriceList.id,
-          requiresApprovalToImport: generalPriceList.requiresApprovalToImport,
-        },
-      };
+    return {
+      id: supplier.id,
+      profile: {
+        ...profileRest,
+        socialMediaLink: { ...socialMediaLink },
+      },
+      priceList: {
+        id: generalPriceList.id,
+        requiresApprovalToImport: generalPriceList.requiresApprovalToImport,
+      },
+    };
+  });
+
+  return suppliers;
+}
+
+export async function getSupplierPaginatedInfo({
+  isReverseDirection,
+  sessionId,
+  cursor,
+}: GetSupplierPaginatedInfoProps) {
+  try {
+    await getSupplierInfoSchema.validate({
+      isReverseDirection,
+      cursor,
+      sessionId,
     });
 
-    // calculation for next and prev cursor
-    const hasSuppliers = suppliers.length > 0;
-    let firstPageSupplierId = null;
-    if (hasSuppliers && !firstSupplierId) {
-      firstPageSupplierId = firstSupplierId;
-    } else {
-      firstPageSupplierId = null;
-    }
-    const isFirstPage =
-      !cursor || (suppliers[0] && suppliers[0].id === firstPageSupplierId);
+    const take = 8;
+    const [firstSupplier, suppliersRawData] = await Promise.all([
+      getPrismaUnformattedSupplierInfo({
+        isReverseDirection: false,
+        sessionId,
+        take: 1,
+        cursor: null,
+      }),
+      getPrismaUnformattedSupplierInfo({
+        isReverseDirection,
+        sessionId,
+        take,
+        cursor,
+      }),
+    ]);
 
+    const firstSupplierId =
+      firstSupplier.length > 0 ? firstSupplier[0].id : null;
+    const suppliers = cleanUpSupplierPrismaData(suppliersRawData);
+
+    const isFirstPage =
+      suppliers[0] && suppliers[0].id === firstSupplierId ? true : false;
     const hasMore = suppliers.length > take || isReverseDirection;
 
     // for next direction, we took one extra to check if there are more elements are the cursor
@@ -183,8 +253,6 @@ export async function getSupplierPaginatedInfo(
     const nextCursor = hasMore ? suppliersArr[take - 1].id : null;
 
     return {
-      firstSupplierId: firstPageSupplierId,
-      hasMore,
       nextCursor,
       prevCursor,
       suppliers: suppliersArr,

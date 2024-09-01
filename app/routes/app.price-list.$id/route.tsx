@@ -91,6 +91,7 @@ type PartneredRetailersProps = {
 // TODO: add success message for updating price list
 // TODO: allow creation of products and retailers through creating a price list
 // TODO: update createPriceListAndCompleteChecklistItem
+// TODO: there should be an edge case I didn't consider with editing the price list and making a private into a general
 export const action = async ({ request, params }: ActionFunctionArgs) => {
   try {
     const { session, admin } = await authenticate.admin(request);

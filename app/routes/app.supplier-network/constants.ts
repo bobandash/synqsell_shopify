@@ -7,5 +7,4 @@ export const INTENTS = {
 };
 
 export type IntentsProps = (typeof INTENTS)[keyof typeof INTENTS];
-
 export type ModalsProps = (typeof MODALS)[keyof typeof MODALS];

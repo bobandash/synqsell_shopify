@@ -10,7 +10,11 @@ import { convertFormDataToObject, getJSONError } from '~/util';
 import { authenticate } from '~/shopify.server';
 import { hasRole } from '~/services/models/roles';
 import { ROLES } from '~/constants';
-import { useLoaderData } from '@remix-run/react';
+import {
+  useLoaderData,
+  useRevalidator,
+  useSearchParams,
+} from '@remix-run/react';
 import { getSupplierPaginatedInfo } from './loader/getSupplierPaginatedInfo';
 import type {
   Supplier,
@@ -19,25 +23,39 @@ import type {
 import { PriceListRequestModal } from './components';
 import { PaddedBox } from '~/components';
 import { ChevronLeftIcon, ChevronRightIcon } from '@shopify/polaris-icons';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { INTENTS } from './constants';
 import { requestAccessAction } from './action';
 import type { RequestAccessFormData } from './action/requestAccessAction';
 
-export const loader = async ({ request }: LoaderFunctionArgs) => {
+export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   try {
     const { session } = await authenticate.admin(request);
     const { id: sessionId } = session;
     const isRetailer = await hasRole(sessionId, ROLES.RETAILER);
-    // TODO: handle errors better
+    const { searchParams } = new URL(request.url);
+    const next = searchParams.get('next');
+    const prev = searchParams.get('prev');
+    const isReverseDirection = prev ? true : false;
+    let cursor = null;
+    if (next) {
+      cursor = next;
+    } else if (prev) {
+      cursor = prev;
+    }
+
     if (!isRetailer) {
       throw json(
-        { error: 'Unauthorized. User is not retailer.' },
+        { error: { message: 'Unauthorized. User is not retailer.' } },
         StatusCodes.UNAUTHORIZED,
       );
     }
-    // todo: add cursors on refresh
-    const supplierInfo = await getSupplierPaginatedInfo(false);
+
+    const supplierInfo = await getSupplierPaginatedInfo({
+      isReverseDirection,
+      sessionId,
+      cursor,
+    });
     return json(supplierInfo, StatusCodes.OK);
   } catch (error) {
     throw getJSONError(error, 'supplier network');
@@ -64,20 +82,35 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 };
 
+// TODO: add cursor navigation with useParams
 const SupplierNetwork = () => {
-  const {
-    suppliers: suppliersData,
-    nextCursor,
-    prevCursor,
-  } = useLoaderData<typeof loader>() as SupplierPaginatedInfoProps;
-
-  // TODO: add cursor navigation with useParams
-  const [suppliers, setSuppliers] = useState<Supplier[]>(suppliersData);
+  const data = useLoaderData<typeof loader>() as SupplierPaginatedInfoProps;
+  const [suppliers, setSuppliers] = useState<Supplier[]>(data.suppliers);
   const [selectedSupplierId, setSelectedSupplierId] = useState('');
+  const [nextCursor, setNextCursor] = useState(data.nextCursor);
+  const [prevCursor, setPrevCursor] = useState(data.prevCursor);
+  const [, setSearchParams] = useSearchParams();
+  const revalidator = useRevalidator();
 
   useEffect(() => {
-    setSuppliers(suppliersData);
-  }, [suppliersData, setSuppliers]);
+    setSuppliers(data.suppliers);
+    setNextCursor(data.nextCursor);
+    setPrevCursor(data.prevCursor);
+  }, [data]);
+
+  const navigateNextCursor = useCallback(() => {
+    if (nextCursor) {
+      setSearchParams({ next: nextCursor });
+      revalidator.revalidate();
+    }
+  }, [nextCursor, setSearchParams, revalidator]);
+
+  const navigatePrevCursor = useCallback(() => {
+    if (prevCursor) {
+      setSearchParams({ prev: prevCursor });
+      revalidator.revalidate();
+    }
+  }, [prevCursor, setSearchParams, revalidator]);
 
   return (
     <Page
@@ -99,11 +132,18 @@ const SupplierNetwork = () => {
         ))}
       </InlineGrid>
       <PriceListRequestModal priceListSupplierId={selectedSupplierId} />
-
       <PaddedBox />
       <InlineStack gap={'200'} align={'center'}>
-        <Button icon={ChevronLeftIcon} disabled={!prevCursor} />
-        <Button icon={ChevronRightIcon} disabled={!nextCursor} />
+        <Button
+          icon={ChevronLeftIcon}
+          disabled={!prevCursor}
+          onClick={navigatePrevCursor}
+        />
+        <Button
+          icon={ChevronRightIcon}
+          disabled={!nextCursor}
+          onClick={navigateNextCursor}
+        />
       </InlineStack>
       <PaddedBox />
     </Page>

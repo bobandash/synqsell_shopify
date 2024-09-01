@@ -24,16 +24,8 @@ const PriceListRequestModal: FC<Props> = ({ priceListSupplierId }) => {
   });
 
   const { submit, submitting } = useSubmit(async (fieldValues) => {
-    try {
-      remixSubmit(fieldValues, { method: 'post' });
-      return { status: 'success' };
-    } catch (error) {
-      console.error('Submission error:', error);
-      return {
-        status: 'fail',
-        errors: [{ message: 'An unexpected error occurred' }],
-      };
-    }
+    remixSubmit(fieldValues, { method: 'post' });
+    return { status: 'success' };
   }, fields);
 
   return (

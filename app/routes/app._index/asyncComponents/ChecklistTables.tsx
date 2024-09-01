@@ -61,7 +61,6 @@ function ChecklistTables() {
             } else if (index > 0 && !isFirstItemCompleted) {
               disabled = true;
             }
-
             return {
               key,
               ...rest,

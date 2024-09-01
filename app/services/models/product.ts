@@ -52,7 +52,6 @@ export async function addProductsTx(
         }),
       ),
     );
-
     return newProducts;
   } catch (error) {
     throw errorHandler(

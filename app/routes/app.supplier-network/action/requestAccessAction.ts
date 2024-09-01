@@ -65,7 +65,7 @@ export async function requestAccessAction(
     ]);
     const { priceListSupplierId, message } = formDataObject;
     const generalPriceListId = (await getGeneralPriceList(sessionId)).id;
-    const newPartnershipRequest = await createPartnershipRequest({
+    await createPartnershipRequest({
       priceListIds: [generalPriceListId],
       recipientId: priceListSupplierId,
       senderId: sessionId,
@@ -73,7 +73,10 @@ export async function requestAccessAction(
       type: PARTNERSHIP_REQUEST_TYPE.RETAILER,
       status: PARTNERSHIP_REQUEST_STATUS.PENDING,
     });
-    return json(newPartnershipRequest, StatusCodes.CREATED);
+    return json(
+      { message: 'Successfully created partnership request.' },
+      StatusCodes.CREATED,
+    );
   } catch (error) {
     throw getJSONError(error, 'supplier network');
   }
