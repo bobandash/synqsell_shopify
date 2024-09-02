@@ -64,7 +64,7 @@ const SupplierCard: FC<Props> = ({ retailer, setSelectedRetailerId }) => {
                 {name}
               </Text>
               <a
-                href="https://www.blankmod.com"
+                href={website}
                 target="_blank"
                 rel="noreferrer"
                 className={`${styles['link']}`}
