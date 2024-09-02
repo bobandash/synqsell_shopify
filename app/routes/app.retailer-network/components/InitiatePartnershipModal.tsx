@@ -13,7 +13,7 @@ type Props = {
   handleSelectPriceListIds: (priceListIds: string[]) => void;
 };
 
-// TODO: Fix: resource list doesn't render in modal?
+// TODO: shopify's useForm doesn't currently support validation for select multiple, so you have to handle the error that the supplier did not select a price list manually
 const PriceListRequestModal: FC<Props> = ({
   selectedRetailerId,
   priceLists,
@@ -21,7 +21,7 @@ const PriceListRequestModal: FC<Props> = ({
   handleSelectPriceListIds,
 }) => {
   const remixSubmit = useRemixSubmit();
-  // priceListSupplierId denotes the session Id of the price list owner
+
   const { fields } = useForm({
     fields: {
       intent: useField(INTENTS.INITIATE_PARTNERSHIP),
@@ -87,6 +87,7 @@ const PriceListRequestModal: FC<Props> = ({
 
 export default PriceListRequestModal;
 
+// TODO: Fix: resource list doesn't render in modal?
 // apparently combo box is not allowed because modals inject javascript
 // <Combobox
 // allowMultiple
