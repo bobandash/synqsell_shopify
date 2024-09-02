@@ -26,7 +26,6 @@ const PriceListRequestModal: FC<Props> = ({
     fields: {
       intent: useField(INTENTS.INITIATE_PARTNERSHIP),
       retailerId: useField(selectedRetailerId),
-      priceListIds: useField(selectedPriceListIds),
       message: useField({
         value: '',
         validates: [notEmpty('Message is required.')],
@@ -35,7 +34,11 @@ const PriceListRequestModal: FC<Props> = ({
   });
 
   const { submit, submitting } = useSubmit(async (fieldValues) => {
-    remixSubmit(fieldValues, { method: 'post' });
+    const newFieldValues = {
+      ...fieldValues,
+      priceListIds: JSON.stringify(selectedPriceListIds),
+    };
+    remixSubmit(newFieldValues, { method: 'post' });
     return { status: 'success' };
   }, fields);
 

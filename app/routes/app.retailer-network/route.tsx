@@ -26,6 +26,7 @@ import type {
 } from './loader/getRetailerPaginatedInfo';
 import { InitiatePartnershipModal, RetailerCard } from './components';
 import { getAllPriceLists } from '~/services/models/priceList';
+import { initiatePartnershipAction } from './actions';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
@@ -73,7 +74,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const formDataObject = convertFormDataToObject(formData);
     switch (intent) {
       case INTENTS.INITIATE_PARTNERSHIP:
-        return json({ error: 'Not implemented' }, StatusCodes.NOT_IMPLEMENTED);
+        await initiatePartnershipAction({
+          supplierId: sessionId,
+          intent: formDataObject.intent,
+          retailerId: formDataObject.retailerId,
+          message: formDataObject.message,
+          priceListIds: formDataObject.priceListIds,
+        });
+        return json(
+          { message: 'Successfully sent partnership request to retailer.' },
+          StatusCodes.OK,
+        );
     }
     return json({ error: 'Not implemented' }, StatusCodes.NOT_IMPLEMENTED);
   } catch (error) {
@@ -81,7 +92,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 };
 
-// TODO: I'm pretty sure I need to propagate the shopify fields up because the fields persist on submit
+// TODO: Figure out how to either clear the fields on shopify modal hide
 const SupplierNetwork = () => {
   const { retailerPaginatedInfo, priceLists } = useLoaderData<
     typeof loader
