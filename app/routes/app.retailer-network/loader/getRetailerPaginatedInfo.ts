@@ -15,13 +15,16 @@ import {
   getPartnershipRequestMultiplePriceLists,
   hasPartnershipRequestMultiplePriceLists,
 } from '~/services/models/partnershipRequest';
-import { getAllPriceListIds } from '~/services/models/priceList';
+import { getAllPriceLists } from '~/services/models/priceList';
 import { PARTNERSHIP_STATUS, type PartnershipStatusProps } from '../constants';
 
-export type SupplierPaginatedInfoProps = {
-  nextCursor: string | null;
-  prevCursor: string | null;
-  retailers: Retailer[];
+export type RetailerPaginatedInfoProps = {
+  retailerPaginatedInfo: {
+    nextCursor: string | null;
+    prevCursor: string | null;
+    retailers: Retailer[];
+  };
+  priceLists: PriceListJsonify[];
 };
 
 export type Retailer = {
@@ -51,6 +54,11 @@ type SocialMediaLink = {
   youtube: string;
   tiktok: string;
   userProfileId: string;
+};
+
+type PriceList = Prisma.PriceListGetPayload<{}>;
+export type PriceListJsonify = PriceList & {
+  createdAt: string;
 };
 
 type SupplierPaginatedInfoPrisma = Prisma.SessionGetPayload<{
@@ -209,7 +217,8 @@ async function cleanUpRetailerPrismaData(
 ) {
   // cleans up retailer data and adds approval status to the prisma data
   try {
-    const priceListIds = await getAllPriceListIds(sessionId);
+    const priceLists = await getAllPriceLists(sessionId);
+    const priceListIds = priceLists.map((priceList) => priceList.id);
     const retailers = await Promise.all(
       retailerRawData.map(async (retailer) => {
         const { userProfile } = retailer;

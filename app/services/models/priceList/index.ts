@@ -402,7 +402,7 @@ export async function deletePriceListBatch(
   }
 }
 
-export async function getAllPriceListIds(supplierId: string) {
+export async function getAllPriceLists(supplierId: string) {
   try {
     // retrieves all price list ids the supplier has
     await isSupplierSchema.validate(supplierId);
@@ -411,13 +411,12 @@ export async function getAllPriceListIds(supplierId: string) {
         supplierId,
       },
     });
-    const priceListIds = priceLists.map(({ id }) => id);
-    return priceListIds;
+    return priceLists;
   } catch (error) {
     throw errorHandler(
       error,
-      'Failed to get all price list ids.',
-      getAllPriceListIds,
+      'Failed to get all price lists.',
+      getAllPriceLists,
       { supplierId },
     );
   }

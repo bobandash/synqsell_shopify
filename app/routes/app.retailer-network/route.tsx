@@ -25,6 +25,7 @@ import type {
   RetailerPaginatedInfoProps,
 } from './loader/getRetailerPaginatedInfo';
 import { InitiatePartnershipModal, RetailerCard } from './components';
+import { getAllPriceLists } from '~/services/models/priceList';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
@@ -49,12 +50,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       );
     }
 
-    const retailerInfo = await getRetailerPaginatedInfo({
+    // TODO: change to suspense await
+    const retailerPaginatedInfo = await getRetailerPaginatedInfo({
       isReverseDirection,
       sessionId,
       cursor,
     });
-    return json(retailerInfo, StatusCodes.OK);
+    const priceLists = await getAllPriceLists(sessionId);
+
+    return json({ retailerPaginatedInfo, priceLists }, StatusCodes.OK);
   } catch (error) {
     throw getJSONError(error, 'supplier network');
   }
@@ -77,22 +81,36 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 };
 
+// TODO: I'm pretty sure I need to propagate the shopify fields up because the fields persist on submit
 const SupplierNetwork = () => {
-  const data = useLoaderData<typeof loader>() as RetailerPaginatedInfoProps;
+  const { retailerPaginatedInfo, priceLists } = useLoaderData<
+    typeof loader
+  >() as RetailerPaginatedInfoProps;
+
   const actionData = useActionData<typeof action>();
-  const [retailers, setRetailers] = useState<Retailer[]>(data.retailers);
+  const [retailers, setRetailers] = useState<Retailer[]>(
+    retailerPaginatedInfo.retailers,
+  );
   const [selectedRetailerId, setSelectedRetailerId] = useState('');
-  const [nextCursor, setNextCursor] = useState(data.nextCursor);
-  const [prevCursor, setPrevCursor] = useState(data.prevCursor);
+  const [nextCursor, setNextCursor] = useState(
+    retailerPaginatedInfo.nextCursor,
+  );
+  const [prevCursor, setPrevCursor] = useState(
+    retailerPaginatedInfo.prevCursor,
+  );
+  const [selectedPriceListIds, setSelectedPriceListIds] = useState<string[]>(
+    [],
+  );
+
   const [, setSearchParams] = useSearchParams();
   const revalidator = useRevalidator();
 
   useEffect(() => {
-    setRetailers(data.retailers);
-    setNextCursor(data.nextCursor);
-    setPrevCursor(data.prevCursor);
+    setRetailers(retailerPaginatedInfo.retailers);
+    setNextCursor(retailerPaginatedInfo.nextCursor);
+    setPrevCursor(retailerPaginatedInfo.prevCursor);
     shopify.modal.hide(MODALS.INITIATE_PARTNERSHIP);
-  }, [data]);
+  }, [retailerPaginatedInfo]);
 
   useEffect(() => {
     if (actionData && 'message' in actionData) {
@@ -114,6 +132,10 @@ const SupplierNetwork = () => {
     }
   }, [prevCursor, setSearchParams, revalidator]);
 
+  const handleSelectPriceListIds = useCallback((priceListIds: string[]) => {
+    setSelectedPriceListIds(priceListIds);
+  }, []);
+
   return (
     <Page
       title="Retailer Network"
@@ -133,7 +155,12 @@ const SupplierNetwork = () => {
           />
         ))}
       </InlineGrid>
-      <InitiatePartnershipModal selectedRetailerId={selectedRetailerId} />
+      <InitiatePartnershipModal
+        selectedRetailerId={selectedRetailerId}
+        priceLists={priceLists}
+        selectedPriceListIds={selectedPriceListIds}
+        handleSelectPriceListIds={handleSelectPriceListIds}
+      />
       <PaddedBox />
       {(prevCursor || nextCursor) && (
         <>

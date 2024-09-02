@@ -1,21 +1,32 @@
 import { Modal, TitleBar } from '@shopify/app-bridge-react';
 import { INTENTS, MODALS } from '../constants';
-import type { FC } from 'react';
+import { useMemo, type FC } from 'react';
 import { useSubmit as useRemixSubmit } from '@remix-run/react';
-import { Form, TextField } from '@shopify/polaris';
+import { BlockStack, Form, TextField, ChoiceList } from '@shopify/polaris';
 import { notEmpty, useField, useForm, useSubmit } from '@shopify/react-form';
+import type { PriceListJsonify } from '../loader/getRetailerPaginatedInfo';
 
 type Props = {
-  priceListSupplierId: string;
+  selectedRetailerId: string;
+  priceLists: PriceListJsonify[];
+  selectedPriceListIds: string[];
+  handleSelectPriceListIds: (priceListIds: string[]) => void;
 };
 
-const PriceListRequestModal: FC<Props> = ({ priceListSupplierId }) => {
+// TODO: Fix: resource list doesn't render in modal?
+const PriceListRequestModal: FC<Props> = ({
+  selectedRetailerId,
+  priceLists,
+  selectedPriceListIds,
+  handleSelectPriceListIds,
+}) => {
   const remixSubmit = useRemixSubmit();
   // priceListSupplierId denotes the session Id of the price list owner
   const { fields } = useForm({
     fields: {
       intent: useField(INTENTS.INITIATE_PARTNERSHIP),
-      priceListSupplierId: useField(priceListSupplierId),
+      retailerId: useField(selectedRetailerId),
+      priceListIds: useField(selectedPriceListIds),
       message: useField({
         value: '',
         validates: [notEmpty('Message is required.')],
@@ -28,26 +39,43 @@ const PriceListRequestModal: FC<Props> = ({ priceListSupplierId }) => {
     return { status: 'success' };
   }, fields);
 
+  const choices = useMemo(() => {
+    return priceLists.map((priceList) => {
+      return {
+        label: priceList.name,
+        value: priceList.id,
+      };
+    });
+  }, [priceLists]);
+
   return (
     <Modal id={MODALS.INITIATE_PARTNERSHIP}>
       <div style={{ padding: '1rem' }}>
-        <p style={{ paddingBottom: '0.25rem' }}>
+        <p style={{ paddingBottom: '0.25rem', fontWeight: 'bold' }}>
           Explain how this partnership will create value and benefits for both
           parties involved!
         </p>
         <Form onSubmit={submit}>
-          <TextField
-            label="Message:"
-            labelHidden
-            autoComplete="off"
-            multiline={4}
-            {...fields.message}
-          />
+          <BlockStack gap="200">
+            <ChoiceList
+              allowMultiple
+              title="Price Lists To Grant Access:"
+              choices={choices}
+              selected={selectedPriceListIds}
+              onChange={handleSelectPriceListIds}
+            />
+            <TextField
+              label="Message:"
+              autoComplete="off"
+              multiline={4}
+              {...fields.message}
+            />
+          </BlockStack>
         </Form>
       </div>
-      <TitleBar title="Request Access">
+      <TitleBar title="Initiate Partnership">
         <button variant="primary" onClick={submit} disabled={submitting}>
-          Request Access
+          Initiate Partnership
         </button>
       </TitleBar>
     </Modal>
@@ -55,3 +83,72 @@ const PriceListRequestModal: FC<Props> = ({ priceListSupplierId }) => {
 };
 
 export default PriceListRequestModal;
+
+// apparently combo box is not allowed because modals inject javascript
+// <Combobox
+// allowMultiple
+// activator={
+//   <Combobox.TextField
+//     prefix={<Icon source={SearchIcon} />}
+//     onChange={() => {}}
+//     label="Select Price Lists:"
+//     value={''}
+//     placeholder=""
+//     autoComplete="off"
+//   />
+// }
+// >
+// {priceLists.length > 0 ? (
+//   <Listbox onSelect={handleSelectPriceListId}>
+//     {priceLists.map(({ id, name }) => {
+//       return (
+//         <Listbox.Option
+//           key={id}
+//           value={id}
+//           selected={selectedPriceListIds.has(id)}
+//           accessibilityLabel={name}
+//         >
+//           {name}
+//         </Listbox.Option>
+//       );
+//     })}
+//   </Listbox>
+// ) : null}
+// </Combobox>
+// <ResourceList
+// resourceName={{
+//   singular: 'Price List',
+//   plural: 'Price Lists',
+// }}
+// items={priceLists.filter(({ id }) =>
+//   selectedPriceListIds.has(id),
+// )}
+// renderItem={(item) => {
+//   const { id, name } = item;
+//   return (
+//     <ResourceItem
+//       id={id}
+//       url={''}
+//       accessibilityLabel={`View details for ${name}`}
+//     >
+//       <InlineStack blockAlign="center" align="space-between">
+//         <Text variant="bodyMd" fontWeight="bold" as="h3">
+//           {name}
+//         </Text>
+//         <div
+//           onClick={(e) => {
+//             e.stopPropagation();
+//           }}
+//         >
+//           <Button
+//             icon={XIcon}
+//             onClick={() => {
+//               handleSelectPriceListId(id);
+//             }}
+//           />
+//         </div>
+//       </InlineStack>
+//     </ResourceItem>
+//   );
+// }}
+// />
