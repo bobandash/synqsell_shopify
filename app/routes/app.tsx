@@ -24,6 +24,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     return json({ apiKey: process.env.SHOPIFY_API_KEY || '', roleNames });
   } catch (error) {
     logger.error(error);
+    console.log(error);
     throw getJSONError(error, 'app root');
   }
 };
