@@ -1,39 +1,65 @@
-import { IndexTable, Link, Text } from '@shopify/polaris';
-import type { FC } from 'react';
+import { Button, IndexTable, Link } from '@shopify/polaris';
+import { useCallback, type FC } from 'react';
 import type { RowData } from '../types';
 import { convertToDate } from '~/routes/util';
 import StatusBadge from './StatusBadge';
+import { useAppBridge } from '@shopify/app-bridge-react';
+import { MODALS } from '../constants';
 
 type RowMarkupProps = {
   data: RowData;
   index: number;
   selected: boolean;
+  setMessage: React.Dispatch<
+    React.SetStateAction<{
+      name: string;
+      content: string;
+    }>
+  >;
 };
 
-const TableRow: FC<RowMarkupProps> = ({ data, index, selected }) => {
-  const { id, createdAt, name, websiteUrl, priceLists, status } = data;
+const TableRow: FC<RowMarkupProps> = ({
+  data,
+  index,
+  selected,
+  setMessage,
+}) => {
+  const { id, createdAt, name, websiteUrl, priceLists, status, message } = data;
+  const shopify = useAppBridge();
+
+  const handleClick = useCallback(() => {
+    setMessage({
+      name,
+      content: message,
+    });
+    shopify.modal.show(MODALS.MESSAGE);
+  }, [message, setMessage, shopify, name]);
+
+  const handleStopPropagation = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+  };
 
   return (
     <IndexTable.Row id={id} key={id} selected={selected} position={index}>
       <IndexTable.Cell>{convertToDate(createdAt)}</IndexTable.Cell>
       <IndexTable.Cell>
-        <a
-          href={websiteUrl}
-          target="_blank"
-          rel="noreferrer"
-          onClick={(e) => {
-            e.stopPropagation();
-          }}
-        >
-          {name}
-        </a>
+        <div onClick={handleStopPropagation}>
+          <Link url={websiteUrl} target="_blank">
+            {name}
+          </Link>
+        </div>
       </IndexTable.Cell>
       <IndexTable.Cell>
         {priceLists.map((priceList) => (
-          <Text as="p" variant="bodyMd" key={priceList.id}>
+          <div onClick={handleStopPropagation} key={priceList.id}>
             <Link url={`/app/products/${priceList.id}`}>{priceList.name}</Link>
-          </Text>
+          </div>
         ))}
+      </IndexTable.Cell>
+      <IndexTable.Cell>
+        <div onClick={handleStopPropagation}>
+          <Button onClick={handleClick}>Open</Button>
+        </div>
       </IndexTable.Cell>
       <IndexTable.Cell>
         <StatusBadge status={status} />

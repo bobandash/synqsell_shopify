@@ -10,4 +10,5 @@ export type RowData = {
     name: string;
   }[];
   status: SupplierAccessRequestStatusProps;
+  message: string;
 };

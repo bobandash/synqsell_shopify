@@ -13,8 +13,7 @@ async function getSupplierPartnershipInfo(sessionId: string) {
     ]);
 
     const formattedPartnershipRequests = partnershipRequests.map((request) => {
-      const { id, createdAt, priceLists } = request;
-      const { sender: supplier } = request;
+      const { id, createdAt, priceLists, message, sender: supplier } = request;
       return {
         id,
         createdAt,
@@ -24,15 +23,17 @@ async function getSupplierPartnershipInfo(sessionId: string) {
           id: priceList.id,
           name: priceList.name,
         })),
+        message,
         status: request.status,
       };
     });
 
     const formattedSupplierPartnerships = partnerships.map((request) => {
-      const { id, createdAt, priceLists, supplier } = request;
+      const { id, createdAt, priceLists, supplier, message } = request;
       return {
         id,
         createdAt,
+        message,
         name: supplier.userProfile?.name,
         websiteUrl: supplier.userProfile?.website,
         priceLists: priceLists.map((priceList) => ({

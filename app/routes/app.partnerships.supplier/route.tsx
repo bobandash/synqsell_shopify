@@ -23,6 +23,8 @@ import type { BulkActionsProps } from '@shopify/polaris/build/ts/src/components/
 import type { RowData } from './types';
 import { TableRow } from './components';
 import getSupplierPartnershipInfo from './loader/getSupplierPartnershipInfo';
+import MessageModal from './components/Modals/MessageModal';
+import { useAppBridge } from '@shopify/app-bridge-react';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
@@ -48,6 +50,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     throw getJSONError(error, 'supplier partnerships');
   }
 };
+
 // the whole point in supplier partnerships is if someone is on the retailer network and requests a partnership with you as a supplier
 // and the whole point in supplier partnerships is if a supplier requests a partnership with you
 const SupplierPartnerships = () => {
@@ -59,6 +62,8 @@ const SupplierPartnerships = () => {
   const [query, setQuery] = useState('');
   const [requestsData, setRequestsData] = useState<RowData[]>(data);
   const [filteredRequestsData, setFilteredData] = useState<RowData[]>(data);
+  const [message, setMessage] = useState({ name: '', content: '' });
+  const shopify = useAppBridge();
 
   useEffect(() => {
     setRequestsData(data);
@@ -145,6 +150,7 @@ const SupplierPartnerships = () => {
     { title: 'Request Date' },
     { title: 'Supplier' },
     { title: 'Price List(s)' },
+    { title: 'Message' },
     { title: 'Status' },
   ];
 
@@ -170,6 +176,7 @@ const SupplierPartnerships = () => {
         onAction: navigateRetailerRequests,
       }}
     >
+      <MessageModal message={message} shopify={shopify} />
       <Card padding={'0'}>
         <IndexFilters
           tabs={tabs}
@@ -206,6 +213,7 @@ const SupplierPartnerships = () => {
               data={data}
               index={index}
               selected={selectedResources.includes(data.id)}
+              setMessage={setMessage}
             />
           ))}
         </IndexTable>
