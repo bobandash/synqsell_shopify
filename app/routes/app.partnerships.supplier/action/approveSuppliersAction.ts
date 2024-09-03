@@ -39,7 +39,7 @@ export async function approveSuppliersAction(
     const { partnershipRequestIds } = data;
     await approvePartnershipRequestBulk(
       partnershipRequestIds,
-      PARTNERSHIP_REQUEST_TYPE.SUPPLIER,
+      PARTNERSHIP_REQUEST_TYPE.RETAILER,
     );
     return json(
       { message: 'Successfully approved partnerships.' },

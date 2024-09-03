@@ -15,8 +15,7 @@ type CreatePartnershipRequestProps = {
   status: PartnershipRequestStatusProps;
 };
 
-// TODO: For now, if a supplier rejects the partnership request, default behavior is to update the rejected request to pending
-export async function createOrUpdatePartnershipRequest(
+async function createOrUpdatePartnershipRequest(
   props: CreatePartnershipRequestProps,
 ) {
   try {
@@ -71,7 +70,7 @@ export async function createOrUpdatePartnershipRequest(
   }
 }
 
-export async function hasPartnershipRequestMultiplePriceLists(
+async function hasPartnershipRequestMultiplePriceLists(
   priceListIds: string[],
   senderId: string,
   type: PartnershipRequestTypeProps,
@@ -105,7 +104,7 @@ export async function hasPartnershipRequestMultiplePriceLists(
   }
 }
 
-export async function getPartnershipRequestMultiplePriceLists(
+async function getPartnershipRequestMultiplePriceLists(
   priceListIds: string[],
   senderId: string,
   type: PartnershipRequestTypeProps,
@@ -136,7 +135,7 @@ export async function getPartnershipRequestMultiplePriceLists(
   }
 }
 
-export async function hasPartnershipRequest(
+async function hasPartnershipRequest(
   priceListId: string,
   senderId: string,
   type: PartnershipRequestTypeProps,
@@ -168,7 +167,7 @@ export async function hasPartnershipRequest(
   }
 }
 
-export async function isValidPartnershipRequest(id: string) {
+async function isValidPartnershipRequest(id: string) {
   try {
     const partnershipRequest = await db.partnershipRequest.findFirst({
       where: {
@@ -190,7 +189,7 @@ export async function isValidPartnershipRequest(id: string) {
   }
 }
 
-export async function getPartnershipRequest(
+async function getPartnershipRequest(
   priceListId: string,
   senderId: string,
   type: PartnershipRequestTypeProps,
@@ -219,7 +218,7 @@ export async function getPartnershipRequest(
   }
 }
 
-export async function getAllPartnershipRequests(
+async function getAllPartnershipRequests(
   recipientId: string,
   type: PartnershipRequestTypeProps,
 ) {
@@ -254,7 +253,7 @@ export async function getAllPartnershipRequests(
   }
 }
 
-export async function deletePartnershipRequestsTx(
+async function deletePartnershipRequestsTx(
   tx: Prisma.TransactionClient,
   partnershipRequestIds: string[],
 ) {
@@ -276,3 +275,14 @@ export async function deletePartnershipRequestsTx(
     );
   }
 }
+
+export {
+  createOrUpdatePartnershipRequest,
+  hasPartnershipRequestMultiplePriceLists,
+  getPartnershipRequestMultiplePriceLists,
+  hasPartnershipRequest,
+  isValidPartnershipRequest,
+  getPartnershipRequest,
+  getAllPartnershipRequests,
+  deletePartnershipRequestsTx,
+};

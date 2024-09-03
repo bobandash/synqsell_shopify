@@ -7,7 +7,7 @@ import { SUPPLIER_ACCESS_REQUEST_STATUS } from '../constants';
 async function getSupplierPartnershipInfo(sessionId: string) {
   try {
     const [partnershipRequests, partnerships] = await Promise.all([
-      getAllPartnershipRequests(sessionId, PARTNERSHIP_REQUEST_TYPE.RETAILER),
+      getAllPartnershipRequests(sessionId, PARTNERSHIP_REQUEST_TYPE.SUPPLIER),
       getAllSupplierPartnerships(sessionId),
     ]);
 

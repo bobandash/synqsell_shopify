@@ -52,18 +52,25 @@ export async function createPartnershipsTx(
       return {
         ...rest,
         priceLists: {
-          connect: priceListIds.map((id) => ({ id })),
+          connect: priceListIds.map((id) => {
+            return { id };
+          }),
         },
       };
     });
-    const newSupplierPartnerships = await tx.partnership.createMany({
-      data: dataInPrismaFmt,
-    });
-    return newSupplierPartnerships;
+    const newPartnerships = await Promise.all(
+      dataInPrismaFmt.map((data) =>
+        tx.partnership.create({
+          data,
+        }),
+      ),
+    );
+
+    return newPartnerships;
   } catch (error) {
     throw errorHandler(
       error,
-      'Failed to create supplier partnerships in transaction.',
+      'Failed to create new partnerships in transaction.',
       createPartnershipsTx,
       {
         data,

@@ -196,7 +196,7 @@ const SupplierPartnerships = () => {
         .map((partnership) => partnership.id);
       remixSubmit(
         {
-          partnerships: JSON.stringify(pendingSelectedPartnershipIds),
+          partnershipRequestIds: JSON.stringify(pendingSelectedPartnershipIds),
           intent,
         },
         {
