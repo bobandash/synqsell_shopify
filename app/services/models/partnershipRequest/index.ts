@@ -4,6 +4,7 @@ import {
 } from '~/constants';
 import { errorHandler } from '../../util';
 import db from '~/db.server';
+import type { Prisma } from '@prisma/client';
 
 type CreatePartnershipRequestProps = {
   priceListIds: string[];
@@ -167,6 +168,28 @@ export async function hasPartnershipRequest(
   }
 }
 
+export async function isValidPartnershipRequest(id: string) {
+  try {
+    const partnershipRequest = await db.partnershipRequest.findFirst({
+      where: {
+        id,
+      },
+    });
+
+    if (partnershipRequest) {
+      return true;
+    }
+    return false;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to check if partnership request id is valid.',
+      hasPartnershipRequest,
+      { id },
+    );
+  }
+}
+
 export async function getPartnershipRequest(
   priceListId: string,
   senderId: string,
@@ -231,15 +254,25 @@ export async function getAllPartnershipRequests(
   }
 }
 
-// model PartnershipRequest {
-//   id          String      @id @default(uuid())
-//   createdAt   DateTime    @default(now())
-//   senderId    String
-//   recipientId String
-//   message     String
-//   type        String // two types, retailer request and supplier request
-//   status      String // can only be rejected or pending; if it is accepted already, it will just make the user into a price list retailer
-//   priceLists  PriceList[]
-//   sender      Session     @relation("SenderPartnershipRequest", fields: [senderId], references: [id])
-//   recipient   Session     @relation("RecipientPartnershipRequest", fields: [recipientId], references: [id])
-// }
+export async function deletePartnershipRequestsTx(
+  tx: Prisma.TransactionClient,
+  partnershipRequestIds: string[],
+) {
+  try {
+    const deletedPartnershipRequests = await tx.partnershipRequest.deleteMany({
+      where: {
+        id: {
+          in: partnershipRequestIds,
+        },
+      },
+    });
+    return deletedPartnershipRequests;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to delete partnership requests in transaction',
+      getPartnershipRequest,
+      { partnershipRequestIds },
+    );
+  }
+}

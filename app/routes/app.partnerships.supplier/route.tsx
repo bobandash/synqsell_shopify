@@ -1,4 +1,10 @@
-import { json, useLoaderData, useNavigate } from '@remix-run/react';
+import {
+  json,
+  useLoaderData,
+  useLocation,
+  useNavigate,
+  useSubmit as useRemixSubmit,
+} from '@remix-run/react';
 import {
   Card,
   IndexFilters,
@@ -10,13 +16,13 @@ import {
 } from '@shopify/polaris';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRoleContext } from '~/context/RoleProvider';
-import { getJSONError } from '~/util';
+import { convertFormDataToObject, getJSONError } from '~/util';
 import { authenticate } from '~/shopify.server';
 import { StatusCodes } from 'http-status-codes';
-import type { LoaderFunctionArgs } from '@remix-run/node';
+import type { ActionFunctionArgs, LoaderFunctionArgs } from '@remix-run/node';
 import { hasRole } from '~/services/models/roles';
 import { ROLES } from '~/constants';
-import { SUPPLIER_ACCESS_REQUEST_STATUS } from './constants';
+import { INTENTS, SUPPLIER_ACCESS_REQUEST_STATUS } from './constants';
 import type { NonEmptyArray } from '@shopify/polaris/build/ts/src/types';
 import type { IndexTableHeading } from '@shopify/polaris/build/ts/src/components/IndexTable';
 import type { BulkActionsProps } from '@shopify/polaris/build/ts/src/components/BulkActions';
@@ -25,6 +31,9 @@ import { TableRow } from './components';
 import getSupplierPartnershipInfo from './loader/getSupplierPartnershipInfo';
 import MessageModal from './components/Modals/MessageModal';
 import { useAppBridge } from '@shopify/app-bridge-react';
+import { useField, useForm } from '@shopify/react-form';
+import { approveSuppliersAction, rejectRemoveSuppliersAction } from './action';
+import type { ApproveSuppliersActionProps } from './action';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
@@ -43,16 +52,42 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }
 
     const supplierPartnershipInfo = await getSupplierPartnershipInfo(sessionId);
-
     return json(supplierPartnershipInfo, StatusCodes.OK);
   } catch (error) {
-    console.error(error);
     throw getJSONError(error, 'supplier partnerships');
   }
 };
 
-// the whole point in supplier partnerships is if someone is on the retailer network and requests a partnership with you as a supplier
-// and the whole point in supplier partnerships is if a supplier requests a partnership with you
+export const action = async ({ request }: ActionFunctionArgs) => {
+  try {
+    const formData = await request.formData();
+    const intent = formData.get('intent');
+    const data = convertFormDataToObject(formData);
+    switch (intent) {
+      case INTENTS.APPROVE_SUPPLIERS:
+        await approveSuppliersAction(data as ApproveSuppliersActionProps);
+        return json(
+          { message: 'Suppliers were successfully approved.' },
+          StatusCodes.OK,
+        );
+      case INTENTS.REJECT_REMOVE_SUPPLIERS:
+        await rejectRemoveSuppliersAction();
+        return json(
+          { message: 'Suppliers were successfully rejected.' },
+          StatusCodes.OK,
+        );
+      default:
+        return json(
+          { message: 'Functionality has not been implemented yet.' },
+          StatusCodes.NOT_IMPLEMENTED,
+        );
+    }
+  } catch (error) {
+    throw getJSONError(error, 'admin network');
+  }
+};
+
+// The whole point in supplier partnerships is when a supplier requests a partnership with you
 const SupplierPartnerships = () => {
   const { isSupplier } = useRoleContext();
   const navigate = useNavigate();
@@ -86,6 +121,8 @@ const SupplierPartnerships = () => {
     setQuery('');
   }, []);
   const [selected, setSelected] = useState(0);
+  const remixSubmit = useRemixSubmit();
+  const { pathname } = useLocation();
 
   // table constants
   const tabs: TabProps[] = useMemo(
@@ -125,20 +162,6 @@ const SupplierPartnerships = () => {
           clearSelection();
         },
       },
-
-      {
-        id: '3',
-        content: 'Rejected',
-        onAction: () => {
-          setSelected(3);
-          setFilteredData(
-            requestsData.filter(
-              (data) => data.status === SUPPLIER_ACCESS_REQUEST_STATUS.REJECTED,
-            ),
-          );
-          clearSelection();
-        },
-      },
     ],
     [requestsData, clearSelection],
   );
@@ -154,14 +177,87 @@ const SupplierPartnerships = () => {
     { title: 'Status' },
   ];
 
+  // Helper form to submit supplier partnerships
+  const { submit: approveSupplierAction } = useForm({
+    fields: {
+      intent: useField(INTENTS.APPROVE_SUPPLIERS),
+      selectedPartnerships: useField(selectedResources),
+    },
+    onSubmit: async (fieldValues) => {
+      const { intent, selectedPartnerships } = fieldValues;
+      // clean up selected partnerships data to only pending
+      const pendingSelectedPartnershipIds = requestsData
+        .filter((data) => {
+          return (
+            data.status === SUPPLIER_ACCESS_REQUEST_STATUS.PENDING &&
+            selectedPartnerships.includes(data.id)
+          );
+        })
+        .map((partnership) => partnership.id);
+      remixSubmit(
+        {
+          partnerships: JSON.stringify(pendingSelectedPartnershipIds),
+          intent,
+        },
+        {
+          method: 'post',
+          action: pathname,
+        },
+      );
+      return { status: 'success' };
+    },
+  });
+
+  // helper form to reject / remove supplier partnerships
+  const { submit: rejectRemoveSupplierAction } = useForm({
+    fields: {
+      intent: useField(INTENTS.REJECT_REMOVE_SUPPLIERS),
+      selectedPartnerships: useField(selectedResources),
+    },
+    onSubmit: async (fieldValues) => {
+      const { intent, selectedPartnerships } = fieldValues;
+      // clean up selected partnerships data to only pending
+      const pendingSelectedPartnershipIds = requestsData
+        .filter((data) => {
+          return (
+            data.status === SUPPLIER_ACCESS_REQUEST_STATUS.PENDING &&
+            selectedPartnerships.includes(data.id)
+          );
+        })
+        .map((partnership) => partnership.id);
+
+      const approvedPartnershipIds = requestsData
+        .filter((data) => {
+          return (
+            data.status === SUPPLIER_ACCESS_REQUEST_STATUS.APPROVED &&
+            selectedPartnerships.includes(data.id)
+          );
+        })
+        .map((partnership) => partnership.id);
+
+      remixSubmit(
+        {
+          approvedPartnershipIds: JSON.stringify(approvedPartnershipIds),
+          pendingPartnershipIds: JSON.stringify(pendingSelectedPartnershipIds),
+          intent,
+        },
+        {
+          method: 'post',
+          action: pathname,
+        },
+      );
+      return { status: 'success' };
+    },
+  });
+
   const promotedBulkActions: BulkActionsProps['promotedActions'] = [
     {
       content: 'Approve',
-      onAction: () => {},
+      onAction: approveSupplierAction,
     },
     {
       content: 'Reject/Remove',
-      onAction: () => {},
+      onAction: rejectRemoveSupplierAction,
     },
   ];
 

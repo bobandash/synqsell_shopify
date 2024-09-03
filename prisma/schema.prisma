@@ -247,7 +247,6 @@ model ImportedProductTransaction {
   importedProductId String
   createdAt         DateTime
   fulfilledAt       DateTime
-  // TODO: figure out what fields I need to add
   unitSales         Int
   importedProduct   ImportedProduct @relation(fields: [importedProductId], references: [id])
 }

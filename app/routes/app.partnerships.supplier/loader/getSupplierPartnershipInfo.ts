@@ -8,7 +8,6 @@ async function getSupplierPartnershipInfo(sessionId: string) {
   try {
     const [partnershipRequests, partnerships] = await Promise.all([
       getAllPartnershipRequests(sessionId, PARTNERSHIP_REQUEST_TYPE.RETAILER),
-      // this may be confusing, suppliers initiate a retailer request (they want you to be a retailer)
       getAllSupplierPartnerships(sessionId),
     ]);
 
@@ -46,7 +45,6 @@ async function getSupplierPartnershipInfo(sessionId: string) {
     const allSupplierPartnershipsAndRequests = formattedPartnershipRequests
       .concat(formattedSupplierPartnerships)
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-    console.log(allSupplierPartnershipsAndRequests);
     return allSupplierPartnershipsAndRequests;
   } catch (error) {
     throw errorHandler(

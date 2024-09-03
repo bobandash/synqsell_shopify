@@ -62,6 +62,8 @@ export const FULFILLMENT_SERVICE = {
 
 export const MARKETPLACE_FEE = 0.03;
 
+// supplier means supplier made request to retailer
+// retailer means retailer made request for partnership to supplier
 export const PARTNERSHIP_REQUEST_TYPE = {
   SUPPLIER: 'SUPPLIER',
   RETAILER: 'RETAILER',

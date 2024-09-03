@@ -5,7 +5,7 @@ import { convertToDate } from '~/routes/util';
 import StatusBadge from './StatusBadge';
 import { useAppBridge } from '@shopify/app-bridge-react';
 import { MODALS } from '../constants';
-
+import sharedStyles from '~/shared.module.css';
 type RowMarkupProps = {
   data: RowData;
   index: number;
@@ -43,7 +43,10 @@ const TableRow: FC<RowMarkupProps> = ({
     <IndexTable.Row id={id} key={id} selected={selected} position={index}>
       <IndexTable.Cell>{convertToDate(createdAt)}</IndexTable.Cell>
       <IndexTable.Cell>
-        <div onClick={handleStopPropagation}>
+        <div
+          onClick={handleStopPropagation}
+          className={sharedStyles['inline-block']}
+        >
           <Link url={websiteUrl} target="_blank">
             {name}
           </Link>
@@ -51,13 +54,20 @@ const TableRow: FC<RowMarkupProps> = ({
       </IndexTable.Cell>
       <IndexTable.Cell>
         {priceLists.map((priceList) => (
-          <div onClick={handleStopPropagation} key={priceList.id}>
+          <div
+            onClick={handleStopPropagation}
+            key={priceList.id}
+            className={sharedStyles['inline-block']}
+          >
             <Link url={`/app/products/${priceList.id}`}>{priceList.name}</Link>
           </div>
         ))}
       </IndexTable.Cell>
       <IndexTable.Cell>
-        <div onClick={handleStopPropagation}>
+        <div
+          onClick={handleStopPropagation}
+          className={sharedStyles['inline-block']}
+        >
           <Button onClick={handleClick}>Open</Button>
         </div>
       </IndexTable.Cell>
