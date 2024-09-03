@@ -22,11 +22,14 @@ import type { IndexTableHeading } from '@shopify/polaris/build/ts/src/components
 import type { BulkActionsProps } from '@shopify/polaris/build/ts/src/components/BulkActions';
 import type { RowData } from './types';
 import { TableRow } from './components';
+import getSupplierPartnershipInfo from './loader/getSupplierPartnershipInfo';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
-    const { session } = await authenticate.admin(request);
-    const isRetailer = await hasRole(session.id, ROLES.RETAILER);
+    const {
+      session: { id: sessionId },
+    } = await authenticate.admin(request);
+    const isRetailer = await hasRole(sessionId, ROLES.RETAILER);
     if (!isRetailer) {
       throw json(
         {
@@ -37,20 +40,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       );
     }
 
-    return json(
-      [
-        {
-          id: '1020',
-          name: 'BlankMod',
-          requestDate: 'Jul 20 at 4:34pm',
-          websiteUrl: 'http://www.blankmod.com',
-          priceLists: ['First price list', 'Test price list'],
-          status: 'APPROVED',
-          updatedAt: 'Jul 20 at 4:34pm',
-        },
-      ],
-      StatusCodes.OK,
-    );
+    const supplierPartnershipInfo = await getSupplierPartnershipInfo(sessionId);
+
+    return json(supplierPartnershipInfo, StatusCodes.OK);
   } catch (error) {
     console.error(error);
     throw getJSONError(error, 'supplier partnerships');
@@ -67,7 +59,6 @@ const SupplierPartnerships = () => {
   const [query, setQuery] = useState('');
   const [requestsData, setRequestsData] = useState<RowData[]>(data);
   const [filteredRequestsData, setFilteredData] = useState<RowData[]>(data);
-  console.log(filteredRequestsData);
 
   useEffect(() => {
     setRequestsData(data);
@@ -105,22 +96,9 @@ const SupplierPartnerships = () => {
       },
       {
         id: '1',
-        content: 'Pending',
-        onAction: () => {
-          setSelected(1);
-          setFilteredData(
-            requestsData.filter(
-              (data) => data.status === SUPPLIER_ACCESS_REQUEST_STATUS.PENDING,
-            ),
-          );
-          clearSelection();
-        },
-      },
-      {
-        id: '2',
         content: 'Approved',
         onAction: () => {
-          setSelected(2);
+          setSelected(1);
           setFilteredData(
             requestsData.filter(
               (data) => data.status === SUPPLIER_ACCESS_REQUEST_STATUS.APPROVED,
@@ -129,6 +107,20 @@ const SupplierPartnerships = () => {
           clearSelection();
         },
       },
+      {
+        id: '2',
+        content: 'Pending',
+        onAction: () => {
+          setSelected(2);
+          setFilteredData(
+            requestsData.filter(
+              (data) => data.status === SUPPLIER_ACCESS_REQUEST_STATUS.PENDING,
+            ),
+          );
+          clearSelection();
+        },
+      },
+
       {
         id: '3',
         content: 'Rejected',
@@ -150,21 +142,19 @@ const SupplierPartnerships = () => {
     plural: 'Supplier Partnerships',
   };
   const headings: NonEmptyArray<IndexTableHeading> = [
-    { title: 'Date' },
-    { title: 'Supplier Name' },
-    { title: 'Website' },
+    { title: 'Request Date' },
+    { title: 'Supplier' },
     { title: 'Price List(s)' },
     { title: 'Status' },
-    { title: 'Updated At' },
   ];
 
   const promotedBulkActions: BulkActionsProps['promotedActions'] = [
     {
-      content: 'Approve Requests',
+      content: 'Approve',
       onAction: () => {},
     },
     {
-      content: 'Reject Requests',
+      content: 'Reject/Remove',
       onAction: () => {},
     },
   ];

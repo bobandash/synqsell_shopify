@@ -1,9 +1,8 @@
-import { IndexTable, Text } from '@shopify/polaris';
+import { IndexTable, Link, Text } from '@shopify/polaris';
 import type { FC } from 'react';
 import type { RowData } from '../types';
 import { convertToDate } from '~/routes/util';
 import StatusBadge from './StatusBadge';
-import { v4 as uuidv4 } from 'uuid';
 
 type RowMarkupProps = {
   data: RowData;
@@ -12,13 +11,11 @@ type RowMarkupProps = {
 };
 
 const TableRow: FC<RowMarkupProps> = ({ data, index, selected }) => {
-  const { id, requestDate, name, websiteUrl, priceLists, status, updatedAt } =
-    data;
+  const { id, createdAt, name, websiteUrl, priceLists, status } = data;
 
   return (
     <IndexTable.Row id={id} key={id} selected={selected} position={index}>
-      <IndexTable.Cell>{convertToDate(requestDate)}</IndexTable.Cell>
-      <IndexTable.Cell>{name}</IndexTable.Cell>
+      <IndexTable.Cell>{convertToDate(createdAt)}</IndexTable.Cell>
       <IndexTable.Cell>
         <a
           href={websiteUrl}
@@ -28,20 +25,19 @@ const TableRow: FC<RowMarkupProps> = ({ data, index, selected }) => {
             e.stopPropagation();
           }}
         >
-          Link
+          {name}
         </a>
       </IndexTable.Cell>
       <IndexTable.Cell>
         {priceLists.map((priceList) => (
-          <Text as="p" variant="bodyMd" key={uuidv4()}>
-            {priceList}
+          <Text as="p" variant="bodyMd" key={priceList.id}>
+            <Link url={`/app/products/${priceList.id}`}>{priceList.name}</Link>
           </Text>
         ))}
       </IndexTable.Cell>
       <IndexTable.Cell>
         <StatusBadge status={status} />
       </IndexTable.Cell>
-      <IndexTable.Cell>{convertToDate(updatedAt)}</IndexTable.Cell>
     </IndexTable.Row>
   );
 };

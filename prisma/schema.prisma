@@ -141,6 +141,8 @@ model PriceList {
   products                 Product[]
   priceListRetailers       PriceListRetailer[]
   partnershipRequests      PartnershipRequest[]
+  Partnership              Partnership?         @relation(fields: [partnershipId], references: [id])
+  partnershipId            String?
 }
 
 // Keeps track of the retailers in the price list
@@ -250,15 +252,6 @@ model ImportedProductTransaction {
   importedProduct   ImportedProduct @relation(fields: [importedProductId], references: [id])
 }
 
-model Partnership {
-  id         String  @id @default(uuid())
-  // stores the session ids of the retailers and suppliers
-  retailerId String
-  supplierId String
-  retailer   Session @relation("RetailerPartnership", fields: [retailerId], references: [id])
-  supplier   Session @relation("SupplierPartnership", fields: [supplierId], references: [id])
-}
-
 model SupplierAccessRequest {
   id                      String          @id @default(uuid())
   num                     Int             @default(autoincrement())
@@ -276,6 +269,7 @@ model SupplierAccessRequest {
 
 model PartnershipRequest {
   id          String      @id @default(uuid())
+  createdAt   DateTime    @default(now())
   senderId    String
   recipientId String
   message     String
@@ -284,4 +278,15 @@ model PartnershipRequest {
   priceLists  PriceList[]
   sender      Session     @relation("SenderPartnershipRequest", fields: [senderId], references: [id])
   recipient   Session     @relation("RecipientPartnershipRequest", fields: [recipientId], references: [id])
+}
+
+model Partnership {
+  id         String      @id @default(uuid())
+  createdAt  DateTime    @default(now())
+  retailerId String
+  supplierId String
+  message    String
+  priceLists PriceList[]
+  retailer   Session     @relation("RetailerPartnership", fields: [retailerId], references: [id])
+  supplier   Session     @relation("SupplierPartnership", fields: [supplierId], references: [id])
 }

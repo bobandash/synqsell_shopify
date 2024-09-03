@@ -1,9 +1,13 @@
+import type { SupplierAccessRequestStatusProps } from './constants';
+
 export type RowData = {
   id: string;
+  createdAt: string;
   name: string;
-  requestDate: string;
   websiteUrl: string;
-  priceLists: string[];
-  status: string;
-  updatedAt: string;
+  priceLists: {
+    id: string;
+    name: string;
+  }[];
+  status: SupplierAccessRequestStatusProps;
 };

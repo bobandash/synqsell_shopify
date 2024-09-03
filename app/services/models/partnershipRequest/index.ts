@@ -195,3 +195,51 @@ export async function getPartnershipRequest(
     );
   }
 }
+
+export async function getAllPartnershipRequests(
+  recipientId: string,
+  type: PartnershipRequestTypeProps,
+) {
+  try {
+    const partnershipRequests = await db.partnershipRequest.findMany({
+      where: {
+        recipientId: recipientId,
+        type,
+      },
+      include: {
+        priceLists: true,
+        sender: {
+          select: {
+            userProfile: true,
+          },
+        },
+        recipient: {
+          select: {
+            userProfile: true,
+          },
+        },
+      },
+    });
+    return partnershipRequests;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to get all partnership requests for recipient.',
+      getPartnershipRequest,
+      { recipientId, type },
+    );
+  }
+}
+
+// model PartnershipRequest {
+//   id          String      @id @default(uuid())
+//   createdAt   DateTime    @default(now())
+//   senderId    String
+//   recipientId String
+//   message     String
+//   type        String // two types, retailer request and supplier request
+//   status      String // can only be rejected or pending; if it is accepted already, it will just make the user into a price list retailer
+//   priceLists  PriceList[]
+//   sender      Session     @relation("SenderPartnershipRequest", fields: [senderId], references: [id])
+//   recipient   Session     @relation("RecipientPartnershipRequest", fields: [recipientId], references: [id])
+// }

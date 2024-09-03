@@ -15,9 +15,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       hasRole(sessionId, ROLES.SUPPLIER),
     ]);
     if (isRetailer) {
-      return redirect('/app/partnerships/retailer');
-    } else if (isSupplier) {
       return redirect('/app/partnerships/supplier');
+    } else if (isSupplier) {
+      return redirect('/app/partnerships/retailer');
     }
 
     return json(
