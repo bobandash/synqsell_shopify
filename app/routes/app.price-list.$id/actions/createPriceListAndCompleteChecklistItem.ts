@@ -103,7 +103,7 @@ async function createPriceListAndCompleteChecklistItemAction(
       return newPriceList;
     });
 
-    return redirect(`/app/price-list/${newPriceList.id}`);
+    return redirect(`/app/price-list/${newPriceList.id}?referrer=new`);
   } catch (error) {
     throw errorHandler(
       error,

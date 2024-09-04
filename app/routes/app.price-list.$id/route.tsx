@@ -9,6 +9,7 @@ import {
   useLocation,
   useParams,
   useSubmit as useRemixSubmit,
+  useSearchParams,
 } from '@remix-run/react';
 import {
   Banner,
@@ -184,6 +185,7 @@ const CreateEditPriceList = () => {
   const [retailerSearchValue, setRetailerSearchValue] = useState('');
   const [hasCreatePriceListBanner, setHasCreatePriceListBanner] =
     useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // write message with feedback
   useEffect(() => {
@@ -193,10 +195,13 @@ const CreateEditPriceList = () => {
   }, [actionData, shopify]);
 
   useEffect(() => {
-    if (location.state) {
+    if (searchParams.get('referrer') === 'new') {
+      setSearchParams();
       setHasCreatePriceListBanner(true);
+    } else if (location.pathname.slice(-3) === 'new') {
+      setHasCreatePriceListBanner(false);
     }
-  }, [location]);
+  }, [searchParams, setSearchParams, location]);
 
   const escapeSpecialRegExCharacters = useCallback(
     (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
