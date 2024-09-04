@@ -6,6 +6,7 @@ import StatusBadge from './StatusBadge';
 import { useAppBridge } from '@shopify/app-bridge-react';
 import { MODALS } from '../constants';
 import sharedStyles from '~/shared.module.css';
+
 type RowMarkupProps = {
   data: RowData;
   index: number;

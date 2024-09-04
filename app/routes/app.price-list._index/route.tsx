@@ -1,18 +1,13 @@
 import {
-  Badge,
-  BlockStack,
-  Box,
   Button,
   Card,
   IndexTable,
   Page,
-  Text,
   useIndexResourceState,
 } from '@shopify/polaris';
 import { type IndexTableHeading } from '@shopify/polaris/build/ts/src/components/IndexTable';
 import { type NonEmptyArray } from '@shopify/polaris/build/ts/src/types';
-import { ToolsIcon } from '~/assets';
-import styles from './styles.module.css';
+
 import {
   useActionData,
   useFetcher,
@@ -29,20 +24,14 @@ import logger from '~/logger';
 import { convertFormDataToObject, getJSONError } from '~/util';
 import { authenticate } from '~/shopify.server';
 import { StatusCodes } from 'http-status-codes';
-import { useEffect, useState, type FC } from 'react';
-import { convertToTitleCase } from '../util';
+import { useEffect, useState } from 'react';
 import { useAppBridge } from '@shopify/app-bridge-react';
 import { MODALS } from './constants';
-import { DeletePriceListModal } from './components';
+import { DeletePriceListModal, EmptyState } from './components';
 import { deletePriceListAction } from './actions';
 import type { PriceListTableInfoProps } from './types';
 import { getPriceListTableInfo } from './loader';
-
-type RowProps = {
-  data: PriceListTableInfoProps;
-  index: number;
-  selected: boolean;
-};
+import TableRow from './components/TableRow';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
@@ -82,7 +71,6 @@ const PriceList = () => {
     typeof loader
   >() as unknown as PriceListTableInfoProps[];
   const actionData = useActionData<typeof action>();
-  console.log(actionData);
 
   const [priceListTableData, setPriceListTableData] = useState(data);
   const shopify = useAppBridge();
@@ -132,7 +120,6 @@ const PriceList = () => {
 
   // render the status message as a shopify toast
   // shopify recommends using a banner instead of toast for error messages
-  console.log(actionData);
   useEffect(() => {
     if (!actionData) {
       return;
@@ -176,7 +163,7 @@ const PriceList = () => {
             emptyState={<EmptyState />}
           >
             {priceListTableData.map((priceListRowData, index) => (
-              <Row
+              <TableRow
                 key={priceListRowData.id}
                 data={priceListRowData}
                 index={index}
@@ -187,76 +174,6 @@ const PriceList = () => {
         </Card>
       </Page>
     </>
-  );
-};
-
-const EmptyState = () => {
-  return (
-    <Box paddingBlock={'200'}>
-      <BlockStack inlineAlign={'center'} gap={'300'}>
-        <img
-          src={ToolsIcon}
-          alt="create price list icon"
-          className={`${styles.icon}`}
-        />
-        <Text as="h2" variant="headingLg">
-          Build Your Price List
-        </Text>
-        <Text as="p" variant={'bodyMd'}>
-          Start inviting retailers to import your products today!
-        </Text>
-      </BlockStack>
-    </Box>
-  );
-};
-
-const Row: FC<RowProps> = ({ data, index, selected }) => {
-  const {
-    id,
-    name,
-    isGeneral,
-    pricingStrategy,
-    numProducts,
-    numRetailers,
-    sales,
-    margin,
-  } = data;
-
-  const navigate = useNavigate();
-  const location = useLocation();
-  function navigateToPriceList() {
-    navigate(`${location.pathname}/${id}`);
-  }
-
-  const marginText = margin
-    ? `${convertToTitleCase(pricingStrategy)} (${margin}%)`
-    : convertToTitleCase(pricingStrategy);
-
-  return (
-    <IndexTable.Row
-      id={id}
-      key={id}
-      selected={selected}
-      position={index}
-      onClick={navigateToPriceList}
-    >
-      <IndexTable.Cell>
-        <Text variant="bodyMd" fontWeight="bold" as="span">
-          {name}
-        </Text>
-      </IndexTable.Cell>
-      <IndexTable.Cell>
-        {isGeneral ? (
-          <Badge tone="success">General</Badge>
-        ) : (
-          <Badge tone="info">Private</Badge>
-        )}
-      </IndexTable.Cell>
-      <IndexTable.Cell>{numProducts}</IndexTable.Cell>
-      <IndexTable.Cell>{numRetailers}</IndexTable.Cell>
-      <IndexTable.Cell>{sales}</IndexTable.Cell>
-      <IndexTable.Cell>{marginText}</IndexTable.Cell>
-    </IndexTable.Row>
   );
 };
 
