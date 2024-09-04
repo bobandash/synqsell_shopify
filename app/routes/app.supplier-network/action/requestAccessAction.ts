@@ -87,7 +87,6 @@ export async function requestAccessAction(
         }),
       ]);
     });
-
     return json(
       { message: 'Successfully created partnership request.' },
       StatusCodes.CREATED,

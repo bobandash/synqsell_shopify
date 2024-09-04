@@ -100,6 +100,12 @@ const SupplierPartnerships = () => {
     useState<RowData[]>(data);
   const [message, setMessage] = useState({ name: '', content: '' });
   const shopify = useAppBridge();
+  const {
+    selectedResources,
+    allResourcesSelected,
+    handleSelectionChange,
+    clearSelection,
+  } = useIndexResourceState(filteredRequestsData);
 
   // TODO: handle bug where queries are reset when approve / reject suppliers
   useEffect(() => {
@@ -110,15 +116,9 @@ const SupplierPartnerships = () => {
   useEffect(() => {
     if (actionData && 'message' in actionData) {
       shopify.toast.show(actionData.message);
+      clearSelection();
     }
-  }, [actionData, shopify]);
-
-  const {
-    selectedResources,
-    allResourcesSelected,
-    handleSelectionChange,
-    clearSelection,
-  } = useIndexResourceState(filteredRequestsData);
+  }, [actionData, shopify, clearSelection]);
 
   const navigateRetailerRequests = useCallback(() => {
     navigate('/app/partnerships/retailer');

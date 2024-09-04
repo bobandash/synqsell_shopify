@@ -1,6 +1,8 @@
 import type { Prisma } from '@prisma/client';
 import { errorHandler } from '../util';
 import db from '~/db.server';
+import { ROLES } from '~/constants';
+import type { RolesOptionsProps } from '~/constants';
 
 type NewPartnershipData = {
   retailerId: string;
@@ -59,6 +61,44 @@ export async function getAllSupplierPartnerships(retailerId: string) {
       getAllSupplierPartnerships,
       {
         retailerId,
+      },
+    );
+  }
+}
+
+export async function getAllPartnerships(
+  sessionId: string,
+  role: RolesOptionsProps,
+) {
+  try {
+    const supplierPartnerships = await db.partnership.findMany({
+      where: {
+        ...(role === ROLES.RETAILER ? { retailerId: sessionId } : {}),
+        ...(role === ROLES.SUPPLIER ? { supplierId: sessionId } : {}),
+      },
+      include: {
+        priceLists: true,
+        retailer: {
+          select: {
+            userProfile: true,
+          },
+        },
+        supplier: {
+          select: {
+            userProfile: true,
+          },
+        },
+      },
+    });
+    return supplierPartnerships;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to get all partnerships given role.',
+      getAllPartnerships,
+      {
+        sessionId,
+        role,
       },
     );
   }
