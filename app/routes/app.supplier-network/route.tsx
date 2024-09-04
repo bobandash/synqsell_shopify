@@ -130,12 +130,12 @@ const SupplierNetwork = () => {
   if (suppliers.length === 0) {
     return (
       <Page
-        title="Retailer Network"
-        subtitle="Discover potential retailers to partner with!"
+        title="Supplier Network"
+        subtitle="Discover potential suppliers to partner with!"
       >
         <Card>
           <EmptyState
-            heading="Become the first retailer on SynqSell and become discovered by suppliers across the world!"
+            heading="Become the first supplier on SynqSell and become discovered by retailers across the world!"
             action={{ content: 'Get Started', url: '/app' }}
             secondaryAction={{
               content: 'Learn more',
