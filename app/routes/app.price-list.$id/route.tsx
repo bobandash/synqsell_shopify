@@ -356,7 +356,6 @@ const CreateEditPriceList = () => {
     },
   });
 
-  // !!! TODO: add frontend error handling
   async function getIdToStoreUrl(productIds: string[]) {
     const params = {
       productIds,

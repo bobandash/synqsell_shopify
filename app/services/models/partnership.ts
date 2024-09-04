@@ -92,7 +92,7 @@ export async function createPartnershipsTx(
         ...rest,
         priceLists: {
           connect: priceListIds.map((id) => {
-            return { id };
+            return { id: id };
           }),
         },
       };

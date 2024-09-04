@@ -323,6 +323,16 @@ export async function getSupplierPaginatedInfo({
       suppliersRawData,
       sessionId,
     );
+
+    // case: there is no data in the network
+    if (suppliers.length === 0) {
+      return {
+        nextCursor: null,
+        prevCursor: null,
+        suppliers: [],
+      };
+    }
+
     const isFirstPage =
       suppliers[0] && suppliers[0].id === firstSupplierId ? true : false;
     const prevCursor = isFirstPage ? null : suppliers[0].id;

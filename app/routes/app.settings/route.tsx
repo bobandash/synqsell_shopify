@@ -29,6 +29,7 @@ import {
 } from '~/services/models/userProfile';
 import { convertFormDataToObject, getJSONError } from '~/util';
 import {
+  useActionData,
   useLoaderData,
   useLocation,
   useSubmit as useRemixSubmit,
@@ -38,7 +39,7 @@ import logger from '~/logger';
 import styles from '~/shared.module.css';
 import { useAppBridge } from '@shopify/app-bridge-react';
 import { getRoles, type RolePropsJSON } from '~/services/models/roles';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { updateSettings } from '~/services/transactions';
 import {
   ImageDropZone,
@@ -47,6 +48,7 @@ import {
 } from '~/components';
 import { getOrCreateProfile } from '~/services/helper/userProfile';
 import { uploadFile } from '~/services/aws/s3';
+import { StatusCodes } from 'http-status-codes';
 
 type FormDataProps = {
   name: string;
@@ -62,8 +64,8 @@ type FormDataProps = {
   tiktokLink: string;
 };
 
-type FormDataObjProps = {
-  data: string;
+type FormDataWithLogo = {
+  data: FormDataProps;
   logo?: File;
 };
 
@@ -105,19 +107,20 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const formData = await request.formData();
     const formDataObject = convertFormDataToObject(
       formData,
-    ) as unknown as FormDataObjProps;
-    const jsonData: FormDataProps = JSON.parse(formDataObject.data);
+    ) as unknown as FormDataWithLogo;
+    const dataBesidesLogo = formDataObject.data;
     const logo = formDataObject.logo ?? null;
     const logoUrl = logo ? await uploadFile(logo) : null;
 
-    const { name, email, biography, desiredProducts } = jsonData;
+    // TODO: low priority, below is really bad code, you could just pass all the params together
+    const { name, email, biography, desiredProducts } = dataBesidesLogo;
     const {
       facebookLink,
       twitterLink,
       instagramLink,
       youtubeLink,
       tiktokLink,
-    } = jsonData;
+    } = dataBesidesLogo;
 
     const socialMediaLinks = {
       facebook: facebookLink,
@@ -127,7 +130,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       tiktok: tiktokLink,
     };
 
-    const { isVisibleRetailerNetwork, isVisibleSupplierNetwork } = jsonData;
+    const { isVisibleRetailerNetwork, isVisibleSupplierNetwork } =
+      dataBesidesLogo;
     const profileObj = {
       name,
       email,
@@ -146,7 +150,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       socialMediaLinks,
       visibilityObj,
     );
-    return json('successfully saved');
+    return json(
+      { message: 'Successfully updated user settings.' },
+      StatusCodes.OK,
+    );
   } catch (error) {
     if (error instanceof Error) {
       logger.error(error.message);
@@ -157,6 +164,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
 const Settings = () => {
   const loaderData = useLoaderData<typeof loader>() as LoaderDataProps;
+  const actionData = useActionData<typeof action>();
   const {
     profile: profileData,
     roles: rolesData,
@@ -170,6 +178,12 @@ const Settings = () => {
     profileData.logo ? { url: profileData.logo, altText: 'Logo' } : null,
   );
   const remixSubmit = useRemixSubmit();
+
+  useEffect(() => {
+    if (actionData && 'message' in actionData) {
+      shopify.toast.show(actionData.message);
+    }
+  }, [actionData, shopify]);
 
   const isVisibleInNetwork = useCallback(
     (role: string, rolesData: RolePropsJSON[]) => {
@@ -248,22 +262,16 @@ const Settings = () => {
       }),
     },
     onSubmit: async (fieldValues) => {
-      try {
-        const formData = new FormData();
-        formData.append('data', JSON.stringify(fieldValues));
-        if (logo && logo instanceof File) {
-          formData.append('logo', logo);
-        }
-        remixSubmit(formData, {
-          method: 'post',
-          encType: 'multipart/form-data',
-        });
-        shopify.toast.show('Settings successfully saved');
-        return { status: 'success' };
-      } catch {
-        shopify.toast.show('Something went wrong. Please try again.');
-        return { status: 'success' };
+      const formData = new FormData();
+      formData.append('data', JSON.stringify(fieldValues));
+      if (logo && logo instanceof File) {
+        formData.append('logo', logo);
       }
+      remixSubmit(formData, {
+        method: 'post',
+        encType: 'multipart/form-data',
+      });
+      return { status: 'success' };
     },
   });
 
@@ -379,7 +387,7 @@ const Settings = () => {
                   {isSupplier && (
                     <Checkbox
                       label="Visible on supplier network (must at least have a general price list)."
-                      checked={true}
+                      {...asChoiceField(fields.isVisibleSupplierNetwork)}
                     />
                   )}
                 </BlockStack>

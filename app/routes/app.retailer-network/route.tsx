@@ -1,4 +1,11 @@
-import { Button, InlineGrid, InlineStack, Page } from '@shopify/polaris';
+import {
+  Button,
+  Card,
+  EmptyState,
+  InlineGrid,
+  InlineStack,
+  Page,
+} from '@shopify/polaris';
 import {
   json,
   type ActionFunctionArgs,
@@ -144,6 +151,28 @@ const SupplierNetwork = () => {
   const handleSelectPriceListIds = useCallback((priceListIds: string[]) => {
     setSelectedPriceListIds(priceListIds);
   }, []);
+
+  if (retailers.length === 0) {
+    return (
+      <Page
+        title="Retailer Network"
+        subtitle="Discover potential retailers to partner with!"
+      >
+        <Card>
+          <EmptyState
+            heading="Become the first supplier on SynqSell and become discovered by retailers across the world!"
+            action={{ content: 'Get Started', url: '/app' }}
+            secondaryAction={{
+              content: 'Learn more',
+              url: 'https://www.synqsell.com',
+              target: '_blank',
+            }}
+            image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
+          />
+        </Card>
+      </Page>
+    );
+  }
 
   return (
     <Page

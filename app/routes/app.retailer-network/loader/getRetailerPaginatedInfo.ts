@@ -303,6 +303,15 @@ export async function getRetailerPaginatedInfo({
       retailerRawData,
       sessionId,
     );
+    // case: there is no data in the network
+    if (retailers.length === 0) {
+      return {
+        nextCursor: null,
+        prevCursor: null,
+        retailers: [],
+      };
+    }
+
     const isFirstPage =
       retailers[0] && retailers[0].id === firstRetailerId ? true : false;
     const prevCursor = isFirstPage ? null : retailers[0].id;
