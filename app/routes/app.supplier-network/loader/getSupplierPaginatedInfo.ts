@@ -189,10 +189,6 @@ async function getApprovalStatus(
   priceListId: string,
   requiresApprovalToImport: boolean,
 ) {
-  if (!requiresApprovalToImport) {
-    return APPROVAL_STATUS.NO_ACCESS_REQUIRED;
-  }
-
   try {
     const [isApprovedRetailer, partnershipRequestExists] = await Promise.all([
       isRetailerInPartnershipPriceList(sessionId, priceListId),
@@ -204,6 +200,9 @@ async function getApprovalStatus(
     ]);
     if (isApprovedRetailer) {
       return APPROVAL_STATUS.HAS_ACCESS;
+    }
+    if (!requiresApprovalToImport) {
+      return APPROVAL_STATUS.NO_ACCESS_REQUIRED;
     }
 
     if (partnershipRequestExists) {

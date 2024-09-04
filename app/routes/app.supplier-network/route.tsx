@@ -36,7 +36,7 @@ import { INTENTS, MODALS } from './constants';
 import { requestAccessAction } from './action';
 import type { RequestAccessFormData } from './action/requestAccessAction';
 
-export const loader = async ({ request, params }: LoaderFunctionArgs) => {
+export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
     const { session } = await authenticate.admin(request);
     const { id: sessionId } = session;

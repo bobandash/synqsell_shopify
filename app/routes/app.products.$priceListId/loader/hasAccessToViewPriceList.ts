@@ -1,6 +1,12 @@
-import { priceListExistsSchema } from '~/services/models/priceList/schemas';
 import { errorHandler } from '~/services/util';
 import { getPriceList, getRetailerIds } from '~/services/models/priceList';
+import { object } from 'yup';
+import { priceListIdSchema, sessionIdSchema } from '~/schemas/models';
+
+const hasAccessToViewPriceListSchema = object({
+  priceListId: priceListIdSchema,
+  sessionId: sessionIdSchema,
+});
 
 // check if user has permission to view the price list
 async function hasAccessToViewPriceList(
@@ -8,7 +14,7 @@ async function hasAccessToViewPriceList(
   sessionId: string,
 ) {
   try {
-    await priceListExistsSchema.validate(priceListId);
+    await hasAccessToViewPriceListSchema.validate({ priceListId, sessionId });
     const isGeneral = (await getPriceList(priceListId)).isGeneral;
     const retailerIds = await getRetailerIds(priceListId);
 

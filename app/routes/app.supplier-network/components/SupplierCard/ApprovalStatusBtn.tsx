@@ -12,19 +12,6 @@ const ApprovalStatusButton: FC<Props> = ({
   approvalStatus,
   handleRequestAccess,
 }) => {
-  if (approvalStatus === APPROVAL_STATUS.NO_ACCESS_REQUIRED) {
-    return (
-      <button
-        className={`${sharedStyles['green']} ${sharedStyles['btn']} ${sharedStyles['disabled']}`}
-        disabled={true}
-      >
-        <Text as="p" variant="bodySm" fontWeight="medium">
-          No Access Needed
-        </Text>
-      </button>
-    );
-  }
-
   if (approvalStatus === APPROVAL_STATUS.HAS_ACCESS) {
     return (
       <button
@@ -33,6 +20,19 @@ const ApprovalStatusButton: FC<Props> = ({
       >
         <Text as="p" variant="bodySm" fontWeight="medium">
           Partnered
+        </Text>
+      </button>
+    );
+  }
+
+  if (approvalStatus === APPROVAL_STATUS.NO_ACCESS_REQUIRED) {
+    return (
+      <button
+        className={`${sharedStyles['green']} ${sharedStyles['btn']} ${sharedStyles['disabled']}`}
+        disabled={true}
+      >
+        <Text as="p" variant="bodySm" fontWeight="medium">
+          No Access Needed
         </Text>
       </button>
     );

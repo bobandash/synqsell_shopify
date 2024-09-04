@@ -38,7 +38,7 @@ button.green {
 }
 
 button.green:disabled:hover {
-  background-color: var(--yellow) !important;
+  background-color: var(--green) !important;
 }
 
 button.blue > p,

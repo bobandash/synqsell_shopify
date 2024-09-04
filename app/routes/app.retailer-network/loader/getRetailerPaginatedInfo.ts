@@ -16,7 +16,7 @@ import {
 } from '~/services/models/partnershipRequest';
 import { getAllPriceLists } from '~/services/models/priceList';
 import { PARTNERSHIP_STATUS, type PartnershipStatusProps } from '../constants';
-import { isRetailerInPartnershipMultiplePriceLists } from '~/services/models/partnership';
+import { isSupplierRetailerPartnered } from '~/services/models/partnership';
 
 export type RetailerPaginatedInfoProps = {
   retailerPaginatedInfo: {
@@ -175,9 +175,9 @@ async function getPartnershipStatus(
   priceListIds: string[],
 ): Promise<PartnershipStatusProps> {
   try {
-    const isPartnered = await isRetailerInPartnershipMultiplePriceLists(
+    const isPartnered = await isSupplierRetailerPartnered(
       retailerId,
-      priceListIds,
+      supplierId,
     );
     if (isPartnered) {
       return PARTNERSHIP_STATUS.PARTNERED;

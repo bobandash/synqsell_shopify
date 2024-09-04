@@ -125,7 +125,6 @@ export async function getPartnershipData(
       notSelectedPartnershipsData,
       false,
     );
-
     const allPartnershipsDataFmt = selectedPartnershipsDataFmt
       .concat(notSelectedPartnershipsDataFmt)
       .sort((a, b) => {

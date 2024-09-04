@@ -33,6 +33,32 @@ export async function hasPartnership(id: string) {
   }
 }
 
+export async function isSupplierRetailerPartnered(
+  retailerId: string,
+  supplierId: string,
+) {
+  try {
+    const partnershipRequest = await db.partnership.findFirst({
+      where: {
+        retailerId,
+        supplierId,
+      },
+    });
+
+    if (partnershipRequest) {
+      return true;
+    }
+    return false;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to check if retailer and supplier have a partnership.',
+      isSupplierRetailerPartnered,
+      { retailerId, supplierId },
+    );
+  }
+}
+
 export async function getAllSupplierPartnerships(retailerId: string) {
   try {
     const supplierPartnerships = await db.partnership.findMany({
