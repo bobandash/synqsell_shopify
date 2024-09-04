@@ -4,12 +4,14 @@ import {
   type ActionFunctionArgs,
 } from '@remix-run/node';
 import {
+  useActionData,
   useLoaderData,
   useLocation,
   useParams,
   useSubmit as useRemixSubmit,
 } from '@remix-run/react';
 import {
+  Banner,
   BlockStack,
   Box,
   Button,
@@ -22,6 +24,7 @@ import {
   IndexTable,
   InlineStack,
   Layout,
+  Link,
   Listbox,
   Page,
   ResourceItem,
@@ -50,7 +53,7 @@ import {
 import type { PriceListPricingStrategyProps } from '~/routes/app.price-list.$id/formData/pricelist';
 import { useAppBridge } from '@shopify/app-bridge-react';
 import { PaddedBox, ProductFilterControl } from '~/components';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { SearchIcon, XIcon } from '@shopify/polaris-icons';
 import {
   getProductsFormattedWithPositions,
@@ -150,37 +153,51 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   }
 };
 
-// TODO: Figure out how to display shopify toast before redirect, might need to just handle in the client
-// TODO: add status badge at the top of form too to denote that a price list was created
+// TODO: Figure out how to display shopify toast before redirect, might need to just handle redirect in the client
+// TODO: also need to figure out the logic in order to display the banner properly
+// TODO: before we move on, also figure out how to handle errors through the banners
 const CreateEditPriceList = () => {
+  const location = useLocation();
   const { settingsData, productsData, partnershipsData } = useLoaderData<
     typeof loader
   >() as LoaderDataProps;
+  const actionData = useActionData<typeof action>();
   const params = useParams();
   const isCreatingNewPriceList = params.id && params.id === 'new';
-
   const { pathname } = useLocation();
   const backActionUrl = pathname.substring(0, pathname.lastIndexOf('/'));
   const shopify = useAppBridge();
   const remixSubmit = useRemixSubmit();
   const [products, setProducts] =
     useState<ProductPropsWithPositions[]>(productsData);
-
   const [partneredRetailers] = useState<PartnershipRowData[]>(partnershipsData);
-
   const initialSelectedRetailers = useMemo(() => {
     return partneredRetailers
       .filter(({ selected }) => selected === true)
       .map(({ id }) => id);
   }, [partneredRetailers]);
-
   const [visibleRetailerOptions, setVisibleRetailerOptions] =
     useState<PartnershipRowData[]>(partneredRetailers);
   const [selectedPartnershipIds, setSelectedPartnershipIds] = useState<
     string[]
   >(initialSelectedRetailers);
-
   const [retailerSearchValue, setRetailerSearchValue] = useState('');
+  const [hasCreatePriceListBanner, setHasCreatePriceListBanner] =
+    useState(false);
+
+  // write message with feedback
+  useEffect(() => {
+    if (actionData && 'message' in actionData) {
+      shopify.toast.show(actionData.message);
+    }
+  }, [actionData, shopify]);
+
+  useEffect(() => {
+    if (location.state) {
+      setHasCreatePriceListBanner(true);
+    }
+  }, [location]);
+
   const escapeSpecialRegExCharacters = useCallback(
     (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
     [],
@@ -213,6 +230,10 @@ const CreateEditPriceList = () => {
     },
     [selectedPartnershipIds],
   );
+
+  const dismissBanner = useCallback(() => {
+    setHasCreatePriceListBanner(false);
+  }, []);
 
   // in order for the non-nested fields to select the nested rows, you have to create an array of objects of the variants
   // and get the indexes of the nested fields
@@ -441,6 +462,22 @@ const CreateEditPriceList = () => {
           title={isCreatingNewPriceList ? `New Price List` : `Edit Price List`}
           backAction={{ content: 'Price Lists', url: backActionUrl }}
         >
+          {hasCreatePriceListBanner && (
+            <>
+              <Banner
+                title="Your price list was successfully created."
+                tone="success"
+                onDismiss={dismissBanner}
+              >
+                <p>
+                  Add products and retailers to your price list and begin
+                  selling, or{' '}
+                  <Link url="/app/price-list/new">add another price list</Link>!
+                </p>
+              </Banner>
+              <PaddedBox />
+            </>
+          )}
           <Box paddingBlockEnd={'400'}>
             <BlockStack gap="400">
               <Card>
