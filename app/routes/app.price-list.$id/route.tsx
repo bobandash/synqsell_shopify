@@ -33,7 +33,6 @@ import {
 } from '@shopify/polaris';
 import { asChoiceList, notEmpty, useField, useForm } from '@shopify/react-form';
 import { StatusCodes } from 'http-status-codes';
-import { redirect } from 'remix-typedjson';
 import {
   PRICE_LIST_CATEGORY,
   PRICE_LIST_IMPORT_SETTINGS,
@@ -62,20 +61,20 @@ import type {
   ProductProps,
   VariantWithPosition,
   Settings,
+  PriceListActionData,
 } from './types';
 import ProductTableRow from './components/ProductTableRow';
 import { type BulkActionsProps } from '@shopify/polaris/build/ts/src/components/BulkActions';
 
 import styles from '~/shared.module.css';
-import { createPriceListAndCompleteChecklistItem } from '~/services/transactions';
-import {
-  type CreatePriceListDataProps,
-  userHasPriceList,
-} from '~/services/models/priceList';
-import { updateAllPriceListInformation } from '~/services/transactions/updatePriceList';
+import { userHasPriceList } from '~/services/models/priceList';
 import { getExistingPriceListData } from './loader/getExistingPriceListData';
 import { getNewPriceListData } from './loader/getNewPriceListData';
 import type { PartnershipRowData } from './loader/getPartnershipData';
+import {
+  createPriceListAndCompleteChecklistItemAction,
+  updateAllPriceListInformationAction,
+} from './actions';
 
 type LoaderDataProps = {
   settingsData: Settings;
@@ -84,8 +83,6 @@ type LoaderDataProps = {
 };
 
 // TODO: add success message for updating price list
-// TODO: allow creation of products and retailers through creating a price list
-// TODO: update createPriceListAndCompleteChecklistItem
 // TODO: there should be an edge case I didn't consider with editing the price list and making a private into a general
 export const action = async ({ request, params }: ActionFunctionArgs) => {
   try {
@@ -94,24 +91,25 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
     const { graphql } = admin;
     const formData = await request.formData();
     const { id: priceListId } = params;
-    const data = convertFormDataToObject(formData) as CreatePriceListDataProps;
+    if (!priceListId) {
+      throw json('Price list id is empty', {
+        status: StatusCodes.BAD_REQUEST,
+      });
+    }
+    const data = convertFormDataToObject(formData) as PriceListActionData;
     if (priceListId === 'new') {
-      const newPriceList = await createPriceListAndCompleteChecklistItem(
-        data,
-        sessionId,
-        graphql,
-      );
-      return redirect(`/app/price-list/${newPriceList.id}`);
-    }
-    if (priceListId) {
-      await updateAllPriceListInformation(
-        priceListId,
+      return await createPriceListAndCompleteChecklistItemAction(
         data,
         sessionId,
         graphql,
       );
     }
-    return json({ message: 'success' }, StatusCodes.OK);
+    return await updateAllPriceListInformationAction(
+      priceListId,
+      data,
+      sessionId,
+      graphql,
+    );
   } catch (error) {
     throw getJSONError(error, 'settings');
   }
@@ -181,8 +179,6 @@ const CreateEditPriceList = () => {
   const [selectedPartnershipIds, setSelectedPartnershipIds] = useState<
     string[]
   >(initialSelectedRetailers);
-
-  console.log(selectedPartnershipIds);
 
   const [retailerSearchValue, setRetailerSearchValue] = useState('');
   const escapeSpecialRegExCharacters = useCallback(
@@ -322,13 +318,12 @@ const CreateEditPriceList = () => {
     onSubmit: async (fieldValues) => {
       const formattedFieldData = formatPriceListFields(fieldValues);
       const formattedProductsData = getCleanedProductDataForSubmission();
-      const formattedRetailers = selectedPartnershipIds;
 
       remixSubmit(
         {
           settings: JSON.stringify(formattedFieldData),
           products: JSON.stringify(formattedProductsData),
-          retailers: JSON.stringify(formattedRetailers),
+          partnerships: JSON.stringify(selectedPartnershipIds),
         },
         {
           method: 'post',

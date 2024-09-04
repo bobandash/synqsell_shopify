@@ -3,7 +3,7 @@ import { errorHandler } from '~/services/util';
 import db from '~/db.server';
 import { getIdMappedToStoreUrl } from '~/services/shopify/products';
 import type { GraphQL } from '~/types';
-import { getPriceListSettings } from '~/services/models/priceList';
+import { getPriceList } from '~/services/models/priceList';
 import { getPartnershipData } from './getPartnershipData';
 
 const isValidPriceListIdSchema = string()
@@ -121,7 +121,7 @@ export async function getExistingPriceListData(
   try {
     const [productsData, settingsData, partnershipsData] = await Promise.all([
       getInitialProductData(priceListId, sessionId, graphql),
-      getPriceListSettings(sessionId, priceListId),
+      getPriceList(priceListId),
       getPartnershipData(sessionId, priceListId),
     ]);
 

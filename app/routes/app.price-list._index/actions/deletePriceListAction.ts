@@ -3,6 +3,8 @@ import { array, object, string, type InferType } from 'yup';
 import { deletePriceListBatch } from '~/services/models/priceList';
 import { getJSONError } from '~/util';
 import { MODALS } from '../constants';
+import { json } from '@remix-run/node';
+import { StatusCodes } from 'http-status-codes';
 type deletePriceListData = InferType<typeof deletePriceListSchema>;
 
 const deletePriceListSchema = object({
@@ -18,11 +20,11 @@ async function deletePriceListAction(
     await deletePriceListSchema.validate(formDataObject);
     const { priceListIds } = formDataObject as unknown as deletePriceListData;
     const priceListIdsArr = priceListIds;
-    const deletedPriceLists = await deletePriceListBatch(
-      priceListIdsArr,
-      sessionId,
+    await deletePriceListBatch(priceListIdsArr, sessionId);
+    return json(
+      { message: `Successfully deleted the price list(s).` },
+      StatusCodes.OK,
     );
-    return deletedPriceLists;
   } catch (error) {
     throw getJSONError(error, 'Price List');
   }

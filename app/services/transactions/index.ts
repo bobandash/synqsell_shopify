@@ -5,5 +5,4 @@ export {
   type supplierAccessRequestInformationProps,
   updateSupplierAccess,
 } from './updateSupplierAccess';
-export { default as createPriceListAndCompleteChecklistItem } from './createPriceListAndCompleteChecklistItem';
 export { default as approvePartnershipRequestBulk } from './approvePartnershipRequestBulk';

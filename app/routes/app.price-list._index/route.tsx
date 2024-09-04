@@ -28,10 +28,6 @@ import {
 import logger from '~/logger';
 import { convertFormDataToObject, getJSONError } from '~/util';
 import { authenticate } from '~/shopify.server';
-import {
-  getPriceListTableInfo,
-  type PriceListTableInfoProps,
-} from '~/services/models/priceList';
 import { StatusCodes } from 'http-status-codes';
 import { useEffect, useState, type FC } from 'react';
 import { convertToTitleCase } from '../util';
@@ -39,6 +35,8 @@ import { useAppBridge } from '@shopify/app-bridge-react';
 import { MODALS } from './constants';
 import { DeletePriceListModal } from './components';
 import { deletePriceListAction } from './actions';
+import type { PriceListTableInfoProps } from './types';
+import { getPriceListTableInfo } from './loader';
 
 type RowProps = {
   data: PriceListTableInfoProps;
@@ -67,11 +65,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const formDataObject = convertFormDataToObject(formData);
     switch (intent) {
       case MODALS.DELETE_PRICE_LIST:
-        await deletePriceListAction(formDataObject, sessionId);
-        return json(
-          { message: `Successfully deleted the price list(s).` },
-          StatusCodes.OK,
-        );
+        return await deletePriceListAction(formDataObject, sessionId);
     }
     return json(
       { error: { message: 'Not Implemented. Please contact support.' } },

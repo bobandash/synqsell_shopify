@@ -46,3 +46,25 @@ export type Settings = {
   supplierId: string;
   margin: number;
 };
+
+export type CoreProductProps = {
+  id: string;
+  variants: {
+    wholesalePrice: number | null;
+    id: string;
+  }[];
+};
+
+export type PriceListSettings = {
+  margin?: number | undefined;
+  requiresApprovalToImport?: boolean | undefined;
+  name: string;
+  isGeneral: boolean;
+  pricingStrategy: string;
+};
+
+export type PriceListActionData = {
+  settings: PriceListSettings;
+  products: CoreProductProps[];
+  partnerships: string[]; // string of ids
+};

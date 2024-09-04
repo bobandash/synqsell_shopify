@@ -1,132 +1,112 @@
 import db from '~/db.server';
 import type { GraphQL } from '~/types';
-import {
-  updatePriceListSettingsTx,
-  type CreatePriceListDataProps,
-} from '../models/priceList';
-import { priceListDataSchema } from '../models/priceList/schemas';
-import { errorHandler } from '../util';
+import { errorHandler } from '~/services/util';
 import {
   addProductsTx,
   deleteProductsTx,
   getMapShopifyProductIdToPrismaIdTx,
-} from '../models/product';
+} from '~/services/models/product';
 import type { Prisma } from '@prisma/client';
-import type { CoreProductProps } from '../types';
 import {
   deleteVariantsTx,
   getShopifyVariantIdsInPriceListTx,
   updateVariantsTx,
-} from '../models/variants';
-import { addVariantsTx } from '../helper/variants';
-import { getPartnershipsByRetailersAndSupplier } from '../models/partnership';
+} from '~/services/models/variants';
+import { addVariantsTx } from '~/services/helper/variants';
+import type {
+  CoreProductProps,
+  PriceListActionData,
+  PriceListSettings,
+} from '../types';
+import { priceListDataSchema } from './schemas';
+import { updatePartnershipsInPriceListTx } from './util';
+import { json } from '@remix-run/node';
+import { StatusCodes } from 'http-status-codes';
 
-export async function addPartnershipsToPriceListTx(
-  tx: Prisma.TransactionClient,
+export async function updatePriceListSettings(
+  sessionId: string,
   priceListId: string,
-  retailerIds: string[],
-  supplierId: string,
+  settings: PriceListSettings,
 ) {
   try {
-    const supplierPartnerships = await getPartnershipsByRetailersAndSupplier(
-      supplierId,
-      retailerIds,
-    );
-    const supplierPartnershipIds = supplierPartnerships.map(({ id }) => {
-      return { id: id };
-    });
-    const priceList = await tx.priceList.update({
+    const {
+      margin,
+      requiresApprovalToImport,
+      name,
+      isGeneral,
+      pricingStrategy,
+    } = settings;
+    const updatedPriceList = await db.priceList.update({
       where: {
         id: priceListId,
       },
       data: {
-        partnerships: {
-          connect: supplierPartnershipIds,
-        },
+        name,
+        isGeneral,
+        ...(requiresApprovalToImport && {
+          requiresApprovalToImport,
+        }),
+        pricingStrategy,
+        ...(margin && {
+          margin,
+        }),
+        supplierId: sessionId,
       },
     });
-    return priceList;
+    return updatedPriceList;
   } catch (error) {
     throw errorHandler(
       error,
-      'Failed to add retailers to price list in transaction.',
-      addPartnershipsToPriceListTx,
-      { priceListId, retailerIds, supplierId },
-    );
-  }
-}
-
-export async function removePartnershipsFromPriceListTx(
-  tx: Prisma.TransactionClient,
-  priceListId: string,
-  retailerIds: string[],
-  supplierId: string,
-) {
-  try {
-    const supplierPartnerships = await getPartnershipsByRetailersAndSupplier(
-      supplierId,
-      retailerIds,
-    );
-    const supplierPartnershipIds = supplierPartnerships.map(({ id }) => {
-      return { id: id };
-    });
-    const priceList = await tx.priceList.update({
-      where: {
-        id: priceListId,
-      },
-      data: {
-        partnerships: {
-          disconnect: supplierPartnershipIds,
-        },
-      },
-    });
-    return priceList;
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to remove retailers from the price list in transaction.',
-      removePartnershipsFromPriceListTx,
-      { priceListId, retailerIds },
-    );
-  }
-}
-
-// gets retailers to add and remove from price list
-async function getRetailerStatus(priceListId: string, newRetailers: string[]) {
-  try {
-    const partneredRetailersInPriceList = await db.partnership.findMany({
-      where: {
-        priceLists: {
-          some: {
-            id: priceListId,
-          },
-        },
-      },
-      select: {
-        retailerId: true,
-      },
-    });
-    const partneredRetailerIds = partneredRetailersInPriceList.map(
-      ({ retailerId }) => retailerId,
-    );
-    const retailerIdsInPriceListSet = new Set(partneredRetailerIds);
-    const retailerIdsSet = new Set(newRetailers);
-
-    const retailersToRemove = partneredRetailerIds.filter(
-      (id) => !retailerIdsSet.has(id),
-    );
-    const retailersToAdd = newRetailers.filter(
-      (id) => !retailerIdsInPriceListSet.has(id),
-    );
-    return { retailersToRemove, retailersToAdd };
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to get retailers that will be removed and added in price list.',
-      getRetailerStatus,
+      'Failed to update price list.',
+      updatePriceListSettings,
       {
         priceListId,
-        newRetailers,
+        settings,
+      },
+    );
+  }
+}
+
+export async function updatePriceListSettingsTx(
+  tx: Prisma.TransactionClient,
+  sessionId: string,
+  priceListId: string,
+  settings: PriceListSettings,
+) {
+  try {
+    const {
+      margin,
+      requiresApprovalToImport,
+      name,
+      isGeneral,
+      pricingStrategy,
+    } = settings;
+    const updatedPriceList = await tx.priceList.update({
+      where: {
+        id: priceListId,
+      },
+      data: {
+        name,
+        isGeneral,
+        ...(requiresApprovalToImport && {
+          requiresApprovalToImport,
+        }),
+        pricingStrategy,
+        ...(margin && {
+          margin,
+        }),
+        supplierId: sessionId,
+      },
+    });
+    return updatedPriceList;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to update price list in transaction.',
+      updatePriceListSettingsTx,
+      {
+        priceListId,
+        settings,
       },
     );
   }
@@ -171,7 +151,6 @@ async function getProductStatus(priceListId: string, productIds: string[]) {
 // returns the data of the variants to add, remove, and update
 // the problem with variants is that when a product is deleted, it should cascade delete the variants as well
 // so that's why you have to use the transaction instead and call this when products are already deleted
-// TODO: refactor this function later
 async function getVariantStatusTx(
   tx: Prisma.TransactionClient,
   priceListId: string,
@@ -247,26 +226,18 @@ async function getVariantStatusTx(
       },
     );
   }
-
-  // for variants to update, it's only if we must update wholesale price
 }
 
-export async function updateAllPriceListInformation(
+async function updateAllPriceListInformationAction(
   priceListId: string,
-  data: CreatePriceListDataProps,
+  data: PriceListActionData,
   sessionId: string,
   graphql: GraphQL,
 ) {
   try {
-    await priceListDataSchema.validate(data, {
-      context: data,
-    });
-    const { settings, products, retailers } = data;
-    const productIds = products.map((product) => product.id);
-    const { retailersToAdd, retailersToRemove } = await getRetailerStatus(
-      priceListId,
-      retailers,
-    );
+    await priceListDataSchema.validate(data);
+    const { settings, products, partnerships } = data;
+    const productIds = products.map(({ id }) => id);
     const { productsToAdd, productsToRemove } = await getProductStatus(
       priceListId,
       productIds,
@@ -286,28 +257,24 @@ export async function updateAllPriceListInformation(
         updateVariantsTx(tx, variantsToUpdate),
         addVariantsTx(tx, variantsToAdd, sessionId, graphql),
         updatePriceListSettingsTx(tx, sessionId, priceListId, settings),
-        removePartnershipsFromPriceListTx(
-          tx,
-          priceListId,
-          retailersToRemove,
-          sessionId,
-        ),
-        addPartnershipsToPriceListTx(
-          tx,
-          priceListId,
-          retailersToAdd,
-          sessionId,
-        ),
+        updatePartnershipsInPriceListTx(tx, priceListId, partnerships),
       ]);
     });
+
+    return json(
+      { message: 'Successfully updated price list.' },
+      StatusCodes.OK,
+    );
   } catch (error) {
     throw errorHandler(
       error,
       'Failed to update price list.',
-      updateAllPriceListInformation,
+      updateAllPriceListInformationAction,
       {
         sessionId,
       },
     );
   }
 }
+
+export default updateAllPriceListInformationAction;
