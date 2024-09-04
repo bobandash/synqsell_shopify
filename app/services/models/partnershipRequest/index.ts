@@ -15,6 +15,10 @@ type CreatePartnershipRequestProps = {
   status: PartnershipRequestStatusProps;
 };
 
+type CreatePartnershipRequestTxProps = CreatePartnershipRequestProps & {
+  tx: Prisma.TransactionClient;
+};
+
 async function createOrUpdatePartnershipRequest(
   props: CreatePartnershipRequestProps,
 ) {
@@ -49,6 +53,61 @@ async function createOrUpdatePartnershipRequest(
           type,
         );
       partnershipRequest = await db.partnershipRequest.update({
+        where: {
+          id: existingPartnershipRequest.id,
+        },
+        data: {
+          message,
+          status,
+        },
+      });
+    }
+
+    return partnershipRequest;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to create or update partnership request.',
+      createOrUpdatePartnershipRequest,
+      { props },
+    );
+  }
+}
+
+async function createOrUpdatePartnershipRequestTx(
+  props: CreatePartnershipRequestTxProps,
+) {
+  try {
+    const { priceListIds, recipientId, senderId, message, type, status, tx } =
+      props;
+    const priceListExists = await hasPartnershipRequestMultiplePriceLists(
+      priceListIds,
+      senderId,
+      type,
+    );
+
+    let partnershipRequest;
+    if (!priceListExists) {
+      partnershipRequest = await tx.partnershipRequest.create({
+        data: {
+          senderId,
+          recipientId,
+          message,
+          type,
+          status,
+          priceLists: {
+            connect: priceListIds.map((id) => ({ id })),
+          },
+        },
+      });
+    } else {
+      const existingPartnershipRequest =
+        await getPartnershipRequestMultiplePriceLists(
+          priceListIds,
+          senderId,
+          type,
+        );
+      partnershipRequest = await tx.partnershipRequest.update({
         where: {
           id: existingPartnershipRequest.id,
         },
@@ -278,6 +337,7 @@ async function deletePartnershipRequestsTx(
 
 export {
   createOrUpdatePartnershipRequest,
+  createOrUpdatePartnershipRequestTx,
   hasPartnershipRequestMultiplePriceLists,
   getPartnershipRequestMultiplePriceLists,
   hasPartnershipRequest,

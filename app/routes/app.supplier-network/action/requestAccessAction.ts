@@ -1,18 +1,21 @@
 import { object, string } from 'yup';
 import { INTENTS, type IntentsProps } from '../constants';
 import { hasSession } from '~/services/models/session';
-import { createOrUpdatePartnershipRequest } from '~/services/models/partnershipRequest';
+import { createOrUpdatePartnershipRequestTx } from '~/services/models/partnershipRequest';
 import {
   getGeneralPriceList,
   hasGeneralPriceList,
 } from '~/services/models/priceList';
 import {
+  CHECKLIST_ITEM_KEYS,
   PARTNERSHIP_REQUEST_STATUS,
   PARTNERSHIP_REQUEST_TYPE,
 } from '~/constants';
 import { json } from '@remix-run/node';
 import { StatusCodes } from 'http-status-codes';
 import { getJSONError } from '~/util';
+import db from '~/db.server';
+import { updateChecklistStatusTx } from '~/services/models/checklistStatus';
 
 export type RequestAccessFormData = {
   intent: IntentsProps;
@@ -65,14 +68,26 @@ export async function requestAccessAction(
     ]);
     const { priceListSupplierId, message } = formDataObject;
     const generalPriceListId = (await getGeneralPriceList(sessionId)).id;
-    await createOrUpdatePartnershipRequest({
-      priceListIds: [generalPriceListId],
-      recipientId: priceListSupplierId,
-      senderId: sessionId,
-      message: message,
-      type: PARTNERSHIP_REQUEST_TYPE.RETAILER,
-      status: PARTNERSHIP_REQUEST_STATUS.PENDING,
+    await db.$transaction(async (tx) => {
+      await Promise.all([
+        updateChecklistStatusTx(
+          tx,
+          sessionId,
+          CHECKLIST_ITEM_KEYS.RETAILER_REQUEST_PARTNERSHIP,
+          true,
+        ),
+        createOrUpdatePartnershipRequestTx({
+          tx,
+          priceListIds: [generalPriceListId],
+          recipientId: priceListSupplierId,
+          senderId: sessionId,
+          message: message,
+          type: PARTNERSHIP_REQUEST_TYPE.RETAILER,
+          status: PARTNERSHIP_REQUEST_STATUS.PENDING,
+        }),
+      ]);
     });
+
     return json(
       { message: 'Successfully created partnership request.' },
       StatusCodes.CREATED,
