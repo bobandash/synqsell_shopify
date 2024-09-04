@@ -261,3 +261,40 @@ export async function deletePartnershipsTx(
     );
   }
 }
+
+export async function getPartnershipsInPriceList(
+  supplierId: string,
+  priceListId: string,
+) {
+  try {
+    const partnerships = await db.partnership.findMany({
+      where: {
+        supplierId: supplierId,
+        priceLists: {
+          some: {
+            id: priceListId,
+          },
+        },
+      },
+      include: {
+        priceLists: {
+          select: {
+            session: {
+              include: {
+                userProfile: true,
+              },
+            },
+          },
+        },
+      },
+    });
+    return partnerships;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to retrieve current partnerships in price list',
+      getPartnershipsInPriceList,
+      { supplierId, priceListId },
+    );
+  }
+}

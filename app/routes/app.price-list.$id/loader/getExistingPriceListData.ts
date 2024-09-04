@@ -4,6 +4,7 @@ import db from '~/db.server';
 import { getIdMappedToStoreUrl } from '~/services/shopify/products';
 import type { GraphQL } from '~/types';
 import { getPriceListSettings } from '~/services/models/priceList';
+import { getPartnershipData } from './getPartnershipData';
 
 const isValidPriceListIdSchema = string()
   .required()
@@ -118,12 +119,13 @@ export async function getExistingPriceListData(
   graphql: GraphQL,
 ) {
   try {
-    const [productsData, settingsData] = await Promise.all([
+    const [productsData, settingsData, partnershipsData] = await Promise.all([
       getInitialProductData(priceListId, sessionId, graphql),
       getPriceListSettings(sessionId, priceListId),
+      getPartnershipData(sessionId, priceListId),
     ]);
 
-    return { productsData, settingsData };
+    return { productsData, settingsData, partnershipsData };
   } catch (error) {
     throw errorHandler(
       error,

@@ -75,17 +75,12 @@ import {
 import { updateAllPriceListInformation } from '~/services/transactions/updatePriceList';
 import { getExistingPriceListData } from './loader/getExistingPriceListData';
 import { getNewPriceListData } from './loader/getNewPriceListData';
+import type { PartnershipRowData } from './loader/getPartnershipData';
 
 type LoaderDataProps = {
   settingsData: Settings;
   productsData: ProductPropsWithPositions[];
-};
-
-type PartneredRetailersProps = {
-  id: string;
-  name: string;
-  website: string;
-  selected: boolean;
+  partnershipsData: PartnershipRowData[];
 };
 
 // TODO: add success message for updating price list
@@ -149,7 +144,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     if (!isNew) {
       data = await getExistingPriceListData(sessionId, priceListId, graphql);
     } else {
-      data = getNewPriceListData();
+      data = await getNewPriceListData(sessionId);
     }
     return json(data, StatusCodes.OK);
   } catch (error) {
@@ -159,13 +154,10 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
 
 // TODO: Figure out how to display shopify toast before redirect, might need to just handle in the client
 // TODO: add status badge at the top of form too to denote that a price list was created
-// TODO: fetch all potential retailer information
-
 const CreateEditPriceList = () => {
-  const { settingsData, productsData } = useLoaderData<
+  const { settingsData, productsData, partnershipsData } = useLoaderData<
     typeof loader
   >() as LoaderDataProps;
-
   const params = useParams();
   const isCreatingNewPriceList = params.id && params.id === 'new';
 
@@ -176,31 +168,22 @@ const CreateEditPriceList = () => {
   const [products, setProducts] =
     useState<ProductPropsWithPositions[]>(productsData);
 
-  const allPartneredRetailers: PartneredRetailersProps[] = useMemo(
-    () => [
-      // {
-      //   id: 'retailer-id',
-      //   name: 'Eppeal',
-      //   website: '/app/retailer-network/retailer-id', // TODO: make this in the frontend
-      //   selected: true,
-      // },
-    ],
-    [],
-  );
+  const [partneredRetailers] = useState<PartnershipRowData[]>(partnershipsData);
 
   const initialSelectedRetailers = useMemo(() => {
-    return allPartneredRetailers
+    return partneredRetailers
       .filter(({ selected }) => selected === true)
       .map(({ id }) => id);
-  }, [allPartneredRetailers]);
+  }, [partneredRetailers]);
 
-  const [visibleRetailerOptions, setVisibleRetailerOptions] = useState<
-    PartneredRetailersProps[]
-  >(allPartneredRetailers);
+  const [visibleRetailerOptions, setVisibleRetailerOptions] =
+    useState<PartnershipRowData[]>(partneredRetailers);
+  const [selectedPartnershipIds, setSelectedPartnershipIds] = useState<
+    string[]
+  >(initialSelectedRetailers);
 
-  const [selectedRetailerIds, setSelectedRetailerIds] = useState<string[]>(
-    initialSelectedRetailers,
-  );
+  console.log(selectedPartnershipIds);
+
   const [retailerSearchValue, setRetailerSearchValue] = useState('');
   const escapeSpecialRegExCharacters = useCallback(
     (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
@@ -210,29 +193,29 @@ const CreateEditPriceList = () => {
     (value: string) => {
       setRetailerSearchValue(value);
       if (value === '') {
-        setVisibleRetailerOptions(allPartneredRetailers);
+        setVisibleRetailerOptions(partneredRetailers);
         return;
       }
       const filterRegex = new RegExp(escapeSpecialRegExCharacters(value), 'i');
-      const resultOptions = allPartneredRetailers.filter((retailer) =>
-        retailer.name.match(filterRegex),
+      const resultOptions = partneredRetailers.filter(({ retailerName }) =>
+        retailerName.match(filterRegex),
       );
       setVisibleRetailerOptions(resultOptions);
     },
-    [allPartneredRetailers, escapeSpecialRegExCharacters],
+    [partneredRetailers, escapeSpecialRegExCharacters],
   );
 
   const updateRetailerSelection = useCallback(
     (selected: string) => {
-      if (selectedRetailerIds.includes(selected)) {
-        setSelectedRetailerIds(
-          selectedRetailerIds.filter((option) => option !== selected),
+      if (selectedPartnershipIds.includes(selected)) {
+        setSelectedPartnershipIds(
+          selectedPartnershipIds.filter((option) => option !== selected),
         );
       } else {
-        setSelectedRetailerIds([...selectedRetailerIds, selected]);
+        setSelectedPartnershipIds([...selectedPartnershipIds, selected]);
       }
     },
-    [selectedRetailerIds],
+    [selectedPartnershipIds],
   );
 
   // in order for the non-nested fields to select the nested rows, you have to create an array of objects of the variants
@@ -339,7 +322,7 @@ const CreateEditPriceList = () => {
     onSubmit: async (fieldValues) => {
       const formattedFieldData = formatPriceListFields(fieldValues);
       const formattedProductsData = getCleanedProductDataForSubmission();
-      const formattedRetailers = selectedRetailerIds;
+      const formattedRetailers = selectedPartnershipIds;
 
       remixSubmit(
         {
@@ -417,7 +400,6 @@ const CreateEditPriceList = () => {
 
   // functions related to updating wholesale price for products
   // this function is for when submitting with margin and edit the wholesale prices before
-
   // update wholesale price for specific product and variant
   const updateProductWholesalePrice = useCallback(
     (productId: string, variantId: string, wholesalePrice: number) => {
@@ -536,15 +518,15 @@ const CreateEditPriceList = () => {
                   >
                     {visibleRetailerOptions.length > 0 ? (
                       <Listbox onSelect={updateRetailerSelection}>
-                        {visibleRetailerOptions.map(({ id, name }) => {
+                        {visibleRetailerOptions.map(({ id, retailerName }) => {
                           return (
                             <Listbox.Option
                               key={id}
                               value={id}
-                              selected={selectedRetailerIds.includes(id)}
-                              accessibilityLabel={name}
+                              selected={selectedPartnershipIds.includes(id)}
+                              accessibilityLabel={retailerName}
                             >
-                              {name}
+                              {retailerName}
                             </Listbox.Option>
                           );
                         })}
@@ -556,23 +538,23 @@ const CreateEditPriceList = () => {
                       singular: 'customer',
                       plural: 'customers',
                     }}
-                    items={allPartneredRetailers.filter(({ id }) =>
-                      selectedRetailerIds.includes(id),
+                    items={partneredRetailers.filter(({ id }) =>
+                      selectedPartnershipIds.includes(id),
                     )}
                     renderItem={(item) => {
-                      const { id, name, website } = item;
+                      const { id, retailerName } = item;
                       return (
                         <ResourceItem
                           id={id}
-                          url={website}
-                          accessibilityLabel={`View details for ${name}`}
+                          url={''}
+                          accessibilityLabel={`View details for ${retailerName}`}
                         >
                           <InlineStack
                             blockAlign="center"
                             align="space-between"
                           >
                             <Text variant="bodyMd" fontWeight="bold" as="h3">
-                              {name}
+                              {retailerName}
                             </Text>
                             <div
                               onClick={(e) => {
