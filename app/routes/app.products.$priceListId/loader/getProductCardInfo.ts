@@ -2,8 +2,8 @@ import { boolean, object, string } from 'yup';
 import { errorHandler } from '~/services/util';
 import db from '~/db.server';
 import type { Prisma } from '@prisma/client';
-import { isRetailerInPriceList } from '~/services/models/priceListRetailer';
 import { hasSession } from '~/services/models/session';
+import { isRetailerInPartnershipPriceList } from '~/services/models/partnership';
 
 type GetProductCardInfoDbProps = {
   priceListId?: string;
@@ -152,7 +152,7 @@ async function getNoAccessPriceListIds(
         continue;
       }
       if (!isGeneral || (isGeneral && requiresApprovalToImport)) {
-        const isPartneredRetailer = await isRetailerInPriceList(
+        const isPartneredRetailer = await isRetailerInPartnershipPriceList(
           sessionId,
           priceListId,
         );

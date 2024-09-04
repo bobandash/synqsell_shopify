@@ -3,7 +3,7 @@
 client_id = "c2ff24913d6d89792234763f0830c676"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://negotiations-measures-labs-engineers.trycloudflare.com"
+application_url = "https://mastercard-schedule-forwarding-outer.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read_assigned_fulfillment_orders,read_inventory,read_orders,read_produ
 
 [auth]
 redirect_urls = [
-  "https://negotiations-measures-labs-engineers.trycloudflare.com/auth/callback",
-  "https://negotiations-measures-labs-engineers.trycloudflare.com/auth/shopify/callback",
-  "https://negotiations-measures-labs-engineers.trycloudflare.com/api/auth/callback"
+  "https://mastercard-schedule-forwarding-outer.trycloudflare.com/auth/callback",
+  "https://mastercard-schedule-forwarding-outer.trycloudflare.com/auth/shopify/callback",
+  "https://mastercard-schedule-forwarding-outer.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]

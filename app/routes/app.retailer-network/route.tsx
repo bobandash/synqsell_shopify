@@ -28,6 +28,13 @@ import { InitiatePartnershipModal, RetailerCard } from './components';
 import { getAllPriceLists } from '~/services/models/priceList';
 import { initiatePartnershipAction } from './actions';
 
+type InitiatePartnershipData = {
+  intent: string;
+  retailerId: string;
+  message: string;
+  priceListIds: string[];
+};
+
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
     const { session } = await authenticate.admin(request);
@@ -50,8 +57,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         StatusCodes.UNAUTHORIZED,
       );
     }
-
-    // TODO: change to suspense await
     const retailerPaginatedInfo = await getRetailerPaginatedInfo({
       isReverseDirection,
       sessionId,
@@ -74,17 +79,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const formDataObject = convertFormDataToObject(formData);
     switch (intent) {
       case INTENTS.INITIATE_PARTNERSHIP:
-        await initiatePartnershipAction({
+        return await initiatePartnershipAction({
           supplierId: sessionId,
-          intent: formDataObject.intent,
-          retailerId: formDataObject.retailerId,
-          message: formDataObject.message,
-          priceListIds: formDataObject.priceListIds,
+          ...(formDataObject as InitiatePartnershipData),
         });
-        return json(
-          { message: 'Successfully sent partnership request to retailer.' },
-          StatusCodes.OK,
-        );
     }
     return json({ error: 'Not implemented' }, StatusCodes.NOT_IMPLEMENTED);
   } catch (error) {

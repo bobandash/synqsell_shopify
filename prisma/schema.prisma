@@ -41,7 +41,6 @@ model Session {
   checklistStatuses            ChecklistStatus[]
   priceLists                   PriceList[]
   importedProducts             ImportedProduct[]
-  priceListRetailers           PriceListRetailer[]
   retailerPartnerships         Partnership[]          @relation("RetailerPartnership")
   supplierPartnerships         Partnership[]          @relation("SupplierPartnership")
   senderPartnershipRequests    PartnershipRequest[]   @relation("SenderPartnershipRequest")
@@ -139,19 +138,8 @@ model PriceList {
   margin                   Int?
   session                  Session              @relation(fields: [supplierId], references: [id])
   products                 Product[]
-  priceListRetailers       PriceListRetailer[]
   partnershipRequests      PartnershipRequest[]
-  Partnership              Partnership?         @relation(fields: [partnershipId], references: [id])
-  partnershipId            String?
-}
-
-// Keeps track of the retailers in the price list
-model PriceListRetailer {
-  id          String    @id @default(uuid())
-  priceListId String
-  retailerId  String
-  priceList   PriceList @relation(fields: [priceListId], references: [id])
-  retailer    Session   @relation(fields: [retailerId], references: [id])
+  partnerships             Partnership[]
 }
 
 model Product {

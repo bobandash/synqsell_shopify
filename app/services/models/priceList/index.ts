@@ -1,5 +1,5 @@
 import db from '~/db.server';
-import { type Prisma } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { errorHandler } from '~/services/util';
 import {
   isSupplierSchema,
@@ -278,7 +278,7 @@ export async function getPriceListTableInfo(
         _count: {
           select: {
             products: true,
-            priceListRetailers: true,
+            partnerships: true,
           },
         },
         products: {
@@ -318,7 +318,7 @@ export async function getPriceListTableInfo(
         return {
           ...priceListInfo,
           numProducts: _count.products,
-          numRetailers: _count.priceListRetailers,
+          numRetailers: _count.partnerships,
           sales: totalSales,
         };
       },
@@ -418,6 +418,34 @@ export async function getAllPriceLists(supplierId: string) {
       'Failed to get all price lists.',
       getAllPriceLists,
       { supplierId },
+    );
+  }
+}
+
+// TODO: decide whether or not you want to move this to partnerships or some other folder
+export async function getRetailerIds(priceListId: string) {
+  try {
+    const priceListWithRetailers = await db.priceList.findFirstOrThrow({
+      where: {
+        id: priceListId,
+      },
+      include: {
+        partnerships: {
+          select: {
+            retailerId: true,
+          },
+        },
+      },
+    });
+    const { partnerships } = priceListWithRetailers;
+    const retailerIds = partnerships.map(({ retailerId }) => retailerId);
+    return retailerIds;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to get retailer ids in price list.',
+      getRetailerIds,
+      { priceListId },
     );
   }
 }

@@ -8,6 +8,8 @@ import {
   PARTNERSHIP_REQUEST_STATUS,
   PARTNERSHIP_REQUEST_TYPE,
 } from '~/constants';
+import { StatusCodes } from 'http-status-codes';
+import { json } from '@remix-run/node';
 
 type InitiatePartnershipActionProps = {
   intent: string;
@@ -68,7 +70,7 @@ async function initiatePartnershipAction(
   try {
     await initiatePartnershipActionSchema.validate(props);
     const { retailerId, message, supplierId, priceListIds } = props;
-    const newPartnershipRequest = await createOrUpdatePartnershipRequest({
+    await createOrUpdatePartnershipRequest({
       priceListIds,
       recipientId: retailerId,
       senderId: supplierId,
@@ -76,7 +78,12 @@ async function initiatePartnershipAction(
       type: PARTNERSHIP_REQUEST_TYPE.SUPPLIER,
       status: PARTNERSHIP_REQUEST_STATUS.PENDING,
     });
-    return newPartnershipRequest;
+    return json(
+      {
+        message: 'Successfully sent supplier partnership request to retailer.',
+      },
+      StatusCodes.OK,
+    );
   } catch (error) {
     throw getJSONError(error, 'retailer network');
   }

@@ -11,11 +11,11 @@ import type { Prisma } from '@prisma/client';
 import logger from '~/logger';
 import createHttpError from 'http-errors';
 import { APPROVAL_STATUS, type ApprovalStatusProps } from '../constants';
-import { isRetailerInPriceList } from '~/services/models/priceListRetailer';
 import {
   getPartnershipRequest,
   hasPartnershipRequest,
 } from '~/services/models/partnershipRequest';
+import { isRetailerInPartnershipPriceList } from '~/services/models/partnership';
 
 export type SupplierPaginatedInfoProps = {
   nextCursor: string | null;
@@ -195,7 +195,7 @@ async function getApprovalStatus(
 
   try {
     const [isApprovedRetailer, partnershipRequestExists] = await Promise.all([
-      isRetailerInPriceList(sessionId, priceListId),
+      isRetailerInPartnershipPriceList(sessionId, priceListId),
       hasPartnershipRequest(
         priceListId,
         sessionId,

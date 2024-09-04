@@ -7,10 +7,6 @@ import {
 import { priceListDataSchema } from '../models/priceList/schemas';
 import { errorHandler } from '../util';
 import {
-  addPriceListRetailersTx,
-  removePriceListRetailersTx,
-} from '../models/priceListRetailer';
-import {
   addProductsTx,
   deleteProductsTx,
   getMapShopifyProductIdToPrismaIdTx,
@@ -23,21 +19,100 @@ import {
   updateVariantsTx,
 } from '../models/variants';
 import { addVariantsTx } from '../helper/variants';
+import { getPartnershipsByRetailersAndSupplier } from '../models/partnership';
+
+export async function addPartnershipsToPriceListTx(
+  tx: Prisma.TransactionClient,
+  priceListId: string,
+  retailerIds: string[],
+  supplierId: string,
+) {
+  try {
+    const supplierPartnerships = await getPartnershipsByRetailersAndSupplier(
+      supplierId,
+      retailerIds,
+    );
+    const supplierPartnershipIds = supplierPartnerships.map(({ id }) => {
+      return { id: id };
+    });
+    const priceList = await tx.priceList.update({
+      where: {
+        id: priceListId,
+      },
+      data: {
+        partnerships: {
+          connect: supplierPartnershipIds,
+        },
+      },
+    });
+    return priceList;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to add retailers to price list in transaction.',
+      addPartnershipsToPriceListTx,
+      { priceListId, retailerIds, supplierId },
+    );
+  }
+}
+
+export async function removePartnershipsFromPriceListTx(
+  tx: Prisma.TransactionClient,
+  priceListId: string,
+  retailerIds: string[],
+  supplierId: string,
+) {
+  try {
+    const supplierPartnerships = await getPartnershipsByRetailersAndSupplier(
+      supplierId,
+      retailerIds,
+    );
+    const supplierPartnershipIds = supplierPartnerships.map(({ id }) => {
+      return { id: id };
+    });
+    const priceList = await tx.priceList.update({
+      where: {
+        id: priceListId,
+      },
+      data: {
+        partnerships: {
+          disconnect: supplierPartnershipIds,
+        },
+      },
+    });
+    return priceList;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to remove retailers from the price list in transaction.',
+      removePartnershipsFromPriceListTx,
+      { priceListId, retailerIds },
+    );
+  }
+}
 
 // gets retailers to add and remove from price list
 async function getRetailerStatus(priceListId: string, newRetailers: string[]) {
   try {
-    const retailerIdsInPriceList = (
-      await db.priceListRetailer.findMany({
-        where: {
-          priceListId,
+    const partneredRetailersInPriceList = await db.partnership.findMany({
+      where: {
+        priceLists: {
+          some: {
+            id: priceListId,
+          },
         },
-      })
-    ).map(({ retailerId }) => retailerId);
-    const retailerIdsInPriceListSet = new Set(retailerIdsInPriceList);
+      },
+      select: {
+        retailerId: true,
+      },
+    });
+    const partneredRetailerIds = partneredRetailersInPriceList.map(
+      ({ retailerId }) => retailerId,
+    );
+    const retailerIdsInPriceListSet = new Set(partneredRetailerIds);
     const retailerIdsSet = new Set(newRetailers);
 
-    const retailersToRemove = retailerIdsInPriceList.filter(
+    const retailersToRemove = partneredRetailerIds.filter(
       (id) => !retailerIdsSet.has(id),
     );
     const retailersToAdd = newRetailers.filter(
@@ -211,8 +286,18 @@ export async function updateAllPriceListInformation(
         updateVariantsTx(tx, variantsToUpdate),
         addVariantsTx(tx, variantsToAdd, sessionId, graphql),
         updatePriceListSettingsTx(tx, sessionId, priceListId, settings),
-        removePriceListRetailersTx(tx, priceListId, retailersToRemove),
-        addPriceListRetailersTx(tx, priceListId, retailersToAdd),
+        removePartnershipsFromPriceListTx(
+          tx,
+          priceListId,
+          retailersToRemove,
+          sessionId,
+        ),
+        addPartnershipsToPriceListTx(
+          tx,
+          priceListId,
+          retailersToAdd,
+          sessionId,
+        ),
       ]);
     });
   } catch (error) {

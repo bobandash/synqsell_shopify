@@ -10,13 +10,13 @@ import { hasSession } from '~/services/models/session';
 import type { Prisma } from '@prisma/client';
 import logger from '~/logger';
 import createHttpError from 'http-errors';
-import { isRetailerInPriceLists } from '~/services/models/priceListRetailer';
 import {
   getPartnershipRequestMultiplePriceLists,
   hasPartnershipRequestMultiplePriceLists,
 } from '~/services/models/partnershipRequest';
 import { getAllPriceLists } from '~/services/models/priceList';
 import { PARTNERSHIP_STATUS, type PartnershipStatusProps } from '../constants';
+import { isRetailerInPartnershipMultiplePriceLists } from '~/services/models/partnership';
 
 export type RetailerPaginatedInfoProps = {
   retailerPaginatedInfo: {
@@ -175,7 +175,10 @@ async function getPartnershipStatus(
   priceListIds: string[],
 ): Promise<PartnershipStatusProps> {
   try {
-    const isPartnered = await isRetailerInPriceLists(retailerId, priceListIds);
+    const isPartnered = await isRetailerInPartnershipMultiplePriceLists(
+      retailerId,
+      priceListIds,
+    );
     if (isPartnered) {
       return PARTNERSHIP_STATUS.PARTNERED;
     }

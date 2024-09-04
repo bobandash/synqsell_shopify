@@ -1,7 +1,6 @@
 import { priceListExistsSchema } from '~/services/models/priceList/schemas';
 import { errorHandler } from '~/services/util';
-import { getPriceList } from '~/services/models/priceList';
-import { getPriceListRetailerIds } from '~/services/models/priceListRetailer';
+import { getPriceList, getRetailerIds } from '~/services/models/priceList';
 
 // check if user has permission to view the price list
 async function hasAccessToViewPriceList(
@@ -11,9 +10,9 @@ async function hasAccessToViewPriceList(
   try {
     await priceListExistsSchema.validate(priceListId);
     const isGeneral = (await getPriceList(priceListId)).isGeneral;
-    const priceListRetailerIds = await getPriceListRetailerIds(priceListId);
+    const retailerIds = await getRetailerIds(priceListId);
 
-    if (isGeneral || priceListRetailerIds.includes(sessionId)) {
+    if (isGeneral || retailerIds.includes(sessionId)) {
       return true;
     }
     return false;
