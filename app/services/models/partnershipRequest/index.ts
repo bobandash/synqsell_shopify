@@ -194,6 +194,7 @@ async function getPartnershipRequestMultiplePriceLists(
   }
 }
 
+// TODO: switch hasPartnershipRequest and isValidPartnershipRequest to stay consistent with other models
 async function hasPartnershipRequest(
   priceListId: string,
   senderId: string,

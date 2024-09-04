@@ -2,4 +2,7 @@ export {
   approveSuppliersAction,
   type ApproveSuppliersActionProps,
 } from './approveSuppliersAction';
-export { default as rejectRemoveSuppliersAction } from './rejectRemoveSuppliersAction';
+export {
+  rejectRemoveSuppliersAction,
+  type RejectRemoveSuppliersActionProps,
+} from './rejectRemoveSuppliersAction';

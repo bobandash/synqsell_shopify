@@ -1,5 +1,6 @@
 import {
   json,
+  useActionData,
   useLoaderData,
   useLocation,
   useNavigate,
@@ -33,7 +34,10 @@ import MessageModal from './components/Modals/MessageModal';
 import { useAppBridge } from '@shopify/app-bridge-react';
 import { useField, useForm } from '@shopify/react-form';
 import { approveSuppliersAction, rejectRemoveSuppliersAction } from './action';
-import type { ApproveSuppliersActionProps } from './action';
+import type {
+  ApproveSuppliersActionProps,
+  RejectRemoveSuppliersActionProps,
+} from './action';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
@@ -65,16 +69,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const data = convertFormDataToObject(formData);
     switch (intent) {
       case INTENTS.APPROVE_SUPPLIERS:
-        await approveSuppliersAction(data as ApproveSuppliersActionProps);
-        return json(
-          { message: 'Suppliers were successfully approved.' },
-          StatusCodes.OK,
+        return await approveSuppliersAction(
+          data as ApproveSuppliersActionProps,
         );
       case INTENTS.REJECT_REMOVE_SUPPLIERS:
-        await rejectRemoveSuppliersAction();
-        return json(
-          { message: 'Suppliers were successfully rejected.' },
-          StatusCodes.OK,
+        return await rejectRemoveSuppliersAction(
+          data as RejectRemoveSuppliersActionProps,
         );
       default:
         return json(
@@ -89,20 +89,29 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
 // The whole point in supplier partnerships is when a supplier requests a partnership with you
 const SupplierPartnerships = () => {
+  const data = useLoaderData<typeof loader>() as RowData[];
+  const actionData = useActionData<typeof action>();
   const { isSupplier } = useRoleContext();
   const navigate = useNavigate();
-  const data = useLoaderData<typeof loader>() as RowData[];
-
   const { mode, setMode } = useSetIndexFiltersMode();
   const [query, setQuery] = useState('');
   const [requestsData, setRequestsData] = useState<RowData[]>(data);
-  const [filteredRequestsData, setFilteredData] = useState<RowData[]>(data);
+  const [filteredRequestsData, setFilteredRequestsData] =
+    useState<RowData[]>(data);
   const [message, setMessage] = useState({ name: '', content: '' });
   const shopify = useAppBridge();
 
+  // TODO: handle bug where queries are reset when approve / reject suppliers
   useEffect(() => {
     setRequestsData(data);
+    setFilteredRequestsData(data);
   }, [data]);
+
+  useEffect(() => {
+    if (actionData && 'message' in actionData) {
+      shopify.toast.show(actionData.message);
+    }
+  }, [actionData, shopify]);
 
   const {
     selectedResources,
@@ -117,6 +126,15 @@ const SupplierPartnerships = () => {
   const handleFiltersQueryChange = useCallback((value: string) => {
     setQuery(value);
   }, []);
+
+  useEffect(() => {
+    setFilteredRequestsData(() => {
+      return requestsData.filter((item) =>
+        item.name.toLowerCase().includes(query.toLowerCase()),
+      );
+    });
+  }, [query, requestsData, data]);
+
   const clearQuery = useCallback(() => {
     setQuery('');
   }, []);
@@ -132,7 +150,7 @@ const SupplierPartnerships = () => {
         content: 'All',
         onAction: () => {
           setSelected(0);
-          setFilteredData(requestsData);
+          setFilteredRequestsData(requestsData);
           clearSelection();
         },
       },
@@ -141,7 +159,7 @@ const SupplierPartnerships = () => {
         content: 'Approved',
         onAction: () => {
           setSelected(1);
-          setFilteredData(
+          setFilteredRequestsData(
             requestsData.filter(
               (data) => data.status === SUPPLIER_ACCESS_REQUEST_STATUS.APPROVED,
             ),
@@ -154,7 +172,7 @@ const SupplierPartnerships = () => {
         content: 'Pending',
         onAction: () => {
           setSelected(2);
-          setFilteredData(
+          setFilteredRequestsData(
             requestsData.filter(
               (data) => data.status === SUPPLIER_ACCESS_REQUEST_STATUS.PENDING,
             ),
@@ -217,7 +235,7 @@ const SupplierPartnerships = () => {
     onSubmit: async (fieldValues) => {
       const { intent, selectedPartnerships } = fieldValues;
       // clean up selected partnerships data to only pending
-      const pendingSelectedPartnershipIds = requestsData
+      const partnershipRequestIds = requestsData
         .filter((data) => {
           return (
             data.status === SUPPLIER_ACCESS_REQUEST_STATUS.PENDING &&
@@ -226,7 +244,7 @@ const SupplierPartnerships = () => {
         })
         .map((partnership) => partnership.id);
 
-      const approvedPartnershipIds = requestsData
+      const partnershipIds = requestsData
         .filter((data) => {
           return (
             data.status === SUPPLIER_ACCESS_REQUEST_STATUS.APPROVED &&
@@ -237,8 +255,8 @@ const SupplierPartnerships = () => {
 
       remixSubmit(
         {
-          approvedPartnershipIds: JSON.stringify(approvedPartnershipIds),
-          pendingPartnershipIds: JSON.stringify(pendingSelectedPartnershipIds),
+          partnershipIds: JSON.stringify(partnershipIds),
+          partnershipRequestIds: JSON.stringify(partnershipRequestIds),
           intent,
         },
         {

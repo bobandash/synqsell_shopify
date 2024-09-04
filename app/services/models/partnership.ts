@@ -9,6 +9,28 @@ type NewPartnershipData = {
   priceListIds: string[];
 };
 
+export async function hasPartnership(id: string) {
+  try {
+    const partnershipRequest = await db.partnership.findFirst({
+      where: {
+        id,
+      },
+    });
+
+    if (partnershipRequest) {
+      return true;
+    }
+    return false;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to check if partnership id is valid.',
+      hasPartnership,
+      { id },
+    );
+  }
+}
+
 export async function getAllSupplierPartnerships(retailerId: string) {
   try {
     const supplierPartnerships = await db.partnership.findMany({
@@ -173,6 +195,29 @@ export async function isRetailerInPartnershipMultiplePriceLists(
       'Failed to see if retailer has a partnership with the price list ids.',
       isRetailerInPartnershipPriceList,
       { retailerId, priceListIds },
+    );
+  }
+}
+
+export async function deletePartnershipsTx(
+  tx: Prisma.TransactionClient,
+  partnershipIds: string[],
+) {
+  try {
+    const deletedPartnerships = await tx.partnership.deleteMany({
+      where: {
+        id: {
+          in: partnershipIds,
+        },
+      },
+    });
+    return deletedPartnerships;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to delete partnerships in bulk.',
+      deletePartnershipsTx,
+      { partnershipIds },
     );
   }
 }
