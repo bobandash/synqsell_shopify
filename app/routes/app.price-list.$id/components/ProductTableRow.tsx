@@ -2,14 +2,14 @@ import type {
   ProductPropsWithPositions,
   UpdateProductWholesalePrice,
   VariantWithPosition,
-} from "../types";
-import { getAllVariantSelectedStatus } from "../util";
-import { IndexTable, InlineStack, Text, Thumbnail } from "@shopify/polaris";
-import { Fragment } from "react/jsx-runtime";
-import { type FC } from "react";
-import { ImageIcon } from "@shopify/polaris-icons";
-import ProductTableNestedRow from "./ProductTableNestedRow";
-import ProductTableRowSingleVariant from "./ProductTableRowSingleVariant";
+} from '../types';
+import { getAllVariantSelectedStatus } from '../util';
+import { IndexTable, InlineStack, Text, Thumbnail } from '@shopify/polaris';
+import { Fragment } from 'react/jsx-runtime';
+import { type FC } from 'react';
+import { ImageIcon } from '@shopify/polaris-icons';
+import ProductTableNestedRow from './ProductTableNestedRow';
+import ProductTableRowSingleVariant from './ProductTableRowSingleVariant';
 
 type ProductTableRowProps = {
   product: ProductPropsWithPositions;
@@ -74,7 +74,7 @@ const ProductTableRow: FC<ProductTableRowProps> = (props) => {
             <Thumbnail
               source={primaryImage}
               alt={`${title} image`}
-              size={"small"}
+              size={'small'}
             />
             <Text as="span" variant="headingSm">
               {title}

@@ -87,12 +87,15 @@ async function getAllAvailablePartnershipsNotSelected(
   }
 }
 
-function formatPartnershipRawData(partnershipData: PartnershipRawData[]) {
+function formatPartnershipRawData(
+  partnershipData: PartnershipRawData[],
+  selected: boolean,
+) {
   return partnershipData.map((partnership) => {
     return {
       id: partnership.id,
       retailerName: partnership.retailer.userProfile?.name ?? '',
-      selected: true,
+      selected,
     };
   });
 }
@@ -110,6 +113,7 @@ export async function getPartnershipData(
       );
       selectedPartnershipsDataFmt = formatPartnershipRawData(
         partnershipsInPriceList,
+        true,
       );
     }
     const notSelectedPartnershipsData =
@@ -119,7 +123,9 @@ export async function getPartnershipData(
       );
     const notSelectedPartnershipsDataFmt = formatPartnershipRawData(
       notSelectedPartnershipsData,
+      false,
     );
+
     const allPartnershipsDataFmt = selectedPartnershipsDataFmt
       .concat(notSelectedPartnershipsDataFmt)
       .sort((a, b) => {
