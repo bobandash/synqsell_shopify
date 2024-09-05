@@ -55,12 +55,15 @@ const TableRow: FC<RowMarkupProps> = ({
       </IndexTable.Cell>
       <IndexTable.Cell>
         {priceLists.map((priceList) => (
-          <div
-            onClick={handleStopPropagation}
-            key={priceList.id}
-            className={sharedStyles['inline-block']}
-          >
-            <Link url={`/app/products/${priceList.id}`}>{priceList.name}</Link>
+          <div key={priceList.id}>
+            <div
+              className={sharedStyles['inline-block']}
+              onClick={handleStopPropagation}
+            >
+              <Link url={`/app/products/${priceList.id}`}>
+                {priceList.name}
+              </Link>
+            </div>
           </div>
         ))}
       </IndexTable.Cell>

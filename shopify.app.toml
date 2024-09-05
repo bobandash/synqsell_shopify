@@ -3,7 +3,7 @@
 client_id = "c2ff24913d6d89792234763f0830c676"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://loads-tomorrow-line-others.trycloudflare.com"
+application_url = "https://skills-vast-teens-usps.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read_assigned_fulfillment_orders,read_inventory,read_orders,read_produ
 
 [auth]
 redirect_urls = [
-  "https://loads-tomorrow-line-others.trycloudflare.com/auth/callback",
-  "https://loads-tomorrow-line-others.trycloudflare.com/auth/shopify/callback",
-  "https://loads-tomorrow-line-others.trycloudflare.com/api/auth/callback"
+  "https://skills-vast-teens-usps.trycloudflare.com/auth/callback",
+  "https://skills-vast-teens-usps.trycloudflare.com/auth/shopify/callback",
+  "https://skills-vast-teens-usps.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]
