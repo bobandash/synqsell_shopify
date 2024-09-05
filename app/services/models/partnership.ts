@@ -38,17 +38,39 @@ export async function isSupplierRetailerPartnered(
   supplierId: string,
 ) {
   try {
-    const partnershipRequest = await db.partnership.findFirst({
+    const partnership = await db.partnership.findFirst({
       where: {
         retailerId,
         supplierId,
       },
     });
 
-    if (partnershipRequest) {
+    if (partnership) {
       return true;
     }
     return false;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to check if retailer and supplier have a partnership.',
+      isSupplierRetailerPartnered,
+      { retailerId, supplierId },
+    );
+  }
+}
+
+export async function getSupplierRetailerPartnership(
+  retailerId: string,
+  supplierId: string,
+) {
+  try {
+    const partnership = await db.partnership.findFirstOrThrow({
+      where: {
+        retailerId,
+        supplierId,
+      },
+    });
+    return partnership;
   } catch (error) {
     throw errorHandler(
       error,

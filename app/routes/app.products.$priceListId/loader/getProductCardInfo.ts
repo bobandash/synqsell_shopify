@@ -209,7 +209,6 @@ const formatProductDataForPriceList = async (
         };
       },
     );
-
     return formattedProducts;
   } catch (error) {
     throw errorHandler(

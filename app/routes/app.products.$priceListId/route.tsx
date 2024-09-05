@@ -3,27 +3,33 @@ import { Button, InlineGrid, InlineStack, Page } from '@shopify/polaris';
 import { StatusCodes } from 'http-status-codes';
 import { authenticate } from '~/shopify.server';
 import { getJSONError } from '~/util';
-import hasAccessToViewPriceList from './loader/hasAccessToViewPriceList';
-import { hasAccessToImportPriceList } from './loader';
+import hasAccessToViewPriceList from './loader/util/hasAccessToViewPriceList';
 import { isValidPriceList } from '~/services/models/priceList';
-import {
-  getPaginatedProductCardsInfo,
-  type ProductCardData,
-} from './loader/getProductCardInfo';
 import {
   useLoaderData,
   useSearchParams,
   useRevalidator,
+  useNavigate,
 } from '@remix-run/react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import ProductCard from './components/ProductCard';
 import { ChevronLeftIcon, ChevronRightIcon } from '@shopify/polaris-icons';
 import { PaddedBox } from '~/components';
+import {
+  getPaginatedProductCardsInfo,
+  getPriceListsWithAccess,
+  type PriceListWithAccess,
+  type ProductCardData,
+} from './loader';
+import { hasAccessToImportPriceList } from './loader/util';
 
 type LoaderDataProps = {
-  products: ProductCardData[];
-  nextCursor: string | null;
-  prevCursor: string | null;
+  productCardInfo: {
+    products: ProductCardData[];
+    nextCursor: string | null;
+    prevCursor: string | null;
+  };
+  priceListsWithAccess: PriceListWithAccess[];
 };
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
@@ -46,7 +52,10 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
 
     // TODO: implement fetch all product data
     if (!priceListId) {
-      return json({ products: [] }, StatusCodes.NOT_IMPLEMENTED);
+      return json(
+        { productCardInfo: [], priceListsWithAccess: [] },
+        StatusCodes.NOT_IMPLEMENTED,
+      );
     }
     // case: searching for products in a specific price list
     const priceListExists = isValidPriceList(priceListId);
@@ -70,13 +79,17 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
       );
     }
 
-    const paginatedInfo = await getPaginatedProductCardsInfo({
-      priceListId,
-      isReverseDirection,
-      sessionId,
-      ...(cursor && { cursor }),
-    });
-    return json(paginatedInfo, StatusCodes.OK);
+    const [productCardInfo, priceListsWithAccess] = await Promise.all([
+      getPaginatedProductCardsInfo({
+        priceListId,
+        isReverseDirection,
+        sessionId,
+        ...(cursor && { cursor }),
+      }),
+      getPriceListsWithAccess(priceListId, sessionId),
+    ]);
+
+    return json({ productCardInfo, priceListsWithAccess }, StatusCodes.OK);
   } catch (error) {
     throw getJSONError(error, 'products');
   }
@@ -84,9 +97,12 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
 
 const PriceListProducts = () => {
   const {
-    products: initialProducts,
-    nextCursor: initialNextCursor,
-    prevCursor: initialPrevCursor,
+    productCardInfo: {
+      products: initialProducts,
+      nextCursor: initialNextCursor,
+      prevCursor: initialPrevCursor,
+    },
+    priceListsWithAccess,
   } = useLoaderData<typeof loader>() as LoaderDataProps;
 
   const [products, setProducts] = useState(initialProducts);
@@ -94,7 +110,9 @@ const PriceListProducts = () => {
   const [prevCursor, setPrevCursor] = useState(initialPrevCursor);
   const [, setSearchParams] = useSearchParams();
   const revalidator = useRevalidator();
+  const navigate = useNavigate();
 
+  // when data changes, update
   useEffect(() => {
     setProducts(initialProducts);
     setNextCursor(initialNextCursor);
@@ -115,10 +133,32 @@ const PriceListProducts = () => {
     }
   }, [prevCursor, setSearchParams, revalidator]);
 
+  const actionGroups = useMemo(() => {
+    return priceListsWithAccess.length > 0
+      ? [
+          {
+            title: 'Price List',
+            onClick: (openActions: () => void) => {
+              openActions();
+            },
+            actions: priceListsWithAccess.map((priceList) => {
+              return {
+                content: priceList.name,
+                onAction: () => {
+                  navigate(`/app/products/${priceList.id}`);
+                },
+              };
+            }),
+          },
+        ]
+      : undefined;
+  }, [priceListsWithAccess, navigate]);
+
   return (
     <Page
       title="Products"
-      subtitle="Discover products that may interest your customers and boost your AOV!"
+      subtitle="Discover products and boost your AOV!"
+      actionGroups={actionGroups}
     >
       <InlineGrid columns={{ xs: 2, sm: 2, md: 3, lg: 4 }} gap="300">
         {products.map((product) => (
