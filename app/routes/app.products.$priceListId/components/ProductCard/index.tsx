@@ -17,16 +17,14 @@ type Props = {
   product: ProductCardData;
 };
 
-// TODO: add pending request status and fix status for this to instead just fetch and check for permissions
-// TODO: the case that it's a general price list that the supplier granted permission
-// TODO: also if the product has been imported before, I need to denote that it's been imported before
+// TODO: if the product has been imported before, I need to denote that it's been imported before
 const ProductCard: FC<Props> = ({ product }) => {
-  const { images, brandName, title, priceListId, variants } = product;
+  const { images, brandName, title, priceList, variants } = product;
   const primaryImage =
     images.length > 0 && images[0].url
       ? { url: images[0].url, alt: images[0].alt }
       : null;
-  const priceListUrl = `/app/products/${priceListId}`;
+  const priceListUrl = `/app/products/${priceList.id}`;
   const numVariants = variants.length;
 
   return (

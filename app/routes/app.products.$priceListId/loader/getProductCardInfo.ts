@@ -184,7 +184,7 @@ const formatProductDataForPriceList = async (
       sessionId,
     );
 
-    return products.map(
+    const formattedProducts = products.map(
       ({ images, priceList, variants, priceListId, ...rest }) => {
         return {
           images: images.sort((a, b) => a.position - b.position),
@@ -209,6 +209,8 @@ const formatProductDataForPriceList = async (
         };
       },
     );
+
+    return formattedProducts;
   } catch (error) {
     throw errorHandler(
       error,
