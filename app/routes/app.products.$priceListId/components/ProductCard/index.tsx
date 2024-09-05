@@ -26,6 +26,7 @@ const ProductCard: FC<Props> = ({ product }) => {
       : null;
   const priceListUrl = `/app/products/${priceList.id}`;
   const numVariants = variants.length;
+  const productName = `${title}${numVariants > 1 ? ` (${numVariants} variants)` : ''}`;
 
   return (
     <Card padding="0">
@@ -47,9 +48,11 @@ const ProductCard: FC<Props> = ({ product }) => {
                   </UnstyledLink>
                 </div>
               )}
-              <Text as="h2" variant="headingMd" truncate={true}>
-                {title} {numVariants > 1 && `(${numVariants} variants)`}
-              </Text>
+              <div title={productName}>
+                <Text as="h2" variant="headingMd" truncate={true}>
+                  {productName}
+                </Text>
+              </div>
             </BlockStack>
             <Divider />
             <PricingDetails product={product} />
