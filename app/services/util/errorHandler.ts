@@ -23,14 +23,14 @@ function errorHandler(
 
   if (createHttpError.isHttpError(error)) {
     // avoids redundant logging because majority of generic errors will funnel into isHttpError
-    // !!! IMPORTANT: if you call a createHttpError inside of a try / throw an error manually, you have to log it instantly
     return error;
   } else if (isPrismaError(error)) {
     logger.error(`Prisma error: ${error.message}`, loggedData);
     return convertPrismaToCreateHttpError(error);
   } else if (error instanceof ValidationError) {
+    // validation errors are already readable messages
     logger.error(`Validation Error: ${error.message}`, loggedData);
-    return new createHttpError.BadRequest(humanReadableMessage);
+    return new createHttpError.BadRequest(error.message);
   } else if (error instanceof Error) {
     logger.error(error.message, loggedData);
     return new createHttpError.InternalServerError(humanReadableMessage);

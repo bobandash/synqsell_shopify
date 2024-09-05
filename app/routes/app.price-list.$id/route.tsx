@@ -79,6 +79,8 @@ import {
   createPriceListAndCompleteChecklistItemAction,
   updateAllPriceListInformationAction,
 } from './actions';
+import createHttpError from 'http-errors';
+import getJSONBadgeError from '~/util/getJSONBadgeError';
 
 type LoaderDataProps = {
   settingsData: Settings;
@@ -86,7 +88,6 @@ type LoaderDataProps = {
   partnershipsData: PartnershipRowData[];
 };
 
-// TODO: add success message for updating price list
 // TODO: there should be an edge case I didn't consider with editing the price list and making a private into a general
 export const action = async ({ request, params }: ActionFunctionArgs) => {
   try {
@@ -115,6 +116,12 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       graphql,
     );
   } catch (error) {
+    if (error instanceof createHttpError.BadRequest) {
+      return getJSONBadgeError({
+        statusCode: error.statusCode,
+        message: error.message,
+      });
+    }
     throw getJSONError(error, 'settings');
   }
 };
@@ -154,9 +161,6 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   }
 };
 
-// TODO: Figure out how to display shopify toast before redirect, might need to just handle redirect in the client
-// TODO: also need to figure out the logic in order to display the banner properly
-// TODO: before we move on, also figure out how to handle errors through the banners
 const CreateEditPriceList = () => {
   const location = useLocation();
   const { settingsData, productsData, partnershipsData } = useLoaderData<
@@ -185,12 +189,23 @@ const CreateEditPriceList = () => {
   const [retailerSearchValue, setRetailerSearchValue] = useState('');
   const [hasCreatePriceListBanner, setHasCreatePriceListBanner] =
     useState(false);
+  const [error, setError] = useState('');
   const [searchParams, setSearchParams] = useSearchParams();
 
   // write message with feedback
   useEffect(() => {
     if (actionData && 'message' in actionData) {
       shopify.toast.show(actionData.message);
+      setError('');
+    } else if (
+      actionData &&
+      'error' in actionData &&
+      'message' in actionData.error
+    ) {
+      shopify.toast.show('Error: see above.', {
+        isError: true,
+      });
+      setError(actionData.error.message);
     }
   }, [actionData, shopify]);
 
@@ -198,10 +213,12 @@ const CreateEditPriceList = () => {
     if (searchParams.get('referrer') === 'new') {
       setSearchParams();
       setHasCreatePriceListBanner(true);
+      shopify.toast.show('Successfully created price list.');
     } else if (location.pathname.slice(-3) === 'new') {
       setHasCreatePriceListBanner(false);
+      setError('');
     }
-  }, [searchParams, setSearchParams, location]);
+  }, [searchParams, setSearchParams, location, shopify]);
 
   const escapeSpecialRegExCharacters = useCallback(
     (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
@@ -236,8 +253,12 @@ const CreateEditPriceList = () => {
     [selectedPartnershipIds],
   );
 
-  const dismissBanner = useCallback(() => {
+  const dismissPriceListBanner = useCallback(() => {
     setHasCreatePriceListBanner(false);
+  }, []);
+
+  const dismissErrorBanner = useCallback(() => {
+    setError('');
   }, []);
 
   // in order for the non-nested fields to select the nested rows, you have to create an array of objects of the variants
@@ -467,12 +488,22 @@ const CreateEditPriceList = () => {
           title={isCreatingNewPriceList ? `New Price List` : `Edit Price List`}
           backAction={{ content: 'Price Lists', url: backActionUrl }}
         >
+          {error && (
+            <>
+              <Banner
+                title={error}
+                tone="warning"
+                onDismiss={dismissErrorBanner}
+              />
+              <PaddedBox />
+            </>
+          )}
           {hasCreatePriceListBanner && (
             <>
               <Banner
                 title="Your price list was successfully created."
                 tone="success"
-                onDismiss={dismissBanner}
+                onDismiss={dismissPriceListBanner}
               >
                 <p>
                   Add products and retailers to your price list and begin

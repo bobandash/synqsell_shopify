@@ -1,6 +1,8 @@
 import { array, boolean, number, object, string } from 'yup';
 import { PRICE_LIST_PRICING_STRATEGY, ROLES } from '~/constants';
+import { priceListIdSchema, sessionIdSchema } from '~/schemas/models';
 import {
+  getGeneralPriceList,
   hasGeneralPriceList,
   isValidPriceList,
 } from '~/services/models/priceList';
@@ -61,10 +63,11 @@ export const priceListDataSchema = object({
   retailers: array().of(string().required()),
 });
 
-// You are not allowed to create more than one general price list
+// this is the schema for creating a price list
+// you are not allowed to create more than one general price list at a time
 export const noMoreThanOneGeneralPriceListSchema = object({
   isGeneral: boolean().required(),
-  sessionId: string().required(),
+  sessionId: sessionIdSchema,
 }).test(
   'max-one-general-price-list',
   'A supplier can only have one general price list at a time.',
@@ -72,6 +75,28 @@ export const noMoreThanOneGeneralPriceListSchema = object({
     const { isGeneral, sessionId } = values;
     const generalPriceListExists = await hasGeneralPriceList(sessionId);
     if (generalPriceListExists && isGeneral) {
+      return false;
+    }
+    return true;
+  },
+);
+
+// this is the schema for editing a price list, preventing people from modifying a price list to a general price list, if it already exists
+export const noPriceListGeneralModificationIfExists = object({
+  isGeneral: boolean().required(),
+  sessionId: sessionIdSchema,
+  priceListId: priceListIdSchema,
+}).test(
+  'max-one-general-price-list',
+  'A supplier can only have one general price list at a time.',
+  async (values) => {
+    const { isGeneral, sessionId, priceListId } = values;
+    const generalPriceListExists = await hasGeneralPriceList(sessionId);
+    if (!generalPriceListExists) {
+      return true;
+    }
+    const generalPriceListId = (await getGeneralPriceList(sessionId)).id;
+    if (isGeneral && priceListId !== generalPriceListId) {
       return false;
     }
     return true;

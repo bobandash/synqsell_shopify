@@ -18,7 +18,10 @@ import type {
   PriceListActionData,
   PriceListSettings,
 } from '../types';
-import { priceListDataSchema } from './schemas';
+import {
+  noPriceListGeneralModificationIfExists,
+  priceListDataSchema,
+} from './schemas';
 import { updatePartnershipsInPriceListTx } from './util';
 import { json } from '@remix-run/node';
 import { StatusCodes } from 'http-status-codes';
@@ -236,6 +239,11 @@ async function updateAllPriceListInformationAction(
 ) {
   try {
     await priceListDataSchema.validate(data);
+    await noPriceListGeneralModificationIfExists.validate({
+      isGeneral: data.settings.isGeneral,
+      sessionId,
+      priceListId,
+    });
     const { settings, products, partnerships } = data;
     const productIds = products.map(({ id }) => id);
     const { productsToAdd, productsToRemove } = await getProductStatus(
