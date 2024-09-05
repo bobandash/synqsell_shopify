@@ -6,3 +6,7 @@ export {
   rejectRemoveRetailersAction,
   type RejectRemoveRetailersActionProps,
 } from './rejectRemoveRetailersAction';
+export {
+  changePermissionRetailersAction,
+  type ChangePermissionsRetailersAction,
+} from './changePermissionsRetailersAction';

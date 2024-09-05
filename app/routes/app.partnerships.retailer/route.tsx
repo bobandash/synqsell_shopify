@@ -27,22 +27,32 @@ import { hasRole } from '~/services/models/roles';
 import { authenticate } from '~/shopify.server';
 import { convertFormDataToObject, getJSONError } from '~/util';
 import getSupplierPartnershipInfo from './loader/getSupplierPartnershipInfo';
-import { INTENTS, RETAILER_ACCESS_REQUEST_STATUS } from './constants';
-import { approveRetailersAction, rejectRemoveRetailersAction } from './action';
+import { INTENTS, MODALS, RETAILER_ACCESS_REQUEST_STATUS } from './constants';
+import {
+  approveRetailersAction,
+  changePermissionRetailersAction,
+  rejectRemoveRetailersAction,
+} from './action';
 import type {
   ApproveRetailersActionProps,
+  ChangePermissionsRetailersAction,
   RejectRemoveRetailersActionProps,
 } from './action';
-import type { RowData } from './types';
+import type { PriceListJSON, RowData } from './types';
 import { useAppBridge } from '@shopify/app-bridge-react';
 import { useField, useForm } from '@shopify/react-form';
 import { TableRow } from './components';
-import MessageModal from './components/Modals/MessageModal';
 import type { NonEmptyArray } from '@shopify/polaris/build/ts/src/types';
 import type { BulkActionsProps } from '@shopify/polaris/build/ts/src/components/BulkActions';
 import type { IndexTableHeading } from '@shopify/polaris/build/ts/src/components/IndexTable';
-// !!! NOTE: Although most of the logic is similar to the supplier route, I decided not to combine both of them into a dynamic route
-// !!! This is just in case suppliers and retailers have different needs in the future
+import { ChangePermissionModal, MessageModal } from './components/Modals';
+import { getAllPriceLists } from '~/services/models/priceList';
+
+type LoaderData = {
+  partnershipInfo: RowData[];
+  priceLists: PriceListJSON[];
+};
+
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
     const {
@@ -58,8 +68,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         StatusCodes.UNAUTHORIZED,
       );
     }
-    const retailerPartnershipInfo = await getSupplierPartnershipInfo(sessionId);
-    return json(retailerPartnershipInfo, StatusCodes.OK);
+    const partnershipInfo = await getSupplierPartnershipInfo(sessionId);
+    const priceLists = await getAllPriceLists(sessionId);
+    return json({ partnershipInfo, priceLists }, StatusCodes.OK);
   } catch (error) {
     throw getJSONError(error, 'retailer partnerships');
   }
@@ -79,27 +90,36 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         return await rejectRemoveRetailersAction(
           data as RejectRemoveRetailersActionProps,
         );
-      default:
-        return json(
-          { message: 'Functionality has not been implemented yet.' },
-          StatusCodes.NOT_IMPLEMENTED,
+      case INTENTS.CHANGE_PERMISSIONS:
+        return await changePermissionRetailersAction(
+          data as ChangePermissionsRetailersAction,
         );
     }
+    return json(
+      { message: 'Functionality has not been implemented yet.' },
+      StatusCodes.NOT_IMPLEMENTED,
+    );
   } catch (error) {
     throw getJSONError(error, 'admin network');
   }
 };
 
+// TODO: handle bug where queries are reset when approve / reject suppliers
 const RetailerPartnerships = () => {
-  const data = useLoaderData<typeof loader>() as RowData[];
+  const { partnershipInfo, priceLists } = useLoaderData<
+    typeof loader
+  >() as LoaderData;
   const actionData = useActionData<typeof action>();
   const { isSupplier } = useRoleContext();
   const navigate = useNavigate();
   const { mode, setMode } = useSetIndexFiltersMode();
   const [query, setQuery] = useState('');
-  const [requestsData, setRequestsData] = useState<RowData[]>(data);
+  const [requestsData, setRequestsData] = useState<RowData[]>(partnershipInfo);
   const [filteredRequestsData, setFilteredRequestsData] =
-    useState<RowData[]>(data);
+    useState<RowData[]>(partnershipInfo);
+  const [selectedPriceListIds, setSelectedPriceListIds] = useState<string[]>(
+    [],
+  );
   const [message, setMessage] = useState({ name: '', content: '' });
   const shopify = useAppBridge();
   const {
@@ -109,16 +129,18 @@ const RetailerPartnerships = () => {
     clearSelection,
   } = useIndexResourceState(filteredRequestsData);
 
-  // TODO: handle bug where queries are reset when approve / reject suppliers
   useEffect(() => {
-    setRequestsData(data);
-    setFilteredRequestsData(data);
-  }, [data]);
+    setRequestsData(partnershipInfo);
+    setFilteredRequestsData(partnershipInfo);
+  }, [partnershipInfo]);
 
   useEffect(() => {
     if (actionData && 'message' in actionData) {
       shopify.toast.show(actionData.message);
       clearSelection();
+      // prematurely hide modal every time
+      shopify.modal.hide(MODALS.CHANGE_PERMISSION);
+      setSelectedPriceListIds([]);
     }
   }, [actionData, shopify, clearSelection]);
 
@@ -135,7 +157,7 @@ const RetailerPartnerships = () => {
         item.name.toLowerCase().includes(query.toLowerCase()),
       );
     });
-  }, [query, requestsData, data]);
+  }, [query, requestsData]);
 
   const clearQuery = useCallback(() => {
     setQuery('');
@@ -197,6 +219,38 @@ const RetailerPartnerships = () => {
     { title: 'Status' },
   ];
 
+  // helper functions to get pending partnership requests
+  const getSelectedPartnershipRequestIds = useCallback(
+    (selectedPartnerships: string[]) => {
+      const partnershipRequestIds = requestsData
+        .filter((data) => {
+          return (
+            data.status === RETAILER_ACCESS_REQUEST_STATUS.PENDING &&
+            selectedPartnerships.includes(data.id)
+          );
+        })
+        .map((partnership) => partnership.id);
+      return partnershipRequestIds;
+    },
+    [requestsData],
+  );
+
+  // helper functions to get approved partnerships
+  const getSelectedPartnershipIds = useCallback(
+    (selectedPartnerships: string[]) => {
+      const pendingSelectedPartnershipIds = requestsData
+        .filter((data) => {
+          return (
+            data.status === RETAILER_ACCESS_REQUEST_STATUS.APPROVED &&
+            selectedPartnerships.includes(data.id)
+          );
+        })
+        .map((partnership) => partnership.id);
+      return pendingSelectedPartnershipIds;
+    },
+    [requestsData],
+  );
+
   // Helper form to submit supplier partnerships
   const { submit: approveSupplierAction } = useForm({
     fields: {
@@ -206,17 +260,11 @@ const RetailerPartnerships = () => {
     onSubmit: async (fieldValues) => {
       const { intent, selectedPartnerships } = fieldValues;
       // clean up selected partnerships data to only pending
-      const pendingSelectedPartnershipIds = requestsData
-        .filter((data) => {
-          return (
-            data.status === RETAILER_ACCESS_REQUEST_STATUS.PENDING &&
-            selectedPartnerships.includes(data.id)
-          );
-        })
-        .map((partnership) => partnership.id);
+      const selectedPartnershipRequestIds =
+        getSelectedPartnershipRequestIds(selectedPartnerships);
       remixSubmit(
         {
-          partnershipRequestIds: JSON.stringify(pendingSelectedPartnershipIds),
+          partnershipRequestIds: JSON.stringify(selectedPartnershipRequestIds),
           intent,
         },
         {
@@ -236,24 +284,9 @@ const RetailerPartnerships = () => {
     },
     onSubmit: async (fieldValues) => {
       const { intent, selectedPartnerships } = fieldValues;
-      // clean up selected partnerships data to only pending
-      const partnershipRequestIds = requestsData
-        .filter((data) => {
-          return (
-            data.status === RETAILER_ACCESS_REQUEST_STATUS.PENDING &&
-            selectedPartnerships.includes(data.id)
-          );
-        })
-        .map((partnership) => partnership.id);
-
-      const partnershipIds = requestsData
-        .filter((data) => {
-          return (
-            data.status === RETAILER_ACCESS_REQUEST_STATUS.APPROVED &&
-            selectedPartnerships.includes(data.id)
-          );
-        })
-        .map((partnership) => partnership.id);
+      const partnershipRequestIds =
+        getSelectedPartnershipRequestIds(selectedPartnerships);
+      const partnershipIds = getSelectedPartnershipIds(selectedPartnerships);
 
       remixSubmit(
         {
@@ -270,14 +303,55 @@ const RetailerPartnerships = () => {
     },
   });
 
+  // helper form to change permissions (add/remove price lists) from retailers
+  const { submit: changeRetailerPermissionsSubmit } = useForm({
+    fields: {
+      intent: useField(INTENTS.CHANGE_PERMISSIONS),
+      selectedPartnerships: useField(selectedResources),
+      selectedPriceListIds: useField(selectedPriceListIds),
+    },
+    onSubmit: async (fieldValues) => {
+      const { intent, selectedPartnerships, selectedPriceListIds } =
+        fieldValues;
+
+      const partnershipIds = getSelectedPartnershipIds(selectedPartnerships);
+      const partnershipRequestIds =
+        getSelectedPartnershipRequestIds(selectedPartnerships);
+
+      remixSubmit(
+        {
+          partnershipIds: JSON.stringify(partnershipIds),
+          partnershipRequestIds: JSON.stringify(partnershipRequestIds),
+          selectedPriceListIds: JSON.stringify(selectedPriceListIds),
+          intent,
+        },
+        {
+          method: 'post',
+          action: pathname,
+        },
+      );
+
+      return { status: 'success' };
+    },
+  });
+
+  // for now, because you can select in bulk, I'll just make it into a new selection
+  const openChangePermissionModal = useCallback(() => {
+    shopify.modal.show(MODALS.CHANGE_PERMISSION);
+  }, [shopify]);
+
   const promotedBulkActions: BulkActionsProps['promotedActions'] = [
     {
       content: 'Approve',
       onAction: approveSupplierAction,
     },
     {
-      content: 'Reject/Remove',
+      content: 'Remove',
       onAction: rejectRemoveSupplierAction,
+    },
+    {
+      content: 'Change Permissions',
+      onAction: openChangePermissionModal,
     },
   ];
 
@@ -293,6 +367,12 @@ const RetailerPartnerships = () => {
       }}
     >
       <MessageModal message={message} shopify={shopify} />
+      <ChangePermissionModal
+        priceLists={priceLists}
+        setSelectedPriceListIds={setSelectedPriceListIds}
+        selectedPriceListIds={selectedPriceListIds}
+        changeRetailerPermissionsSubmit={changeRetailerPermissionsSubmit}
+      />
       <Card padding={'0'}>
         <IndexFilters
           tabs={tabs}

@@ -5,6 +5,7 @@ import { useSubmit as useRemixSubmit } from '@remix-run/react';
 import { BlockStack, Form, TextField, ChoiceList } from '@shopify/polaris';
 import { notEmpty, useField, useForm, useSubmit } from '@shopify/react-form';
 import type { PriceListJsonify } from '../loader/getRetailerPaginatedInfo';
+import sharedStyles from '~/shared.module.css';
 
 type Props = {
   selectedRetailerId: string;
@@ -60,13 +61,15 @@ const PriceListRequestModal: FC<Props> = ({
         </p>
         <Form onSubmit={submit}>
           <BlockStack gap="200">
-            <ChoiceList
-              allowMultiple
-              title="Price Lists To Grant Access:"
-              choices={choices}
-              selected={selectedPriceListIds}
-              onChange={handleSelectPriceListIds}
-            />
+            <div className={sharedStyles['choice-list-container']}>
+              <ChoiceList
+                allowMultiple
+                title="Price Lists To Grant Access:"
+                choices={choices}
+                selected={selectedPriceListIds}
+                onChange={handleSelectPriceListIds}
+              />
+            </div>
             <TextField
               label="Message:"
               autoComplete="off"
@@ -86,73 +89,3 @@ const PriceListRequestModal: FC<Props> = ({
 };
 
 export default PriceListRequestModal;
-
-// TODO: Fix: resource list doesn't render in modal?
-// apparently combo box is not allowed because modals inject javascript
-// <Combobox
-// allowMultiple
-// activator={
-//   <Combobox.TextField
-//     prefix={<Icon source={SearchIcon} />}
-//     onChange={() => {}}
-//     label="Select Price Lists:"
-//     value={''}
-//     placeholder=""
-//     autoComplete="off"
-//   />
-// }
-// >
-// {priceLists.length > 0 ? (
-//   <Listbox onSelect={handleSelectPriceListId}>
-//     {priceLists.map(({ id, name }) => {
-//       return (
-//         <Listbox.Option
-//           key={id}
-//           value={id}
-//           selected={selectedPriceListIds.has(id)}
-//           accessibilityLabel={name}
-//         >
-//           {name}
-//         </Listbox.Option>
-//       );
-//     })}
-//   </Listbox>
-// ) : null}
-// </Combobox>
-// <ResourceList
-// resourceName={{
-//   singular: 'Price List',
-//   plural: 'Price Lists',
-// }}
-// items={priceLists.filter(({ id }) =>
-//   selectedPriceListIds.has(id),
-// )}
-// renderItem={(item) => {
-//   const { id, name } = item;
-//   return (
-//     <ResourceItem
-//       id={id}
-//       url={''}
-//       accessibilityLabel={`View details for ${name}`}
-//     >
-//       <InlineStack blockAlign="center" align="space-between">
-//         <Text variant="bodyMd" fontWeight="bold" as="h3">
-//           {name}
-//         </Text>
-//         <div
-//           onClick={(e) => {
-//             e.stopPropagation();
-//           }}
-//         >
-//           <Button
-//             icon={XIcon}
-//             onClick={() => {
-//               handleSelectPriceListId(id);
-//             }}
-//           />
-//         </div>
-//       </InlineStack>
-//     </ResourceItem>
-//   );
-// }}
-// />

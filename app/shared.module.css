@@ -126,3 +126,8 @@ button.green > p {
 .inline-block {
   display: inline-block;
 }
+
+/* misc class for choice list to decrease spacing */
+.choice-list-container ul {
+  gap: 0 !important;
+}

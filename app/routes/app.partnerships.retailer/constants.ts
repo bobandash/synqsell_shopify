@@ -7,12 +7,14 @@ export type SupplierAccessRequestStatusProps =
 
 export const MODALS = {
   MESSAGE: 'MESSAGE',
+  CHANGE_PERMISSION: 'CHANGE_PERMISSION',
 };
 export type ModalsProps = (typeof MODALS)[keyof typeof MODALS];
 
 export const INTENTS = {
   APPROVE_RETAILERS: 'APPROVE_RETAILERS',
   REJECT_REMOVE_RETAILERS: 'REJECT_REMOVE_RETAILERS',
+  CHANGE_PERMISSIONS: 'CHANGE_PERMISSIONS',
 };
 
 export type IntentsProps = (typeof INTENTS)[keyof typeof INTENTS];
