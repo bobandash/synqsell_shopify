@@ -10,6 +10,7 @@ import {
   useSearchParams,
   useRevalidator,
   useNavigate,
+  useParams,
 } from '@remix-run/react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import ProductCard from './components/ProductCard';
@@ -111,6 +112,16 @@ const PriceListProducts = () => {
   const [, setSearchParams] = useSearchParams();
   const revalidator = useRevalidator();
   const navigate = useNavigate();
+  const { priceListId } = useParams();
+  const headerName = useMemo(() => {
+    const priceList = priceListsWithAccess.filter(
+      ({ id }) => id === priceListId,
+    );
+    if (priceListId && priceList.length === 1) {
+      return `${priceList[0].name}'s Products`;
+    }
+    return `Products`;
+  }, [priceListId, priceListsWithAccess]);
 
   // when data changes, update
   useEffect(() => {
@@ -156,7 +167,7 @@ const PriceListProducts = () => {
 
   return (
     <Page
-      title="Products"
+      title={headerName}
       subtitle="Discover products and boost your AOV!"
       actionGroups={actionGroups}
     >
