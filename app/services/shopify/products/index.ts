@@ -229,10 +229,18 @@ async function createProduct(
       },
     });
     const { data } = await createProductResponse.json();
-    if (!data || data.productCreate?.userErrors) {
-      console.error(data?.productCreate?.userErrors);
+    if (!data) {
       throw new Error('TODO');
     }
+
+    if (
+      data.productCreate &&
+      data.productCreate.userErrors &&
+      data.productCreate.userErrors.length > 0
+    ) {
+      throw new Error('TODO');
+    }
+
     const newProductId = data.productCreate?.product?.id;
     if (!newProductId) {
       throw new Error('TODO');
@@ -261,7 +269,6 @@ async function createProductMedia(
         originalSource: url,
       };
     });
-
     const createProductMediaResponse = await graphql(
       CREATE_PRODUCT_MEDIA_MUTATION,
       {
@@ -273,10 +280,18 @@ async function createProductMedia(
     );
 
     const { data } = await createProductMediaResponse.json();
-    if (!data || data.productCreateMedia?.mediaUserErrors) {
-      console.error(data?.productCreateMedia?.mediaUserErrors);
+    if (!data) {
       throw new Error('TODO');
     }
+
+    if (
+      data.productCreateMedia &&
+      data.productCreateMedia.mediaUserErrors &&
+      data.productCreateMedia.mediaUserErrors.length > 0
+    ) {
+      throw new Error('TODO');
+    }
+
     const newMediaIds = data.productCreateMedia?.media?.map(({ id }) => id);
     if (!newMediaIds) {
       throw new Error('TODO');
@@ -287,7 +302,7 @@ async function createProductMedia(
       error,
       'Failed to create media on Shopify.',
       createProductMedia,
-      { productId, images },
+      {},
     );
   }
 }
@@ -345,16 +360,25 @@ async function createVariants(
       };
     });
 
+    console.log(newProductId);
+    console.log(variantInput);
+
     const createVariantResponse = await graphql(CREATE_VARIANTS_BULK_MUTATION, {
       variables: {
         productId: newProductId,
         variants: variantInput,
       },
     });
-
     const { data } = await createVariantResponse.json();
-    if (!data || data.productVariantsBulkCreate?.userErrors) {
-      console.error(data?.productVariantsBulkCreate?.userErrors);
+    if (!data) {
+      throw new Error('TODO');
+    }
+
+    if (
+      data.productVariantsBulkCreate &&
+      data.productVariantsBulkCreate.userErrors &&
+      data.productVariantsBulkCreate.userErrors.length > 0
+    ) {
       throw new Error('TODO');
     }
     const newVariantIds = data.productVariantsBulkCreate?.productVariants?.map(
@@ -368,8 +392,8 @@ async function createVariants(
     throw errorHandler(
       error,
       'Failed to create variants on Shopify.',
-      createProductMedia,
-      { variants, newProductId },
+      createVariants,
+      {},
     );
   }
 }
