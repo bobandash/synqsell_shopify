@@ -87,7 +87,7 @@ const PricingDetails: FC<Props> = ({ product }) => {
       </div>
       <button className={`${sharedStyles['green']} ${sharedStyles['btn']}`}>
         <Text as="p" variant="bodySm" fontWeight="medium">
-          Import Products
+          Import Product
         </Text>
       </button>
     </>

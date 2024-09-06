@@ -1,4 +1,8 @@
-import { json, type LoaderFunctionArgs } from '@remix-run/node';
+import {
+  ActionFunctionArgs,
+  json,
+  type LoaderFunctionArgs,
+} from '@remix-run/node';
 import { Button, InlineGrid, InlineStack, Page } from '@shopify/polaris';
 import { StatusCodes } from 'http-status-codes';
 import { authenticate } from '~/shopify.server';
@@ -39,6 +43,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     const admin = await authenticate.admin(request);
     const {
       session: { id: sessionId },
+      admin: { graphql },
     } = admin;
     const { searchParams } = new URL(request.url);
     const next = searchParams.get('next');
@@ -89,8 +94,18 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
       }),
       getPriceListsWithAccess(priceListId, sessionId),
     ]);
-
     return json({ productCardInfo, priceListsWithAccess }, StatusCodes.OK);
+  } catch (error) {
+    throw getJSONError(error, 'products');
+  }
+};
+
+export const action = async ({ request }: ActionFunctionArgs) => {
+  try {
+    return json(
+      { productCardInfo: [], priceListsWithAccess: [] },
+      StatusCodes.NOT_IMPLEMENTED,
+    );
   } catch (error) {
     throw getJSONError(error, 'products');
   }
