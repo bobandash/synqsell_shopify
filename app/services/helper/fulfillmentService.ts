@@ -6,36 +6,33 @@ import {
 import {
   getOrCreateFulfillmentService as shopifyGetOrCreateFulfillmentService,
   deleteFulfillmentService as shopifyDeleteFulfillmentService,
-  getFulfillmentServiceId as shopifyGetFulfillmentServiceId,
+  getFulfillmentService as shopifyGetFulfillmentService,
 } from '../shopify/fulfillmentService';
 import logger from '~/logger';
 import { errorHandler } from '../util';
 
 // this is the coordinator for creating a fulfillment service on Shopify and for the prisma db
-// TODO: research a bit more about sys design and designing distributed applications, this does not handle all the edge cases
+// TODO: research retries
 export async function getOrCreateFulfillmentService(
   sessionId: string,
   graphql: GraphQL,
 ) {
-  let shopifyFulfillmentServiceId;
+  let shopifyFulfillmentService;
   try {
-    shopifyFulfillmentServiceId = await shopifyGetOrCreateFulfillmentService(
+    shopifyFulfillmentService = await shopifyGetOrCreateFulfillmentService(
       sessionId,
       graphql,
     );
     const prismaFulfillmentService = await prismaGetOrCreateFulfillmentService(
       sessionId,
-      shopifyFulfillmentServiceId,
+      shopifyFulfillmentService,
     );
     return prismaFulfillmentService;
   } catch (error) {
-    // case: action failed at creating fulfillment service in db
-    // TODO: add retry logic in future
-    if (shopifyFulfillmentServiceId) {
+    if (shopifyFulfillmentService) {
       try {
         await shopifyDeleteFulfillmentService(
-          shopifyFulfillmentServiceId,
-          sessionId,
+          shopifyFulfillmentService.id,
           graphql,
         );
       } catch (error) {
@@ -65,7 +62,7 @@ export async function hasFulfillmentService(
   graphql: GraphQL,
 ) {
   try {
-    const fulfillmentServiceId = await shopifyGetFulfillmentServiceId(
+    const fulfillmentServiceId = await shopifyGetFulfillmentService(
       sessionId,
       graphql,
     );

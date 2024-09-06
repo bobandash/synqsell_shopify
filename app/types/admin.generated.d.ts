@@ -3,10 +3,13 @@
 /* eslint-disable */
 import type * as AdminTypes from './admin.types';
 
-export type FulfillmentServicesQueryQueryVariables = AdminTypes.Exact<{ [key: string]: never; }>;
+export type AllFulfillmentServicesQueryVariables = AdminTypes.Exact<{ [key: string]: never; }>;
 
 
-export type FulfillmentServicesQueryQuery = { shop: { fulfillmentServices: Array<Pick<AdminTypes.FulfillmentService, 'id' | 'serviceName'>> } };
+export type AllFulfillmentServicesQuery = { shop: { fulfillmentServices: Array<(
+      Pick<AdminTypes.FulfillmentService, 'id' | 'serviceName' | 'callbackUrl' | 'trackingSupport'>
+      & { location?: AdminTypes.Maybe<Pick<AdminTypes.Location, 'id'>> }
+    )> } };
 
 export type FulfillmentServiceDeleteMutationVariables = AdminTypes.Exact<{
   id: AdminTypes.Scalars['ID']['input'];
@@ -25,7 +28,10 @@ export type FulfillmentServiceCreateMutationVariables = AdminTypes.Exact<{
 }>;
 
 
-export type FulfillmentServiceCreateMutation = { fulfillmentServiceCreate?: AdminTypes.Maybe<{ fulfillmentService?: AdminTypes.Maybe<Pick<AdminTypes.FulfillmentService, 'id' | 'serviceName' | 'callbackUrl' | 'trackingSupport'>>, userErrors: Array<Pick<AdminTypes.UserError, 'field' | 'message'>> }> };
+export type FulfillmentServiceCreateMutation = { fulfillmentServiceCreate?: AdminTypes.Maybe<{ fulfillmentService?: AdminTypes.Maybe<(
+      Pick<AdminTypes.FulfillmentService, 'id' | 'serviceName' | 'callbackUrl' | 'trackingSupport'>
+      & { location?: AdminTypes.Maybe<Pick<AdminTypes.Location, 'id'>> }
+    )>, userErrors: Array<Pick<AdminTypes.UserError, 'field' | 'message'>> }> };
 
 export type Model3dFieldsFragment = (
   Pick<AdminTypes.Model3d, 'mediaContentType' | 'alt'>
@@ -131,7 +137,7 @@ export type VariantInformationForPrismaQueryQuery = { productVariants: { edges: 
       ) }> } };
 
 interface GeneratedQueryTypes {
-  "\n      query FulfillmentServicesQuery {\n        shop {\n          fulfillmentServices {\n            id\n            serviceName\n          }\n        }\n      }\n    ": {return: FulfillmentServicesQueryQuery, variables: FulfillmentServicesQueryQueryVariables},
+  "#graphql\n  query allFulfillmentServices {\n    shop {\n      fulfillmentServices {\n        id\n        serviceName\n        callbackUrl\n        location {\n          id\n        }\n        trackingSupport\n      }\n    }\n  }\n": {return: AllFulfillmentServicesQuery, variables: AllFulfillmentServicesQueryVariables},
   "#graphql\n  #graphql\n  fragment Model3dFields on Model3d {\n    mediaContentType\n    alt\n    originalSource {\n      url\n    }\n  }\n\n  #graphql\n  fragment VideoFields on Video {\n    mediaContentType\n    alt\n    originalSource {\n      url\n    }\n  }\n\n  #graphql\n  fragment ImageFields on Image {\n    url\n    alt: altText\n  }\n\n  query ProductInformationForPrismaQuery($query: String, $first: Int) {\n    products(query: $query, first: $first) {\n      edges {\n        node {\n          id\n          category {\n            id\n          }\n          productType\n          description\n          descriptionHtml\n          status\n          vendor\n          title\n          variantsCount {\n            count\n          }\n          images(first: 10) {\n            edges {\n              node {\n                ...ImageFields\n              }\n            }\n          }\n          media(first: 10) {\n            edges {\n              node {\n                ...Model3dFields\n                ...VideoFields\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n": {return: ProductInformationForPrismaQueryQuery, variables: ProductInformationForPrismaQueryQueryVariables},
   "\n        query ProductUrlsQuery($first: Int, $query: String) {\n          products(first: $first, query: $query) {\n            edges {\n              node {\n                id\n                onlineStoreUrl\n              }\n            }\n          }\n        }\n      ": {return: ProductUrlsQueryQuery, variables: ProductUrlsQueryQueryVariables},
   "\n      query profileQuery {\n        shop {\n          name\n          contactEmail\n          description\n          url\n          billingAddress {\n            city\n            provinceCode\n            country\n          }\n        }\n      }\n    ": {return: ProfileQueryQuery, variables: ProfileQueryQueryVariables},
@@ -139,8 +145,8 @@ interface GeneratedQueryTypes {
 }
 
 interface GeneratedMutationTypes {
-  "\n        mutation fulfillmentServiceDelete($id: ID!) {\n          fulfillmentServiceDelete(id: $id) {\n            deletedId\n            userErrors {\n              field\n              message\n            }\n          }\n        }\n      ": {return: FulfillmentServiceDeleteMutation, variables: FulfillmentServiceDeleteMutationVariables},
-  "\n        mutation fulfillmentServiceCreate(\n          $name: String!\n          $callbackUrl: URL!\n          $trackingSupport: Boolean!\n        ) {\n          fulfillmentServiceCreate(\n            name: $name\n            callbackUrl: $callbackUrl\n            trackingSupport: $trackingSupport\n          ) {\n            fulfillmentService {\n              id\n              serviceName\n              callbackUrl\n              trackingSupport\n            }\n            userErrors {\n              field\n              message\n            }\n          }\n        }\n      ": {return: FulfillmentServiceCreateMutation, variables: FulfillmentServiceCreateMutationVariables},
+  "#graphql\n  mutation fulfillmentServiceDelete($id: ID!) {\n    fulfillmentServiceDelete(id: $id) {\n      deletedId\n      userErrors {\n        field\n        message\n      }\n    }\n  }\n": {return: FulfillmentServiceDeleteMutation, variables: FulfillmentServiceDeleteMutationVariables},
+  "#graphql\n  mutation fulfillmentServiceCreate(\n    $name: String!\n    $callbackUrl: URL!\n    $trackingSupport: Boolean!\n  ) {\n    fulfillmentServiceCreate(\n      name: $name\n      callbackUrl: $callbackUrl\n      trackingSupport: $trackingSupport\n    ) {\n      fulfillmentService {\n        id\n        serviceName\n        callbackUrl\n        location {\n          id\n        }\n        trackingSupport\n      }\n      userErrors {\n        field\n        message\n      }\n    }\n  }\n": {return: FulfillmentServiceCreateMutation, variables: FulfillmentServiceCreateMutationVariables},
   "#graphql\n  mutation createProductMutation($input: ProductInput!) {\n    productCreate(input: $input) {\n      product {\n        id\n      }\n      userErrors {\n        message\n        field\n      }\n    }\n  }\n": {return: CreateProductMutationMutation, variables: CreateProductMutationMutationVariables},
   "#graphql\n  mutation createProductMediaMutation($media: [CreateMediaInput!]!, $productId: ID!) {\n    productCreateMedia(media: $media, productId: $productId) {\n      media {\n        id\n      }\n      mediaUserErrors {\n        field\n        message\n      }\n      product {\n        id\n      }\n    }\n  }\n": {return: CreateProductMediaMutationMutation, variables: CreateProductMediaMutationMutationVariables},
   "#graphql\n  mutation productVariantsBulkCreate($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {\n      productVariantsBulkCreate(productId: $productId, variants: $variants) {\n        product {\n          id\n        }\n        productVariants {\n          id\n          inventoryItem {\n            id\n          }\n        }\n        userErrors {\n          field\n          message\n        }\n      }\n    }\n": {return: ProductVariantsBulkCreateMutation, variables: ProductVariantsBulkCreateMutationVariables},

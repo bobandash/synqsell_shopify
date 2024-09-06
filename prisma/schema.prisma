@@ -48,10 +48,11 @@ model Session {
 }
 
 model FulfillmentService {
-  id                   String  @id @default(uuid())
-  fulfillmentServiceId String
-  Session              Session @relation(fields: [sessionId], references: [id])
-  sessionId            String  @unique
+  id                          String  @id @default(uuid())
+  shopifyFulfillmentServiceId String?
+  shopifyLocationId           String?
+  Session                     Session @relation(fields: [sessionId], references: [id])
+  sessionId                   String  @unique
 }
 
 model UserPreference {
@@ -176,7 +177,7 @@ model Image {
 // TODO: create it when you add the import
 // TODO: google who pays for tax
 // TODO: for deletion, just have some fields cascade
-// Ignored metaFields as well
+// TODO: add barcode
 model Variant {
   id                String          @id @default(uuid())
   shopifyVariantId  String
@@ -195,6 +196,7 @@ model Variant {
 
 // Fields removed form shopify: countryHarmonizedSystemCodes
 // Fields simplified: weightUnit and weightValue
+
 model InventoryItem {
   id                   String  @id @default(uuid())
   countryCodeOfOrigin  String?

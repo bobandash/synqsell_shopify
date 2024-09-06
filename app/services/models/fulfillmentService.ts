@@ -1,3 +1,4 @@
+import type { AllFulfillmentServicesQuery } from '~/types/admin.generated';
 import db from '../../db.server';
 import { errorHandler } from '../util';
 
@@ -29,6 +30,29 @@ export async function hasFulfillmentService(sessionId: string) {
       'Failed to check if fulfillment service exists.',
       hasFulfillmentService,
       { sessionId },
+    );
+  }
+}
+
+export async function hasShopifyFulfillmentServiceId(
+  shopifyFulfillmentServiceId: string,
+) {
+  try {
+    const fulfillmentService = await db.fulfillmentService.findFirst({
+      where: {
+        shopifyFulfillmentServiceId,
+      },
+    });
+    if (!fulfillmentService) {
+      return false;
+    }
+    return true;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to check if fulfillment service exists.',
+      hasShopifyFulfillmentServiceId,
+      { shopifyFulfillmentServiceId },
     );
   }
 }
@@ -72,7 +96,7 @@ export async function deleteFulfillmentService(id: string) {
 
 export async function getOrCreateFulfillmentService(
   sessionId: string,
-  fulfillmentServiceId: string,
+  shopifyFulfillmentService: AllFulfillmentServicesQuery['shop']['fulfillmentServices'][0],
 ) {
   try {
     const fulfillmentServiceExists = await hasFulfillmentService(sessionId);
@@ -84,7 +108,8 @@ export async function getOrCreateFulfillmentService(
     const fulfillmentService = await db.fulfillmentService.create({
       data: {
         sessionId,
-        fulfillmentServiceId,
+        shopifyFulfillmentServiceId: shopifyFulfillmentService.id,
+        shopifyLocationId: shopifyFulfillmentService.location?.id ?? '',
       },
     });
     return fulfillmentService;
@@ -93,7 +118,7 @@ export async function getOrCreateFulfillmentService(
       error,
       'Failed to retrieve or create fulfillment service.',
       deleteFulfillmentService,
-      { sessionId, fulfillmentServiceId },
+      { sessionId, shopifyFulfillmentService },
     );
   }
 }
