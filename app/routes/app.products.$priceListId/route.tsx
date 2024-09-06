@@ -1,12 +1,12 @@
 import {
-  ActionFunctionArgs,
   json,
+  type ActionFunctionArgs,
   type LoaderFunctionArgs,
 } from '@remix-run/node';
 import { Button, InlineGrid, InlineStack, Page } from '@shopify/polaris';
 import { StatusCodes } from 'http-status-codes';
 import { authenticate } from '~/shopify.server';
-import { getJSONError } from '~/util';
+import { convertFormDataToObject, getJSONError } from '~/util';
 import hasAccessToViewPriceList from './loader/util/hasAccessToViewPriceList';
 import { isValidPriceList } from '~/services/models/priceList';
 import {
@@ -25,16 +25,23 @@ import {
   getPriceListsWithAccess,
   type PriceListWithAccess,
   type ProductCardData,
+  type FulfillmentService,
 } from './loader';
 import { hasAccessToImportPriceList } from './loader/util';
+import { getFulfillmentService } from '~/services/models/fulfillmentService';
+import { importProductAction, type ImportProductFormData } from './actions';
+import { INTENTS } from './constants';
+
+type ProductCardInfo = {
+  products: ProductCardData[];
+  nextCursor: string | null;
+  prevCursor: string | null;
+};
 
 type LoaderDataProps = {
-  productCardInfo: {
-    products: ProductCardData[];
-    nextCursor: string | null;
-    prevCursor: string | null;
-  };
+  productCardInfo: ProductCardInfo;
   priceListsWithAccess: PriceListWithAccess[];
+  fulfillmentService: FulfillmentService;
 };
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
@@ -43,8 +50,9 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     const admin = await authenticate.admin(request);
     const {
       session: { id: sessionId },
-      admin: { graphql },
     } = admin;
+
+    // cursor logic
     const { searchParams } = new URL(request.url);
     const next = searchParams.get('next');
     const prev = searchParams.get('prev');
@@ -55,11 +63,18 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     } else if (prev) {
       cursor = prev;
     }
-
-    // TODO: implement fetch all product data
+    const fulfillmentService = await getFulfillmentService(sessionId);
     if (!priceListId) {
       return json(
-        { productCardInfo: [], priceListsWithAccess: [] },
+        {
+          productCardInfo: {
+            products: [],
+            nextCursor: null,
+            prevCursor: null,
+          } as ProductCardInfo,
+          priceListsWithAccess: [] as PriceListWithAccess[],
+          fulfillmentService: fulfillmentService,
+        },
         StatusCodes.NOT_IMPLEMENTED,
       );
     }
@@ -94,7 +109,10 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
       }),
       getPriceListsWithAccess(priceListId, sessionId),
     ]);
-    return json({ productCardInfo, priceListsWithAccess }, StatusCodes.OK);
+    return json(
+      { productCardInfo, priceListsWithAccess, fulfillmentService },
+      StatusCodes.OK,
+    );
   } catch (error) {
     throw getJSONError(error, 'products');
   }
@@ -102,6 +120,23 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   try {
+    const {
+      session,
+      admin: { graphql },
+    } = await authenticate.admin(request);
+    const { id: sessionId } = session;
+    let formData = await request.formData();
+    const intent = formData.get('intent');
+    const formDataObject = convertFormDataToObject(formData);
+    switch (intent) {
+      case INTENTS.IMPORT_PRODUCT:
+        return await importProductAction(
+          formDataObject as ImportProductFormData,
+          sessionId,
+          graphql,
+        );
+    }
+
     return json(
       { productCardInfo: [], priceListsWithAccess: [] },
       StatusCodes.NOT_IMPLEMENTED,
@@ -119,6 +154,7 @@ const PriceListProducts = () => {
       prevCursor: initialPrevCursor,
     },
     priceListsWithAccess,
+    fulfillmentService,
   } = useLoaderData<typeof loader>() as LoaderDataProps;
 
   const [products, setProducts] = useState(initialProducts);
@@ -133,7 +169,7 @@ const PriceListProducts = () => {
       ({ id }) => id === priceListId,
     );
     if (priceListId && priceList.length === 1) {
-      return `${priceList[0].name}'s Products`;
+      return `${priceList[0].name}'s Price List`;
     }
     return `Products`;
   }, [priceListId, priceListsWithAccess]);
@@ -159,6 +195,7 @@ const PriceListProducts = () => {
     }
   }, [prevCursor, setSearchParams, revalidator]);
 
+  // to render between different price lists in the ui
   const actionGroups = useMemo(() => {
     return priceListsWithAccess.length > 0
       ? [
@@ -188,7 +225,11 @@ const PriceListProducts = () => {
     >
       <InlineGrid columns={{ xs: 2, sm: 2, md: 3, lg: 4 }} gap="300">
         {products.map((product) => (
-          <ProductCard key={product.id} product={product} />
+          <ProductCard
+            key={product.id}
+            product={product}
+            fulfillmentService={fulfillmentService}
+          />
         ))}
       </InlineGrid>
       <PaddedBox />

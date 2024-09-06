@@ -44,20 +44,25 @@ export type ProductWithImageAndVariant = Prisma.ProductGetPayload<{
   };
 }>;
 
-export type ProductCardData = Prisma.ProductGetPayload<{
-  include: {
-    images: true;
-    variants: true;
-  };
-}> & {
-  brandName: string | null;
-  priceList: {
-    id: string;
-    isGeneral: boolean;
-    requiresApprovalToImport?: boolean;
-    margin?: number;
-  };
-};
+export type ProductCardData = Omit<
+  Prisma.ProductGetPayload<{
+    include: {
+      images: true;
+      variants: true;
+    };
+  }> & {
+    brandName: string | null;
+    priceList: {
+      id: string;
+      isGeneral: boolean;
+      requiresApprovalToImport?: boolean;
+      margin?: number;
+    };
+  },
+  'priceListId'
+>;
+
+export type FulfillmentService = Prisma.FulfillmentServiceGetPayload<{}>;
 
 const getProductCardsSchema = object({
   isReverseDirection: boolean().required(),
@@ -185,7 +190,7 @@ const formatProductDataForPriceList = async (
     );
 
     const formattedProducts = products.map(
-      ({ images, priceList, variants, priceListId, ...rest }) => {
+      ({ images, priceList, variants, ...rest }) => {
         return {
           images: images.sort((a, b) => a.position - b.position),
           brandName: priceList.session.userProfile?.name,

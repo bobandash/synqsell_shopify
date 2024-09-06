@@ -1,4 +1,4 @@
-import type { FC } from 'react';
+import { type FC } from 'react';
 import type { ProductCardData } from '../../loader/getProductCardInfo';
 import {
   BlockStack,
@@ -12,13 +12,15 @@ import {
 import { ImageIcon } from '~/assets';
 import sharedStyles from '~/shared.module.css';
 import PricingDetails from './PricingDetails';
+import type { FulfillmentService } from '../../types';
 
 type Props = {
   product: ProductCardData;
+  fulfillmentService: FulfillmentService;
 };
 
 // TODO: if the product has been imported before, I need to denote that it's been imported before
-const ProductCard: FC<Props> = ({ product }) => {
+const ProductCard: FC<Props> = ({ product, fulfillmentService }) => {
   const { images, brandName, title, priceList, variants } = product;
   const primaryImage =
     images.length > 0 && images[0].url
@@ -55,7 +57,10 @@ const ProductCard: FC<Props> = ({ product }) => {
               </div>
             </BlockStack>
             <Divider />
-            <PricingDetails product={product} />
+            <PricingDetails
+              product={product}
+              fulfillmentService={fulfillmentService}
+            />
           </BlockStack>
         </Box>
       </BlockStack>

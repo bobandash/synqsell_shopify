@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { BlockStack, Divider, Icon, InlineStack, Text } from '@shopify/polaris';
 import type { ProductCardData } from '../../loader/getProductCardInfo';
 import type { FC } from 'react';
@@ -7,12 +8,16 @@ import {
   calculateRetailerPaymentGivenMargin,
 } from '~/routes/util';
 import { LockIcon } from '@shopify/polaris-icons';
+import { useLocation, useSubmit as useRemixSubmit } from '@remix-run/react';
+import { INTENTS } from '../../constants';
+import type { FulfillmentService } from '../../types';
 
 type Props = {
   product: ProductCardData;
+  fulfillmentService: FulfillmentService;
 };
 
-const PricingDetails: FC<Props> = ({ product }) => {
+const PricingDetails: FC<Props> = ({ product, fulfillmentService }) => {
   const { priceList, variants } = product;
   const isPrivate =
     (priceList.isGeneral && priceList.requiresApprovalToImport) ||
@@ -32,6 +37,23 @@ const PricingDetails: FC<Props> = ({ product }) => {
     cost = calculatePriceDifference(price, wholesalePrice);
     profit = wholesalePrice;
   }
+
+  const { pathname } = useLocation();
+  const remixSubmit = useRemixSubmit();
+
+  const handleImportProduct = useCallback(() => {
+    remixSubmit(
+      {
+        productId: product.id,
+        intent: INTENTS.IMPORT_PRODUCT,
+        fulfillmentServiceId: fulfillmentService.fulfillmentServiceId,
+      },
+      {
+        method: 'post',
+        action: pathname,
+      },
+    );
+  }, [product, pathname, remixSubmit, fulfillmentService]);
 
   if (isPrivate && !hasAccessToImport) {
     return (
@@ -85,7 +107,10 @@ const PricingDetails: FC<Props> = ({ product }) => {
           Your Profit: ${profit}
         </Text>
       </div>
-      <button className={`${sharedStyles['green']} ${sharedStyles['btn']}`}>
+      <button
+        className={`${sharedStyles['green']} ${sharedStyles['btn']}`}
+        onClick={handleImportProduct}
+      >
         <Text as="p" variant="bodySm" fontWeight="medium">
           Import Product
         </Text>

@@ -2,6 +2,29 @@ import type { Prisma } from '@prisma/client';
 import { errorHandler } from '../util';
 import type { GraphQL } from '~/types';
 import { getRelevantProductInformationForPrisma } from '../shopify/products';
+import db from '~/db.server';
+
+export async function hasProduct(id: string) {
+  try {
+    const product = await db.product.findFirst({
+      where: {
+        id,
+      },
+    });
+
+    if (product) {
+      return true;
+    }
+    return false;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to check if product exists.',
+      hasProduct,
+      { id },
+    );
+  }
+}
 
 export async function deleteProductsTx(
   tx: Prisma.TransactionClient,
@@ -87,4 +110,29 @@ export async function getMapShopifyProductIdToPrismaIdTx(
     shopifyProductIdToPrismaId.set(shopifyProductId, id);
   });
   return shopifyProductIdToPrismaId;
+}
+
+export async function getProductDetailsForProductCreation(productId: string) {
+  try {
+    const productDetails = await db.product.findFirstOrThrow({
+      include: {
+        priceList: true,
+        images: true,
+        variants: {
+          include: {
+            inventoryItem: true,
+            variantOptions: true,
+          },
+        },
+      },
+    });
+    return productDetails;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to get product details for product creation.',
+      deleteProductsTx,
+      { productId },
+    );
+  }
 }
