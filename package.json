@@ -49,6 +49,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-social-icons": "^6.17.0",
+    "remix-development-tools": "^4.4.1",
     "remix-typedjson": "^0.4.1",
     "ts-node": "^10.9.2",
     "uuid": "^10.0.0",
