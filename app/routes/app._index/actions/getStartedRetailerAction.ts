@@ -1,5 +1,4 @@
 import { json } from '@remix-run/node';
-import type { TypedResponse } from '@remix-run/node';
 import { object, string, type InferType } from 'yup';
 import { getJSONError } from '~/util';
 import type { FormDataObject, GraphQL } from '~/types';
@@ -56,7 +55,7 @@ export async function getStartedRetailerAction(
   graphql: GraphQL,
   formDataObject: FormDataObject,
   sessionId: string,
-): Promise<TypedResponse<GetStartedRetailerActionData> | undefined> {
+) {
   try {
     await getStartedRetailerSchema.validate(formDataObject);
     const { checklistItemId } = formDataObject as unknown as getRetailerData;

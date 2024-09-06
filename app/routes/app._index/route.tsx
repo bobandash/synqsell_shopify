@@ -86,8 +86,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   } catch (error) {
     logger.error(error);
   }
-
-  return null;
 };
 
 function Index() {

@@ -111,7 +111,6 @@ export async function changePermissionRetailersAction(
   data: ChangePermissionsRetailersAction,
 ) {
   try {
-    console.log(data.partnershipRequestIds);
     await changePermissionRetailersActionSchema.validate(data);
     const { partnershipIds, partnershipRequestIds, selectedPriceListIds } =
       data;

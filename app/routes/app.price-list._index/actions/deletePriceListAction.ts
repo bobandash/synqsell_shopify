@@ -2,13 +2,13 @@ import { type FormDataObject } from '~/types';
 import { array, object, string, type InferType } from 'yup';
 import { deletePriceListBatch } from '~/services/models/priceList';
 import { getJSONError } from '~/util';
-import { MODALS } from '../constants';
+import { INTENTS } from '../constants';
 import { json } from '@remix-run/node';
 import { StatusCodes } from 'http-status-codes';
 type deletePriceListData = InferType<typeof deletePriceListSchema>;
 
 const deletePriceListSchema = object({
-  intent: string().oneOf([MODALS.DELETE_PRICE_LIST]).required(),
+  intent: string().oneOf([INTENTS.DELETE_PRICE_LIST]).required(),
   priceListIds: array().of(string().required()).required(),
 });
 

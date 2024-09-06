@@ -1,11 +1,9 @@
 import type { ActionFunctionArgs } from '@remix-run/node';
 import { authenticate } from '../shopify.server';
-import db from '../db.server';
 
-// TODO: switch to cloud to save costs
+// TODO: switch to cloud
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { topic, admin, payload } =
-    await authenticate.webhook(request);
+  const { topic, admin, payload } = await authenticate.webhook(request);
 
   if (!admin) {
     // The admin context isn't returned if the webhook fired after a shop was uninstalled.
@@ -17,7 +15,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     case 'APP_UNINSTALLED':
       break;
     case 'PRODUCTS_UPDATE':
-      console.log('product was updated!');
       break;
     case 'BULK_OPERATIONS_FINISH':
       console.log(payload);

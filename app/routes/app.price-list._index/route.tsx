@@ -26,7 +26,7 @@ import { authenticate } from '~/shopify.server';
 import { StatusCodes } from 'http-status-codes';
 import { useEffect, useState } from 'react';
 import { useAppBridge } from '@shopify/app-bridge-react';
-import { MODALS } from './constants';
+import { INTENTS, MODALS } from './constants';
 import { DeletePriceListModal, EmptyState } from './components';
 import { deletePriceListAction } from './actions';
 import type { PriceListTableInfoProps } from './types';
@@ -53,7 +53,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const intent = formData.get('intent');
     const formDataObject = convertFormDataToObject(formData);
     switch (intent) {
-      case MODALS.DELETE_PRICE_LIST:
+      case INTENTS.DELETE_PRICE_LIST:
         return await deletePriceListAction(formDataObject, sessionId);
     }
     return json(
