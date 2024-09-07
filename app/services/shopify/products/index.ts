@@ -3,22 +3,10 @@ import { type GraphQL } from '~/types';
 import getQueryStr from '../util/getQueryStr';
 import type { ProductInformationForPrismaQueryQuery } from '~/types/admin.generated';
 import { errorHandler } from '~/services/util';
-import {
-  CREATE_PRODUCT_MEDIA_MUTATION,
-  CREATE_PRODUCT_MUTATION,
-  CREATE_VARIANTS_BULK_MUTATION,
-  PRODUCT_QUERY,
-} from './graphql';
+import { CREATE_PRODUCT_MUTATION, PRODUCT_QUERY } from './graphql';
 import type { Prisma } from '@prisma/client';
-import type {
-  CountryCode,
-  ProductVariantInventoryPolicy,
-  WeightUnit,
-  ProductStatus,
-  ProductVariantsBulkCreateStrategy,
-} from '~/types/admin.types';
+import type { ProductStatus } from '~/types/admin.types';
 import getUserError from '../util/getUserError';
-import { v4 as uuidv4 } from 'uuid';
 
 type ProductWithVariantImagePriceList = Prisma.ProductGetPayload<{
   include: {
@@ -30,15 +18,6 @@ type ProductWithVariantImagePriceList = Prisma.ProductGetPayload<{
         variantOptions: true;
       };
     };
-  };
-}>;
-
-type Image = Prisma.ImageGetPayload<{}>;
-
-type Variant = Prisma.VariantGetPayload<{
-  include: {
-    inventoryItem: true;
-    variantOptions: true;
   };
 }>;
 
@@ -212,8 +191,7 @@ export const getRelevantProductInformationForPrisma = async (
 
 // https://shopify.dev/docs/api/admin-graphql/2024-07/input-objects/ProductInput
 // helper functions for creating product with variants and image
-// TODO: handle different errors and rollbacks
-async function createProduct(
+export async function createProduct(
   product: ProductWithVariantImagePriceList,
   graphql: GraphQL,
 ) {
@@ -232,22 +210,22 @@ async function createProduct(
       },
     });
     const { data } = await createProductResponse.json();
-    if (!data) {
-      throw new Error('TODO');
-    }
+    const productCreate = data?.productCreate;
 
     if (
-      data.productCreate &&
-      data.productCreate.userErrors &&
-      data.productCreate.userErrors.length > 0
+      !productCreate ||
+      !productCreate.product ||
+      (productCreate.userErrors && productCreate.userErrors.length > 0)
     ) {
-      throw new Error('TODO');
+      throw getUserError({
+        defaultMessage: 'Data is missing from creating product on shopify.',
+        userErrors: productCreate?.userErrors,
+        parentFunc: createProduct,
+        data: { product },
+      });
     }
 
-    const newProductId = data.productCreate?.product?.id;
-    if (!newProductId) {
-      throw new Error('TODO');
-    }
+    const newProductId = productCreate.product.id;
     return newProductId;
   } catch (error) {
     throw errorHandler(
@@ -255,191 +233,6 @@ async function createProduct(
       'Failed to create product on Shopify.',
       createProduct,
       { product },
-    );
-  }
-}
-
-async function createProductMedia(
-  images: Image[],
-  productId: string,
-  graphql: GraphQL,
-) {
-  try {
-    const mediaInput = images.map(({ alt, mediaContentType, url }) => {
-      return {
-        alt,
-        mediaContentType: mediaContentType as MediaContentType,
-        originalSource: url,
-      };
-    });
-    const createProductMediaResponse = await graphql(
-      CREATE_PRODUCT_MEDIA_MUTATION,
-      {
-        variables: {
-          media: mediaInput,
-          productId: productId,
-        },
-      },
-    );
-
-    const { data } = await createProductMediaResponse.json();
-    if (!data) {
-      throw new Error('TODO');
-    }
-
-    if (
-      data.productCreateMedia &&
-      data.productCreateMedia.mediaUserErrors &&
-      data.productCreateMedia.mediaUserErrors.length > 0
-    ) {
-      throw new Error('TODO');
-    }
-
-    const newMediaIds = data.productCreateMedia?.media?.map(({ id }) => id);
-    if (!newMediaIds) {
-      throw new Error('TODO');
-    }
-    return newMediaIds;
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to create media on Shopify.',
-      createProductMedia,
-      {},
-    );
-  }
-}
-
-async function createVariants(
-  variants: Variant[],
-  newProductId: string,
-  shopifyLocationId: string,
-  graphql: GraphQL,
-) {
-  try {
-    const variantInput = variants.map((variant) => {
-      const { inventoryItem: inventoryItemValues } = variant;
-      const measurement =
-        inventoryItemValues?.weightUnit && inventoryItemValues?.weightValue
-          ? {
-              weight: {
-                unit: inventoryItemValues.weightUnit as WeightUnit,
-                value: inventoryItemValues.weightValue,
-              },
-            }
-          : undefined;
-
-      const inventoryItem = inventoryItemValues
-        ? {
-            countryCodeOfOrigin:
-              (inventoryItemValues.countryCodeOfOrigin as CountryCode) ??
-              undefined,
-            harmonizedSystemCode: inventoryItemValues.harmonizedSystemCode,
-            measurement,
-            provinceCodeOfOrigin: inventoryItemValues.provinceCodeOfOrigin,
-            requiresShipping: inventoryItemValues.requiresShipping,
-            sku: inventoryItemValues.sku
-              ? `Synqsell-${inventoryItemValues.sku}`
-              : `Synqsell-${uuidv4()}`,
-            tracked: inventoryItemValues.tracked,
-          }
-        : undefined;
-
-      return {
-        barcode: variant.barcode,
-        compareAtPrice: variant.compareAtPrice,
-        inventoryItem,
-        inventoryPolicy:
-          variant.inventoryPolicy as ProductVariantInventoryPolicy,
-        inventoryQuantities: [
-          {
-            availableQuantity: variant.inventoryQuantity ?? 0,
-            locationId: shopifyLocationId,
-          },
-        ],
-        optionValues: variant.variantOptions.map((option) => {
-          return {
-            name: option.value,
-            optionName: option.name,
-          };
-        }),
-        price: variant.price,
-        taxCode: variant.taxCode,
-        taxable: variant.taxable,
-      };
-    });
-
-    const createVariantResponse = await graphql(CREATE_VARIANTS_BULK_MUTATION, {
-      variables: {
-        productId: newProductId,
-        variants: variantInput,
-        strategy:
-          'REMOVE_STANDALONE_VARIANT' as ProductVariantsBulkCreateStrategy.RemoveStandaloneVariant,
-      },
-    });
-    const { data } = await createVariantResponse.json();
-    const productVariantsBulkCreate = data?.productVariantsBulkCreate;
-
-    if (
-      !productVariantsBulkCreate ||
-      !productVariantsBulkCreate.productVariants ||
-      (productVariantsBulkCreate.userErrors &&
-        productVariantsBulkCreate.userErrors.length > 0)
-    ) {
-      throw getUserError({
-        defaultMessage:
-          'Data is missing from deleting fulfillment service in Shopify.',
-        userErrors: productVariantsBulkCreate?.userErrors,
-        parentFunc: createVariants,
-        data: { variants, newProductId, shopifyLocationId },
-      });
-    }
-
-    const newVariantIds = productVariantsBulkCreate.productVariants.map(
-      ({ id }) => id,
-    );
-
-    return newVariantIds;
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to create variants on Shopify.',
-      createVariants,
-      {},
-    );
-  }
-}
-
-export async function createEntireProductShopify(
-  product: ProductWithVariantImagePriceList,
-  shopifyLocationId: string,
-  graphql: GraphQL,
-) {
-  // get all data for creating a product
-  try {
-    const { images, variants } = product;
-    const newProductId = await createProduct(product, graphql);
-    const newImageIds = await createProductMedia(images, newProductId, graphql);
-    const newVariantIds = await createVariants(
-      variants,
-      newProductId,
-      shopifyLocationId,
-      graphql,
-    );
-    return {
-      newProductId,
-      newImageIds,
-      newVariantIds,
-    };
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to create entire product with variant and images',
-      createEntireProductShopify,
-      {
-        product,
-        shopifyLocationId,
-      },
     );
   }
 }

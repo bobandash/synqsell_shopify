@@ -101,27 +101,6 @@ export const CREATE_PRODUCT_MEDIA_MUTATION = `#graphql
   }
 `;
 
-// https://shopify.dev/docs/api/admin-graphql/2024-07/mutations/productVariantsBulkCreate
-export const CREATE_VARIANTS_BULK_MUTATION = `#graphql
-  mutation productVariantsBulkCreate($productId: ID!, $variants: [ProductVariantsBulkInput!]!, $strategy: ProductVariantsBulkCreateStrategy) {
-      productVariantsBulkCreate(productId: $productId, variants: $variants, strategy: $strategy) {
-        product {
-          id
-        }
-        productVariants {
-          id
-          inventoryItem {
-            id
-          }
-        }
-        userErrors {
-          field
-          message
-        }
-      }
-    }
-`;
-
 // https://shopify.dev/docs/api/admin-graphql/2024-07/mutations/inventoryActivate
 // this actives the fulfillment center and on hand qty
 export const ACTIVATE_INVENTORY_ITEM = `#graphql
