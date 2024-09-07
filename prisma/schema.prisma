@@ -189,6 +189,7 @@ model Variant {
   wholesalePrice    Int?
   taxCode           String?
   taxable           Boolean
+  barcode           String?
   product           Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
   inventoryItem     InventoryItem?
   variantOptions    VariantOption[]

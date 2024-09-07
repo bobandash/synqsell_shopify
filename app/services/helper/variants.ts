@@ -4,7 +4,7 @@ import type {
   BasicVariantInfoWithoutVariantId,
 } from '../models/variants';
 import { errorHandler } from '../util';
-import { getRelevantVariantInformationForPrisma } from '../shopify/variants';
+import { getVariantInformation } from '../shopify/variants';
 import type { GraphQL } from '~/types';
 import type { VariantInformationForPrismaQueryQuery } from '~/types/admin.generated';
 import createHttpError from 'http-errors';
@@ -41,6 +41,7 @@ function getFormattedAddVariantData(
       taxCode,
       taxable,
       inventoryItem,
+      barcode,
     } = variant;
     const otherFields = variantIdToOtherFieldsMap.get(shopifyVariantId);
     // TODO: Determine logging strategy for inline error throws
@@ -65,6 +66,7 @@ function getFormattedAddVariantData(
       price,
       taxCode,
       taxable,
+      barcode,
       inventoryItem: {
         create: {
           countryCodeOfOrigin: inventoryItem.countryCodeOfOrigin,
@@ -97,16 +99,12 @@ export async function addVariantsTx(
 ) {
   try {
     const variantIds = variants.map(({ variantId: id }) => id);
-    const graphqlData = await getRelevantVariantInformationForPrisma(
+    const graphqlData = await getVariantInformation(
       variantIds,
       sessionId,
       graphql,
     );
-    if (!graphqlData) {
-      return null;
-    }
     const prismaData = getFormattedAddVariantData(graphqlData, variants);
-
     await Promise.all(
       prismaData.map((data) =>
         tx.variant.create({

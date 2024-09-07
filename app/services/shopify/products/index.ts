@@ -218,7 +218,6 @@ async function createProduct(
   graphql: GraphQL,
 ) {
   try {
-    console.log(product);
     const { categoryId, title, descriptionHtml, status, vendor } = product;
     const productCreateInput = {
       category: categoryId,
@@ -347,7 +346,7 @@ async function createVariants(
         : undefined;
 
       return {
-        barcode: '', // TODO: add barcode
+        barcode: variant.barcode,
         compareAtPrice: variant.compareAtPrice,
         inventoryItem,
         inventoryPolicy:
@@ -399,9 +398,7 @@ async function createVariants(
     const newVariantIds = productVariantsBulkCreate.productVariants.map(
       ({ id }) => id,
     );
-    if (!newVariantIds) {
-      throw new Error('TODO');
-    }
+
     return newVariantIds;
   } catch (error) {
     throw errorHandler(
@@ -421,7 +418,6 @@ export async function createEntireProductShopify(
   // get all data for creating a product
   try {
     const { images, variants } = product;
-
     const newProductId = await createProduct(product, graphql);
     const newImageIds = await createProductMedia(images, newProductId, graphql);
     const newVariantIds = await createVariants(
