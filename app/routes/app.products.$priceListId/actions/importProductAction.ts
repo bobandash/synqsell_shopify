@@ -5,13 +5,13 @@ import {
   productIdSchema,
   sessionIdSchema,
 } from '~/schemas/models';
-import { createEntireProductShopify } from '~/services/shopify/products';
 import { getProductDetailsForProductCreation } from '~/services/models/product';
 import type { GraphQL } from '~/types';
 import { json } from '@remix-run/node';
 import { StatusCodes } from 'http-status-codes';
 import { getJSONError } from '~/util';
 import { getFulfillmentService } from '~/services/models/fulfillmentService';
+import { createEntireProductShopify } from '~/services/helper/product';
 
 export type ImportProductFormData = InferType<typeof formDataObjectSchema>;
 
@@ -35,13 +35,9 @@ export async function importProductAction(
     await importProductActionSchema.validate({ formDataObject, sessionId });
     const { productId, fulfillmentServiceId } = formDataObject;
     const productDetails = await getProductDetailsForProductCreation(productId);
-    console.log(productId);
-    console.log(productDetails);
     const fulfillmentService =
       await getFulfillmentService(fulfillmentServiceId);
-
     const { shopifyLocationId } = fulfillmentService;
-
     await createEntireProductShopify(
       productDetails,
       shopifyLocationId,
