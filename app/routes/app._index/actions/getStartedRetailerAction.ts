@@ -18,7 +18,7 @@ import {
 import { CHECKLIST_ITEM_KEYS, ROLES } from '~/constants';
 import { createRoleAndCompleteChecklistItem } from '~/services/transactions';
 import {
-  getFulfillmentService,
+  userGetFulfillmentService,
   type FulfillmentServiceDBProps,
 } from '~/services/models/fulfillmentService';
 import {
@@ -97,7 +97,7 @@ export async function getStartedRetailerAction(
 async function handleCompleted(sessionId: string, checklistItemId: string) {
   try {
     const [fulfillmentService, checklistStatus, role] = await Promise.all([
-      getFulfillmentService(sessionId),
+      userGetFulfillmentService(sessionId),
       getChecklistStatus(sessionId, checklistItemId),
       getRole(sessionId, ROLES.RETAILER),
     ]);
@@ -126,7 +126,7 @@ async function getExistingFieldsOrUndefined(
 ) {
   try {
     const fulfillmentService = fulfillmentServiceExists
-      ? await getFulfillmentService(sessionId)
+      ? await userGetFulfillmentService(sessionId)
       : undefined;
     const checklistStatus = checklistStatusCompleted
       ? await getChecklistStatus(sessionId, checklistItemId)
@@ -214,7 +214,6 @@ async function createOrGetFields(
       },
     );
   } catch (error) {
-    // !!! TODO: read about distributed system rollbacks
     throw getJSONError(error, 'index');
   }
 }

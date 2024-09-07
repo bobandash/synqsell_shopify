@@ -15,7 +15,10 @@ import type {
   ProductVariantInventoryPolicy,
   WeightUnit,
   ProductStatus,
+  ProductVariantsBulkCreateStrategy,
 } from '~/types/admin.types';
+import getUserError from '../util/getUserError';
+import { v4 as uuidv4 } from 'uuid';
 
 type ProductWithVariantImagePriceList = Prisma.ProductGetPayload<{
   include: {
@@ -215,6 +218,7 @@ async function createProduct(
   graphql: GraphQL,
 ) {
   try {
+    console.log(product);
     const { categoryId, title, descriptionHtml, status, vendor } = product;
     const productCreateInput = {
       category: categoryId,
@@ -309,49 +313,55 @@ async function createProductMedia(
 
 async function createVariants(
   variants: Variant[],
-  totalVariants: number, // TODO: figure out what strategy means
   newProductId: string,
-  fulfillmentId: string,
+  shopifyLocationId: string,
   graphql: GraphQL,
 ) {
   try {
     const variantInput = variants.map((variant) => {
-      const { inventoryItem } = variant;
+      const { inventoryItem: inventoryItemValues } = variant;
       const measurement =
-        inventoryItem?.weightUnit && inventoryItem?.weightValue
+        inventoryItemValues?.weightUnit && inventoryItemValues?.weightValue
           ? {
               weight: {
-                unit: inventoryItem.weightUnit as WeightUnit,
-                value: inventoryItem.weightValue,
+                unit: inventoryItemValues.weightUnit as WeightUnit,
+                value: inventoryItemValues.weightValue,
               },
             }
           : undefined;
 
+      const inventoryItem = inventoryItemValues
+        ? {
+            countryCodeOfOrigin:
+              (inventoryItemValues.countryCodeOfOrigin as CountryCode) ??
+              undefined,
+            harmonizedSystemCode: inventoryItemValues.harmonizedSystemCode,
+            measurement,
+            provinceCodeOfOrigin: inventoryItemValues.provinceCodeOfOrigin,
+            requiresShipping: inventoryItemValues.requiresShipping,
+            sku: inventoryItemValues.sku
+              ? `Synqsell-${inventoryItemValues.sku}`
+              : `Synqsell-${uuidv4()}`,
+            tracked: inventoryItemValues.tracked,
+          }
+        : undefined;
+
       return {
         barcode: '', // TODO: add barcode
         compareAtPrice: variant.compareAtPrice,
-        inventoryItem: {
-          countryCodeOfOrigin:
-            (inventoryItem?.countryCodeOfOrigin as CountryCode) ?? undefined,
-          harmonizedSystemCode: inventoryItem?.harmonizedSystemCode,
-          measurement,
-          provinceCodeOfOrigin: inventoryItem?.provinceCodeOfOrigin,
-          requiresShipping: inventoryItem?.requiresShipping,
-          sku: inventoryItem?.sku,
-          tracked: inventoryItem?.tracked,
-        },
+        inventoryItem,
         inventoryPolicy:
           variant.inventoryPolicy as ProductVariantInventoryPolicy,
         inventoryQuantities: [
           {
             availableQuantity: variant.inventoryQuantity ?? 0,
-            locationId: fulfillmentId,
+            locationId: shopifyLocationId,
           },
         ],
         optionValues: variant.variantOptions.map((option) => {
           return {
-            name: option.name,
-            optionName: option.value,
+            name: option.value,
+            optionName: option.name,
           };
         }),
         price: variant.price,
@@ -360,28 +370,33 @@ async function createVariants(
       };
     });
 
-    console.log(newProductId);
-    console.log(variantInput);
-
     const createVariantResponse = await graphql(CREATE_VARIANTS_BULK_MUTATION, {
       variables: {
         productId: newProductId,
         variants: variantInput,
+        strategy:
+          'REMOVE_STANDALONE_VARIANT' as ProductVariantsBulkCreateStrategy.RemoveStandaloneVariant,
       },
     });
     const { data } = await createVariantResponse.json();
-    if (!data) {
-      throw new Error('TODO');
-    }
+    const productVariantsBulkCreate = data?.productVariantsBulkCreate;
 
     if (
-      data.productVariantsBulkCreate &&
-      data.productVariantsBulkCreate.userErrors &&
-      data.productVariantsBulkCreate.userErrors.length > 0
+      !productVariantsBulkCreate ||
+      !productVariantsBulkCreate.productVariants ||
+      (productVariantsBulkCreate.userErrors &&
+        productVariantsBulkCreate.userErrors.length > 0)
     ) {
-      throw new Error('TODO');
+      throw getUserError({
+        defaultMessage:
+          'Data is missing from deleting fulfillment service in Shopify.',
+        userErrors: productVariantsBulkCreate?.userErrors,
+        parentFunc: createVariants,
+        data: { variants, newProductId, shopifyLocationId },
+      });
     }
-    const newVariantIds = data.productVariantsBulkCreate?.productVariants?.map(
+
+    const newVariantIds = productVariantsBulkCreate.productVariants.map(
       ({ id }) => id,
     );
     if (!newVariantIds) {
@@ -400,19 +415,19 @@ async function createVariants(
 
 export async function createEntireProductShopify(
   product: ProductWithVariantImagePriceList,
-  fulfillmentId: string,
+  shopifyLocationId: string,
   graphql: GraphQL,
 ) {
   // get all data for creating a product
   try {
-    const { images, variants, variantsCount } = product;
+    const { images, variants } = product;
+
     const newProductId = await createProduct(product, graphql);
     const newImageIds = await createProductMedia(images, newProductId, graphql);
     const newVariantIds = await createVariants(
       variants,
-      variantsCount,
       newProductId,
-      fulfillmentId,
+      shopifyLocationId,
       graphql,
     );
     return {
@@ -427,7 +442,7 @@ export async function createEntireProductShopify(
       createEntireProductShopify,
       {
         product,
-        fulfillmentId,
+        shopifyLocationId,
       },
     );
   }

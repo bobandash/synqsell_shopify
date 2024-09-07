@@ -12,7 +12,7 @@ import {
 import { ImageIcon } from '~/assets';
 import sharedStyles from '~/shared.module.css';
 import PricingDetails from './PricingDetails';
-import type { FulfillmentService } from '../../types';
+import type { FulfillmentService } from '@prisma/client';
 
 type Props = {
   product: ProductCardData;

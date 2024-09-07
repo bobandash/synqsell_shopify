@@ -15,12 +15,18 @@ import type { TransformedChecklistTableData, LoaderResponse } from '../types';
 import ChecklistTable from '../components/ChecklistTable';
 import { BlockStack } from '@shopify/polaris';
 
+// !!! TODO: Important fix, need to refresh loader data with action, may just need to convert to fetcher key
 function ChecklistTables() {
-  const { tables: tablesData } = useAsyncValue() as unknown as LoaderResponse;
+  const { tables: tablesData } = useAsyncValue() as LoaderResponse;
   const navigate = useNavigate();
   const shopify = useAppBridge();
   const [tables, setTables] =
     useState<TransformedChecklistTableData[]>(tablesData);
+
+  useEffect(() => {
+    setTables(tablesData);
+  }, [tablesData]);
+
   const retailerGetStartedId = getChecklistItemId(
     CHECKLIST_ITEM_KEYS.RETAILER_GET_STARTED,
     tables,
@@ -44,7 +50,7 @@ function ChecklistTables() {
   });
 
   const transformedTablesData = useMemo(() => {
-    return tablesData.map((table, index) => {
+    return tablesData.map((table) => {
       const isFirstItemCompleted = table.checklistItems[0]
         ? table.checklistItems[0].isCompleted
         : false;

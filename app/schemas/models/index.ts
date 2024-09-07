@@ -4,15 +4,15 @@ import { isValidPriceList } from '~/services/models/priceList';
 import { isValidPartnershipRequest } from '~/services/models/partnershipRequest';
 import { hasPartnership } from '~/services/models/partnership';
 import { hasProduct } from '~/services/models/product';
-import { hasShopifyFulfillmentServiceId } from '~/services/models/fulfillmentService';
+import { hasFulfillmentService } from '~/services/models/fulfillmentService';
 
 // for individual id
 export const sessionIdSchema = createIdSchema('session', hasSession);
 export const priceListIdSchema = createIdSchema('price-list', isValidPriceList);
 export const productIdSchema = createIdSchema('product', hasProduct);
-export const shopifyFulfillmentServiceIdSchema = createIdSchema(
-  'shopify-fulfillment-service',
-  hasShopifyFulfillmentServiceId,
+export const fulfillmentServiceIdSchema = createIdSchema(
+  'fulfillment-service',
+  hasFulfillmentService,
 );
 
 // for list of ids

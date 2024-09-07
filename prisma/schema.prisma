@@ -49,8 +49,8 @@ model Session {
 
 model FulfillmentService {
   id                          String  @id @default(uuid())
-  shopifyFulfillmentServiceId String?
-  shopifyLocationId           String?
+  shopifyFulfillmentServiceId String
+  shopifyLocationId           String
   Session                     Session @relation(fields: [sessionId], references: [id])
   sessionId                   String  @unique
 }
@@ -182,7 +182,7 @@ model Variant {
   id                String          @id @default(uuid())
   shopifyVariantId  String
   compareAtPrice    String?
-  productId         String // !!! NOTE: productId refers to product's id, not product's productId
+  productId         String
   inventoryPolicy   String
   inventoryQuantity Int?
   price             String

@@ -103,8 +103,8 @@ export const CREATE_PRODUCT_MEDIA_MUTATION = `#graphql
 
 // https://shopify.dev/docs/api/admin-graphql/2024-07/mutations/productVariantsBulkCreate
 export const CREATE_VARIANTS_BULK_MUTATION = `#graphql
-  mutation productVariantsBulkCreate($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
-      productVariantsBulkCreate(productId: $productId, variants: $variants) {
+  mutation productVariantsBulkCreate($productId: ID!, $variants: [ProductVariantsBulkInput!]!, $strategy: ProductVariantsBulkCreateStrategy) {
+      productVariantsBulkCreate(productId: $productId, variants: $variants, strategy: $strategy) {
         product {
           id
         }

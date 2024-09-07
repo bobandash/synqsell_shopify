@@ -13,7 +13,46 @@ export type FulfillmentServiceDBProps = {
   sessionId: string;
 };
 
-export async function hasFulfillmentService(sessionId: string) {
+export async function hasFulfillmentService(id: string) {
+  try {
+    const fulfillmentService = await db.fulfillmentService.findFirst({
+      where: {
+        id,
+      },
+    });
+    if (!fulfillmentService) {
+      return false;
+    }
+    return true;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to check if fulfillment service exists.',
+      hasFulfillmentService,
+      { id },
+    );
+  }
+}
+
+export async function getFulfillmentService(id: string) {
+  try {
+    const fulfillmentService = await db.fulfillmentService.findFirstOrThrow({
+      where: {
+        id,
+      },
+    });
+    return fulfillmentService;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to get fulfillment service.',
+      getFulfillmentService,
+      { id },
+    );
+  }
+}
+
+export async function userHasFulfillmentService(sessionId: string) {
   try {
     const fulfillmentService = await db.fulfillmentService.findFirst({
       where: {
@@ -28,7 +67,25 @@ export async function hasFulfillmentService(sessionId: string) {
     throw errorHandler(
       error,
       'Failed to check if fulfillment service exists.',
-      hasFulfillmentService,
+      userHasFulfillmentService,
+      { sessionId },
+    );
+  }
+}
+
+export async function userGetFulfillmentService(sessionId: string) {
+  try {
+    const fulfillmentService = await db.fulfillmentService.findFirstOrThrow({
+      where: {
+        sessionId,
+      },
+    });
+    return fulfillmentService;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to get fulfillment service.',
+      userGetFulfillmentService,
       { sessionId },
     );
   }
@@ -53,24 +110,6 @@ export async function hasShopifyFulfillmentServiceId(
       'Failed to check if fulfillment service exists.',
       hasShopifyFulfillmentServiceId,
       { shopifyFulfillmentServiceId },
-    );
-  }
-}
-
-export async function getFulfillmentService(sessionId: string) {
-  try {
-    const fulfillmentService = await db.fulfillmentService.findFirstOrThrow({
-      where: {
-        sessionId,
-      },
-    });
-    return fulfillmentService;
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to get fulfillment service.',
-      getFulfillmentService,
-      { sessionId },
     );
   }
 }

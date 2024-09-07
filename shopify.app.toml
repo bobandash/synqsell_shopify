@@ -3,7 +3,7 @@
 client_id = "c2ff24913d6d89792234763f0830c676"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://administrative-probability-narrative-toy.trycloudflare.com"
+application_url = "https://numeric-eye-problems-mitsubishi.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read_assigned_fulfillment_orders,read_inventory,read_locations,read_or
 
 [auth]
 redirect_urls = [
-  "https://administrative-probability-narrative-toy.trycloudflare.com/auth/callback",
-  "https://administrative-probability-narrative-toy.trycloudflare.com/auth/shopify/callback",
-  "https://administrative-probability-narrative-toy.trycloudflare.com/api/auth/callback"
+  "https://numeric-eye-problems-mitsubishi.trycloudflare.com/auth/callback",
+  "https://numeric-eye-problems-mitsubishi.trycloudflare.com/auth/shopify/callback",
+  "https://numeric-eye-problems-mitsubishi.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]

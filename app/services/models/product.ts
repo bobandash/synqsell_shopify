@@ -115,6 +115,9 @@ export async function getMapShopifyProductIdToPrismaIdTx(
 export async function getProductDetailsForProductCreation(productId: string) {
   try {
     const productDetails = await db.product.findFirstOrThrow({
+      where: {
+        id: productId,
+      },
       include: {
         priceList: true,
         images: true,
@@ -131,7 +134,7 @@ export async function getProductDetailsForProductCreation(productId: string) {
     throw errorHandler(
       error,
       'Failed to get product details for product creation.',
-      deleteProductsTx,
+      getProductDetailsForProductCreation,
       { productId },
     );
   }

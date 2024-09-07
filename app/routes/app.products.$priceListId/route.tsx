@@ -28,7 +28,7 @@ import {
   type FulfillmentService,
 } from './loader';
 import { hasAccessToImportPriceList } from './loader/util';
-import { getFulfillmentService } from '~/services/models/fulfillmentService';
+import { userGetFulfillmentService } from '~/services/models/fulfillmentService';
 import { importProductAction, type ImportProductFormData } from './actions';
 import { INTENTS } from './constants';
 
@@ -63,7 +63,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     } else if (prev) {
       cursor = prev;
     }
-    const fulfillmentService = await getFulfillmentService(sessionId);
+    const fulfillmentService = await userGetFulfillmentService(sessionId);
     if (!priceListId) {
       return json(
         {

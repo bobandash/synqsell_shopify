@@ -10,7 +10,7 @@ import {
 import { LockIcon } from '@shopify/polaris-icons';
 import { useLocation, useSubmit as useRemixSubmit } from '@remix-run/react';
 import { INTENTS } from '../../constants';
-import type { FulfillmentService } from '../../types';
+import type { FulfillmentService } from '@prisma/client';
 
 type Props = {
   product: ProductCardData;
@@ -46,7 +46,7 @@ const PricingDetails: FC<Props> = ({ product, fulfillmentService }) => {
       {
         productId: product.id,
         intent: INTENTS.IMPORT_PRODUCT,
-        fulfillmentServiceId: fulfillmentService.fulfillmentServiceId,
+        fulfillmentServiceId: fulfillmentService.id,
       },
       {
         method: 'post',

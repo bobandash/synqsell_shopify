@@ -1,7 +1,7 @@
 import type { GraphQL } from '~/types';
 import {
   getOrCreateFulfillmentService as prismaGetOrCreateFulfillmentService,
-  hasFulfillmentService as prismaHasFulfillmentService,
+  userHasFulfillmentService as prismaUserHasFulfillmentService,
 } from '../models/fulfillmentService';
 import {
   getOrCreateFulfillmentService as shopifyGetOrCreateFulfillmentService,
@@ -67,7 +67,7 @@ export async function hasFulfillmentService(
       graphql,
     );
     const hasFulfillmentServiceInDb =
-      await prismaHasFulfillmentService(sessionId);
+      await prismaUserHasFulfillmentService(sessionId);
     if (!fulfillmentServiceId || !hasFulfillmentServiceInDb) {
       return false;
     }
