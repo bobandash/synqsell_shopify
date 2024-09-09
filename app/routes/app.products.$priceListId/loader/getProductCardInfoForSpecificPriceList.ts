@@ -6,17 +6,16 @@ import db from '~/db.server';
 import { hasAccessToImportPriceList } from './util';
 import { getPriceList } from '~/services/models/priceList';
 import { getProfile } from '~/services/models/userProfile';
-import { getBasicProductDetails } from '~/services/shopify/products';
-import type { GraphQL } from '~/types';
+import { getBasicProductDetailsWithAccessToken } from '~/services/shopify/products';
 import { createMapIdToRestObj } from '~/routes/util';
 import type { ProductCard } from '../types';
+import { getShopAndAccessToken } from '~/services/models/session';
 
 type GetPaginatedProductCardsInfoProps = {
   priceListId: string;
   cursor?: string;
   isReverseDirection: boolean;
   sessionId: string;
-  graphql: GraphQL;
 };
 
 type GetProductsWithVariantsProps = {
@@ -122,7 +121,7 @@ async function getPrevCursor(
 export async function getProductCardInfoFromPriceList(
   props: GetPaginatedProductCardsInfoProps,
 ): Promise<ProductCardInfoFromPriceList> {
-  const { priceListId, cursor, isReverseDirection, sessionId, graphql } = props;
+  const { priceListId, cursor, isReverseDirection, sessionId } = props;
   try {
     await getProductCardsSchema.validate(props);
     const { products, nextCursor } = await getProductsWithVariantsSorted({
@@ -131,20 +130,26 @@ export async function getProductCardInfoFromPriceList(
       isReverseDirection,
       take: 16,
     });
-    const hasAccessToImport = await hasAccessToImportPriceList(
-      priceListId,
-      sessionId,
+    const [hasAccessToImport, priceList, supplierBrandName] = await Promise.all(
+      [
+        hasAccessToImportPriceList(priceListId, sessionId),
+        getPriceList(priceListId),
+        getBrandName(priceListId),
+      ],
     );
-    const supplierBrandName = await getBrandName(priceListId);
+    const supplierId = priceList.supplierId;
+    const { shop, accessToken } = await getShopAndAccessToken(supplierId);
 
     // need to fetch misc data from shopify to render
     const shopifyProductIds = products.map(
       ({ shopifyProductId }) => shopifyProductId,
     );
-    const shopifyProductDetails = await getBasicProductDetails(
+
+    const shopifyProductDetails = await getBasicProductDetailsWithAccessToken(
       shopifyProductIds,
       shopifyProductIds.length,
-      graphql,
+      shop,
+      accessToken,
     );
     const mapShopifyProductIdToProductDetails = createMapIdToRestObj(
       shopifyProductDetails,
@@ -186,8 +191,6 @@ export async function getProductCardInfoFromPriceList(
       currFirstProductIdInView,
       priceListId,
     );
-    console.log(prevCursor);
-
     return { products: productsFormatted, nextCursor, prevCursor };
   } catch (error) {
     throw errorHandler(

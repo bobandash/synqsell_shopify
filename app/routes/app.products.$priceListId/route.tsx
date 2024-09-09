@@ -45,7 +45,6 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   try {
     const { priceListId } = params;
     const {
-      admin: { graphql },
       session: { id: sessionId },
     } = await authenticate.admin(request);
 
@@ -104,7 +103,6 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
         isReverseDirection,
         sessionId,
         ...(cursor && { cursor }),
-        graphql,
       });
     }
     const priceListsWithAccess =

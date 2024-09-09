@@ -21,3 +21,22 @@ export async function hasSession(sessionId: string) {
     );
   }
 }
+
+export async function getShopAndAccessToken(sessionId: string) {
+  try {
+    const session = await db.session.findFirstOrThrow({
+      where: {
+        id: sessionId,
+      },
+    });
+
+    return { accessToken: session.accessToken, shop: session.shop };
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to get shop and access token',
+      getShopAndAccessToken,
+      { sessionId },
+    );
+  }
+}

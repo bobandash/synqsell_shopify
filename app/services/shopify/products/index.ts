@@ -1,19 +1,14 @@
 import { nodesFromEdges } from '@shopify/admin-graphql-api-utilities';
 import { type GraphQL } from '~/types';
 import getQueryStr from '../util/getQueryStr';
-import type {
-  ProductBasicInfoQuery,
-  ProductInformationForPrismaQueryQuery,
-} from '~/types/admin.generated';
+import type { ProductBasicInfoQuery } from '~/types/admin.generated';
 import { errorHandler } from '~/services/util';
-import {
-  CREATE_PRODUCT_MUTATION,
-  PRODUCT_BASIC_INFO_QUERY,
-  PRODUCT_QUERY,
-} from './graphql';
+import { PRODUCT_BASIC_INFO_QUERY } from './graphql';
 import type { Prisma } from '@prisma/client';
-import type { ProductStatus } from '~/types/admin.types';
 import getUserError from '../util/getUserError';
+import fetchGraphQL from '../util/fetchGraphql';
+
+// the reality is
 
 export type ProductWithVariantImagePriceList = Prisma.ProductGetPayload<{
   include: {
@@ -162,50 +157,43 @@ export async function getBasicProductDetails(
   }
 }
 
-// https://shopify.dev/docs/api/admin-graphql/2024-07/input-objects/ProductInput
-// helper functions for creating product with variants and image
-// export async function createProduct(
-//   product: ProductWithVariantImagePriceList,
-//   graphql: GraphQL,
-// ) {
-//   try {
-//     const { categoryId, title, descriptionHtml, status, vendor } = product;
-//     const productCreateInput = {
-//       category: categoryId,
-//       title,
-//       descriptionHtml,
-//       status: status as ProductStatus,
-//       vendor,
-//     };
-//     const createProductResponse = await graphql(CREATE_PRODUCT_MUTATION, {
-//       variables: {
-//         input: productCreateInput,
-//       },
-//     });
-//     const { data } = await createProductResponse.json();
-//     const productCreate = data?.productCreate;
-
-//     if (
-//       !productCreate ||
-//       !productCreate.product ||
-//       (productCreate.userErrors && productCreate.userErrors.length > 0)
-//     ) {
-//       throw getUserError({
-//         defaultMessage: 'Data is missing from creating product on shopify.',
-//         userErrors: productCreate?.userErrors,
-//         parentFunc: createProduct,
-//         data: { product },
-//       });
-//     }
-
-//     const newProductId = productCreate.product.id;
-//     return newProductId;
-//   } catch (error) {
-//     throw errorHandler(
-//       error,
-//       'Failed to create product on Shopify.',
-//       createProduct,
-//       { product },
-//     );
-//   }
-// }
+export async function getBasicProductDetailsWithAccessToken(
+  shopifyProductIds: string[],
+  take: number,
+  shop: string,
+  accessToken: string,
+) {
+  try {
+    const queryStr = getQueryStr(shopifyProductIds);
+    const variables = {
+      query: queryStr,
+      first: take,
+    };
+    const response = await fetchGraphQL(
+      shop,
+      accessToken,
+      PRODUCT_BASIC_INFO_QUERY,
+      variables,
+    );
+    const { data } = await response.json();
+    if (!data) {
+      throw getUserError({
+        defaultMessage: 'Could not fetch product details.',
+        parentFunc: getBasicProductDetails,
+        data: {
+          shopifyProductIds,
+          take,
+        },
+      });
+    }
+    const flattenedData = flattenBasicProductInfo(data);
+    return flattenedData;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to retrieve basic product details.',
+      getBasicProductDetailsWithAccessToken,
+      { shopifyProductIds, take },
+    );
+  }
+}

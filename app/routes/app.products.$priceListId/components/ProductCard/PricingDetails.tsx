@@ -30,7 +30,7 @@ const PricingDetails: FC<Props> = ({ variant }) => {
         <Divider />
         <div className={`${sharedStyles['orange-container']}`}>
           <InlineStack>
-            <Text as="p" fontWeight="medium">
+            <Text as="p" fontWeight="bold">
               Your Profit
             </Text>
             <div>
@@ -54,7 +54,7 @@ const PricingDetails: FC<Props> = ({ variant }) => {
       </BlockStack>
       <Divider />
       <div className={`${sharedStyles['green-container']}`}>
-        <Text as="p" fontWeight="medium">
+        <Text as="p" fontWeight="bold">
           Your Profit: ${retailerPayment}
         </Text>
       </div>
