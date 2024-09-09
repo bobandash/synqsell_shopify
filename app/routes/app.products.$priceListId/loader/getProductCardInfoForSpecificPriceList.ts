@@ -47,9 +47,7 @@ async function getProductsWithVariantsSorted(
       include: {
         variants: true,
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], // id is to ensure consistent ordering in case product was created at same time
       take: isReverseDirection ? -1 * take : take + 1,
       ...(cursor && { cursor: { id: cursor } }),
       ...(cursor && { skip: 1 }),
@@ -116,6 +114,7 @@ async function getPrevCursor(
   });
   const hasPrevious =
     products.length > 0 && products[0].id !== currFirstProductIdInView;
+
   const prevCursor = hasPrevious ? currFirstProductIdInView : null;
   return prevCursor;
 }
@@ -164,7 +163,6 @@ export async function getProductCardInfoFromPriceList(
         return {
           ...rest,
           ...productDetails,
-          priceListId,
           variants: variants.map(
             ({ retailPrice, retailerPayment, supplierProfit, ...rest }) => {
               return {
@@ -188,6 +186,7 @@ export async function getProductCardInfoFromPriceList(
       currFirstProductIdInView,
       priceListId,
     );
+    console.log(prevCursor);
 
     return { products: productsFormatted, nextCursor, prevCursor };
   } catch (error) {
