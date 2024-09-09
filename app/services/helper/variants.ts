@@ -90,34 +90,3 @@ function getFormattedAddVariantData(
     };
   });
 }
-
-export async function addVariantsTx(
-  tx: Prisma.TransactionClient,
-  variants: BasicVariantInfo[],
-  sessionId: string,
-  graphql: GraphQL,
-) {
-  try {
-    const variantIds = variants.map(({ variantId: id }) => id);
-    const graphqlData = await getVariantInformation(
-      variantIds,
-      sessionId,
-      graphql,
-    );
-    const prismaData = getFormattedAddVariantData(graphqlData, variants);
-    await Promise.all(
-      prismaData.map((data) =>
-        tx.variant.create({
-          data: data,
-        }),
-      ),
-    );
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to add variants in bulk.',
-      addVariantsTx,
-      { variants },
-    );
-  }
-}

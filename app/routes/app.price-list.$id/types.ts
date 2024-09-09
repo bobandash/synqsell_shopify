@@ -70,33 +70,3 @@ export type PriceListActionData = {
   products: ProductCoreData[];
   partnerships: string[]; // string of ids
 };
-
-// for loader data
-export type VariantData = {
-  sku: string;
-  title: string;
-  id: string;
-  shopifyVariantId: string;
-  productId: string;
-  retailPrice: string;
-  retailerPayment: string;
-  supplierProfit: string;
-};
-
-export type ProductData = {
-  shopifyProductId: string;
-  title: string;
-  mediaId: string;
-  mediaAlt: string;
-  mediaImageUrl: string;
-  variantsCount: number;
-  onlineStoreUrl: string | null;
-  id: string;
-  priceListId: string;
-  createdAt: Date;
-  variants: VariantData[];
-};
-
-export type ProductDataJSON = Omit<ProductData, 'createdAt'> & {
-  createdAt: string;
-};
