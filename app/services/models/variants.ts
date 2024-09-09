@@ -7,15 +7,17 @@ export type BasicVariantInfoWithoutVariantId = {
 };
 
 export type BasicVariantInfo = {
-  variantId: string;
-  wholesalePrice: number | null;
-  prismaProductId: string;
+  productId: string;
+  shopifyVariantId: string;
+  retailPrice: string;
+  retailerPayment: string;
+  supplierProfit: string;
 };
 
 type AddVariantProps = Omit<Prisma.VariantGetPayload<{}>, 'id'>;
 
 export type BasicVariantInfoWithPrismaId = BasicVariantInfo & {
-  prismaId: string;
+  id: string;
 };
 
 export async function getShopifyVariantIdsInPriceListTx(
@@ -79,6 +81,7 @@ export async function deleteVariantsTx(
   variantIds: string[],
 ) {
   try {
+    console.log(variantIds);
     const deletedVariants = await tx.variant.deleteMany({
       where: {
         id: {
@@ -106,14 +109,13 @@ export async function updateVariantsTx(
   try {
     const updatedRecords = await Promise.all([
       variants.map((variant) => {
-        const { wholesalePrice, prismaId } = variant;
-
+        const { id, ...rest } = variant;
         return tx.variant.update({
           where: {
-            id: prismaId,
+            id,
           },
           data: {
-            wholesalePrice,
+            ...rest,
           },
         });
       }),

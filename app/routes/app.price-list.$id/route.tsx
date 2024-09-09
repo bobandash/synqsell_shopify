@@ -367,7 +367,6 @@ const CreateEditPriceList = () => {
     onSubmit: async (fieldValues) => {
       const formattedFieldData = formatPriceListFields(fieldValues);
       const formattedProductsData = getCleanedProductDataForSubmission();
-      console.log(formattedProductsData);
       remixSubmit(
         {
           settings: JSON.stringify(formattedFieldData),

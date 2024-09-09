@@ -8,15 +8,15 @@ import {
 } from '~/services/models/product';
 import type { Prisma } from '@prisma/client';
 import {
+  addVariantsTx,
   deleteVariantsTx,
   getShopifyVariantIdsInPriceListTx,
   updateVariantsTx,
 } from '~/services/models/variants';
-import { addVariantsTx } from '~/services/helper/variants';
 import type {
-  CoreProductProps,
   PriceListActionData,
   PriceListSettings,
+  ProductCoreData,
 } from '../types';
 import {
   noPriceListGeneralModificationIfExists,
@@ -116,28 +116,33 @@ export async function updatePriceListSettingsTx(
 }
 
 // gets products to add and remove from price list
-async function getProductStatus(priceListId: string, productIds: string[]) {
+async function getProductStatus(
+  priceListId: string,
+  shopifyProductIds: string[],
+) {
   try {
-    const originalProducts = (
-      await db.product.findMany({
-        where: {
-          priceListId,
-        },
-        select: {
-          id: true,
-        },
-      })
-    ).map(({ id }) => id);
-    const originalProductsSet = new Set(originalProducts);
-    const newProductsSet = new Set(productIds);
+    const originalProducts = await db.product.findMany({
+      where: {
+        priceListId,
+      },
+      select: {
+        id: true,
+        shopifyProductId: true,
+      },
+    });
+    const originalProductShopifyIds = originalProducts.map(
+      ({ shopifyProductId }) => shopifyProductId,
+    );
+    const originalProductShopifyIdsSet = new Set(originalProductShopifyIds);
+    const newProductsSet = new Set(shopifyProductIds);
 
-    const productsToAdd = productIds.filter(
-      (id) => !originalProductsSet.has(id),
+    const shopifyProductIdsToAdd = shopifyProductIds.filter(
+      (shopifyProductId) => !originalProductShopifyIdsSet.has(shopifyProductId),
     );
-    const productsToRemove = originalProducts.filter(
-      (id) => !newProductsSet.has(id),
-    );
-    return { productsToAdd, productsToRemove };
+    const prismaProductIdsToRemove = originalProducts
+      .filter(({ shopifyProductId }) => !newProductsSet.has(shopifyProductId))
+      .map(({ id }) => id);
+    return { shopifyProductIdsToAdd, prismaProductIdsToRemove };
   } catch (error) {
     throw errorHandler(
       error,
@@ -145,7 +150,7 @@ async function getProductStatus(priceListId: string, productIds: string[]) {
       getProductStatus,
       {
         priceListId,
-        productIds,
+        shopifyProductIds,
       },
     );
   }
@@ -154,26 +159,39 @@ async function getProductStatus(priceListId: string, productIds: string[]) {
 // returns the data of the variants to add, remove, and update
 // the problem with variants is that when a product is deleted, it should cascade delete the variants as well
 // so that's why you have to use the transaction instead and call this when products are already deleted
+// TODO: this should be refactored for smaller functions after MVP
 async function getVariantStatusTx(
   tx: Prisma.TransactionClient,
   priceListId: string,
-  products: CoreProductProps[],
+  products: ProductCoreData[],
 ) {
   try {
-    const productIds = products.map(({ id }) => id);
+    const shopifyProductIds = products.map(
+      ({ shopifyProductId }) => shopifyProductId,
+    );
     const shopifyProductIdToPrismaId = await getMapShopifyProductIdToPrismaIdTx(
       tx,
-      productIds,
+      shopifyProductIds,
       priceListId,
     );
+
     const variantsWithPrismaProductId = products.flatMap((product) =>
-      product.variants.map((variant) => ({
-        variantId: variant.id,
-        wholesalePrice: variant.wholesalePrice,
-        prismaProductId: shopifyProductIdToPrismaId.get(product.id) ?? '',
-      })),
+      product.variants.map((variant) => {
+        const productId = shopifyProductIdToPrismaId.get(
+          product.shopifyProductId,
+        );
+        if (!productId) {
+          throw new Error(
+            'Product must be created before any variants are created.',
+          );
+        }
+        return {
+          ...variant,
+          productId,
+        };
+      }),
     );
-    // TODO: add error handling for if productId is nothing
+
     const idsInOldPriceList = await getShopifyVariantIdsInPriceListTx(
       tx,
       priceListId,
@@ -191,7 +209,7 @@ async function getVariantStatusTx(
     );
     const variantIdsInNewPriceListSet = new Set(
       products.flatMap((product) =>
-        product.variants.map((variant) => variant.id),
+        product.variants.map((variant) => variant.shopifyVariantId),
       ),
     );
 
@@ -200,16 +218,16 @@ async function getVariantStatusTx(
       .filter((ids) => !variantIdsInNewPriceListSet.has(ids.shopifyVariantId))
       .map(({ id }) => id);
     const variantsToAdd = variantsWithPrismaProductId.filter(
-      ({ variantId: id }) => !shopifyVariantIdsInOldPriceListSet.has(id),
+      ({ shopifyVariantId: id }) => !shopifyVariantIdsInOldPriceListSet.has(id),
     );
     const variantsToUpdate = variantsWithPrismaProductId.filter(
-      ({ variantId: id }) => shopifyVariantIdsInOldPriceListSet.has(id),
+      ({ shopifyVariantId: id }) => shopifyVariantIdsInOldPriceListSet.has(id),
     );
     const variantsToUpdateWithPrismaId = variantsToUpdate.map((item) => {
       return {
         ...item,
-        prismaId:
-          variantIdToPrismaIdInOldPriceListMap.get(item.variantId) ?? '',
+        id:
+          variantIdToPrismaIdInOldPriceListMap.get(item.shopifyVariantId) ?? '',
       };
     });
 
@@ -245,25 +263,25 @@ async function updateAllPriceListInformationAction(
       priceListId,
     });
     const { settings, products, partnerships } = data;
-    const productIds = products.map(({ id }) => id);
-    const { productsToAdd, productsToRemove } = await getProductStatus(
-      priceListId,
-      productIds,
+    const shopifyProductIds = products.map(
+      ({ shopifyProductId }) => shopifyProductId,
     );
-
+    const { shopifyProductIdsToAdd, prismaProductIdsToRemove } =
+      await getProductStatus(priceListId, shopifyProductIds);
     await db.$transaction(async (tx) => {
       // variants can only be created after all the products are created because they depend on the product db's id
       await Promise.all([
-        addProductsTx(tx, sessionId, priceListId, productsToAdd, graphql),
-        deleteProductsTx(tx, priceListId, productsToRemove),
+        addProductsTx(tx, sessionId, priceListId, shopifyProductIdsToAdd),
+        deleteProductsTx(tx, priceListId, prismaProductIdsToRemove),
       ]);
+
       const { variantsToAdd, prismaIdsToRemoveInVariant, variantsToUpdate } =
         await getVariantStatusTx(tx, priceListId, products);
 
       await Promise.all([
         deleteVariantsTx(tx, prismaIdsToRemoveInVariant),
         updateVariantsTx(tx, variantsToUpdate),
-        addVariantsTx(tx, variantsToAdd, sessionId, graphql),
+        addVariantsTx(tx, variantsToAdd),
         updatePriceListSettingsTx(tx, sessionId, priceListId, settings),
         updatePartnershipsInPriceListTx(tx, priceListId, partnerships),
       ]);
