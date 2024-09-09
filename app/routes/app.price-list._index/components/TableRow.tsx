@@ -3,6 +3,7 @@ import type { PriceListTableInfoProps } from '../types';
 import { useLocation, useNavigate } from '@remix-run/react';
 import { convertToTitleCase } from '~/routes/util';
 import { Badge, IndexTable, Text } from '@shopify/polaris';
+import { PRICE_LIST_PRICING_STRATEGY } from '~/constants';
 
 type RowProps = {
   data: PriceListTableInfoProps;
@@ -28,9 +29,10 @@ const TableRow: FC<RowProps> = ({ data, index, selected }) => {
     navigate(`${location.pathname}/${id}`);
   }
 
-  const marginText = margin
-    ? `${convertToTitleCase(pricingStrategy)} (${margin}%)`
-    : convertToTitleCase(pricingStrategy);
+  const marginText =
+    pricingStrategy === PRICE_LIST_PRICING_STRATEGY.MARGIN
+      ? `${convertToTitleCase(pricingStrategy)} (${margin}%)`
+      : convertToTitleCase(pricingStrategy);
 
   return (
     <IndexTable.Row

@@ -10,19 +10,18 @@ export type ProductCard = {
   onlineStoreUrl: string | null;
   variants: VariantProductCard[];
   brandName: string;
-  priceListId: string;
 };
 
 export type ProductCardJSON = Omit<ProductCard, 'createdAt'> & {
   createdAt: string;
 };
 
-type VariantProductCard = {
+export type VariantProductCard = {
   id: string;
   shopifyVariantId: string;
   productId: string;
   shopifyProductId: string;
-  retailPrice: string | null;
+  retailPrice: string;
   retailerPayment: string | null;
   supplierProfit: string | null;
 };
