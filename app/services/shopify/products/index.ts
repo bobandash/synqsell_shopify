@@ -152,43 +152,6 @@ function convertProductInfoQueryToMatchPrismaModel(
   });
 }
 
-export const getRelevantProductInformationForPrisma = async (
-  productIds: string[],
-  sessionId: string,
-  priceListId: string,
-  graphql: GraphQL,
-) => {
-  const queryStr = getQueryStr(productIds);
-  const numProducts = productIds.length;
-  try {
-    const response = await graphql(PRODUCT_QUERY, {
-      variables: {
-        query: queryStr,
-        first: numProducts,
-      },
-    });
-    const { data } = await response.json();
-    if (!data) {
-      return null;
-    }
-
-    const prismaDataFmt = convertProductInfoQueryToMatchPrismaModel(
-      data,
-      priceListId,
-    );
-    return prismaDataFmt;
-
-    // clean up data to submit to create product model
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to get relevant product information from product ids.',
-      getRelevantProductInformationForPrisma,
-      { productIds, sessionId },
-    );
-  }
-};
-
 // https://shopify.dev/docs/api/admin-graphql/2024-07/input-objects/ProductInput
 // helper functions for creating product with variants and image
 export async function createProduct(

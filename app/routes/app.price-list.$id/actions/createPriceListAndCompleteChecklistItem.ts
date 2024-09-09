@@ -2,12 +2,7 @@ import db from '~/db.server';
 import { updateChecklistStatusTx } from '~/services/models/checklistStatus';
 import { CHECKLIST_ITEM_KEYS } from '~/constants';
 import { errorHandler } from '~/services/util';
-import type { GraphQL } from '~/types';
-import {
-  addProductsTx,
-  getMapShopifyProductIdToPrismaIdTx,
-} from '~/services/models/product';
-import { addVariantsTx } from '~/services/helper/variants';
+import { addProductsTx } from '~/services/models/product';
 import { redirect } from '@remix-run/node';
 import type { PriceListActionData } from '../types';
 import type { Prisma } from '@prisma/client';
@@ -16,6 +11,7 @@ import {
   priceListDataSchema,
 } from './schemas';
 import { updatePartnershipsInPriceListTx } from './util';
+import { addVariantsTx } from '~/services/models/variants';
 
 export async function createPriceListTx(
   tx: Prisma.TransactionClient,
@@ -23,7 +19,6 @@ export async function createPriceListTx(
   sessionId: string,
 ) {
   try {
-    await priceListDataSchema.validate(data);
     await noMoreThanOneGeneralPriceListSchema.validate({
       sessionId,
       isGeneral: data.settings.isGeneral,
@@ -66,11 +61,13 @@ export async function createPriceListTx(
 async function createPriceListAndCompleteChecklistItemAction(
   data: PriceListActionData,
   sessionId: string,
-  graphql: GraphQL,
 ) {
-  const { products, partnerships } = data;
-  const productIdsToAdd = products.map((product) => product.id);
   try {
+    await priceListDataSchema.validate(data);
+    const { products, partnerships } = data;
+    const shopifyProductIdsToAdd = products.map(
+      (product) => product.shopifyProductId,
+    );
     const newPriceList = await db.$transaction(async (tx) => {
       await updateChecklistStatusTx(
         tx,
@@ -80,29 +77,22 @@ async function createPriceListAndCompleteChecklistItemAction(
       );
       const newPriceList = await createPriceListTx(tx, data, sessionId);
       const priceListId = newPriceList.id;
-      await addProductsTx(tx, sessionId, priceListId, productIdsToAdd, graphql);
       await updatePartnershipsInPriceListTx(tx, priceListId, partnerships);
-
-      // logic for adding variants
-      const mapShopifyProductIdToPrismaId =
-        await getMapShopifyProductIdToPrismaIdTx(
-          tx,
-          productIdsToAdd,
-          priceListId,
-        );
-      const variantsToAdd = products.flatMap(({ variants, id }) =>
-        variants.map((variant) => {
-          return {
-            ...variant,
-            prismaProductId: mapShopifyProductIdToPrismaId.get(id) ?? '',
-            variantId: variant.id,
-          };
-        }),
+      const newProducts = await addProductsTx(
+        tx,
+        sessionId,
+        priceListId,
+        shopifyProductIdsToAdd,
       );
-      await addVariantsTx(tx, variantsToAdd, sessionId, graphql);
+      const variantsToAdd = products.flatMap(({ variants }, index) =>
+        variants.map((variant) => ({
+          ...variant,
+          productId: newProducts[index].id,
+        })),
+      );
+      await addVariantsTx(tx, variantsToAdd);
       return newPriceList;
     });
-
     return redirect(`/app/price-list/${newPriceList.id}?referrer=new`);
   } catch (error) {
     throw errorHandler(

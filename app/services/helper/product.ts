@@ -40,8 +40,3 @@ export async function createEntireProductShopify(
     );
   }
 }
-
-
-export async function storeCreatedProductInPrisma(product, newProductId, newImageIds){
-  
-}

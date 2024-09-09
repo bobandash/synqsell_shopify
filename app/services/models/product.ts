@@ -1,7 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import { errorHandler } from '../util';
 import type { GraphQL } from '~/types';
-import { getRelevantProductInformationForPrisma } from '../shopify/products';
 import db from '~/db.server';
 
 export async function hasProduct(id: string) {
@@ -55,23 +54,16 @@ export async function addProductsTx(
   tx: Prisma.TransactionClient,
   sessionId: string,
   priceListId: string,
-  productIdsToAdd: string[],
-  graphql: GraphQL,
+  shopifyProductIdsToAdd: string[],
 ) {
   try {
-    const productsFmt = await getRelevantProductInformationForPrisma(
-      productIdsToAdd,
-      sessionId,
-      priceListId,
-      graphql,
-    );
-    if (!productsFmt) {
-      return null;
-    }
     const newProducts = await Promise.all(
-      productsFmt.map((product) =>
+      shopifyProductIdsToAdd.map((shopifyProductId) =>
         tx.product.create({
-          data: product,
+          data: {
+            shopifyProductId,
+            priceListId,
+          },
         }),
       ),
     );
@@ -81,7 +73,7 @@ export async function addProductsTx(
       error,
       'Failed to add products to price list.',
       deleteProductsTx,
-      { sessionId, priceListId, productIdsToAdd },
+      { sessionId, priceListId, shopifyProductIdsToAdd },
     );
   }
 }

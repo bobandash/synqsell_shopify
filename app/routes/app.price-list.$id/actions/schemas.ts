@@ -40,22 +40,13 @@ export const priceListDataSchema = object({
   }),
   products: array().of(
     object({
-      id: string().required(),
+      shopifyProductId: string().required(),
       variants: array().of(
         object({
-          id: string().required(),
-          wholesalePrice: number().when('$settings.pricingStrategy', {
-            is: PRICE_LIST_PRICING_STRATEGY.WHOLESALE,
-            then: (schema) => schema.required(),
-            otherwise: (schema) =>
-              schema
-                .nullable()
-                .test(
-                  'is-null',
-                  'Wholesale price must be null when pricing strategy is not wholesale.',
-                  (value) => value === null,
-                ),
-          }),
+          shopifyVariantId: string().required(),
+          retailPrice: string().required(),
+          retailerPayment: string().required(),
+          supplierProfit: string().required(),
         }),
       ),
     }),

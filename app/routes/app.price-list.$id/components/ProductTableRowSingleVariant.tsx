@@ -14,9 +14,9 @@ import {
 } from '@shopify/polaris';
 import { useField } from '@shopify/react-form';
 import {
-  calculatePriceDifference,
-  calculateRetailerPaymentGivenMargin,
-} from '~/routes/util';
+  calculateRetailerPayment,
+  calculateSupplierProfitForMarginPricing,
+} from '../util';
 
 type Props = {
   variant: VariantWithPosition;
@@ -56,21 +56,22 @@ const ProductTableRowSingleVariant: FC<Props> = ({
   });
 
   const retailerPayment = useMemo(() => {
-    if (!price || variantWholesalePrice.error) {
-      return 'N/A';
-    }
-
-    if (!isWholesalePricing) {
-      return calculateRetailerPaymentGivenMargin(price, margin);
-    }
-    return calculatePriceDifference(price, variantWholesalePrice.value);
+    const hasError = !!variantWholesalePrice.error;
+    return calculateRetailerPayment({
+      isWholesalePriceList: isWholesalePricing,
+      price,
+      margin,
+      wholesalePrice: variantWholesalePrice.value,
+      hasError,
+    });
   }, [isWholesalePricing, margin, price, variantWholesalePrice]);
 
   const marginPricingProfit = useMemo(() => {
-    if (!price || isWholesalePricing) {
-      return 'N/A';
-    }
-    return calculatePriceDifference(price, retailerPayment);
+    return calculateSupplierProfitForMarginPricing({
+      price,
+      retailerPayment,
+      isWholesalePriceList: isWholesalePricing,
+    });
   }, [isWholesalePricing, price, retailerPayment]);
 
   const handleBlur = useCallback(() => {

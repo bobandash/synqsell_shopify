@@ -8,9 +8,9 @@ import type {
 import { useCallback, useMemo, type FC } from 'react';
 import { useField } from '@shopify/react-form';
 import {
-  calculatePriceDifference,
-  calculateRetailerPaymentGivenMargin,
-} from '~/routes/util';
+  calculateRetailerPayment,
+  calculateSupplierProfitForMarginPricing,
+} from '../util';
 
 type Props = {
   product: ProductPropsWithPositions;
@@ -48,20 +48,22 @@ const ProductTableNestedRow: FC<Props> = ({
   });
 
   const retailerPayment = useMemo(() => {
-    if (!isWholesalePricing) {
-      return calculateRetailerPaymentGivenMargin(price, margin);
-    }
-    if (variantWholesalePrice.error) {
-      return 'N/A';
-    }
-    return calculatePriceDifference(price, variantWholesalePrice.value);
+    const hasError = !!variantWholesalePrice.error;
+    return calculateRetailerPayment({
+      isWholesalePriceList: isWholesalePricing,
+      price,
+      margin,
+      wholesalePrice: variantWholesalePrice.value,
+      hasError,
+    });
   }, [isWholesalePricing, margin, price, variantWholesalePrice]);
 
   const marginPricingProfit = useMemo(() => {
-    if (isWholesalePricing) {
-      return 'N/A';
-    }
-    return calculatePriceDifference(price, retailerPayment);
+    return calculateSupplierProfitForMarginPricing({
+      price,
+      retailerPayment,
+      isWholesalePriceList: isWholesalePricing,
+    });
   }, [isWholesalePricing, price, retailerPayment]);
 
   const handleBlur = useCallback(() => {

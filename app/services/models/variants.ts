@@ -12,6 +12,8 @@ export type BasicVariantInfo = {
   prismaProductId: string;
 };
 
+type AddVariantProps = Omit<Prisma.VariantGetPayload<{}>, 'id'>;
+
 export type BasicVariantInfoWithPrismaId = BasicVariantInfo & {
   prismaId: string;
 };
@@ -49,6 +51,25 @@ export async function getShopifyVariantIdsInPriceListTx(
       {
         priceListId,
       },
+    );
+  }
+}
+
+export async function addVariantsTx(
+  tx: Prisma.TransactionClient,
+  variants: AddVariantProps[],
+) {
+  try {
+    const createdVariants = await tx.variant.createManyAndReturn({
+      data: variants,
+    });
+    return createdVariants;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to add variants in bulk.',
+      addVariantsTx,
+      { variants },
     );
   }
 }

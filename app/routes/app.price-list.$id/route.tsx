@@ -57,6 +57,8 @@ import { PaddedBox, ProductFilterControl } from '~/components';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { SearchIcon, XIcon } from '@shopify/polaris-icons';
 import {
+  calculatePriceDifference,
+  calculateRetailerPayment,
   getProductsFormattedWithPositions,
   getVariantIdToWholesalePrice,
 } from './util';
@@ -91,27 +93,28 @@ type LoaderDataProps = {
 // TODO: there should be an edge case I didn't consider with editing the price list and making a private into a general
 export const action = async ({ request, params }: ActionFunctionArgs) => {
   try {
-    const { session, admin } = await authenticate.admin(request);
+    const {
+      session,
+      admin: { graphql },
+    } = await authenticate.admin(request);
     const { id: sessionId } = session;
-    const { graphql } = admin;
     const formData = await request.formData();
     const { id: priceListId } = params;
     if (!priceListId) {
-      throw json('Price list id is empty', {
+      throw json('There is no price list id.', {
         status: StatusCodes.BAD_REQUEST,
       });
     }
-    const data = convertFormDataToObject(formData) as PriceListActionData;
+    const data = convertFormDataToObject(formData);
     if (priceListId === 'new') {
       return await createPriceListAndCompleteChecklistItemAction(
-        data,
+        data as PriceListActionData,
         sessionId,
-        graphql,
       );
     }
     return await updateAllPriceListInformationAction(
       priceListId,
-      data,
+      data as PriceListActionData,
       sessionId,
       graphql,
     );
@@ -365,7 +368,7 @@ const CreateEditPriceList = () => {
     onSubmit: async (fieldValues) => {
       const formattedFieldData = formatPriceListFields(fieldValues);
       const formattedProductsData = getCleanedProductDataForSubmission();
-
+      console.log(formattedProductsData);
       remixSubmit(
         {
           settings: JSON.stringify(formattedFieldData),
@@ -462,25 +465,39 @@ const CreateEditPriceList = () => {
     },
     [],
   );
-  // cleans product data before submission
-  // Default behavior: want the wholesale price to persist if the seller changes their mind on pricing strategy before refreshing / navigating the page
-  const getCleanedProductDataForSubmission = useCallback(() => {
-    return products.map(({ id, variants }) => {
-      return {
-        id,
-        variants: variants.map((variant) => {
-          return {
-            ...variant,
-            wholesalePrice:
-              fields.margin.value === PRICE_LIST_PRICING_STRATEGY.MARGIN
-                ? variant.wholesalePrice
-                : null,
-          };
-        }),
-      };
-    });
-  }, [fields, products]);
 
+  // cleans product data before submission
+  const getCleanedProductDataForSubmission = useCallback(() => {
+    return products.map(
+      ({ id: shopifyProductId, variants }) => {
+        return {
+          shopifyProductId,
+          variants: variants.map((variant) => {
+            const retailerPayment = calculateRetailerPayment({
+              isWholesalePriceList:
+                fields.pricingStrategy.value ===
+                PRICE_LIST_PRICING_STRATEGY.WHOLESALE,
+              margin: fields.margin.value,
+              wholesalePrice: variant.wholesalePrice,
+              hasError: false,
+              price: variant.price,
+            });
+            const supplierProfit = calculatePriceDifference(
+              variant.price,
+              retailerPayment,
+            );
+            return {
+              shopifyVariantId: variant.id,
+              retailPrice: variant.price,
+              retailerPayment: retailerPayment,
+              supplierProfit: supplierProfit,
+            };
+          }),
+        };
+      },
+      [fields, products],
+    );
+  }, [fields, products]);
   return (
     <Form onSubmit={submit}>
       <Layout>

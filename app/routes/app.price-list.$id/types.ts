@@ -47,11 +47,13 @@ export type Settings = {
   margin: number;
 };
 
-export type CoreProductProps = {
-  id: string;
+export type ProductCoreData = {
+  shopifyProductId: string;
   variants: {
-    wholesalePrice: number | null;
-    id: string;
+    shopifyVariantId: string;
+    retailPrice: string;
+    retailerPayment: string;
+    supplierProfit: string;
   }[];
 };
 
@@ -65,6 +67,6 @@ export type PriceListSettings = {
 
 export type PriceListActionData = {
   settings: PriceListSettings;
-  products: CoreProductProps[];
+  products: ProductCoreData[];
   partnerships: string[]; // string of ids
 };

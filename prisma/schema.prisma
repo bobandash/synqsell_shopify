@@ -37,7 +37,6 @@ model Session {
   fulfillmentService           FulfillmentService?
   supplierAccessRequest        SupplierAccessRequest?
   userProfile                  UserProfile?
-  shippingProfile              ShippingProfile?
   roles                        Role[]
   checklistStatuses            ChecklistStatus[]
   priceLists                   PriceList[]
@@ -93,6 +92,21 @@ model ChecklistStatus {
   supplierAccessRequest SupplierAccessRequest?
 }
 
+model SupplierAccessRequest {
+  id                      String          @id @default(uuid())
+  num                     Int             @default(autoincrement())
+  checklistStatusId       String          @unique
+  hasMetSalesThreshold    Boolean
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @default(now())
+  status                  String
+  sessionId               String          @unique
+  notes                   String?
+  isEligibleForNewRequest Boolean         @default(true) // This variable is just in case we reject a supplier and they are not allowed to relist on our app
+  checklistStatus         ChecklistStatus @relation(fields: [checklistStatusId], references: [id])
+  session                 Session         @relation(fields: [sessionId], references: [id])
+}
+
 model Role {
   id                 String   @id @default(uuid())
   name               String
@@ -144,151 +158,64 @@ model PriceList {
   partnerships             Partnership[]
 }
 
+model PartnershipRequest {
+  id          String      @id @default(uuid())
+  createdAt   DateTime    @default(now())
+  senderId    String
+  recipientId String
+  message     String
+  type        String // two types, retailer request and supplier request
+  status      String // can only be rejected or pending; if it is accepted already, it will just make the user into a price list retailer
+  priceLists  PriceList[]
+  sender      Session     @relation("SenderPartnershipRequest", fields: [senderId], references: [id])
+  recipient   Session     @relation("RecipientPartnershipRequest", fields: [recipientId], references: [id])
+}
+
+model Partnership {
+  id         String      @id @default(uuid())
+  createdAt  DateTime    @default(now())
+  retailerId String
+  supplierId String
+  message    String
+  priceLists PriceList[]
+  retailer   Session     @relation("RetailerPartnership", fields: [retailerId], references: [id])
+  supplier   Session     @relation("SupplierPartnership", fields: [supplierId], references: [id])
+}
+
+// Necessary fields for products, the rest can be imported by gql
 model Product {
   id               String            @id @default(uuid())
   shopifyProductId String
-  categoryId       String?
-  productType      String
-  description      String
-  descriptionHtml  String
-  status           String
-  vendor           String
-  title            String
-  variantsCount    Int               @default(1)
   priceListId      String
-  priceList        PriceList         @relation(fields: [priceListId], references: [id], onDelete: Cascade)
-  importedProducts ImportedProduct[]
-  images           Image[]
-  variants         Variant[]
   createdAt        DateTime          @default(now())
+  priceList        PriceList         @relation(fields: [priceListId], references: [id])
+  variants         Variant[]
+  importedProducts ImportedProduct[]
 }
 
-model Image {
-  id               String  @id @default(uuid())
-  productId        String
-  url              String
-  alt              String
-  mediaContentType String
-  position         Int
-  product          Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-}
-
-// Fields for variants
-// https://shopify.dev/docs/api/admin-graphql/2024-07/mutations/productVariantsBulkCreate
-// TODO: I ignored media / image for now for variants
-// TODO: create it when you add the import
-// TODO: google who pays for tax
 model Variant {
-  id                String            @id @default(uuid())
-  shopifyVariantId  String
-  compareAtPrice    String?
-  productId         String
-  inventoryPolicy   String
-  inventoryQuantity Int?
-  price             String
-  wholesalePrice    Int?
-  taxCode           String?
-  taxable           Boolean
-  barcode           String?
-  product           Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
-  inventoryItem     InventoryItem?
-  variantOptions    VariantOption[]
-  importedVariants  ImportedVariant[]
+  id               String            @id @default(uuid())
+  shopifyVariantId String
+  productId        String
+  retailPrice      String
+  retailerPayment  String
+  supplierProfit   String
+  product          Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
+  inventoryItem    InventoryItem?
+  importedVariants ImportedVariant[]
 }
-
-// Fields removed form shopify: countryHarmonizedSystemCodes
-// Fields simplified: weightUnit and weightValue
 
 model InventoryItem {
-  id                   String  @id @default(uuid())
-  countryCodeOfOrigin  String?
-  harmonizedSystemCode String?
-  weightUnit           String?
-  weightValue          Int?
-  provinceCodeOfOrigin String?
-  requiresShipping     Boolean
-  sku                  String?
-  tracked              Boolean
-  variantId            String  @unique
-  variant              Variant @relation(fields: [variantId], references: [id], onDelete: Cascade)
-}
-
-// There are some extra fields in variant option that I didn't include
-model VariantOption {
-  id        String  @id @default(uuid())
-  variantId String
-  name      String
-  value     String
-  variant   Variant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  id                     String  @id @default(uuid())
+  shopifyInventoryItemId String
+  variantId              String  @unique
+  variant                Variant @relation(fields: [variantId], references: [id], onDelete: Cascade)
 }
 
 // End models for variants
 
-// Start fields for shipping profile
-// Just for mvp, you can distribute anywhere w/ shipping zones
-model ShippingProfile {
-  id               String          @id @default(uuid())
-  shopifyProfileId String
-  name             String
-  supplierId       String          @unique
-  supplier         Session         @relation(fields: [supplierId], references: [id])
-  locationGroup    LocationGroup[]
-}
-
-model LocationGroup {
-  id                String          @id @default(uuid())
-  shopifyLocationId String
-  shippingProfileId String
-  shippingProfile   ShippingProfile @relation(fields: [shippingProfileId], references: [id])
-  zones             Zone[]
-}
-
-model Zone {
-  id               String            @id @default(uuid())
-  name             String
-  shopifyZoneId    String
-  locationGroupId  String
-  locationGroup    LocationGroup     @relation(fields: [locationGroupId], references: [id])
-  countries        Country[]
-  modelDefinitions ModelDefinition[]
-}
-
-// Note: right now, we are only implementing rate definition (charge different shipping rates per territory)
-// TODO: may need to implement other shipping methods in the future, depending on user feedback
-model ModelDefinition {
-  id             String          @id @default(uuid())
-  zoneId         String
-  zone           Zone            @relation(fields: [zoneId], references: [id])
-  rateDefinition RateDefinition?
-}
-
-model RateDefinition {
-  id                      String          @id @default(uuid())
-  shopifyRateDefinitionId String
-  priceAmount             String
-  priceCurrencyCode       String
-  modelDefinitionId       String          @unique
-  modelDefinition         ModelDefinition @relation(fields: [modelDefinitionId], references: [id])
-}
-
-model Country {
-  id                  String     @id @default(uuid())
-  code                String     @db.Char(2)
-  includeAllProvinces Boolean
-  restOfWorld         Boolean
-  zoneId              String
-  provinces           Province[]
-  zone                Zone       @relation(fields: [zoneId], references: [id])
-}
-
-model Province {
-  id        String  @id @default(uuid())
-  code      String
-  countryId String
-  country   Country @relation(fields: [countryId], references: [id])
-}
-
 // Models for imported products
+// TODO: focus on importing these
 model ImportedProduct {
   id                          String                       @id @default(uuid())
   prismaProductId             String
@@ -316,43 +243,4 @@ model ImportedProductTransaction {
   fulfilledAt       DateTime
   unitSales         Int
   importedProduct   ImportedProduct @relation(fields: [importedProductId], references: [id])
-}
-
-model SupplierAccessRequest {
-  id                      String          @id @default(uuid())
-  num                     Int             @default(autoincrement())
-  checklistStatusId       String          @unique
-  hasMetSalesThreshold    Boolean
-  createdAt               DateTime        @default(now())
-  updatedAt               DateTime        @default(now())
-  status                  String
-  sessionId               String          @unique
-  notes                   String?
-  isEligibleForNewRequest Boolean         @default(true) // This variable is just in case we reject a supplier and they are not allowed to relist on our app
-  checklistStatus         ChecklistStatus @relation(fields: [checklistStatusId], references: [id])
-  session                 Session         @relation(fields: [sessionId], references: [id])
-}
-
-model PartnershipRequest {
-  id          String      @id @default(uuid())
-  createdAt   DateTime    @default(now())
-  senderId    String
-  recipientId String
-  message     String
-  type        String // two types, retailer request and supplier request
-  status      String // can only be rejected or pending; if it is accepted already, it will just make the user into a price list retailer
-  priceLists  PriceList[]
-  sender      Session     @relation("SenderPartnershipRequest", fields: [senderId], references: [id])
-  recipient   Session     @relation("RecipientPartnershipRequest", fields: [recipientId], references: [id])
-}
-
-model Partnership {
-  id         String      @id @default(uuid())
-  createdAt  DateTime    @default(now())
-  retailerId String
-  supplierId String
-  message    String
-  priceLists PriceList[]
-  retailer   Session     @relation("RetailerPartnership", fields: [retailerId], references: [id])
-  supplier   Session     @relation("SupplierPartnership", fields: [supplierId], references: [id])
 }
