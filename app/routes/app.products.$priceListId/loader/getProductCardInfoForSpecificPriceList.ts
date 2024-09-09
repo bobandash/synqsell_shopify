@@ -3,7 +3,7 @@ import { errorHandler } from '~/services/util';
 import type { Prisma } from '@prisma/client';
 import { priceListIdSchema, sessionIdSchema } from '~/schemas/models';
 import db from '~/db.server';
-import { hasAccessToImportPriceList } from './util';
+import { getProductStatus, hasAccessToImportPriceList } from './util';
 import { getPriceList } from '~/services/models/priceList';
 import { getProfile } from '~/services/models/userProfile';
 import { getBasicProductDetailsWithAccessToken } from '~/services/shopify/products';
@@ -11,6 +11,8 @@ import { createMapIdToRestObj, getCurrencySign } from '~/routes/util';
 import type { ProductCard } from '../types';
 import { getShopAndAccessToken } from '~/services/models/session';
 import type { CurrencyCode } from '~/types/admin.types';
+import { hasPartnershipRequest } from '~/services/models/partnershipRequest';
+import { PARTNERSHIP_REQUEST_TYPE } from '~/constants';
 
 type GetPaginatedProductCardsInfoProps = {
   priceListId: string;
@@ -46,6 +48,7 @@ export async function getProductCardInfoFromPriceList(
       isReverseDirection,
       take: 16,
     });
+
     const [hasAccessToImport, priceList, supplierDetails] = await Promise.all([
       hasAccessToImportPriceList(priceListId, sessionId),
       getPriceList(priceListId),
@@ -76,6 +79,11 @@ export async function getProductCardInfoFromPriceList(
     const prismaProductIdsImportedByRetailerSet = new Set(
       prismaProductIdsImportedByRetailer,
     );
+    const partnershipRequestExists = await hasPartnershipRequest(
+      priceListId,
+      sessionId,
+      PARTNERSHIP_REQUEST_TYPE.RETAILER,
+    );
 
     // when there's no access to import, we have to hide the pricing
     const productsFormatted = products.map(
@@ -104,8 +112,11 @@ export async function getProductCardInfoFromPriceList(
           ),
           brandName: supplierDetails.brandName,
           currencySign: supplierDetails.currencySign,
-          isImported: prismaProductIdsImportedByRetailerSet.has(id),
-          hasAccessToImport: hasAccessToImport,
+          productStatus: getProductStatus(
+            prismaProductIdsImportedByRetailerSet.has(id),
+            partnershipRequestExists,
+            hasAccessToImport,
+          ),
         };
       },
     );

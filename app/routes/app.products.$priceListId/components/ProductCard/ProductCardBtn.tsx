@@ -9,7 +9,7 @@ import type { ProductCardJSON } from '../../types';
 import sharedStyles from '~/shared.module.css';
 import { Text } from '@shopify/polaris';
 import { useLocation, useSubmit } from '@remix-run/react';
-import { INTENTS } from '../../constants';
+import { INTENTS, PRODUCT_STATUS } from '../../constants';
 import type { FulfillmentService } from '../../loader';
 
 type Props = {
@@ -19,7 +19,7 @@ type Props = {
 
 const ProductCardBtn: FC<Props> = (props) => {
   const { product, fulfillmentService } = props;
-  const { isImported, hasAccessToImport } = product;
+  const { productStatus } = product;
   const remixSubmit = useSubmit();
   const { pathname } = useLocation();
 
@@ -37,7 +37,7 @@ const ProductCardBtn: FC<Props> = (props) => {
     );
   }, [product, pathname, remixSubmit, fulfillmentService]);
 
-  if (isImported) {
+  if (productStatus === PRODUCT_STATUS.IMPORTED) {
     return (
       <button
         className={`${sharedStyles['green']} ${sharedStyles['btn']} ${sharedStyles['disabled']}`}
@@ -50,7 +50,7 @@ const ProductCardBtn: FC<Props> = (props) => {
     );
   }
 
-  if (hasAccessToImport && !isImported) {
+  if (productStatus === PRODUCT_STATUS.ACCESS_NOT_IMPORTED) {
     return (
       <button
         className={`${sharedStyles['green']} ${sharedStyles['btn']}`}
@@ -63,13 +63,28 @@ const ProductCardBtn: FC<Props> = (props) => {
     );
   }
 
-  return (
-    <button className={`${sharedStyles['orange']} ${sharedStyles['btn']}`}>
-      <Text as="p" variant="bodySm" fontWeight="medium">
-        Request Price List
-      </Text>
-    </button>
-  );
+  if (productStatus === PRODUCT_STATUS.NO_ACCESS_REQUEST) {
+    return (
+      <button className={`${sharedStyles['orange']} ${sharedStyles['btn']}`}>
+        <Text as="p" variant="bodySm" fontWeight="medium">
+          Request Price List
+        </Text>
+      </button>
+    );
+  }
+
+  if (productStatus === PRODUCT_STATUS.REQUESTED_ACCESS) {
+    return (
+      <button
+        className={`${sharedStyles['orange']} ${sharedStyles['btn']} } ${sharedStyles['disabled']}`}
+        disabled={true}
+      >
+        <Text as="p" variant="bodySm" fontWeight="medium">
+          Requested Access
+        </Text>
+      </button>
+    );
+  }
 };
 
 export default ProductCardBtn;

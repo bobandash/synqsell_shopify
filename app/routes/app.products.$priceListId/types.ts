@@ -1,3 +1,5 @@
+import type { ProductStatusProps } from './constants';
+
 export type ProductCard = {
   id: string;
   priceListId: string;
@@ -11,8 +13,7 @@ export type ProductCard = {
   variants: VariantProductCard[];
   brandName: string;
   currencySign: string;
-  isImported: boolean;
-  hasAccessToImport: boolean;
+  productStatus: ProductStatusProps;
 };
 
 export type ProductCardJSON = Omit<ProductCard, 'createdAt'> & {
