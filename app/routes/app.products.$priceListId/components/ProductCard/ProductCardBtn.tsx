@@ -4,18 +4,38 @@
 // 3. imported
 // 4. approved
 
-import type { FC } from 'react';
+import { useCallback, type FC } from 'react';
 import type { ProductCardJSON } from '../../types';
 import sharedStyles from '~/shared.module.css';
 import { Text } from '@shopify/polaris';
+import { useLocation, useSubmit } from '@remix-run/react';
+import { INTENTS } from '../../constants';
+import type { FulfillmentService } from '../../loader';
 
 type Props = {
   product: ProductCardJSON;
+  fulfillmentService: FulfillmentService;
 };
 
 const ProductCardBtn: FC<Props> = (props) => {
-  const { product } = props;
+  const { product, fulfillmentService } = props;
   const { isImported, hasAccessToImport } = product;
+  const remixSubmit = useSubmit();
+  const { pathname } = useLocation();
+
+  const handleImportProduct = useCallback(() => {
+    remixSubmit(
+      {
+        productId: product.id,
+        intent: INTENTS.IMPORT_PRODUCT,
+        fulfillmentServiceId: fulfillmentService.id,
+      },
+      {
+        method: 'post',
+        action: pathname,
+      },
+    );
+  }, [product, pathname, remixSubmit, fulfillmentService]);
 
   if (isImported) {
     return (
@@ -32,7 +52,10 @@ const ProductCardBtn: FC<Props> = (props) => {
 
   if (hasAccessToImport && !isImported) {
     return (
-      <button className={`${sharedStyles['green']} ${sharedStyles['btn']}`}>
+      <button
+        className={`${sharedStyles['green']} ${sharedStyles['btn']}`}
+        onClick={handleImportProduct}
+      >
         <Text as="p" variant="bodySm" fontWeight="medium">
           Import Product
         </Text>
@@ -50,19 +73,3 @@ const ProductCardBtn: FC<Props> = (props) => {
 };
 
 export default ProductCardBtn;
-
-// TODO: add import buttons
-
-// const handleImportProduct = useCallback(() => {
-//   remixSubmit(
-//     {
-//       productId: product.id,
-//       intent: INTENTS.IMPORT_PRODUCT,
-//       fulfillmentServiceId: fulfillmentService.id,
-//     },
-//     {
-//       method: 'post',
-//       action: pathname,
-//     },
-//   );
-// }, [product, pathname, remixSubmit, fulfillmentService]);

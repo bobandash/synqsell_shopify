@@ -57,12 +57,14 @@ const ProductCard: FC<Props> = ({ product, fulfillmentService }) => {
               </div>
             </BlockStack>
             <Divider />
-
             <PricingDetails
               variant={product.variants[0]}
               currencySign={product.currencySign}
             />
-            <ProductCardBtn product={product} />
+            <ProductCardBtn
+              product={product}
+              fulfillmentService={fulfillmentService}
+            />
           </BlockStack>
         </Box>
       </BlockStack>
