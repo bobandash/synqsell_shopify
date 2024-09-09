@@ -1,3 +1,17 @@
+export const GET_VARIANTS_BASIC_INFO = `#graphql 
+  query VariantBasicInfo($query: String, $first: Int){
+    productVariants(query: $query, first: $first){
+      edges {
+        node {
+          id
+          title
+          sku
+        }
+      }
+    }
+  }
+`;
+
 export const GET_VARIANTS = `#graphql 
   query VariantInformationForPrismaQuery($query: String, $first: Int){
     productVariants(query: $query, first: $first){

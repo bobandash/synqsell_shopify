@@ -10,7 +10,12 @@ import type {
   ProductVariantsBulkCreateStrategy,
 } from '~/types/admin.types';
 import { v4 as uuidv4 } from 'uuid';
-import { CREATE_VARIANTS_BULK_MUTATION, GET_VARIANTS } from './graphql';
+import {
+  CREATE_VARIANTS_BULK_MUTATION,
+  GET_VARIANTS,
+  GET_VARIANTS_BASIC_INFO,
+} from './graphql';
+import type { VariantBasicInfoQuery } from '~/types/admin.generated';
 
 type CreateVariant = Prisma.VariantGetPayload<{
   include: {
@@ -18,6 +23,61 @@ type CreateVariant = Prisma.VariantGetPayload<{
     variantOptions: true;
   };
 }>;
+
+export type BasicVariantDetails = {
+  id: string;
+  sku: string | null;
+  title: string;
+};
+
+// helper function to flatten basic variant details
+function flattenBasicVariantDetails(data: VariantBasicInfoQuery) {
+  const flattenedData = data.productVariants.edges.map((edge) => {
+    const variant = edge.node;
+    return {
+      id: variant.id,
+      sku: variant.sku ?? null,
+      title: variant.title,
+    };
+  });
+  return flattenedData;
+}
+
+export async function getBasicVariantDetails(
+  shopifyVariantIds: string[],
+  take: number,
+  graphql: GraphQL,
+): Promise<BasicVariantDetails[]> {
+  try {
+    const queryStr = getQueryStr(shopifyVariantIds);
+    const response = await graphql(GET_VARIANTS_BASIC_INFO, {
+      variables: {
+        query: queryStr,
+        first: take,
+      },
+    });
+    const { data } = await response.json();
+    if (!data) {
+      throw getUserError({
+        defaultMessage: 'Could not fetch variant details.',
+        parentFunc: getBasicVariantDetails,
+        data: {
+          shopifyVariantIds,
+          take,
+        },
+      });
+    }
+    const flattenedData = flattenBasicVariantDetails(data);
+    return flattenedData;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to get shopify variant basic details.',
+      createVariants,
+      { shopifyVariantIds, take, graphql },
+    );
+  }
+}
 
 export async function getVariantInformation(
   variantIds: string[],

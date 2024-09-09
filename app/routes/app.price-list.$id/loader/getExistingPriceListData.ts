@@ -1,112 +1,103 @@
-import { string } from 'yup';
 import { errorHandler } from '~/services/util';
-import db from '~/db.server';
-import { getIdMappedToStoreUrl } from '~/services/shopify/products';
+import { getBasicProductDetails } from '~/services/shopify/products';
 import type { GraphQL } from '~/types';
 import { getPriceList } from '~/services/models/priceList';
 import { getPartnershipData } from './getPartnershipData';
+import { priceListIdSchema } from '~/schemas/models';
+import { getProductWithVariantsFromPriceList } from '~/services/models/product';
+import { getBasicVariantDetails } from '~/services/shopify/variants';
+import { createMapIdToRestObj, round } from '~/routes/util';
+import type { ProductPropsWithPositions } from '../types';
+import { getProductsFormattedWithPositions } from '../util';
 
-const isValidPriceListIdSchema = string()
-  .required()
-  .test(
-    'is-valid-price-list-id',
-    'Price list id is not valid',
-    async (value) => {
-      if (value === 'new') {
-        return true;
-      }
-      const priceList = await db.priceList.findFirst({
-        where: {
-          id: value,
-        },
-      });
-      if (priceList) {
-        return true;
-      }
-      return false;
-    },
-  );
-
-// fetches initial product data from loader
 async function getInitialProductData(
   priceListId: string,
-  sessionId: string,
   graphql: GraphQL,
-) {
+): Promise<ProductPropsWithPositions[]> {
   try {
-    await isValidPriceListIdSchema.validate(priceListId);
     if (priceListId === 'new') {
       return [];
     }
+    await priceListIdSchema.validate(priceListId);
+    const productsWithVariantsPrisma =
+      await getProductWithVariantsFromPriceList(priceListId);
 
-    const rawProductsData = await db.product.findMany({
-      where: {
-        priceListId,
-      },
-      include: {
-        images: true,
-        variants: {
-          include: {
-            inventoryItem: true,
-            variantOptions: true,
-          },
-        },
-      },
-    });
-    const productIds = rawProductsData.map(({ id }) => id);
-    const productIdToStoreUrl = (await getIdMappedToStoreUrl(
-      graphql,
-      sessionId,
-      productIds,
-    )) as { [key: string]: string };
+    const shopifyProductIds = productsWithVariantsPrisma.map(
+      ({ shopifyProductId }) => shopifyProductId,
+    );
+    const shopifyVariantIds = productsWithVariantsPrisma.flatMap(
+      ({ variants }) =>
+        variants.map(({ shopifyVariantId }) => shopifyVariantId),
+    );
 
-    const cleanProductsData = rawProductsData.map((product, index) => {
-      const { shopifyProductId, title, variantsCount, variants, images } =
-        product;
-      // totalVariants is deprecated in graphql but not deprecated in the admin picker
+    const [shopifyProductBasicInfo, shopifyVariantBasicInfo] =
+      await Promise.all([
+        getBasicProductDetails(
+          shopifyProductIds,
+          shopifyProductIds.length,
+          graphql,
+        ),
+        getBasicVariantDetails(
+          shopifyVariantIds,
+          shopifyVariantIds.length,
+          graphql,
+        ),
+      ]);
+
+    const shopifyIdToRestBasicInfoMap = createMapIdToRestObj(
+      shopifyProductBasicInfo,
+      'productId',
+    );
+    const variantIdToRestBasicInfoMap = createMapIdToRestObj(
+      shopifyVariantBasicInfo,
+      'id',
+    );
+
+    const productDetails = productsWithVariantsPrisma.map((product) => {
+      const productGraphQLInfo = shopifyIdToRestBasicInfoMap.get(
+        product.shopifyProductId,
+      );
+      if (!productGraphQLInfo) {
+        throw new Error('Product should have its information fetched.');
+      }
       return {
-        id: shopifyProductId,
-        title,
-        storeUrl: productIdToStoreUrl[shopifyProductId] ?? '',
-        position: index,
-        totalVariants: variantsCount,
-        images: images.map((image) => {
+        id: product.shopifyProductId,
+        title: productGraphQLInfo.title,
+        images: [
+          {
+            id: productGraphQLInfo.mediaId ?? '',
+            altText: productGraphQLInfo.mediaAlt ?? '',
+            originalSrc: productGraphQLInfo.mediaImageUrl ?? '',
+          },
+        ],
+        storeUrl: productGraphQLInfo.onlineStoreUrl,
+        totalVariants: productGraphQLInfo.variantsCount,
+        variants: product.variants.map((variant) => {
+          const variantGraphQLInfo = variantIdToRestBasicInfoMap.get(
+            variant.shopifyVariantId,
+          );
+          if (!variantGraphQLInfo) {
+            throw new Error('Variant should have its information fetched.');
+          }
+
           return {
-            id: image.id,
-            altText: image.alt,
-            originalSrc: image.url,
+            id: variant.shopifyVariantId,
+            title: variantGraphQLInfo.title,
+            price: variant.retailPrice,
+            wholesalePrice: round(Number(variant.supplierProfit), 2), // should be possible to be null
+            sku: variantGraphQLInfo.sku,
           };
         }),
-        variants: variants.map(
-          (
-            {
-              shopifyVariantId,
-              price,
-              wholesalePrice,
-              inventoryItem,
-              variantOptions,
-            },
-            index,
-          ) => {
-            const title = variantOptions.map(({ value }) => value).join(' ');
-            return {
-              id: shopifyVariantId,
-              title,
-              sku: inventoryItem?.sku ?? null,
-              price,
-              wholesalePrice,
-              position: index,
-            };
-          },
-        ),
       };
     });
 
-    return cleanProductsData;
+    const profileDetailsWithPosition =
+      getProductsFormattedWithPositions(productDetails);
+    return profileDetailsWithPosition;
   } catch (error) {
     throw errorHandler(
       error,
-      'Failed to get product data for price list form.',
+      'Failed to get product data from price list.',
       getInitialProductData,
       { priceListId },
     );
@@ -120,7 +111,7 @@ export async function getExistingPriceListData(
 ) {
   try {
     const [productsData, settingsData, partnershipsData] = await Promise.all([
-      getInitialProductData(priceListId, sessionId, graphql),
+      getInitialProductData(priceListId, graphql),
       getPriceList(priceListId),
       getPartnershipData(sessionId, priceListId),
     ]);
@@ -130,7 +121,7 @@ export async function getExistingPriceListData(
     throw errorHandler(
       error,
       'Failed to get existing price list data.',
-      getInitialProductData,
+      getExistingPriceListData,
       { priceListId },
     );
   }

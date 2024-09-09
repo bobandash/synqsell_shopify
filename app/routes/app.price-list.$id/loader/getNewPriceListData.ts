@@ -1,7 +1,7 @@
 import { PRICE_LIST_PRICING_STRATEGY } from '~/constants';
-import type { ProductPropsWithPositions } from '../types';
 import { errorHandler } from '~/services/util';
 import { getPartnershipData } from './getPartnershipData';
+import type { ProductPropsWithPositions } from '../types';
 
 export async function getNewPriceListData(sessionId: string) {
   try {

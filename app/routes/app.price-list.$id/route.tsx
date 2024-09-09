@@ -63,15 +63,14 @@ import {
   getVariantIdToWholesalePrice,
 } from './util';
 import type {
-  ProductPropsWithPositions,
   ProductProps,
   VariantWithPosition,
   Settings,
   PriceListActionData,
+  ProductPropsWithPositions,
 } from './types';
 import ProductTableRow from './components/ProductTableRow';
 import { type BulkActionsProps } from '@shopify/polaris/build/ts/src/components/BulkActions';
-
 import styles from '~/shared.module.css';
 import { userHasPriceList } from '~/services/models/priceList';
 import { getExistingPriceListData } from './loader/getExistingPriceListData';
@@ -90,7 +89,6 @@ type LoaderDataProps = {
   partnershipsData: PartnershipRowData[];
 };
 
-// TODO: there should be an edge case I didn't consider with editing the price list and making a private into a general
 export const action = async ({ request, params }: ActionFunctionArgs) => {
   try {
     const {
@@ -227,6 +225,7 @@ const CreateEditPriceList = () => {
     (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
     [],
   );
+
   const filterRetailerOptions = useCallback(
     (value: string) => {
       setRetailerSearchValue(value);
@@ -419,7 +418,7 @@ const CreateEditPriceList = () => {
       const productIds = productsSelected.map(({ id }) => id);
       const idToStoreUrl = await getIdToStoreUrl(productIds);
       const variantIdToWholesalePrice = getVariantIdToWholesalePrice(products);
-      // only get the relevant information needed to render the UI, to create a product using a graphQL mutation is a lot harder
+      // only get the relevant information needed to render the UI
       const productsFormatted: ProductProps[] = productsSelected.map(
         ({ id, title, images, variants, totalVariants }) => {
           return {

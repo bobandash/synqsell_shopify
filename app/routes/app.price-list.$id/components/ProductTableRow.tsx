@@ -20,7 +20,6 @@ type ProductTableRowProps = {
   updateProductWholesalePrice: UpdateProductWholesalePrice;
 };
 
-// !!! TODO: figure out how to tell the currency
 const ProductTableRow: FC<ProductTableRowProps> = (props) => {
   const {
     product,

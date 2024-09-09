@@ -1,7 +1,12 @@
 import type { Prisma } from '@prisma/client';
 import { errorHandler } from '../util';
-import type { GraphQL } from '~/types';
 import db from '~/db.server';
+
+type ProductWithVariants = Prisma.ProductGetPayload<{
+  include: {
+    variants: true;
+  };
+}>;
 
 export async function hasProduct(id: string) {
   try {
@@ -74,6 +79,29 @@ export async function addProductsTx(
       'Failed to add products to price list.',
       deleteProductsTx,
       { sessionId, priceListId, shopifyProductIdsToAdd },
+    );
+  }
+}
+
+export async function getProductWithVariantsFromPriceList(
+  priceListId: string,
+): Promise<ProductWithVariants[]> {
+  try {
+    const products = await db.product.findMany({
+      where: {
+        priceListId,
+      },
+      include: {
+        variants: true,
+      },
+    });
+    return products;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to get products with variants from price list.',
+      getProductDetailsForProductCreation,
+      { priceListId },
     );
   }
 }

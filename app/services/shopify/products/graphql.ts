@@ -26,6 +26,38 @@ const IMAGE_FIELDS_FRAGMENT = `#graphql
   }
 `;
 
+// query specifically for products in price list & product card
+// renders basic info that user can view
+export const PRODUCT_BASIC_INFO_QUERY = `#graphql 
+  query ProductBasicInfo($query: String, $first: Int){
+    products(query: $query, first: $first) {
+      edges {
+        node {
+          id
+          title
+          media(first: 1) {
+            edges {
+              node {
+                id
+                alt
+                preview {
+                  image {
+                    url
+                  }
+                }
+              }
+            }
+          }
+          variantsCount {
+            count
+          }
+          onlineStoreUrl
+        }
+      }
+    }
+  }
+`;
+
 export const PRODUCT_QUERY = `#graphql
   ${MODEL_3D_FIELDS_FRAGMENT}
   ${VIDEO_FIELDS_FRAGMENT}
@@ -82,8 +114,6 @@ export const CREATE_PRODUCT_MUTATION = `#graphql
     }
   }
 `;
-
-
 
 // https://shopify.dev/docs/api/admin-graphql/2024-07/mutations/inventoryActivate
 // this actives the fulfillment center and on hand qty
