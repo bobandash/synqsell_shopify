@@ -11,6 +11,8 @@ export type ProductCard = {
   variants: VariantProductCard[];
   brandName: string;
   currencySign: string;
+  isImported: boolean;
+  hasAccessToImport: boolean;
 };
 
 export type ProductCardJSON = Omit<ProductCard, 'createdAt'> & {

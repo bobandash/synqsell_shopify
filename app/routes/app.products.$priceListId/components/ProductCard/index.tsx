@@ -13,6 +13,7 @@ import type { FulfillmentService } from '@prisma/client';
 import type { ProductCardJSON } from '../../types';
 import PricingDetails from './PricingDetails';
 import type { FC } from 'react';
+import ProductCardBtn from './ProductCardBtn';
 
 type Props = {
   product: ProductCardJSON;
@@ -56,11 +57,13 @@ const ProductCard: FC<Props> = ({ product, fulfillmentService }) => {
               </div>
             </BlockStack>
             <Divider />
+
+            <PricingDetails
+              variant={product.variants[0]}
+              currencySign={product.currencySign}
+            />
+            <ProductCardBtn product={product} />
           </BlockStack>
-          <PricingDetails
-            variant={product.variants[0]}
-            currencySign={product.currencySign}
-          />
         </Box>
       </BlockStack>
     </Card>
@@ -68,32 +71,3 @@ const ProductCard: FC<Props> = ({ product, fulfillmentService }) => {
 };
 
 export default ProductCard;
-
-// TODO: add import buttons
-// {/* <button className={`${sharedStyles['orange']} ${sharedStyles['btn']}`}>
-// <Text as="p" variant="bodySm" fontWeight="medium">
-//   Request Price List
-// </Text>
-// </button> */}
-// {/* <button
-// className={`${sharedStyles['green']} ${sharedStyles['btn']}`}
-// onClick={handleImportProduct}
-// >
-// <Text as="p" variant="bodySm" fontWeight="medium">
-//   Import Product
-// </Text>
-// </button> */}
-
-// const handleImportProduct = useCallback(() => {
-//   remixSubmit(
-//     {
-//       productId: product.id,
-//       intent: INTENTS.IMPORT_PRODUCT,
-//       fulfillmentServiceId: fulfillmentService.id,
-//     },
-//     {
-//       method: 'post',
-//       action: pathname,
-//     },
-//   );
-// }, [product, pathname, remixSubmit, fulfillmentService]);

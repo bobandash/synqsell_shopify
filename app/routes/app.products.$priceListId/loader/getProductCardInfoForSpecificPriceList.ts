@@ -34,6 +34,100 @@ type ProductCardInfoFromPriceList = {
   prevCursor: string | null;
 };
 
+export async function getProductCardInfoFromPriceList(
+  props: GetPaginatedProductCardsInfoProps,
+): Promise<ProductCardInfoFromPriceList> {
+  const { priceListId, cursor, isReverseDirection, sessionId } = props;
+  try {
+    await getProductCardsSchema.validate(props);
+    const { products, nextCursor } = await getProductsWithVariantsSorted({
+      priceListId,
+      cursor,
+      isReverseDirection,
+      take: 16,
+    });
+    const [hasAccessToImport, priceList, supplierDetails] = await Promise.all([
+      hasAccessToImportPriceList(priceListId, sessionId),
+      getPriceList(priceListId),
+      getSupplierDetails(priceListId),
+    ]);
+
+    const supplierId = priceList.supplierId;
+    const { shop, accessToken } = await getShopAndAccessToken(supplierId);
+
+    // need to fetch misc data from shopify to render
+    const shopifyProductIds = products.map(
+      ({ shopifyProductId }) => shopifyProductId,
+    );
+
+    const shopifyProductDetails = await getBasicProductDetailsWithAccessToken(
+      shopifyProductIds,
+      shopifyProductIds.length,
+      shop,
+      accessToken,
+    );
+    const mapShopifyProductIdToProductDetails = createMapIdToRestObj(
+      shopifyProductDetails,
+      'productId',
+    );
+
+    const prismaProductIdsImportedByRetailer =
+      await getImportedPrismaProductIds(sessionId, priceListId);
+    const prismaProductIdsImportedByRetailerSet = new Set(
+      prismaProductIdsImportedByRetailer,
+    );
+
+    // when there's no access to import, we have to hide the pricing
+    const productsFormatted = products.map(
+      ({ variants, shopifyProductId, id, ...rest }) => {
+        const productDetails =
+          mapShopifyProductIdToProductDetails.get(shopifyProductId);
+        if (!productDetails) {
+          throw new Error(
+            'Shopify product details is missing for product card.',
+          );
+        }
+        return {
+          id,
+          ...rest,
+          ...productDetails,
+          variants: variants.map(
+            ({ retailPrice, retailerPayment, supplierProfit, ...rest }) => {
+              return {
+                ...rest,
+                shopifyProductId,
+                retailPrice: retailPrice,
+                retailerPayment: hasAccessToImport ? retailerPayment : null,
+                supplierProfit: hasAccessToImport ? supplierProfit : null,
+              };
+            },
+          ),
+          brandName: supplierDetails.brandName,
+          currencySign: supplierDetails.currencySign,
+          isImported: prismaProductIdsImportedByRetailerSet.has(id),
+          hasAccessToImport: hasAccessToImport,
+        };
+      },
+    );
+
+    const currFirstProductIdInView = productsFormatted[0]
+      ? productsFormatted[0].id
+      : null;
+    const prevCursor = await getPrevCursor(
+      currFirstProductIdInView,
+      priceListId,
+    );
+    return { products: productsFormatted, nextCursor, prevCursor };
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to get product cards information.',
+      getProductCardInfoFromPriceList,
+      { priceListId, cursor, isReverseDirection },
+    );
+  }
+}
+
 // helper functions for retrieving product card info
 async function getProductsWithVariantsSorted(
   props: GetProductsWithVariantsProps,
@@ -120,86 +214,42 @@ async function getPrevCursor(
   return prevCursor;
 }
 
-export async function getProductCardInfoFromPriceList(
-  props: GetPaginatedProductCardsInfoProps,
-): Promise<ProductCardInfoFromPriceList> {
-  const { priceListId, cursor, isReverseDirection, sessionId } = props;
+// used to check if retailer imported the product already
+async function getImportedPrismaProductIds(
+  retailerId: string,
+  priceListId: string,
+) {
   try {
-    await getProductCardsSchema.validate(props);
-    const { products, nextCursor } = await getProductsWithVariantsSorted({
-      priceListId,
-      cursor,
-      isReverseDirection,
-      take: 16,
-    });
-    const [hasAccessToImport, priceList, supplierDetails] = await Promise.all([
-      hasAccessToImportPriceList(priceListId, sessionId),
-      getPriceList(priceListId),
-      getSupplierDetails(priceListId),
-    ]);
-
-    const supplierId = priceList.supplierId;
-    const { shop, accessToken } = await getShopAndAccessToken(supplierId);
-
-    // need to fetch misc data from shopify to render
-    const shopifyProductIds = products.map(
-      ({ shopifyProductId }) => shopifyProductId,
-    );
-
-    const shopifyProductDetails = await getBasicProductDetailsWithAccessToken(
-      shopifyProductIds,
-      shopifyProductIds.length,
-      shop,
-      accessToken,
-    );
-    const mapShopifyProductIdToProductDetails = createMapIdToRestObj(
-      shopifyProductDetails,
-      'productId',
-    );
-    // when there's no access to import, we have to hide the pricing
-    const productsFormatted = products.map(
-      ({ variants, shopifyProductId, ...rest }) => {
-        const productDetails =
-          mapShopifyProductIdToProductDetails.get(shopifyProductId);
-        if (!productDetails) {
-          throw new Error(
-            'Shopify product details is missing for product card.',
-          );
-        }
-        return {
-          ...rest,
-          ...productDetails,
-          variants: variants.map(
-            ({ retailPrice, retailerPayment, supplierProfit, ...rest }) => {
-              return {
-                ...rest,
-                shopifyProductId,
-                retailPrice: retailPrice,
-                retailerPayment: hasAccessToImport ? retailerPayment : null,
-                supplierProfit: hasAccessToImport ? supplierProfit : null,
-              };
-            },
-          ),
-          brandName: supplierDetails.brandName,
-          currencySign: supplierDetails.currencySign,
-        };
+    const products = await db.product.findMany({
+      where: {
+        priceListId,
       },
+      select: {
+        id: true,
+      },
+    });
+    const productIds = products.map(({ id }) => id);
+    const importedProducts = await db.importedProduct.findMany({
+      where: {
+        prismaProductId: {
+          in: productIds,
+        },
+        retailerId,
+      },
+      select: {
+        prismaProductId: true,
+      },
+    });
+    const prismaProductIds = importedProducts.map(
+      ({ prismaProductId }) => prismaProductId,
     );
-
-    const currFirstProductIdInView = productsFormatted[0]
-      ? productsFormatted[0].id
-      : null;
-    const prevCursor = await getPrevCursor(
-      currFirstProductIdInView,
-      priceListId,
-    );
-    return { products: productsFormatted, nextCursor, prevCursor };
+    return prismaProductIds;
   } catch (error) {
     throw errorHandler(
       error,
-      'Failed to get product cards information.',
-      getProductCardInfoFromPriceList,
-      { priceListId, cursor, isReverseDirection },
+      'Failed to get list of product ids that have been imported by the retailer.',
+      getProductsWithVariantsSorted,
+      { priceListId },
     );
   }
 }

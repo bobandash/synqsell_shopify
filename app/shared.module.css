@@ -1,3 +1,5 @@
+/* TODO: I NEED TO CREATE DISABLED COLORS */
+
 :root {
   --orange: #fb6514;
   --blue: #0066fe;
@@ -130,4 +132,9 @@ button.green > p {
 /* misc class for choice list to decrease spacing */
 .choice-list-container ul {
   gap: 0 !important;
+}
+
+/* any children take full width of container */
+.full-width-container * {
+  width: 100%;
 }
