@@ -7,9 +7,10 @@ import { hasAccessToImportPriceList } from './util';
 import { getPriceList } from '~/services/models/priceList';
 import { getProfile } from '~/services/models/userProfile';
 import { getBasicProductDetailsWithAccessToken } from '~/services/shopify/products';
-import { createMapIdToRestObj } from '~/routes/util';
+import { createMapIdToRestObj, getCurrencySign } from '~/routes/util';
 import type { ProductCard } from '../types';
 import { getShopAndAccessToken } from '~/services/models/session';
+import type { CurrencyCode } from '~/types/admin.types';
 
 type GetPaginatedProductCardsInfoProps = {
   priceListId: string;
@@ -68,23 +69,24 @@ async function getProductsWithVariantsSorted(
   }
 }
 
-async function getBrandName(priceListId: string) {
+async function getSupplierDetails(priceListId: string) {
   try {
     const priceList = await getPriceList(priceListId);
     const supplierId = priceList.supplierId;
-    const brandName = (await getProfile(supplierId)).name;
-    return brandName;
+    const profile = await getProfile(supplierId);
+    const { currencyCode, name } = profile;
+    const currencySign = getCurrencySign(currencyCode as CurrencyCode);
+    return { brandName: name, currencySign: currencySign };
   } catch (error) {
     throw errorHandler(
       error,
       'Failed to get products with variants from price list.',
-      getBrandName,
+      getSupplierDetails,
       { priceListId },
     );
   }
 }
 
-// TODO: add currency code, pretty sure this is set in profile
 const getProductCardsSchema = object({
   isReverseDirection: boolean().required(),
   priceListId: priceListIdSchema,
@@ -130,13 +132,12 @@ export async function getProductCardInfoFromPriceList(
       isReverseDirection,
       take: 16,
     });
-    const [hasAccessToImport, priceList, supplierBrandName] = await Promise.all(
-      [
-        hasAccessToImportPriceList(priceListId, sessionId),
-        getPriceList(priceListId),
-        getBrandName(priceListId),
-      ],
-    );
+    const [hasAccessToImport, priceList, supplierDetails] = await Promise.all([
+      hasAccessToImportPriceList(priceListId, sessionId),
+      getPriceList(priceListId),
+      getSupplierDetails(priceListId),
+    ]);
+
     const supplierId = priceList.supplierId;
     const { shop, accessToken } = await getShopAndAccessToken(supplierId);
 
@@ -179,7 +180,8 @@ export async function getProductCardInfoFromPriceList(
               };
             },
           ),
-          brandName: supplierBrandName,
+          brandName: supplierDetails.brandName,
+          currencySign: supplierDetails.currencySign,
         };
       },
     );

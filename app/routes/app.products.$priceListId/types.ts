@@ -10,6 +10,7 @@ export type ProductCard = {
   onlineStoreUrl: string | null;
   variants: VariantProductCard[];
   brandName: string;
+  currencySign: string;
 };
 
 export type ProductCardJSON = Omit<ProductCard, 'createdAt'> & {

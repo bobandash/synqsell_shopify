@@ -6,9 +6,10 @@ import type { VariantProductCard } from '../../types';
 
 type Props = {
   variant: VariantProductCard;
+  currencySign: string;
 };
 
-const PricingDetails: FC<Props> = ({ variant }) => {
+const PricingDetails: FC<Props> = ({ variant, currencySign }) => {
   const { retailPrice, retailerPayment, supplierProfit } = variant;
 
   if (!retailerPayment && !supplierProfit) {
@@ -16,7 +17,8 @@ const PricingDetails: FC<Props> = ({ variant }) => {
       <>
         <BlockStack gap="025">
           <Text as="p" fontWeight="medium">
-            Retail: ${retailPrice}
+            Retail: {currencySign}
+            {retailPrice}
           </Text>
           <InlineStack>
             <Text as="p" fontWeight="medium">
@@ -46,16 +48,19 @@ const PricingDetails: FC<Props> = ({ variant }) => {
     <>
       <BlockStack gap="025">
         <Text as="p" fontWeight="medium">
-          Retail: ${retailPrice}
+          Retail: {currencySign}
+          {retailPrice}
         </Text>
         <Text as="p" fontWeight="medium">
-          Cost: ${supplierProfit}
+          Cost: {currencySign}
+          {supplierProfit}
         </Text>
       </BlockStack>
       <Divider />
       <div className={`${sharedStyles['green-container']}`}>
         <Text as="p" fontWeight="bold">
-          Your Profit: ${retailerPayment}
+          Your Profit: {currencySign}
+          {retailerPayment}
         </Text>
       </div>
     </>
