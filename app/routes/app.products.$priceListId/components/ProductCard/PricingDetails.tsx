@@ -11,12 +11,12 @@ type Props = {
 const PricingDetails: FC<Props> = ({ variant }) => {
   const { retailPrice, retailerPayment, supplierProfit } = variant;
 
-  if (!retailPrice && !retailerPayment && !supplierProfit) {
+  if (!retailerPayment && !supplierProfit) {
     return (
       <>
         <BlockStack gap="025">
           <Text as="p" fontWeight="medium">
-            Retail:
+            Retail: ${retailPrice}
           </Text>
           <InlineStack>
             <Text as="p" fontWeight="medium">

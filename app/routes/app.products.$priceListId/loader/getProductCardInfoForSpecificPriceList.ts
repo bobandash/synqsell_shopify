@@ -173,7 +173,7 @@ export async function getProductCardInfoFromPriceList(
               return {
                 ...rest,
                 shopifyProductId,
-                retailPrice: hasAccessToImport ? retailPrice : null,
+                retailPrice: retailPrice,
                 retailerPayment: hasAccessToImport ? retailerPayment : null,
                 supplierProfit: hasAccessToImport ? supplierProfit : null,
               };
