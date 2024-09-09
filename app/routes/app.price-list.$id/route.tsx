@@ -91,10 +91,7 @@ type LoaderDataProps = {
 
 export const action = async ({ request, params }: ActionFunctionArgs) => {
   try {
-    const {
-      session,
-      admin: { graphql },
-    } = await authenticate.admin(request);
+    const { session } = await authenticate.admin(request);
     const { id: sessionId } = session;
     const formData = await request.formData();
     const { id: priceListId } = params;

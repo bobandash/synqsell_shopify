@@ -125,6 +125,7 @@ model UserProfile {
   logo            String?
   biography       String?
   desiredProducts String?
+  currencyCode    String           @default("USD")
   sessionId       String           @unique
   session         Session          @relation(fields: [sessionId], references: [id])
   socialMediaLink SocialMediaLink?

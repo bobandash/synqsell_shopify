@@ -1,8 +1,8 @@
 import type { GraphQL } from '~/types';
 import type { ShopAddress } from '~/types/admin.types';
-import { errorHandler } from '../util';
-import logger from '~/logger';
-import createHttpError from 'http-errors';
+import { errorHandler } from '../../util';
+import { GET_PROFILE_DEFAULTS } from './graphql';
+import getUserError from '../util/getUserError';
 
 // helper function for getProfileDefaultsShopify
 function getBillingAddressStringFmt(
@@ -24,30 +24,17 @@ function getBillingAddressStringFmt(
 // retrieves the default profile details from shopify
 export async function getProfileDefaults(sessionId: string, graphql: GraphQL) {
   try {
-    const response = await graphql(`
-      query profileQuery {
-        shop {
-          name
-          contactEmail
-          description
-          url
-          billingAddress {
-            city
-            provinceCode
-            country
-          }
-        }
-      }
-    `);
+    const response = await graphql(GET_PROFILE_DEFAULTS);
     const json = await response.json();
     const { data } = json;
     if (!data) {
-      const errorMessage =
-        'Did not receive any information from querying profile';
-      logger.error(errorMessage, {
-        sessionId,
+      throw getUserError({
+        defaultMessage: 'Could not fetch profile default values.',
+        parentFunc: getProfileDefaults,
+        data: {
+          sessionId,
+        },
       });
-      throw new createHttpError.BadRequest(errorMessage);
     }
     const { shop } = data;
     const {
@@ -56,10 +43,12 @@ export async function getProfileDefaults(sessionId: string, graphql: GraphQL) {
       description,
       url,
       billingAddress,
+      currencyCode,
     } = shop;
 
     const address = getBillingAddressStringFmt(billingAddress);
-    const website = url as string; // enforce the string type on url, graphql by default type-checks if it's a valid url
+    // enforce the string type on url, graphql by default type-checks if it's a valid url
+    const website = url as string;
     const biography = description || '';
 
     return {
@@ -68,6 +57,7 @@ export async function getProfileDefaults(sessionId: string, graphql: GraphQL) {
       biography,
       website,
       address,
+      currencyCode,
     };
   } catch (error) {
     throw errorHandler(
