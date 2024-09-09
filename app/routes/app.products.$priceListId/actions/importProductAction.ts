@@ -38,11 +38,16 @@ export async function importProductAction(
     const fulfillmentService =
       await getFulfillmentService(fulfillmentServiceId);
     const { shopifyLocationId } = fulfillmentService;
-    await createEntireProductShopify(
-      productDetails,
-      shopifyLocationId,
-      graphql,
-    );
+    const { newProductId, newImageIds, newVariantIds } =
+      await createEntireProductShopify(
+        productDetails,
+        shopifyLocationId,
+        graphql,
+      );
+
+    console.log(newProductId);
+    console.log(newImageIds);
+    console.log(newVariantIds);
     return json({ message: `Successfully imported products.` }, StatusCodes.OK);
   } catch (error) {
     throw getJSONError(error, 'Price List');

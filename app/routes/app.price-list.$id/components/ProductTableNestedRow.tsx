@@ -35,7 +35,6 @@ const ProductTableNestedRow: FC<Props> = ({
     value: wholesalePrice?.toString() ?? '',
     validates: [
       (value) => {
-        console.log(value);
         const valueFloat = parseFloat(value);
         if (valueFloat < 0) {
           return 'Must not be less than 0.';

@@ -49,6 +49,11 @@ import {
 import { getOrCreateProfile } from '~/services/helper/userProfile';
 import { uploadFile } from '~/services/aws/s3';
 import { StatusCodes } from 'http-status-codes';
+import {
+  userGetShippingProfile,
+  userHasShippingProfile,
+  type ShippingProfilePayload,
+} from '~/services/models/shippingProfile';
 
 type FormDataProps = {
   name: string;
@@ -73,13 +78,22 @@ type LoaderDataProps = {
   profile: ProfileProps;
   roles: RolePropsJSON[];
   socialMediaLinks: SocialMediaDataProps;
+  shippingProfile: ShippingProfilePayload | null;
 };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
     const { session, admin } = await authenticate.admin(request);
     const { id: sessionId } = session;
-    const hasExistingProfile = await hasProfile(sessionId);
+    const [hasExistingProfile, hasExistingShippingProfile] = await Promise.all([
+      hasProfile(sessionId),
+      userHasShippingProfile(sessionId),
+    ]);
+
+    const shippingProfile = hasExistingShippingProfile
+      ? await userGetShippingProfile(sessionId)
+      : null;
+
     const [profileWithSocialMediaLinks, roles] = await Promise.all([
       getOrCreateProfile(sessionId, admin.graphql),
       getRoles(sessionId),
@@ -88,7 +102,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       profileWithSocialMediaLinks;
 
     return json(
-      { profile, roles, socialMediaLinks },
+      { profile, roles, socialMediaLinks, shippingProfile },
       {
         status: hasExistingProfile ? 200 : 201,
       },
@@ -169,7 +183,10 @@ const Settings = () => {
     profile: profileData,
     roles: rolesData,
     socialMediaLinks: socialMediaData,
+    shippingProfile: shippingProfileData,
   } = loaderData;
+
+  console.log(shippingProfileData);
 
   const { isRetailer, isSupplier } = useRoleContext();
   const location = useLocation();
@@ -257,6 +274,15 @@ const Settings = () => {
         validates: (value) => {
           if (value && !value.startsWith('https://www.tiktok.com/@')) {
             return 'Link has to start with https://www.tiktok.com/@';
+          }
+        },
+      }),
+      // TODO: maybe need to separate the form in the future
+      shippingProfileName: useField({
+        value: shippingProfileData?.name ?? '',
+        validates: (value) => {
+          if (isSupplier && value === '') {
+            return 'Shipping profile name cannot be empty';
           }
         },
       }),
@@ -369,7 +395,7 @@ const Settings = () => {
               </Card>
             </Layout.AnnotatedSection>
             <Layout.AnnotatedSection
-              id="notifications"
+              id="preferences"
               title="Preferences"
               description="Decide your profile visibility."
             >
@@ -393,6 +419,28 @@ const Settings = () => {
                 </BlockStack>
               </Card>
             </Layout.AnnotatedSection>
+            {isSupplier && (
+              <Layout.AnnotatedSection
+                id="shipping"
+                title="Shipping Profile (Supplier)"
+                description="Determine your shipping rate for products you sell."
+              >
+                <Card>
+                  <BlockStack gap={'200'}>
+                    <Text as="h2" variant="headingSm">
+                      Shipping Profile
+                    </Text>
+                    <TextField
+                      labelHidden
+                      label="Shipping profile name"
+                      autoComplete="off"
+                      placeholder={'Enter your shipping profile name'}
+                      {...fields.shippingProfileName}
+                    />
+                  </BlockStack>
+                </Card>
+              </Layout.AnnotatedSection>
+            )}
           </Layout>
         </Box>
         <div className={styles['center-right']}>

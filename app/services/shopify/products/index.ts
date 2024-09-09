@@ -8,7 +8,7 @@ import type { Prisma } from '@prisma/client';
 import type { ProductStatus } from '~/types/admin.types';
 import getUserError from '../util/getUserError';
 
-type ProductWithVariantImagePriceList = Prisma.ProductGetPayload<{
+export type ProductWithVariantImagePriceList = Prisma.ProductGetPayload<{
   include: {
     priceList: true;
     images: true;

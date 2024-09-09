@@ -3,7 +3,7 @@
 client_id = "c2ff24913d6d89792234763f0830c676"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://url-peru-substantially-riders.trycloudflare.com"
+application_url = "https://statewide-headed-hearing-tp.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read_assigned_fulfillment_orders,read_inventory,read_locations,read_or
 
 [auth]
 redirect_urls = [
-  "https://url-peru-substantially-riders.trycloudflare.com/auth/callback",
-  "https://url-peru-substantially-riders.trycloudflare.com/auth/shopify/callback",
-  "https://url-peru-substantially-riders.trycloudflare.com/api/auth/callback"
+  "https://statewide-headed-hearing-tp.trycloudflare.com/auth/callback",
+  "https://statewide-headed-hearing-tp.trycloudflare.com/auth/shopify/callback",
+  "https://statewide-headed-hearing-tp.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]
