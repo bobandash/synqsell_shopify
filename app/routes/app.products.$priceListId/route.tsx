@@ -17,23 +17,20 @@ import {
   useParams,
 } from '@remix-run/react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import ProductCard from './components/ProductCard';
 import { ChevronLeftIcon, ChevronRightIcon } from '@shopify/polaris-icons';
 import { PaddedBox } from '~/components';
-import {
-  getPaginatedProductCardsInfo,
-  getPriceListsWithAccess,
-  type PriceListWithAccess,
-  type ProductCardData,
-  type FulfillmentService,
-} from './loader';
+import type { PriceListWithAccess, FulfillmentService } from './loader';
+import { getPriceListsWithAccessForSpecificSupplier } from './loader';
 import { hasAccessToImportPriceList } from './loader/util';
 import { userGetFulfillmentService } from '~/services/models/fulfillmentService';
 import { importProductAction, type ImportProductFormData } from './actions';
 import { INTENTS } from './constants';
+import { getProductCardInfoFromPriceList } from './loader/getProductCardInfoForSpecificPriceList';
+import type { ProductCardJSON } from './types';
+import ProductCard from './components/ProductCard';
 
 type ProductCardInfo = {
-  products: ProductCardData[];
+  products: ProductCardJSON[];
   nextCursor: string | null;
   prevCursor: string | null;
 };
@@ -47,10 +44,10 @@ type LoaderDataProps = {
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   try {
     const { priceListId } = params;
-    const admin = await authenticate.admin(request);
     const {
+      admin: { graphql },
       session: { id: sessionId },
-    } = admin;
+    } = await authenticate.admin(request);
 
     // cursor logic
     const { searchParams } = new URL(request.url);
@@ -100,15 +97,18 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
       );
     }
 
-    const [productCardInfo, priceListsWithAccess] = await Promise.all([
-      getPaginatedProductCardsInfo({
+    let productCardInfo;
+    if (priceListId) {
+      productCardInfo = await getProductCardInfoFromPriceList({
         priceListId,
         isReverseDirection,
         sessionId,
         ...(cursor && { cursor }),
-      }),
-      getPriceListsWithAccess(priceListId, sessionId),
-    ]);
+        graphql,
+      });
+    }
+    const priceListsWithAccess =
+      await getPriceListsWithAccessForSpecificSupplier(priceListId, sessionId);
     return json(
       { productCardInfo, priceListsWithAccess, fulfillmentService },
       StatusCodes.OK,
@@ -157,7 +157,7 @@ const PriceListProducts = () => {
     fulfillmentService,
   } = useLoaderData<typeof loader>() as LoaderDataProps;
 
-  const [products, setProducts] = useState(initialProducts);
+  const [products, setProducts] = useState<ProductCardJSON[]>(initialProducts);
   const [nextCursor, setNextCursor] = useState(initialNextCursor);
   const [prevCursor, setPrevCursor] = useState(initialPrevCursor);
   const [, setSearchParams] = useSearchParams();

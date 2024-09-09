@@ -67,7 +67,7 @@ async function getPrivatePriceListsWithAccessFormatted(
 }
 
 // obtains the price lists for the specific supplier we're on in the ui on that the retailer has access to
-export async function getPriceListsWithAccess(
+export async function getPriceListsWithAccessForSpecificSupplier(
   priceListId: string,
   retailerId: string,
 ) {
@@ -89,8 +89,8 @@ export async function getPriceListsWithAccess(
   } catch (error) {
     throw errorHandler(
       error,
-      'Failed to get price lists with access.',
-      getPriceListsWithAccess,
+      'Failed to get price lists with access for specific supplier.',
+      getPriceListsWithAccessForSpecificSupplier,
       { priceListId, retailerId },
     );
   }

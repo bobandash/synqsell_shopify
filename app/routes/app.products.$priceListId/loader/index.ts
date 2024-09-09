@@ -1,10 +1,5 @@
+export { type FulfillmentService } from './getProductCardInfoForSpecificPriceList';
 export {
-  getPaginatedProductCardsInfo,
-  type ProductWithImageAndVariant,
-  type ProductCardData,
-  type FulfillmentService,
-} from './getProductCardInfo';
-export {
-  getPriceListsWithAccess,
+  getPriceListsWithAccessForSpecificSupplier,
   type PriceListWithAccess,
-} from './getPriceListsWithAccess';
+} from './getPriceListsWithAccessForSpecificSupplier';

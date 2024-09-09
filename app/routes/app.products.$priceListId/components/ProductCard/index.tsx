@@ -1,5 +1,3 @@
-import { type FC } from 'react';
-import type { ProductCardData } from '../../loader/getProductCardInfo';
 import {
   BlockStack,
   Box,
@@ -11,22 +9,23 @@ import {
 } from '@shopify/polaris';
 import { ImageIcon } from '~/assets';
 import sharedStyles from '~/shared.module.css';
-import PricingDetails from './PricingDetails';
 import type { FulfillmentService } from '@prisma/client';
+import type { ProductCardJSON } from '../../types';
+import PricingDetails from './PricingDetails';
+import type { FC } from 'react';
 
 type Props = {
-  product: ProductCardData;
+  product: ProductCardJSON;
   fulfillmentService: FulfillmentService;
 };
 
-// TODO: if the product has been imported before, I need to denote that it's been imported before
 const ProductCard: FC<Props> = ({ product, fulfillmentService }) => {
-  const { images, brandName, title, priceList, variants } = product;
+  const { brandName, title, variants } = product;
   const primaryImage =
-    images.length > 0 && images[0].url
-      ? { url: images[0].url, alt: images[0].alt }
+    product.mediaImageUrl && product.mediaAlt !== null
+      ? { url: product.mediaImageUrl, alt: product.mediaAlt }
       : null;
-  const priceListUrl = `/app/products/${priceList.id}`;
+  const priceListUrl = `/app/products/${product.priceListId}`;
   const numVariants = variants.length;
   const productName = `${title}${numVariants > 1 ? ` (${numVariants} variants)` : ''}`;
 
@@ -57,11 +56,8 @@ const ProductCard: FC<Props> = ({ product, fulfillmentService }) => {
               </div>
             </BlockStack>
             <Divider />
-            <PricingDetails
-              product={product}
-              fulfillmentService={fulfillmentService}
-            />
           </BlockStack>
+          <PricingDetails variant={product.variants[0]} />
         </Box>
       </BlockStack>
     </Card>
@@ -69,3 +65,32 @@ const ProductCard: FC<Props> = ({ product, fulfillmentService }) => {
 };
 
 export default ProductCard;
+
+// TODO: add import buttons
+// {/* <button className={`${sharedStyles['orange']} ${sharedStyles['btn']}`}>
+// <Text as="p" variant="bodySm" fontWeight="medium">
+//   Request Price List
+// </Text>
+// </button> */}
+// {/* <button
+// className={`${sharedStyles['green']} ${sharedStyles['btn']}`}
+// onClick={handleImportProduct}
+// >
+// <Text as="p" variant="bodySm" fontWeight="medium">
+//   Import Product
+// </Text>
+// </button> */}
+
+// const handleImportProduct = useCallback(() => {
+//   remixSubmit(
+//     {
+//       productId: product.id,
+//       intent: INTENTS.IMPORT_PRODUCT,
+//       fulfillmentServiceId: fulfillmentService.id,
+//     },
+//     {
+//       method: 'post',
+//       action: pathname,
+//     },
+//   );
+// }, [product, pathname, remixSubmit, fulfillmentService]);

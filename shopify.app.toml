@@ -3,7 +3,7 @@
 client_id = "c2ff24913d6d89792234763f0830c676"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://consult-h-letter-entertainment.trycloudflare.com"
+application_url = "https://eau-eventually-ap-spider.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read_assigned_fulfillment_orders,read_inventory,read_locations,read_or
 
 [auth]
 redirect_urls = [
-  "https://consult-h-letter-entertainment.trycloudflare.com/auth/callback",
-  "https://consult-h-letter-entertainment.trycloudflare.com/auth/shopify/callback",
-  "https://consult-h-letter-entertainment.trycloudflare.com/api/auth/callback"
+  "https://eau-eventually-ap-spider.trycloudflare.com/auth/callback",
+  "https://eau-eventually-ap-spider.trycloudflare.com/auth/shopify/callback",
+  "https://eau-eventually-ap-spider.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]
