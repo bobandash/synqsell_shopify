@@ -48,8 +48,8 @@ async function getProductsWithVariantsSorted(
       },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], // id is to ensure consistent ordering in case product was created at same time
       take: isReverseDirection ? -1 * take : take + 1,
-      ...(cursor && { cursor: { id: cursor } }),
-      ...(cursor && { skip: 1 }),
+      ...(cursor !== undefined && { cursor: { id: cursor } }),
+      ...(cursor !== undefined && { skip: 1 }),
     });
     const hasMore = rawProductsData.length > take || isReverseDirection;
     const products =

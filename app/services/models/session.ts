@@ -29,7 +29,6 @@ export async function getShopAndAccessToken(sessionId: string) {
         id: sessionId,
       },
     });
-
     return { accessToken: session.accessToken, shop: session.shop };
   } catch (error) {
     throw errorHandler(

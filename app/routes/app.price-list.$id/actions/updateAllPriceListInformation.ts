@@ -1,5 +1,4 @@
 import db from '~/db.server';
-import type { GraphQL } from '~/types';
 import { errorHandler } from '~/services/util';
 import {
   addProductsTx,
@@ -46,11 +45,11 @@ export async function updatePriceListSettings(
       data: {
         name,
         isGeneral,
-        ...(requiresApprovalToImport && {
+        ...(requiresApprovalToImport !== undefined && {
           requiresApprovalToImport,
         }),
         pricingStrategy,
-        ...(margin && {
+        ...(margin !== undefined && {
           margin,
         }),
         supplierId: sessionId,
@@ -91,16 +90,17 @@ export async function updatePriceListSettingsTx(
       data: {
         name,
         isGeneral,
-        ...(requiresApprovalToImport && {
+        ...(requiresApprovalToImport !== undefined && {
           requiresApprovalToImport,
         }),
         pricingStrategy,
-        ...(margin && {
+        ...(margin !== undefined && {
           margin,
         }),
         supplierId: sessionId,
       },
     });
+
     return updatedPriceList;
   } catch (error) {
     throw errorHandler(
@@ -253,7 +253,6 @@ async function updateAllPriceListInformationAction(
   priceListId: string,
   data: PriceListActionData,
   sessionId: string,
-  graphql: GraphQL,
 ) {
   try {
     await priceListDataSchema.validate(data);
@@ -268,6 +267,7 @@ async function updateAllPriceListInformationAction(
     );
     const { shopifyProductIdsToAdd, prismaProductIdsToRemove } =
       await getProductStatus(priceListId, shopifyProductIds);
+
     await db.$transaction(async (tx) => {
       // variants can only be created after all the products are created because they depend on the product db's id
       await Promise.all([

@@ -114,7 +114,6 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       priceListId,
       data as PriceListActionData,
       sessionId,
-      graphql,
     );
   } catch (error) {
     if (error instanceof createHttpError.BadRequest) {

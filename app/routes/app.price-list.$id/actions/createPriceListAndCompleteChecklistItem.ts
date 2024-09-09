@@ -36,11 +36,11 @@ export async function createPriceListTx(
       data: {
         name,
         isGeneral,
-        ...(requiresApprovalToImport && {
+        ...(requiresApprovalToImport !== undefined && {
           requiresApprovalToImport,
         }),
         pricingStrategy,
-        ...(margin && {
+        ...(margin !== undefined && {
           margin,
         }),
         supplierId: sessionId,

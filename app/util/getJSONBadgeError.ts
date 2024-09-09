@@ -10,7 +10,7 @@ function getJSONBadgeError({ statusCode, message, subMessage }: Props) {
   return json({
     error: {
       message: message,
-      ...(subMessage && {
+      ...(subMessage !== undefined && {
         subMessage,
       }),
     },
