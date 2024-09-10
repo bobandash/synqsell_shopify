@@ -22,7 +22,7 @@ export async function hasSession(sessionId: string) {
   }
 }
 
-export async function getShopAndAccessToken(sessionId: string) {
+export async function getSession(sessionId: string) {
   try {
     const session = await db.session.findFirstOrThrow({
       where: {
@@ -31,11 +31,8 @@ export async function getShopAndAccessToken(sessionId: string) {
     });
     return { accessToken: session.accessToken, shop: session.shop };
   } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to get shop and access token',
-      getShopAndAccessToken,
-      { sessionId },
-    );
+    throw errorHandler(error, 'Failed to get session', getSession, {
+      sessionId,
+    });
   }
 }

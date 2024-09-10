@@ -1,11 +1,12 @@
 import fetch from 'node-fetch';
 
-async function fetchGraphQL(
+// this function is for making fetch requests to other stores
+async function fetchAndValidateGraphQLData<T>(
   shop: string,
   accessToken: string,
   query: string,
   variables: any,
-) {
+): Promise<T> {
   const url = `https://${shop}/admin/api/2024-07/graphql.json`;
   const response = await fetch(url, {
     method: 'POST',
@@ -15,8 +16,11 @@ async function fetchGraphQL(
     },
     body: JSON.stringify({ query, variables }),
   });
-
-  return response;
+  const { data } = await response.json();
+  if (!data) {
+    throw new Error('No data returned from GraphQL query');
+  }
+  return data as T;
 }
 
-export default fetchGraphQL;
+export default fetchAndValidateGraphQLData;

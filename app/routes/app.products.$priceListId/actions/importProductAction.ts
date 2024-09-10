@@ -5,13 +5,19 @@ import {
   productIdSchema,
   sessionIdSchema,
 } from '~/schemas/models';
-import { getProductDetailsForProductCreation } from '~/services/models/product';
 import type { GraphQL } from '~/types';
 import { json } from '@remix-run/node';
 import { StatusCodes } from 'http-status-codes';
 import { getJSONError } from '~/util';
+import { getAllProductDetails } from '~/services/models/product';
+import {
+  createProduct,
+  getProductAndMediaCreationInputWithAccessToken,
+} from '~/services/shopify/products';
+import { getSession } from '~/services/models/session';
+import { getPriceList } from '~/services/models/priceList';
 import { getFulfillmentService } from '~/services/models/fulfillmentService';
-import { createEntireProductShopify } from '~/services/helper/product';
+import { getProfile } from '~/services/models/userProfile';
 
 export type ImportProductFormData = InferType<typeof formDataObjectSchema>;
 
@@ -34,20 +40,32 @@ export async function importProductAction(
   try {
     await importProductActionSchema.validate({ formDataObject, sessionId });
     const { productId, fulfillmentServiceId } = formDataObject;
-    const productDetails = await getProductDetailsForProductCreation(productId);
-    const fulfillmentService =
-      await getFulfillmentService(fulfillmentServiceId);
-    const { shopifyLocationId } = fulfillmentService;
-    const { newProductId, newImageIds, newVariantIds } =
-      await createEntireProductShopify(
-        productDetails,
-        shopifyLocationId,
-        graphql,
+    const product = await getAllProductDetails(productId);
+    const priceList = await getPriceList(product.priceListId);
+    const { shop, accessToken } = await getSession(priceList.supplierId);
+    const { name: supplierName } = await getProfile(priceList.supplierId);
+
+    const shopifyProductCreationInput =
+      await getProductAndMediaCreationInputWithAccessToken(
+        product.shopifyProductId,
+        shop,
+        accessToken,
+        supplierName,
       );
 
-    console.log(newProductId);
-    console.log(newImageIds);
-    console.log(newVariantIds);
+    const newProduct = await createProduct(
+      shopifyProductCreationInput.productInputFields,
+      shopifyProductCreationInput.mediaInputFields,
+      graphql,
+    );
+
+    console.log(newProduct);
+    console.log(shopifyProductCreationInput);
+
+    const fulfillmentService =
+      await getFulfillmentService(fulfillmentServiceId);
+    console.log(product);
+    console.log(fulfillmentServiceId);
     return json({ message: `Successfully imported products.` }, StatusCodes.OK);
   } catch (error) {
     throw getJSONError(error, 'Price List');

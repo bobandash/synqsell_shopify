@@ -9,10 +9,10 @@ import { getProfile } from '~/services/models/userProfile';
 import { getBasicProductDetailsWithAccessToken } from '~/services/shopify/products';
 import { createMapIdToRestObj, getCurrencySign } from '~/routes/util';
 import type { ProductCard } from '../types';
-import { getShopAndAccessToken } from '~/services/models/session';
 import type { CurrencyCode } from '~/types/admin.types';
 import { hasPartnershipRequest } from '~/services/models/partnershipRequest';
 import { PARTNERSHIP_REQUEST_TYPE } from '~/constants';
+import { getSession } from '~/services/models/session';
 
 type GetPaginatedProductCardsInfoProps = {
   priceListId: string;
@@ -56,7 +56,7 @@ export async function getProductCardInfoFromPriceList(
     ]);
 
     const supplierId = priceList.supplierId;
-    const { shop, accessToken } = await getShopAndAccessToken(supplierId);
+    const { shop, accessToken } = await getSession(supplierId);
 
     // need to fetch misc data from shopify to render
     const shopifyProductIds = products.map(

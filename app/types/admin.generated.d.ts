@@ -60,21 +60,6 @@ export type CreateProductMediaMutationMutationVariables = AdminTypes.Exact<{
 
 export type CreateProductMediaMutationMutation = { productCreateMedia?: AdminTypes.Maybe<{ media?: AdminTypes.Maybe<Array<Pick<AdminTypes.ExternalVideo, 'id'> | Pick<AdminTypes.MediaImage, 'id'> | Pick<AdminTypes.Model3d, 'id'> | Pick<AdminTypes.Video, 'id'>>>, mediaUserErrors: Array<Pick<AdminTypes.MediaUserError, 'field' | 'message'>>, product?: AdminTypes.Maybe<Pick<AdminTypes.Product, 'id'>> }> };
 
-export type Model3dFieldsFragment = (
-  Pick<AdminTypes.Model3d, 'mediaContentType' | 'alt'>
-  & { originalSource?: AdminTypes.Maybe<Pick<AdminTypes.Model3dSource, 'url'>> }
-);
-
-export type VideoFieldsFragment = (
-  Pick<AdminTypes.Video, 'mediaContentType' | 'alt'>
-  & { originalSource?: AdminTypes.Maybe<Pick<AdminTypes.VideoSource, 'url'>> }
-);
-
-export type ImageFieldsFragment = (
-  Pick<AdminTypes.Image, 'url'>
-  & { alt: AdminTypes.Image['altText'] }
-);
-
 export type ProductBasicInfoQueryVariables = AdminTypes.Exact<{
   query?: AdminTypes.InputMaybe<AdminTypes.Scalars['String']['input']>;
   first?: AdminTypes.InputMaybe<AdminTypes.Scalars['Int']['input']>;
@@ -98,33 +83,6 @@ export type ProductBasicInfoQuery = { products: { edges: Array<{ node: (
             ) }> }, variantsCount?: AdminTypes.Maybe<Pick<AdminTypes.Count, 'count'>> }
       ) }> } };
 
-export type ProductInformationForPrismaQueryQueryVariables = AdminTypes.Exact<{
-  query?: AdminTypes.InputMaybe<AdminTypes.Scalars['String']['input']>;
-  first?: AdminTypes.InputMaybe<AdminTypes.Scalars['Int']['input']>;
-}>;
-
-
-export type ProductInformationForPrismaQueryQuery = { products: { edges: Array<{ node: (
-        Pick<AdminTypes.Product, 'id' | 'productType' | 'description' | 'descriptionHtml' | 'status' | 'vendor' | 'title'>
-        & { category?: AdminTypes.Maybe<Pick<AdminTypes.TaxonomyCategory, 'id'>>, variantsCount?: AdminTypes.Maybe<Pick<AdminTypes.Count, 'count'>>, images: { edges: Array<{ node: (
-              Pick<AdminTypes.Image, 'url'>
-              & { alt: AdminTypes.Image['altText'] }
-            ) }> }, media: { edges: Array<{ node: (
-              Pick<AdminTypes.Model3d, 'mediaContentType' | 'alt'>
-              & { originalSource?: AdminTypes.Maybe<Pick<AdminTypes.Model3dSource, 'url'>> }
-            ) | (
-              Pick<AdminTypes.Video, 'mediaContentType' | 'alt'>
-              & { originalSource?: AdminTypes.Maybe<Pick<AdminTypes.VideoSource, 'url'>> }
-            ) }> } }
-      ) }> } };
-
-export type CreateProductMutationMutationVariables = AdminTypes.Exact<{
-  input: AdminTypes.ProductInput;
-}>;
-
-
-export type CreateProductMutationMutation = { productCreate?: AdminTypes.Maybe<{ product?: AdminTypes.Maybe<Pick<AdminTypes.Product, 'id'>>, userErrors: Array<Pick<AdminTypes.UserError, 'message' | 'field'>> }> };
-
 export type ActivateInventoryItemMutationVariables = AdminTypes.Exact<{
   inventoryItemId: AdminTypes.Scalars['ID']['input'];
   locationId: AdminTypes.Scalars['ID']['input'];
@@ -136,6 +94,44 @@ export type ActivateInventoryItemMutation = { inventoryActivate?: AdminTypes.May
       Pick<AdminTypes.InventoryLevel, 'id'>
       & { quantities: Array<Pick<AdminTypes.InventoryQuantity, 'name' | 'quantity'>>, item: Pick<AdminTypes.InventoryItem, 'id'>, location: Pick<AdminTypes.Location, 'id'> }
     )> }> };
+
+export type ProductCreationInformationQueryVariables = AdminTypes.Exact<{
+  id: AdminTypes.Scalars['ID']['input'];
+}>;
+
+
+export type ProductCreationInformationQuery = { product?: AdminTypes.Maybe<(
+    Pick<AdminTypes.Product, 'id' | 'descriptionHtml' | 'productType' | 'isGiftCard' | 'requiresSellingPlan' | 'status' | 'tags' | 'title'>
+    & { category?: AdminTypes.Maybe<Pick<AdminTypes.TaxonomyCategory, 'id'>>, options: Array<(
+      Pick<AdminTypes.ProductOption, 'name' | 'position'>
+      & { optionValues: Array<Pick<AdminTypes.ProductOptionValue, 'name'>> }
+    )>, mediaCount?: AdminTypes.Maybe<Pick<AdminTypes.Count, 'count'>> }
+  )> };
+
+export type ProductMediaQueryVariables = AdminTypes.Exact<{
+  id: AdminTypes.Scalars['ID']['input'];
+  first: AdminTypes.Scalars['Int']['input'];
+}>;
+
+
+export type ProductMediaQuery = { product?: AdminTypes.Maybe<{ media: { edges: Array<{ node: Pick<AdminTypes.ExternalVideo, 'originUrl' | 'alt' | 'mediaContentType'> | (
+          Pick<AdminTypes.MediaImage, 'alt' | 'mediaContentType'>
+          & { image?: AdminTypes.Maybe<Pick<AdminTypes.Image, 'url'>> }
+        ) | (
+          Pick<AdminTypes.Model3d, 'alt' | 'mediaContentType'>
+          & { sources: Array<Pick<AdminTypes.Model3dSource, 'url'>> }
+        ) | (
+          Pick<AdminTypes.Video, 'alt' | 'mediaContentType'>
+          & { sources: Array<Pick<AdminTypes.VideoSource, 'url'>> }
+        ) }> } }> };
+
+export type ProductCreateMutationVariables = AdminTypes.Exact<{
+  input: AdminTypes.ProductInput;
+  media?: AdminTypes.InputMaybe<Array<AdminTypes.CreateMediaInput> | AdminTypes.CreateMediaInput>;
+}>;
+
+
+export type ProductCreateMutation = { productCreate?: AdminTypes.Maybe<{ product?: AdminTypes.Maybe<Pick<AdminTypes.Product, 'id'>>, userErrors: Array<Pick<AdminTypes.UserError, 'message' | 'field'>> }> };
 
 export type ProductUrlsQueryQueryVariables = AdminTypes.Exact<{
   first?: AdminTypes.InputMaybe<AdminTypes.Scalars['Int']['input']>;
@@ -190,7 +186,8 @@ export type ProductVariantsBulkCreateMutation = { productVariantsBulkCreate?: Ad
 interface GeneratedQueryTypes {
   "#graphql\n  query allFulfillmentServices {\n    shop {\n      fulfillmentServices {\n        id\n        serviceName\n        callbackUrl\n        location {\n          id\n        }\n        trackingSupport\n      }\n    }\n  }\n": {return: AllFulfillmentServicesQuery, variables: AllFulfillmentServicesQueryVariables},
   "#graphql \n  query ProductBasicInfo($query: String, $first: Int){\n    products(query: $query, first: $first) {\n      edges {\n        node {\n          id\n          title\n          media(first: 1) {\n            edges {\n              node {\n                id\n                alt\n                preview {\n                  image {\n                    url\n                  }\n                }\n              }\n            }\n          }\n          variantsCount {\n            count\n          }\n          onlineStoreUrl\n        }\n      }\n    }\n  }\n": {return: ProductBasicInfoQuery, variables: ProductBasicInfoQueryVariables},
-  "#graphql\n  #graphql\n  fragment Model3dFields on Model3d {\n    mediaContentType\n    alt\n    originalSource {\n      url\n    }\n  }\n\n  #graphql\n  fragment VideoFields on Video {\n    mediaContentType\n    alt\n    originalSource {\n      url\n    }\n  }\n\n  #graphql\n  fragment ImageFields on Image {\n    url\n    alt: altText\n  }\n\n  query ProductInformationForPrismaQuery($query: String, $first: Int) {\n    products(query: $query, first: $first) {\n      edges {\n        node {\n          id\n          category {\n            id\n          }\n          productType\n          description\n          descriptionHtml\n          status\n          vendor\n          title\n          variantsCount {\n            count\n          }\n          images(first: 10) {\n            edges {\n              node {\n                ...ImageFields\n              }\n            }\n          }\n          media(first: 10) {\n            edges {\n              node {\n                ...Model3dFields\n                ...VideoFields\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n": {return: ProductInformationForPrismaQueryQuery, variables: ProductInformationForPrismaQueryQueryVariables},
+  "#graphql\n  query ProductCreationInformation($id: ID!) {\n    product(id: $id){\n      id\n      category {\n        id\n      }\n      descriptionHtml\n      productType\n      isGiftCard\n      options {\n        name\n        position\n        optionValues {\n          name\n        }\n      }\n      requiresSellingPlan\n      status\n      tags\n      title\n      mediaCount {\n        count\n      }\n    }\n  }\n": {return: ProductCreationInformationQuery, variables: ProductCreationInformationQueryVariables},
+  "#graphql \n  query ProductMedia($id: ID!, $first: Int!) {\n    product(id: $id) {\n      media(first: $first) {\n        edges {\n          node {\n            alt\n            mediaContentType\n            ... on MediaImage {\n              image {\n                url\n              }\n            }\n            ... on Video {\n              sources {\n                url\n              }\n            }\n            ... on ExternalVideo {\n              originUrl\n            }\n            ... on Model3d {\n              sources {\n                url\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n": {return: ProductMediaQuery, variables: ProductMediaQueryVariables},
   "\n        query ProductUrlsQuery($first: Int, $query: String) {\n          products(first: $first, query: $query) {\n            edges {\n              node {\n                id\n                onlineStoreUrl\n              }\n            }\n          }\n        }\n      ": {return: ProductUrlsQueryQuery, variables: ProductUrlsQueryQueryVariables},
   "#graphql \n  query ProfileDefaults {\n    shop {\n      name\n      contactEmail\n      description\n      url\n      currencyCode\n      billingAddress {\n        city\n        provinceCode\n        country\n      }\n    }\n  }\n": {return: ProfileDefaultsQuery, variables: ProfileDefaultsQueryVariables},
   "#graphql \n  query VariantBasicInfo($query: String, $first: Int){\n    productVariants(query: $query, first: $first){\n      edges {\n        node {\n          id\n          title\n          sku\n        }\n      }\n    }\n  }\n": {return: VariantBasicInfoQuery, variables: VariantBasicInfoQueryVariables},
@@ -202,8 +199,8 @@ interface GeneratedMutationTypes {
   "#graphql\n  mutation fulfillmentServiceDelete($id: ID!) {\n    fulfillmentServiceDelete(id: $id) {\n      deletedId\n      userErrors {\n        field\n        message\n      }\n    }\n  }\n": {return: FulfillmentServiceDeleteMutation, variables: FulfillmentServiceDeleteMutationVariables},
   "#graphql\n  mutation fulfillmentServiceCreate(\n    $name: String!\n    $callbackUrl: URL!\n    $trackingSupport: Boolean!\n  ) {\n    fulfillmentServiceCreate(\n      name: $name\n      callbackUrl: $callbackUrl\n      trackingSupport: $trackingSupport\n    ) {\n      fulfillmentService {\n        id\n        serviceName\n        callbackUrl\n        location {\n          id\n        }\n        trackingSupport\n      }\n      userErrors {\n        field\n        message\n      }\n    }\n  }\n": {return: FulfillmentServiceCreateMutation, variables: FulfillmentServiceCreateMutationVariables},
   "#graphql\n  mutation createProductMediaMutation($media: [CreateMediaInput!]!, $productId: ID!) {\n    productCreateMedia(media: $media, productId: $productId) {\n      media {\n        id\n      }\n      mediaUserErrors {\n        field\n        message\n      }\n      product {\n        id\n      }\n    }\n  }\n": {return: CreateProductMediaMutationMutation, variables: CreateProductMediaMutationMutationVariables},
-  "#graphql\n  mutation createProductMutation($input: ProductInput!) {\n    productCreate(input: $input) {\n      product {\n        id\n      }\n      userErrors {\n        message\n        field\n      }\n    }\n  }\n": {return: CreateProductMutationMutation, variables: CreateProductMutationMutationVariables},
   "#graphql\n  mutation ActivateInventoryItem($inventoryItemId: ID!, $locationId: ID!, $available: Int) {\n    inventoryActivate(inventoryItemId: $inventoryItemId, locationId: $locationId, available: $available) {\n      inventoryLevel {\n        id\n        quantities(names: [\"available\"]) {\n          name\n          quantity\n        }\n        item {\n          id\n        }\n        location {\n          id\n        }\n      }\n    }\n  }\n": {return: ActivateInventoryItemMutation, variables: ActivateInventoryItemMutationVariables},
+  "#graphql \n  mutation ProductCreate($input: ProductInput!, $media: [CreateMediaInput!]) {\n    productCreate(input: $input, media: $media) {\n      product {\n        id\n      }\n      userErrors {\n        message\n        field\n      }\n    }\n  }\n": {return: ProductCreateMutation, variables: ProductCreateMutationVariables},
   "#graphql\n  mutation productVariantsBulkCreate($productId: ID!, $variants: [ProductVariantsBulkInput!]!, $strategy: ProductVariantsBulkCreateStrategy) {\n      productVariantsBulkCreate(productId: $productId, variants: $variants, strategy: $strategy) {\n        product {\n          id\n        }\n        productVariants {\n          id\n          inventoryItem {\n            id\n          }\n        }\n        userErrors {\n          field\n          message\n        }\n      }\n    }\n": {return: ProductVariantsBulkCreateMutation, variables: ProductVariantsBulkCreateMutationVariables},
 }
 declare module '@shopify/admin-api-client' {

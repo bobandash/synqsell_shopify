@@ -100,7 +100,7 @@ export async function getProductWithVariantsFromPriceList(
     throw errorHandler(
       error,
       'Failed to get products with variants from price list.',
-      getProductDetailsForProductCreation,
+      getProductWithVariantsFromPriceList,
       { priceListId },
     );
   }
@@ -132,7 +132,7 @@ export async function getMapShopifyProductIdToPrismaIdTx(
   return shopifyProductIdToPrismaId;
 }
 
-export async function getProductDetailsForProductCreation(productId: string) {
+export async function getAllProductDetails(productId: string) {
   try {
     const productDetails = await db.product.findFirstOrThrow({
       where: {
@@ -140,11 +140,9 @@ export async function getProductDetailsForProductCreation(productId: string) {
       },
       include: {
         priceList: true,
-        images: true,
         variants: {
           include: {
             inventoryItem: true,
-            variantOptions: true,
           },
         },
       },
@@ -154,7 +152,7 @@ export async function getProductDetailsForProductCreation(productId: string) {
     throw errorHandler(
       error,
       'Failed to get product details for product creation.',
-      getProductDetailsForProductCreation,
+      getAllProductDetails,
       { productId },
     );
   }
