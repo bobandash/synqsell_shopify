@@ -18,6 +18,10 @@ import { getSession } from '~/services/models/session';
 import { getPriceList } from '~/services/models/priceList';
 import { getFulfillmentService } from '~/services/models/fulfillmentService';
 import { getProfile } from '~/services/models/userProfile';
+import {
+  createVariants,
+  getVariantCreationInputWithAccessToken,
+} from '~/services/shopify/variants';
 
 export type ImportProductFormData = InferType<typeof formDataObjectSchema>;
 
@@ -42,14 +46,16 @@ export async function importProductAction(
     const { productId, fulfillmentServiceId } = formDataObject;
     const product = await getAllProductDetails(productId);
     const priceList = await getPriceList(product.priceListId);
-    const { shop, accessToken } = await getSession(priceList.supplierId);
+    const supplierSession = await getSession(priceList.supplierId);
     const { name: supplierName } = await getProfile(priceList.supplierId);
+    const fulfillmentService =
+      await getFulfillmentService(fulfillmentServiceId);
 
     const shopifyProductCreationInput =
       await getProductAndMediaCreationInputWithAccessToken(
         product.shopifyProductId,
-        shop,
-        accessToken,
+        supplierSession.shop,
+        supplierSession.accessToken,
         supplierName,
       );
 
@@ -59,11 +65,30 @@ export async function importProductAction(
       graphql,
     );
 
+    const shopifyVariantCreationInput =
+      await getVariantCreationInputWithAccessToken(
+        product.variants,
+        supplierSession,
+        supplierName,
+        fulfillmentService.shopifyLocationId,
+      );
+
+    const newVariants = await createVariants(
+      newProduct,
+      shopifyVariantCreationInput,
+      graphql,
+    );
+
+    // variants: CreateVariant[],
+    // createdShopifyProductId: string,
+    // shopifyLocationId: string,
+    // shop: string,
+    // accessToken: string,
+    // graphql: GraphQL,
+
     console.log(newProduct);
     console.log(shopifyProductCreationInput);
 
-    const fulfillmentService =
-      await getFulfillmentService(fulfillmentServiceId);
     console.log(product);
     console.log(fulfillmentServiceId);
     return json({ message: `Successfully imported products.` }, StatusCodes.OK);

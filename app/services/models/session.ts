@@ -29,7 +29,7 @@ export async function getSession(sessionId: string) {
         id: sessionId,
       },
     });
-    return { accessToken: session.accessToken, shop: session.shop };
+    return session;
   } catch (error) {
     throw errorHandler(error, 'Failed to get session', getSession, {
       sessionId,

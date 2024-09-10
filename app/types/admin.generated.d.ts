@@ -52,14 +52,6 @@ export type FulfillmentServiceCreateMutation = { fulfillmentServiceCreate?: Admi
       & { location?: AdminTypes.Maybe<Pick<AdminTypes.Location, 'id'>> }
     )>, userErrors: Array<Pick<AdminTypes.UserError, 'field' | 'message'>> }> };
 
-export type CreateProductMediaMutationMutationVariables = AdminTypes.Exact<{
-  media: Array<AdminTypes.CreateMediaInput> | AdminTypes.CreateMediaInput;
-  productId: AdminTypes.Scalars['ID']['input'];
-}>;
-
-
-export type CreateProductMediaMutationMutation = { productCreateMedia?: AdminTypes.Maybe<{ media?: AdminTypes.Maybe<Array<Pick<AdminTypes.ExternalVideo, 'id'> | Pick<AdminTypes.MediaImage, 'id'> | Pick<AdminTypes.Model3d, 'id'> | Pick<AdminTypes.Video, 'id'>>>, mediaUserErrors: Array<Pick<AdminTypes.MediaUserError, 'field' | 'message'>>, product?: AdminTypes.Maybe<Pick<AdminTypes.Product, 'id'>> }> };
-
 export type ProductBasicInfoQueryVariables = AdminTypes.Exact<{
   query?: AdminTypes.InputMaybe<AdminTypes.Scalars['String']['input']>;
   first?: AdminTypes.InputMaybe<AdminTypes.Scalars['Int']['input']>;
@@ -157,18 +149,18 @@ export type VariantBasicInfoQueryVariables = AdminTypes.Exact<{
 
 export type VariantBasicInfoQuery = { productVariants: { edges: Array<{ node: Pick<AdminTypes.ProductVariant, 'id' | 'title' | 'sku'> }> } };
 
-export type VariantInformationForPrismaQueryQueryVariables = AdminTypes.Exact<{
+export type VariantCreationInformationQueryVariables = AdminTypes.Exact<{
   query?: AdminTypes.InputMaybe<AdminTypes.Scalars['String']['input']>;
   first?: AdminTypes.InputMaybe<AdminTypes.Scalars['Int']['input']>;
 }>;
 
 
-export type VariantInformationForPrismaQueryQuery = { productVariants: { edges: Array<{ node: (
-        Pick<AdminTypes.ProductVariant, 'id' | 'barcode' | 'compareAtPrice' | 'inventoryPolicy' | 'inventoryQuantity' | 'price' | 'taxable' | 'taxCode'>
-        & { inventoryItem: (
-          Pick<AdminTypes.InventoryItem, 'countryCodeOfOrigin' | 'harmonizedSystemCode' | 'provinceCodeOfOrigin' | 'requiresShipping' | 'sku' | 'tracked'>
+export type VariantCreationInformationQuery = { productVariants: { edges: Array<{ node: (
+        Pick<AdminTypes.ProductVariant, 'id' | 'barcode' | 'compareAtPrice' | 'inventoryPolicy' | 'inventoryQuantity' | 'taxCode' | 'taxable'>
+        & { selectedOptions: Array<Pick<AdminTypes.SelectedOption, 'name' | 'value'>>, inventoryItem: (
+          Pick<AdminTypes.InventoryItem, 'countryCodeOfOrigin' | 'harmonizedSystemCode' | 'provinceCodeOfOrigin' | 'sku' | 'tracked' | 'requiresShipping'>
           & { measurement: { weight?: AdminTypes.Maybe<Pick<AdminTypes.Weight, 'unit' | 'value'>> } }
-        ), selectedOptions: Array<Pick<AdminTypes.SelectedOption, 'name' | 'value'>> }
+        ) }
       ) }> } };
 
 export type ProductVariantsBulkCreateMutationVariables = AdminTypes.Exact<{
@@ -191,14 +183,13 @@ interface GeneratedQueryTypes {
   "\n        query ProductUrlsQuery($first: Int, $query: String) {\n          products(first: $first, query: $query) {\n            edges {\n              node {\n                id\n                onlineStoreUrl\n              }\n            }\n          }\n        }\n      ": {return: ProductUrlsQueryQuery, variables: ProductUrlsQueryQueryVariables},
   "#graphql \n  query ProfileDefaults {\n    shop {\n      name\n      contactEmail\n      description\n      url\n      currencyCode\n      billingAddress {\n        city\n        provinceCode\n        country\n      }\n    }\n  }\n": {return: ProfileDefaultsQuery, variables: ProfileDefaultsQueryVariables},
   "#graphql \n  query VariantBasicInfo($query: String, $first: Int){\n    productVariants(query: $query, first: $first){\n      edges {\n        node {\n          id\n          title\n          sku\n        }\n      }\n    }\n  }\n": {return: VariantBasicInfoQuery, variables: VariantBasicInfoQueryVariables},
-  "#graphql \n  query VariantInformationForPrismaQuery($query: String, $first: Int){\n    productVariants(query: $query, first: $first){\n      edges {\n        node {\n          id\n          barcode,\n          compareAtPrice\n          inventoryItem {\n            countryCodeOfOrigin\n            harmonizedSystemCode\n            measurement {\n              weight {\n                unit\n                value\n              }\n            }\n            provinceCodeOfOrigin\n            requiresShipping\n            sku\n            tracked\n          }\n          inventoryPolicy\n          inventoryQuantity\n          price\n          taxable\n          taxCode\n          selectedOptions {\n            name\n            value\n          }\n        }\n      }\n    }\n  }\n": {return: VariantInformationForPrismaQueryQuery, variables: VariantInformationForPrismaQueryQueryVariables},
+  "#graphql \n  query variantCreationInformation($query: String, $first: Int){\n    productVariants(query: $query, first: $first){\n      edges {\n        node {\n          id\n          barcode\n          compareAtPrice\n          selectedOptions{\n            name,\n            value\n          }\n          inventoryItem {\n            countryCodeOfOrigin\n            harmonizedSystemCode\n            measurement {\n              weight {\n                unit\n                value\n              } \n            }\n            provinceCodeOfOrigin\n            sku\n            tracked\n            requiresShipping\n          }\n          inventoryPolicy\n          inventoryQuantity\n          taxCode\n          taxable\n        }\n      }\n    }\n  }\n": {return: VariantCreationInformationQuery, variables: VariantCreationInformationQueryVariables},
 }
 
 interface GeneratedMutationTypes {
   "#graphql \n  mutation createDeliveryProfile($profile: DeliveryProfileInput!) {\n  deliveryProfileCreate(profile: $profile) {\n    profile {\n      id\n      name\n      profileLocationGroups {\n        locationGroup {\n          id\n          locations(first: 5) {\n            nodes {\n              name\n              address {\n                country\n              }\n            }\n          }\n        }\n        locationGroupZones(first: 2) {\n          edges {\n            node {\n              zone {\n                id\n                name\n                countries {\n                  code {\n                    countryCode\n                  }\n                  provinces {\n                    code\n                  }\n                }\n              }\n            }\n          }\n        }\n      }\n    }\n    userErrors {\n      field\n      message\n    }\n  }\n}": {return: CreateDeliveryProfileMutation, variables: CreateDeliveryProfileMutationVariables},
   "#graphql\n  mutation fulfillmentServiceDelete($id: ID!) {\n    fulfillmentServiceDelete(id: $id) {\n      deletedId\n      userErrors {\n        field\n        message\n      }\n    }\n  }\n": {return: FulfillmentServiceDeleteMutation, variables: FulfillmentServiceDeleteMutationVariables},
   "#graphql\n  mutation fulfillmentServiceCreate(\n    $name: String!\n    $callbackUrl: URL!\n    $trackingSupport: Boolean!\n  ) {\n    fulfillmentServiceCreate(\n      name: $name\n      callbackUrl: $callbackUrl\n      trackingSupport: $trackingSupport\n    ) {\n      fulfillmentService {\n        id\n        serviceName\n        callbackUrl\n        location {\n          id\n        }\n        trackingSupport\n      }\n      userErrors {\n        field\n        message\n      }\n    }\n  }\n": {return: FulfillmentServiceCreateMutation, variables: FulfillmentServiceCreateMutationVariables},
-  "#graphql\n  mutation createProductMediaMutation($media: [CreateMediaInput!]!, $productId: ID!) {\n    productCreateMedia(media: $media, productId: $productId) {\n      media {\n        id\n      }\n      mediaUserErrors {\n        field\n        message\n      }\n      product {\n        id\n      }\n    }\n  }\n": {return: CreateProductMediaMutationMutation, variables: CreateProductMediaMutationMutationVariables},
   "#graphql\n  mutation ActivateInventoryItem($inventoryItemId: ID!, $locationId: ID!, $available: Int) {\n    inventoryActivate(inventoryItemId: $inventoryItemId, locationId: $locationId, available: $available) {\n      inventoryLevel {\n        id\n        quantities(names: [\"available\"]) {\n          name\n          quantity\n        }\n        item {\n          id\n        }\n        location {\n          id\n        }\n      }\n    }\n  }\n": {return: ActivateInventoryItemMutation, variables: ActivateInventoryItemMutationVariables},
   "#graphql \n  mutation ProductCreate($input: ProductInput!, $media: [CreateMediaInput!]) {\n    productCreate(input: $input, media: $media) {\n      product {\n        id\n      }\n      userErrors {\n        message\n        field\n      }\n    }\n  }\n": {return: ProductCreateMutation, variables: ProductCreateMutationVariables},
   "#graphql\n  mutation productVariantsBulkCreate($productId: ID!, $variants: [ProductVariantsBulkInput!]!, $strategy: ProductVariantsBulkCreateStrategy) {\n      productVariantsBulkCreate(productId: $productId, variants: $variants, strategy: $strategy) {\n        product {\n          id\n        }\n        productVariants {\n          id\n          inventoryItem {\n            id\n          }\n        }\n        userErrors {\n          field\n          message\n        }\n      }\n    }\n": {return: ProductVariantsBulkCreateMutation, variables: ProductVariantsBulkCreateMutationVariables},

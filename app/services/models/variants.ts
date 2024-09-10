@@ -1,5 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import { errorHandler } from '../util';
+import db from '~/db.server';
 
 export type BasicVariantInfoWithoutVariantId = {
   wholesalePrice: number | null;
@@ -19,6 +20,31 @@ type AddVariantProps = Omit<Prisma.VariantGetPayload<{}>, 'id'>;
 export type BasicVariantInfoWithPrismaId = BasicVariantInfo & {
   id: string;
 };
+
+export async function getProductVariantsWithInventoryItem(
+  prismaProductId: string,
+) {
+  try {
+    const variants = await db.variant.findMany({
+      where: {
+        productId: prismaProductId,
+      },
+      include: {
+        inventoryItem: true,
+      },
+    });
+    return variants;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to get variants with inventory items from product.',
+      getProductVariantsWithInventoryItem,
+      {
+        prismaProductId,
+      },
+    );
+  }
+}
 
 export async function getShopifyVariantIdsInPriceListTx(
   tx: Prisma.TransactionClient,

@@ -12,14 +12,18 @@ export const GET_VARIANTS_BASIC_INFO = `#graphql
   }
 `;
 
-export const GET_VARIANTS = `#graphql 
-  query VariantInformationForPrismaQuery($query: String, $first: Int){
+export const VARIANT_CREATION_DETAILS_BULK_QUERY = `#graphql 
+  query variantCreationInformation($query: String, $first: Int){
     productVariants(query: $query, first: $first){
       edges {
         node {
           id
-          barcode,
+          barcode
           compareAtPrice
+          selectedOptions{
+            name,
+            value
+          }
           inventoryItem {
             countryCodeOfOrigin
             harmonizedSystemCode
@@ -27,22 +31,17 @@ export const GET_VARIANTS = `#graphql
               weight {
                 unit
                 value
-              }
+              } 
             }
             provinceCodeOfOrigin
-            requiresShipping
             sku
             tracked
+            requiresShipping
           }
           inventoryPolicy
           inventoryQuantity
-          price
-          taxable
           taxCode
-          selectedOptions {
-            name
-            value
-          }
+          taxable
         }
       }
     }
@@ -50,7 +49,7 @@ export const GET_VARIANTS = `#graphql
 `;
 
 // https://shopify.dev/docs/api/admin-graphql/2024-07/mutations/productVariantsBulkCreate
-export const CREATE_VARIANTS_BULK_MUTATION = `#graphql
+export const VARIANTS_BULK_CREATION_MUTATION = `#graphql
   mutation productVariantsBulkCreate($productId: ID!, $variants: [ProductVariantsBulkInput!]!, $strategy: ProductVariantsBulkCreateStrategy) {
       productVariantsBulkCreate(productId: $productId, variants: $variants, strategy: $strategy) {
         product {

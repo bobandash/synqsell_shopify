@@ -1,28 +1,28 @@
 import type { GraphQL } from '~/types';
 import getQueryStr from '../util/getQueryStr';
-import { errorHandler } from '~/services/util';
+import { createMapIdToRestObj, errorHandler } from '~/services/util';
 import getUserError from '../util/getUserError';
 import type { Prisma } from '@prisma/client';
-import type {
-  CountryCode,
-  ProductVariantInventoryPolicy,
-  WeightUnit,
-  ProductVariantsBulkCreateStrategy,
-} from '~/types/admin.types';
-import { v4 as uuidv4 } from 'uuid';
 import {
-  CREATE_VARIANTS_BULK_MUTATION,
-  GET_VARIANTS,
   GET_VARIANTS_BASIC_INFO,
+  VARIANT_CREATION_DETAILS_BULK_QUERY,
+  VARIANTS_BULK_CREATION_MUTATION,
 } from './graphql';
-import type { VariantBasicInfoQuery } from '~/types/admin.generated';
+import type {
+  VariantCreationInformationQuery,
+  VariantBasicInfoQuery,
+  ProductVariantsBulkCreateMutation,
+} from '~/types/admin.generated';
+import { fetchAndValidateGraphQLData, mutateGraphQLAdminData } from '../util';
+import { v4 as uuid } from 'uuid';
 
-type CreateVariant = Prisma.VariantGetPayload<{
+type VariantWithInventoryAndOptions = Prisma.VariantGetPayload<{
   include: {
     inventoryItem: true;
-    variantOptions: true;
   };
 }>;
+
+type Session = Prisma.SessionGetPayload<{}>;
 
 export type BasicVariantDetails = {
   id: string;
@@ -79,135 +79,116 @@ export async function getBasicVariantDetails(
   }
 }
 
-export async function getVariantInformation(
-  variantIds: string[],
-  sessionId: string,
-  graphql: GraphQL,
+export async function getVariantCreationInputWithAccessToken(
+  variants: VariantWithInventoryAndOptions[],
+  supplierSession: Session,
+  supplierName: string,
+  shopifyLocationId: string,
 ) {
   try {
-    const queryStr = getQueryStr(variantIds);
-    const numVariants = variantIds.length;
-    const response = await graphql(GET_VARIANTS, {
-      variables: {
-        query: queryStr,
-        first: numVariants,
+    const shopifyVariantIds = variants.map(
+      ({ shopifyVariantId }) => shopifyVariantId,
+    );
+    const queryStr = getQueryStr(shopifyVariantIds);
+    const numVariants = shopifyVariantIds.length;
+    const variantShopifyData =
+      await fetchAndValidateGraphQLData<VariantCreationInformationQuery>(
+        supplierSession.shop,
+        supplierSession.accessToken,
+        VARIANT_CREATION_DETAILS_BULK_QUERY,
+        {
+          query: queryStr,
+          first: numVariants,
+        },
+      );
+
+    const shopifyVariantIdToPrismaData = createMapIdToRestObj(
+      variants,
+      'shopifyVariantId',
+    );
+    // sometimes the query field doesn't match the mutation field,
+    // so there are some fields that have to be mapped manually
+    const variantsBulkInput = variantShopifyData.productVariants.edges.map(
+      ({ node: variant }) => {
+        const prismaData = shopifyVariantIdToPrismaData.get(variant.id);
+        if (!prismaData) {
+          throw new Error(
+            'Variant exists in shopify but not in prisma database.',
+          );
+        }
+        const {
+          inventoryItem,
+          inventoryQuantity,
+          selectedOptions,
+          id,
+          ...rest
+        } = variant;
+        // for some reason, sku is a required field for variants even though documentation says otherwise
+        const sku = inventoryItem.sku
+          ? `Synqsell ${supplierName} ${inventoryItem.sku}`
+          : `Synqsell ${supplierName} ${uuid()}`;
+
+        // TODO: handle media ids
+        return {
+          ...rest,
+          inventoryItem: {
+            ...inventoryItem,
+            cost: prismaData.supplierProfit,
+            sku: sku,
+          },
+          inventoryQuantities: [
+            {
+              availableQuantity: inventoryQuantity ?? 0,
+              locationId: shopifyLocationId,
+            },
+          ],
+          optionValues: selectedOptions.map((option) => {
+            return {
+              name: option.value,
+              optionName: option.name,
+            };
+          }),
+          price: prismaData.retailPrice,
+        };
       },
-    });
-    const { data } = await response.json();
-    if (!data) {
-      throw getUserError({
-        defaultMessage: 'Data is missing from retrieving variant information.',
-        parentFunc: getVariantInformation,
-        data: { variantIds, sessionId },
-      });
-    }
-    return data;
+    );
+
+    return variantsBulkInput;
   } catch (error) {
     throw errorHandler(
       error,
       'Failed to get relevant variant information from variant ids.',
-      getVariantInformation,
-      { variantIds, sessionId },
+      getVariantCreationInputWithAccessToken,
+      { variants },
     );
   }
 }
 
 export async function createVariants(
-  variants: CreateVariant[],
-  newProductId: string,
-  shopifyLocationId: string,
+  shopifyProductId: string,
+  shopifyProductCreationInput: any,
   graphql: GraphQL,
 ) {
   try {
-    const variantInput = variants.map((variant) => {
-      const { inventoryItem: inventoryItemValues } = variant;
-      const measurement =
-        inventoryItemValues?.weightUnit && inventoryItemValues?.weightValue
-          ? {
-              weight: {
-                unit: inventoryItemValues.weightUnit as WeightUnit,
-                value: inventoryItemValues.weightValue,
-              },
-            }
-          : undefined;
+    const data =
+      await mutateGraphQLAdminData<ProductVariantsBulkCreateMutation>(
+        graphql,
+        VARIANTS_BULK_CREATION_MUTATION,
+        {
+          productId: shopifyProductId,
+          variants: shopifyProductCreationInput,
+          strategy: 'REMOVE_STANDALONE_VARIANT',
+        },
+        'Failed to create product on Shopify',
+      );
 
-      const inventoryItem = inventoryItemValues
-        ? {
-            countryCodeOfOrigin:
-              (inventoryItemValues.countryCodeOfOrigin as CountryCode) ??
-              undefined,
-            harmonizedSystemCode: inventoryItemValues.harmonizedSystemCode,
-            measurement,
-            provinceCodeOfOrigin: inventoryItemValues.provinceCodeOfOrigin,
-            requiresShipping: inventoryItemValues.requiresShipping,
-            sku: inventoryItemValues.sku
-              ? `Synqsell-${inventoryItemValues.sku}`
-              : `Synqsell-${uuidv4()}`,
-            tracked: inventoryItemValues.tracked,
-          }
-        : undefined;
-
-      return {
-        barcode: variant.barcode,
-        compareAtPrice: variant.compareAtPrice,
-        inventoryItem,
-        inventoryPolicy:
-          variant.inventoryPolicy as ProductVariantInventoryPolicy,
-        inventoryQuantities: [
-          {
-            availableQuantity: variant.inventoryQuantity ?? 0,
-            locationId: shopifyLocationId,
-          },
-        ],
-        optionValues: variant.variantOptions.map((option) => {
-          return {
-            name: option.value,
-            optionName: option.name,
-          };
-        }),
-        price: variant.price,
-        taxCode: variant.taxCode,
-        taxable: variant.taxable,
-      };
-    });
-
-    const createVariantResponse = await graphql(CREATE_VARIANTS_BULK_MUTATION, {
-      variables: {
-        productId: newProductId,
-        variants: variantInput,
-        strategy:
-          'REMOVE_STANDALONE_VARIANT' as ProductVariantsBulkCreateStrategy.RemoveStandaloneVariant,
-      },
-    });
-    const { data } = await createVariantResponse.json();
-    const productVariantsBulkCreate = data?.productVariantsBulkCreate;
-
-    if (
-      !productVariantsBulkCreate ||
-      !productVariantsBulkCreate.productVariants ||
-      (productVariantsBulkCreate.userErrors &&
-        productVariantsBulkCreate.userErrors.length > 0)
-    ) {
-      throw getUserError({
-        defaultMessage:
-          'Data is missing from deleting fulfillment service in Shopify.',
-        userErrors: productVariantsBulkCreate?.userErrors,
-        parentFunc: createVariants,
-        data: { variants, newProductId, shopifyLocationId },
-      });
-    }
-
-    const newVariantIds = productVariantsBulkCreate.productVariants.map(
-      ({ id }) => id,
-    );
-
-    return newVariantIds;
+    return data;
   } catch (error) {
     throw errorHandler(
       error,
       'Failed to create variants on Shopify.',
       createVariants,
-      { variants, newProductId, shopifyLocationId },
+      { shopifyProductCreationInput },
     );
   }
 }
