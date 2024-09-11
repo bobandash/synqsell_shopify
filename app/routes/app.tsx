@@ -18,32 +18,6 @@ export const links = () => [{ rel: 'stylesheet', href: polarisStyles }];
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
     const { session } = await authenticate.admin(request);
-    // const response = await fetch(
-    //   'https://quickstart-3fe7f8c3.myshopify.com/admin/api/2024-07/graphql.json',
-    //   {
-    //     method: 'POST',
-    //     headers: {
-    //       'Content-Type': 'application/json',
-    //       'X-Shopify-Access-Token': 'shpua_c00af32ff75610e5abe968cf07dfc2c9',
-    //     },
-    //     body: JSON.stringify({
-    //       query: `{
-    //       products(first: 5) {
-    //         edges {
-    //           node {
-    //             id
-    //             handle
-    //           }
-    //         }
-    //         pageInfo {
-    //           hasNextPage
-    //         }
-    //       }
-    //     }`,
-    //     }),
-    //   },
-    // );
-
     const { id: sessionId } = session;
     const roles = await getRoles(sessionId);
     const roleNames = roles.map((role) => role.name);
@@ -69,7 +43,6 @@ export default function App() {
             Home
           </Link>
           {isAdmin && <Link to="/app/admin">Admin</Link>}
-          {/* !!! TODO: Deny retailer access to supplier network */}
           {isRetailer && (
             <Link to="/app/retailer-network">Retailer Network</Link>
           )}

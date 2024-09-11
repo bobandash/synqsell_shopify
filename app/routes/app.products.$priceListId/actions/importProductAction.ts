@@ -112,7 +112,7 @@ export async function addImportedProductToDatabaseTx(
 
 // !!! TODO: handle images in variants, not that important in MVP though
 // !!! TODO: honestly this isn't a big issue, but in the future, figure out how to deal with rollbacks using a different service
-// !!! TODO: refactor this function better
+// !!! TODO: refactor this function later
 export async function importProductAction(
   formDataObject: ImportProductFormData,
   sessionId: string,

@@ -3,7 +3,7 @@
 client_id = "c2ff24913d6d89792234763f0830c676"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://corpus-rather-riding-sum.trycloudflare.com"
+application_url = "https://carefully-maintains-restricted-trademarks.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,21 +17,17 @@ scopes = "read_assigned_fulfillment_orders,read_inventory,read_locations,read_or
 
 [auth]
 redirect_urls = [
-  "https://corpus-rather-riding-sum.trycloudflare.com/auth/callback",
-  "https://corpus-rather-riding-sum.trycloudflare.com/auth/shopify/callback",
-  "https://corpus-rather-riding-sum.trycloudflare.com/api/auth/callback"
+  "https://carefully-maintains-restricted-trademarks.trycloudflare.com/auth/callback",
+  "https://carefully-maintains-restricted-trademarks.trycloudflare.com/auth/shopify/callback",
+  "https://carefully-maintains-restricted-trademarks.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]
 api_version = "2024-07"
 
   [[webhooks.subscriptions]]
-  topics = [
-  "app/uninstalled",
-  "bulk_operations/finish",
-  "products/update"
-]
-  uri = "/webhooks"
+  topics = [ "app/uninstalled", "products/delete", "products/update" ]
+  uri = "arn:aws:events:us-east-2::event-source/aws.partner/shopify.com/144025485313/SynqSell"
 
 [pos]
 embedded = false

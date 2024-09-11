@@ -1,7 +1,6 @@
 import type { ActionFunctionArgs } from '@remix-run/node';
 import { authenticate } from '../shopify.server';
 
-// TODO: switch to cloud
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { topic, admin, payload } = await authenticate.webhook(request);
 

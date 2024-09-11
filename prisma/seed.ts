@@ -1,19 +1,22 @@
 import { PrismaClient } from '@prisma/client'
 import { CHECKLIST_ITEM_KEYS, ROLES } from '~/constants';
 import { addRole } from '~/services/models/roles';
+import { hasSession } from '~/services/models/session';
 const db = new PrismaClient()
 
+// npx prisma db push
 // npx prisma db seed - to run seed for database
 
 async function main() {
   // create checklist tables
   const checklistTables = await db.checklistTable.findMany();
+  const adminSessionExists = await hasSession(process.env.ADMIN_SESSION_ID ?? "")
   const hasAdmin = await db.role.findFirst({
     where: {
       name: ROLES.ADMIN
     }
   })
-  if(!hasAdmin && process.env.ADMIN_SESSION_ID){
+  if(adminSessionExists && !hasAdmin && process.env.ADMIN_SESSION_ID){
     addRole(process.env.ADMIN_SESSION_ID, ROLES.ADMIN)
   }
 
