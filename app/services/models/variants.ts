@@ -15,7 +15,11 @@ export type BasicVariantInfo = {
   supplierProfit: string;
 };
 
-type AddVariantProps = Omit<Prisma.VariantGetPayload<{}>, 'id'>;
+type AddVariantProps = Omit<Prisma.VariantGetPayload<{}>, 'id'> & {
+  inventoryItem: {
+    shopifyInventoryItemId: string;
+  };
+};
 
 export type BasicVariantInfoWithPrismaId = BasicVariantInfo & {
   id: string;
@@ -87,9 +91,26 @@ export async function addVariantsTx(
   tx: Prisma.TransactionClient,
   variants: AddVariantProps[],
 ) {
+  // variants always have a one to one relationship with inventoryItemId, so it's better to just include it
   try {
+    // prisma does not support nested writes with createMany
+    const variantsData = variants.map(({ inventoryItem, ...rest }) => {
+      return {
+        ...rest,
+      };
+    });
     const createdVariants = await tx.variant.createManyAndReturn({
-      data: variants,
+      data: variantsData,
+    });
+
+    const inventoryItemData = variants.map(({ inventoryItem }, index) => {
+      return {
+        shopifyInventoryItemId: inventoryItem.shopifyInventoryItemId,
+        variantId: createdVariants[index].id,
+      };
+    });
+    await tx.inventoryItem.createMany({
+      data: inventoryItemData,
     });
     return createdVariants;
   } catch (error) {

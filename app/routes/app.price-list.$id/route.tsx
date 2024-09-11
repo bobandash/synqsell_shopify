@@ -431,7 +431,7 @@ const CreateEditPriceList = () => {
                 price: price ?? null,
                 wholesalePrice: variantIdToWholesalePrice.get(id ?? '') ?? null,
                 inventoryItem: {
-                  shopifyInventoryItemId: inventoryItem?.id ?? '',
+                  id: inventoryItem?.id ?? '',
                 },
               }),
             ),
@@ -491,6 +491,9 @@ const CreateEditPriceList = () => {
               retailPrice: variant.price,
               retailerPayment: retailerPayment,
               supplierProfit: supplierProfit,
+              inventoryItem: {
+                shopifyInventoryItemId: variant.inventoryItem.id,
+              },
             };
           }),
         };

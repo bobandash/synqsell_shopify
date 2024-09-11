@@ -223,13 +223,15 @@ async function getVariantStatusTx(
     const variantsToUpdate = variantsWithPrismaProductId.filter(
       ({ shopifyVariantId: id }) => shopifyVariantIdsInOldPriceListSet.has(id),
     );
-    const variantsToUpdateWithPrismaId = variantsToUpdate.map((item) => {
-      return {
-        ...item,
-        id:
-          variantIdToPrismaIdInOldPriceListMap.get(item.shopifyVariantId) ?? '',
-      };
-    });
+    const variantsToUpdateWithPrismaId = variantsToUpdate.map(
+      ({ inventoryItem, shopifyVariantId, ...rest }) => {
+        return {
+          ...rest,
+          shopifyVariantId,
+          id: variantIdToPrismaIdInOldPriceListMap.get(shopifyVariantId) ?? '',
+        };
+      },
+    );
 
     return {
       variantsToUpdate: variantsToUpdateWithPrismaId,

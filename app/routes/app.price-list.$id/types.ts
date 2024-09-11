@@ -6,6 +6,11 @@ export type Variant = {
   sku: string | null;
   price: string | null;
   wholesalePrice: number | null;
+  inventoryItem: InventoryItem;
+};
+
+type InventoryItem = {
+  id: string;
 };
 
 export type VariantWithPosition = Variant & {
@@ -54,6 +59,9 @@ export type ProductCoreData = {
     retailPrice: string;
     retailerPayment: string;
     supplierProfit: string;
+    inventoryItem: {
+      shopifyInventoryItemId: string;
+    };
   }[];
 };
 
