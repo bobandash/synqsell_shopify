@@ -78,7 +78,7 @@ export async function getStartedRetailerAction(
       return completedFields;
     }
 
-    const newFields = await createOrGetFields(
+    await createOrGetFields(
       checklistStatusCompleted,
       fulfillmentServiceExists,
       hasRetailerRole,
@@ -87,7 +87,10 @@ export async function getStartedRetailerAction(
       checklistItemId,
     );
 
-    return newFields;
+    return json(
+      { message: 'You have successfully became a retailer.' },
+      StatusCodes.OK,
+    );
   } catch (error) {
     throw getJSONError(error, 'index');
   }

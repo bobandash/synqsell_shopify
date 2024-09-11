@@ -10,16 +10,17 @@ import {
   Await,
   defer,
   isRouteErrorResponse,
+  useActionData,
   useLoaderData,
   useRouteError,
 } from '@remix-run/react';
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import {
   createUserPreferences,
   hasUserPreferences,
 } from '~/services/models/userPreferences';
 import logger from '~/logger';
-import { INTENTS } from './constants';
+import { INTENTS, MODALS } from './constants';
 import {
   toggleChecklistVisibilityAction,
   getStartedRetailerAction,
@@ -66,7 +67,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   try {
-    const { session, admin } = await authenticate.admin(request);
+    const {
+      session,
+      admin: { graphql },
+    } = await authenticate.admin(request);
     const { id: sessionId } = session;
     let formData = await request.formData();
     const intent = formData.get('intent');
@@ -75,11 +79,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       case INTENTS.TOGGLE_CHECKLIST_VISIBILITY:
         return toggleChecklistVisibilityAction(formDataObject, sessionId);
       case INTENTS.RETAILER_GET_STARTED:
-        return getStartedRetailerAction(
-          admin.graphql,
-          formDataObject,
-          sessionId,
-        );
+        return getStartedRetailerAction(graphql, formDataObject, sessionId);
       case INTENTS.SUPPLIER_GET_STARTED:
         return getStartedSupplierAction(formDataObject, sessionId);
     }
@@ -90,6 +90,16 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
 function Index() {
   const loaderData = useLoaderData<typeof loader>();
+  const actionData = useActionData<typeof action>();
+
+  useEffect(() => {
+    if (actionData && 'message' in actionData) {
+      shopify.modal.hide(MODALS.BECOME_RETAILER);
+      shopify.modal.hide(MODALS.BECOME_SUPPLIER);
+      shopify.toast.show(actionData.message);
+    }
+  }, [actionData]);
+
   return (
     <Page title="SynqSell" subtitle="Where Brand Partnerships Flourish">
       <BlockStack gap="500">

@@ -3,7 +3,7 @@
 client_id = "c2ff24913d6d89792234763f0830c676"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://carefully-maintains-restricted-trademarks.trycloudflare.com"
+application_url = "https://maldives-life-oval-cartridge.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read_assigned_fulfillment_orders,read_inventory,read_locations,read_or
 
 [auth]
 redirect_urls = [
-  "https://carefully-maintains-restricted-trademarks.trycloudflare.com/auth/callback",
-  "https://carefully-maintains-restricted-trademarks.trycloudflare.com/auth/shopify/callback",
-  "https://carefully-maintains-restricted-trademarks.trycloudflare.com/api/auth/callback"
+  "https://maldives-life-oval-cartridge.trycloudflare.com/auth/callback",
+  "https://maldives-life-oval-cartridge.trycloudflare.com/auth/shopify/callback",
+  "https://maldives-life-oval-cartridge.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]

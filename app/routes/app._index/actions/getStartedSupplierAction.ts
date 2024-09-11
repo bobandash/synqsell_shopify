@@ -55,12 +55,12 @@ export async function getStartedSupplierAction(
     );
     const supplierAccessRequestExists =
       await hasSupplierAccessRequest(sessionId);
-    const supplierAccessRequest = await getOrCreateSupplierAccessRequest(
-      sessionId,
-      checklistStatus.id,
-    );
+    await getOrCreateSupplierAccessRequest(sessionId, checklistStatus.id);
     return json(
-      { supplierAccessRequest },
+      {
+        message:
+          'Your request to become a supplier has been submitted successfully. Please wait for the app owner to review your app.',
+      },
       {
         status: supplierAccessRequestExists
           ? StatusCodes.OK

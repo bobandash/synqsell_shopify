@@ -1,21 +1,16 @@
 import { useAsyncValue, useFetcher, useNavigate } from '@remix-run/react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FETCHER_KEYS, MODALS } from '../constants';
+import { FETCHER_KEYS } from '../constants';
 import { useAppBridge } from '@shopify/app-bridge-react';
 import { RetailerModal } from '../components/Modals';
-import type {
-  ToggleChecklistVisibilityActionData,
-  GetStartedRetailerActionData,
-} from '../actions';
+import type { ToggleChecklistVisibilityActionData } from '../actions';
 import { getChecklistBtnFunction, getChecklistItemId } from '../util';
-import { useRoleContext } from '~/context/RoleProvider';
 import { CHECKLIST_ITEM_KEYS } from '~/constants';
 import SupplierModal from '../components/Modals/SupplierModal';
 import type { TransformedChecklistTableData, LoaderResponse } from '../types';
 import ChecklistTable from '../components/ChecklistTable';
 import { BlockStack } from '@shopify/polaris';
 
-// !!! TODO: Important fix, need to refresh loader data with action, may just need to convert to fetcher key
 function ChecklistTables() {
   const { tables: tablesData } = useAsyncValue() as LoaderResponse;
   const navigate = useNavigate();
@@ -36,17 +31,9 @@ function ChecklistTables() {
     tables,
   );
 
-  const { addRole } = useRoleContext();
-
   // fetchers to get data from actions w/out refreshing the page
   const checklistVisibilityFetcher = useFetcher({
     key: FETCHER_KEYS.TOGGLE_CHECKLIST_VISIBILITY,
-  });
-  const becomeRetailerFetcher = useFetcher({
-    key: FETCHER_KEYS.RETAILER_GET_STARTED,
-  });
-  const becomeSupplierFetcher = useFetcher({
-    key: FETCHER_KEYS.SUPPLIER_GET_STARTED,
   });
 
   const transformedTablesData = useMemo(() => {
@@ -98,32 +85,6 @@ function ChecklistTables() {
     );
   }, []);
 
-  const updateChecklistStatus = useCallback(
-    (becomeRetailerData: GetStartedRetailerActionData) => {
-      const { checklistStatus } = becomeRetailerData;
-      setTables((prev) =>
-        prev.map(({ checklistItems, ...table }) => {
-          const updatedChecklistItems = checklistItems.map((item) => {
-            const isUpdatedChecklistItem =
-              item.id === checklistStatus.checklistItemId;
-            return {
-              ...item,
-              isCompleted: isUpdatedChecklistItem
-                ? checklistStatus.isCompleted
-                : item.isCompleted,
-            };
-          });
-
-          return {
-            ...table,
-            checklistItems: updatedChecklistItems,
-          };
-        }),
-      );
-    },
-    [],
-  );
-
   // render ui changes when form is completed
   // may need to decide whether or not to use formData to optimistically render UI in the future
   useEffect(() => {
@@ -133,28 +94,6 @@ function ChecklistTables() {
       updateTableVisibility(userPreference.tableIdsHidden);
     }
   }, [checklistVisibilityFetcher.data, updateTableVisibility]);
-
-  useEffect(() => {
-    const data = becomeRetailerFetcher.data;
-    if (data) {
-      const becomeRetailerData =
-        data as unknown as GetStartedRetailerActionData;
-      updateChecklistStatus(becomeRetailerData);
-      addRole(becomeRetailerData.role.name);
-      shopify.modal.hide(MODALS.BECOME_RETAILER);
-    }
-  }, [becomeRetailerFetcher.data, updateChecklistStatus, shopify, addRole]);
-
-  // !!!TODO: data persists on refresh
-  useEffect(() => {
-    const data = becomeSupplierFetcher.data;
-    if (data) {
-      shopify.modal.hide(MODALS.BECOME_SUPPLIER);
-      shopify.toast.show(
-        'Your request to become a supplier has been submitted. You will receive an email with the decision shortly.',
-      );
-    }
-  }, [becomeSupplierFetcher.data, shopify]);
 
   const toggleActiveChecklistItem = useCallback(
     (checklistItemIndex: number, tableIndex: number) => {

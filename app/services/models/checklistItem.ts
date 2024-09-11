@@ -36,7 +36,6 @@ export async function checklistItemIdMatchesKey(
         id: checklistItemId,
       },
     });
-
     if (matches) {
       return true;
     }
