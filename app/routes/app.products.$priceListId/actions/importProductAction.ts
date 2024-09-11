@@ -44,13 +44,19 @@ export async function importProductAction(
   try {
     await importProductActionSchema.validate({ formDataObject, sessionId });
     const { productId, fulfillmentServiceId } = formDataObject;
-    const product = await getAllProductDetails(productId);
-    const priceList = await getPriceList(product.priceListId);
-    const supplierSession = await getSession(priceList.supplierId);
-    const { name: supplierName } = await getProfile(priceList.supplierId);
-    const fulfillmentService =
-      await getFulfillmentService(fulfillmentServiceId);
+    const [product, fulfillmentService] = await Promise.all([
+      getAllProductDetails(productId),
+      getFulfillmentService(fulfillmentServiceId),
+    ]);
 
+    const priceList = await getPriceList(product.priceListId);
+
+    const [supplierSession, { name: supplierName }] = await Promise.all([
+      getSession(priceList.supplierId),
+      getProfile(priceList.supplierId),
+    ]);
+
+    // !!! TODO: handle images in variants, not that important in MVP though
     const shopifyProductCreationInput =
       await getProductAndMediaCreationInputWithAccessToken(
         product.shopifyProductId,
@@ -79,19 +85,10 @@ export async function importProductAction(
       graphql,
     );
 
-    // variants: CreateVariant[],
-    // createdShopifyProductId: string,
-    // shopifyLocationId: string,
-    // shop: string,
-    // accessToken: string,
-    // graphql: GraphQL,
-
-    console.log(newProduct);
-    console.log(shopifyProductCreationInput);
-
-    console.log(product);
-    console.log(fulfillmentServiceId);
-    return json({ message: `Successfully imported products.` }, StatusCodes.OK);
+    return json(
+      { message: `The product has been successfully imported to your store.` },
+      StatusCodes.OK,
+    );
   } catch (error) {
     throw getJSONError(error, 'Price List');
   }

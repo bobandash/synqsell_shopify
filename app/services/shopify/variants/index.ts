@@ -136,12 +136,14 @@ export async function getVariantCreationInputWithAccessToken(
             cost: prismaData.supplierProfit,
             sku: sku,
           },
-          inventoryQuantities: [
-            {
-              availableQuantity: inventoryQuantity ?? 0,
-              locationId: shopifyLocationId,
-            },
-          ],
+          ...(inventoryQuantity && {
+            inventoryQuantities: [
+              {
+                availableQuantity: inventoryQuantity,
+                locationId: shopifyLocationId,
+              },
+            ],
+          }),
           optionValues: selectedOptions.map((option) => {
             return {
               name: option.value,

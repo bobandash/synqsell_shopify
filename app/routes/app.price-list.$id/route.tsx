@@ -400,6 +400,7 @@ const CreateEditPriceList = () => {
       variants: product.variants.map(({ id }) => ({ id })),
     }));
 
+    // !!! TODO: FIGURE OUT QUERIES AND REMOVE GIFT CARDS AND PRODUCTS THAT HAVE BEEN IMPORTED IN THE PAST
     const productsSelected = await shopify.resourcePicker({
       type: 'product',
       multiple: true,
@@ -422,13 +423,18 @@ const CreateEditPriceList = () => {
             images,
             storeUrl: idToStoreUrl[id] ?? '',
             totalVariants,
-            variants: variants.map(({ id, title, sku, price }) => ({
-              id: id ?? '',
-              title: title ?? null,
-              sku: sku ?? null,
-              price: price ?? null,
-              wholesalePrice: variantIdToWholesalePrice.get(id ?? '') ?? null,
-            })),
+            variants: variants.map(
+              ({ id, title, sku, price, inventoryItem }) => ({
+                id: id ?? '',
+                title: title ?? null,
+                sku: sku ?? null,
+                price: price ?? null,
+                wholesalePrice: variantIdToWholesalePrice.get(id ?? '') ?? null,
+                inventoryItem: {
+                  shopifyInventoryItemId: inventoryItem?.id ?? '',
+                },
+              }),
+            ),
           };
         },
       );
