@@ -313,6 +313,27 @@ async function getAllPartnershipRequests(
   }
 }
 
+async function deletePartnershipRequestTx(
+  tx: Prisma.TransactionClient,
+  partnershipRequestId: string,
+) {
+  try {
+    const deletedPartnershipRequest = await tx.partnershipRequest.delete({
+      where: {
+        id: partnershipRequestId,
+      },
+    });
+    return deletedPartnershipRequest;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to delete partnership request in transaction',
+      deletePartnershipRequestTx,
+      { partnershipRequestId },
+    );
+  }
+}
+
 async function deletePartnershipRequestsTx(
   tx: Prisma.TransactionClient,
   partnershipRequestIds: string[],
@@ -345,5 +366,6 @@ export {
   isValidPartnershipRequest,
   getPartnershipRequest,
   getAllPartnershipRequests,
+  deletePartnershipRequestTx,
   deletePartnershipRequestsTx,
 };

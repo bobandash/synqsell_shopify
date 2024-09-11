@@ -309,3 +309,30 @@ export async function deletePartnershipsTx(
     );
   }
 }
+
+export async function addPriceListToPartnershipTx(
+  tx: Prisma.TransactionClient,
+  partnershipId: string,
+  priceListId: string,
+) {
+  try {
+    const partnership = await tx.partnership.update({
+      where: {
+        id: partnershipId,
+      },
+      data: {
+        priceLists: {
+          connect: { id: priceListId },
+        },
+      },
+    });
+    return partnership;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to add price list to partnership.',
+      addPriceListToPartnershipTx,
+      { partnershipId, priceListId },
+    );
+  }
+}
