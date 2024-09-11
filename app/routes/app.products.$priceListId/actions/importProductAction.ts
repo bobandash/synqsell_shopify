@@ -9,7 +9,10 @@ import type { GraphQL } from '~/types';
 import { json } from '@remix-run/node';
 import { StatusCodes } from 'http-status-codes';
 import { getJSONError } from '~/util';
-import { getAllProductDetails } from '~/services/models/product';
+import {
+  getAllProductDetails,
+  type ProductWithVariants,
+} from '~/services/models/product';
 import {
   createProduct,
   getProductAndMediaCreationInputWithAccessToken,
@@ -22,6 +25,9 @@ import {
   createVariants,
   getVariantCreationInputWithAccessToken,
 } from '~/services/shopify/variants';
+import type { ProductVariantsBulkCreateMutation } from '~/types/admin.generated';
+import { errorHandler } from '~/services/util';
+import db from '~/db.server';
 
 export type ImportProductFormData = InferType<typeof formDataObjectSchema>;
 
@@ -36,6 +42,61 @@ const importProductActionSchema = object({
   sessionId: sessionIdSchema,
 });
 
+export async function addImportedProductToDatabase(
+  importedProduct: ProductVariantsBulkCreateMutation,
+  parentProduct: ProductWithVariants,
+  retailerId: string,
+) {
+  try {
+    // TODO: add yup validation
+    const productVariantsBulkCreate = importedProduct.productVariantsBulkCreate;
+    const shopifyImportedProduct = productVariantsBulkCreate?.product;
+    const shopifyImportedVariants = productVariantsBulkCreate?.productVariants;
+
+    const prismaData = {
+      prismaProductId: parentProduct.id,
+      shopifyProductId: shopifyImportedProduct!.id,
+      retailerId,
+      importedVariants: {
+        create: shopifyImportedVariants?.map(
+          (shopifyImportedVariant, index) => {
+            const prismaVariantId = parentProduct.variants[index].id;
+            const prismaInventoryItemId =
+              parentProduct.variants[index].inventoryItem!.id;
+            return {
+              prismaVariantId,
+              shopifyVariantId: shopifyImportedVariant.id,
+              importedInventoryItem: {
+                create: {
+                  prismaInventoryItemId,
+                  shopifyInventoryItemId:
+                    shopifyImportedVariant.inventoryItem.id,
+                },
+              },
+            };
+          },
+        ),
+      },
+    };
+
+    const newImportedProduct = await db.importedProduct.create({
+      data: prismaData,
+    });
+    return newImportedProduct;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to add imported product to database',
+      addImportedProductToDatabase,
+      {
+        importedProduct,
+        parentProduct,
+      },
+    );
+  }
+}
+
+// !!! TODO: handle images in variants, not that important in MVP though
 export async function importProductAction(
   formDataObject: ImportProductFormData,
   sessionId: string,
@@ -56,7 +117,6 @@ export async function importProductAction(
       getProfile(priceList.supplierId),
     ]);
 
-    // !!! TODO: handle images in variants, not that important in MVP though
     const shopifyProductCreationInput =
       await getProductAndMediaCreationInputWithAccessToken(
         product.shopifyProductId,
@@ -79,10 +139,16 @@ export async function importProductAction(
         fulfillmentService.shopifyLocationId,
       );
 
-    const newVariants = await createVariants(
+    const importedProductPayload = await createVariants(
       newProduct,
       shopifyVariantCreationInput,
       graphql,
+    );
+
+    await addImportedProductToDatabase(
+      importedProductPayload,
+      product,
+      sessionId,
     );
 
     return json(

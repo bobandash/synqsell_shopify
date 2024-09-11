@@ -51,7 +51,7 @@ model FulfillmentService {
   id                          String  @id @default(uuid())
   shopifyFulfillmentServiceId String
   shopifyLocationId           String
-  Session                     Session @relation(fields: [sessionId], references: [id])
+  session                     Session @relation(fields: [sessionId], references: [id])
   sessionId                   String  @unique
 }
 
@@ -207,10 +207,11 @@ model Variant {
 }
 
 model InventoryItem {
-  id                     String  @id @default(uuid())
+  id                     String                  @id @default(uuid())
   shopifyInventoryItemId String
-  variantId              String  @unique
-  variant                Variant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  variantId              String                  @unique
+  variant                Variant                 @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  ImportedInventoryItem  ImportedInventoryItem[]
 }
 
 // End models for variants
@@ -230,11 +231,22 @@ model ImportedProduct {
 }
 
 model ImportedVariant {
-  id                String          @id @default(uuid())
-  importedProductId String
-  prismaVariantId   String
-  primaVariant      Variant         @relation(fields: [prismaVariantId], references: [id])
-  importedProduct   ImportedProduct @relation(fields: [importedProductId], references: [id])
+  id                    String                 @id @default(uuid())
+  shopifyVariantId      String
+  importedProductId     String
+  prismaVariantId       String
+  primaVariant          Variant                @relation(fields: [prismaVariantId], references: [id])
+  importedProduct       ImportedProduct        @relation(fields: [importedProductId], references: [id])
+  importedInventoryItem ImportedInventoryItem?
+}
+
+model ImportedInventoryItem {
+  id                     String          @id @default(uuid())
+  shopifyInventoryItemId String
+  importedVariantId      String          @unique
+  prismaInventoryItemId  String
+  prismaInventoryItem    InventoryItem   @relation(fields: [prismaInventoryItemId], references: [id])
+  importedVariant        ImportedVariant @relation(fields: [importedVariantId], references: [id])
 }
 
 model ImportedProductTransaction {

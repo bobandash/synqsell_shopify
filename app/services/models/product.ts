@@ -2,7 +2,7 @@ import type { Prisma } from '@prisma/client';
 import { errorHandler } from '../util';
 import db from '~/db.server';
 
-type ProductWithVariants = Prisma.ProductGetPayload<{
+export type ProductWithVariants = Prisma.ProductGetPayload<{
   include: {
     variants: {
       include: {
