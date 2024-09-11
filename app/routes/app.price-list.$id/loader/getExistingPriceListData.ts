@@ -86,6 +86,9 @@ async function getInitialProductData(
             price: variant.retailPrice,
             wholesalePrice: round(Number(variant.supplierProfit), 2), // should be possible to be null
             sku: variantGraphQLInfo.sku,
+            inventoryItem: {
+              id: variant.inventoryItem?.shopifyInventoryItemId ?? '',
+            },
           };
         }),
       };

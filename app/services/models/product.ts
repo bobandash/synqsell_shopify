@@ -4,7 +4,11 @@ import db from '~/db.server';
 
 type ProductWithVariants = Prisma.ProductGetPayload<{
   include: {
-    variants: true;
+    variants: {
+      include: {
+        inventoryItem: true;
+      };
+    };
   };
 }>;
 
@@ -92,7 +96,11 @@ export async function getProductWithVariantsFromPriceList(
         priceListId,
       },
       include: {
-        variants: true,
+        variants: {
+          include: {
+            inventoryItem: true,
+          },
+        },
       },
     });
     return products;
