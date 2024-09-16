@@ -12,6 +12,17 @@ export type ProductWithVariants = Prisma.ProductGetPayload<{
   };
 }>;
 
+export type AllProductDetails = Prisma.ProductGetPayload<{
+  include: {
+    priceList: true;
+    variants: {
+      include: {
+        inventoryItem: true;
+      };
+    };
+  };
+}>;
+
 export async function hasProduct(id: string) {
   try {
     const product = await db.product.findFirst({
@@ -140,7 +151,9 @@ export async function getMapShopifyProductIdToPrismaIdTx(
   return shopifyProductIdToPrismaId;
 }
 
-export async function getAllProductDetails(productId: string) {
+export async function getAllProductDetails(
+  productId: string,
+): Promise<AllProductDetails> {
   try {
     const productDetails = await db.product.findFirstOrThrow({
       where: {

@@ -11,13 +11,14 @@ import { StatusCodes } from 'http-status-codes';
 import { getJSONError } from '~/util';
 import {
   getAllProductDetails,
+  type AllProductDetails,
   type ProductWithVariants,
 } from '~/services/models/product';
 import {
   createProduct,
   getProductAndMediaCreationInputWithAccessToken,
 } from '~/services/shopify/products';
-import { getSession } from '~/services/models/session';
+import { getSession, type Session } from '~/services/models/session';
 import { getPriceList } from '~/services/models/priceList';
 import { getFulfillmentService } from '~/services/models/fulfillmentService';
 import { getProfile } from '~/services/models/userProfile';
@@ -110,9 +111,95 @@ export async function addImportedProductToDatabaseTx(
   }
 }
 
-// !!! TODO: handle images in variants, not that important in MVP though
-// !!! TODO: honestly this isn't a big issue, but in the future, figure out how to deal with rollbacks using a different service
-// !!! TODO: refactor this function later
+async function handlePartnership(
+  tx: Prisma.TransactionClient,
+  retailerId: string,
+  supplierId: string,
+  priceListId: string,
+) {
+  const partnershipExists = await isSupplierRetailerPartnered(
+    retailerId,
+    supplierId,
+  );
+
+  if (partnershipExists) {
+    const partnership = await getSupplierRetailerPartnership(
+      retailerId,
+      supplierId,
+    );
+    await addPriceListToPartnershipTx(tx, partnership.id, priceListId);
+  } else {
+    const partnershipRequestExists = await hasPartnershipRequest(
+      priceListId,
+      supplierId,
+      PARTNERSHIP_REQUEST_TYPE.RETAILER,
+    );
+    if (partnershipRequestExists) {
+      const partnershipRequest = await getPartnershipRequest(
+        priceListId,
+        retailerId,
+        PARTNERSHIP_REQUEST_TYPE.RETAILER,
+      );
+      await deletePartnershipRequestTx(tx, partnershipRequest.id);
+    }
+    await createPartnershipsTx(tx, [
+      {
+        retailerId,
+        supplierId,
+        message: 'Retailer partnered by importing a product',
+        priceListIds: [priceListId],
+      },
+    ]);
+  }
+}
+
+async function createShopifyProduct(
+  shopifyProductId: string,
+  supplierSession: Session,
+  supplierName: string,
+  graphql: GraphQL,
+) {
+  const shopifyProductCreationInput =
+    await getProductAndMediaCreationInputWithAccessToken(
+      shopifyProductId,
+      supplierSession.shop,
+      supplierSession.accessToken,
+      supplierName,
+    );
+
+  const newProduct = await createProduct(
+    shopifyProductCreationInput.productInputFields,
+    shopifyProductCreationInput.mediaInputFields,
+    graphql,
+  );
+  return newProduct;
+}
+
+async function createShopifyVariants(
+  variants: AllProductDetails['variants'],
+  supplierSession: Session,
+  supplierName: string,
+  shopifyLocationId: string,
+  retailerNewShopifyProductId: string,
+  graphql: GraphQL,
+) {
+  const shopifyVariantCreationInput =
+    await getVariantCreationInputWithAccessToken(
+      variants,
+      supplierSession,
+      supplierName,
+      shopifyLocationId,
+    );
+
+  const variantsPayload = await createVariants(
+    retailerNewShopifyProductId,
+    shopifyVariantCreationInput,
+    graphql,
+  );
+
+  return variantsPayload;
+}
+
 export async function importProductAction(
   formDataObject: ImportProductFormData,
   sessionId: string,
@@ -120,88 +207,41 @@ export async function importProductAction(
 ) {
   try {
     await importProductActionSchema.validate({ formDataObject, sessionId });
+
+    // get initial fields
     const { productId, fulfillmentServiceId } = formDataObject;
-    const [product, fulfillmentService] = await Promise.all([
+    const [product, { shopifyLocationId }] = await Promise.all([
       getAllProductDetails(productId),
       getFulfillmentService(fulfillmentServiceId),
     ]);
-
     const priceList = await getPriceList(product.priceListId);
-
     const [supplierSession, { name: supplierName }] = await Promise.all([
       getSession(priceList.supplierId),
       getProfile(priceList.supplierId),
     ]);
 
-    const shopifyProductCreationInput =
-      await getProductAndMediaCreationInputWithAccessToken(
-        product.shopifyProductId,
-        supplierSession.shop,
-        supplierSession.accessToken,
-        supplierName,
-      );
-
-    const newProduct = await createProduct(
-      shopifyProductCreationInput.productInputFields,
-      shopifyProductCreationInput.mediaInputFields,
+    const retailerNewShopifyProductId = await createShopifyProduct(
+      productId,
+      supplierSession,
+      supplierName,
       graphql,
     );
 
-    const shopifyVariantCreationInput =
-      await getVariantCreationInputWithAccessToken(
-        product.variants,
-        supplierSession,
-        supplierName,
-        fulfillmentService.shopifyLocationId,
-      );
-
-    const importedProductPayload = await createVariants(
-      newProduct,
-      shopifyVariantCreationInput,
+    const variantsPayload = await createShopifyVariants(
+      product.variants,
+      supplierSession,
+      supplierName,
+      shopifyLocationId,
+      retailerNewShopifyProductId,
       graphql,
     );
-
     // if the user imports the product and isn't a partner of the price list, add the user as a partner
     // this allows the supplier to know that the retailer is interested in their products
     await db.$transaction(async (tx) => {
-      const partnershipExists = await isSupplierRetailerPartnered(
-        sessionId,
-        supplierSession.id,
-      );
-
-      if (partnershipExists) {
-        const partnership = await getSupplierRetailerPartnership(
-          sessionId,
-          supplierSession.id,
-        );
-        await addPriceListToPartnershipTx(tx, partnership.id, priceList.id);
-      } else {
-        const partnershipRequestExists = await hasPartnershipRequest(
-          priceList.id,
-          sessionId,
-          PARTNERSHIP_REQUEST_TYPE.RETAILER,
-        );
-        if (partnershipRequestExists) {
-          const partnershipRequest = await getPartnershipRequest(
-            priceList.id,
-            sessionId,
-            PARTNERSHIP_REQUEST_TYPE.RETAILER,
-          );
-          await deletePartnershipRequestTx(tx, partnershipRequest.id);
-        }
-        await createPartnershipsTx(tx, [
-          {
-            retailerId: sessionId,
-            supplierId: supplierSession.id,
-            message: 'Retailer partnered by importing a product',
-            priceListIds: [priceList.id],
-          },
-        ]);
-      }
-
+      await handlePartnership(tx, sessionId, supplierSession.id, priceList.id);
       await addImportedProductToDatabaseTx(
         tx,
-        importedProductPayload,
+        variantsPayload,
         product,
         sessionId,
       );

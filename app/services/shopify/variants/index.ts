@@ -4,6 +4,7 @@ import { createMapIdToRestObj, errorHandler } from '~/services/util';
 import getUserError from '../util/getUserError';
 import type { Prisma } from '@prisma/client';
 import {
+  GET_VARIANT_DELIVERY_PROFILES,
   GET_VARIANTS_BASIC_INFO,
   VARIANT_CREATION_DETAILS_BULK_QUERY,
   VARIANTS_BULK_CREATION_MUTATION,
@@ -12,6 +13,7 @@ import type {
   VariantCreationInformationQuery,
   VariantBasicInfoQuery,
   ProductVariantsBulkCreateMutation,
+  VariantDeliveryProfilesQuery,
 } from '~/types/admin.generated';
 import { fetchAndValidateGraphQLData, mutateGraphQLAdminData } from '../util';
 import { v4 as uuid } from 'uuid';
@@ -162,6 +164,37 @@ export async function getVariantCreationInputWithAccessToken(
       'Failed to get relevant variant information from variant ids.',
       getVariantCreationInputWithAccessToken,
       { variants },
+    );
+  }
+}
+
+export async function getVariantDeliveryProfilesIdsWithAccessToken(
+  shopifyVariantIds: string[],
+  supplierSession: Session,
+) {
+  try {
+    const queryStr = getQueryStr(shopifyVariantIds);
+    const numVariants = shopifyVariantIds.length;
+    const deliveryProfilesQuery =
+      await fetchAndValidateGraphQLData<VariantDeliveryProfilesQuery>(
+        supplierSession.shop,
+        supplierSession.accessToken,
+        GET_VARIANT_DELIVERY_PROFILES,
+        {
+          query: queryStr,
+          first: numVariants,
+        },
+      );
+    const deliveryProfileIds = deliveryProfilesQuery.productVariants.edges
+      .map(({ node: { deliveryProfile } }) => deliveryProfile?.id)
+      .filter((id) => id !== undefined);
+    return deliveryProfileIds;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to create variants on Shopify.',
+      createVariants,
+      { shopifyVariantIds },
     );
   }
 }

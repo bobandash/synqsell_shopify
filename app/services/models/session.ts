@@ -1,5 +1,8 @@
+import type { Prisma } from '@prisma/client';
 import { errorHandler } from '../util';
 import db from '~/db.server';
+
+export type Session = Prisma.SessionGetPayload<{}>;
 
 export async function hasSession(sessionId: string) {
   try {
@@ -22,7 +25,7 @@ export async function hasSession(sessionId: string) {
   }
 }
 
-export async function getSession(sessionId: string) {
+export async function getSession(sessionId: string): Promise<Session> {
   try {
     const session = await db.session.findFirstOrThrow({
       where: {

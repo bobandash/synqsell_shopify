@@ -12,7 +12,7 @@ import logger from '~/logger';
 import { errorHandler } from '../util';
 
 // this is the coordinator for creating a fulfillment service on Shopify and for the prisma db
-// TODO: research retries
+// TODO: refactor to not be try-catch hell
 export async function getOrCreateFulfillmentService(
   sessionId: string,
   graphql: GraphQL,
