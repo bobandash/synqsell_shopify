@@ -79,3 +79,5 @@ export type PartnershipRequestTypeProps =
 
 export type PartnershipRequestStatusProps =
   (typeof PARTNERSHIP_REQUEST_STATUS)[keyof typeof PARTNERSHIP_REQUEST_STATUS];
+
+export const CARRIER_SERVICE_NAME = 'SynqSell';

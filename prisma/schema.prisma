@@ -37,6 +37,7 @@ model Session {
   fulfillmentService           FulfillmentService?
   supplierAccessRequest        SupplierAccessRequest?
   userProfile                  UserProfile?
+  carrierService               CarrierService?
   roles                        Role[]
   checklistStatuses            ChecklistStatus[]
   priceLists                   PriceList[]
@@ -256,4 +257,11 @@ model ImportedProductTransaction {
   fulfilledAt       DateTime
   unitSales         Int
   importedProduct   ImportedProduct @relation(fields: [importedProductId], references: [id])
+}
+
+model CarrierService {
+  id                      String  @id @default(uuid())
+  retailerId              String  @unique
+  retailer                Session @relation(fields: [retailerId], references: [id])
+  shopifyCarrierServiceId String
 }
