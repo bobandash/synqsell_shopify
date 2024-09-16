@@ -48,6 +48,20 @@ export const VARIANT_CREATION_DETAILS_BULK_QUERY = `#graphql
   }
 `;
 
+export const GET_VARIANT_DELIVERY_PROFILES = `#graphql 
+  query variantDeliveryProfiles($query: String, $first: Int){
+    productVariants(query: $query, first: $first){
+      edges {
+        node {
+          deliveryProfile {
+            id
+          }
+        }
+      }
+    }
+  }
+`;
+
 // https://shopify.dev/docs/api/admin-graphql/2024-07/mutations/productVariantsBulkCreate
 export const VARIANTS_BULK_CREATION_MUTATION = `#graphql
   mutation productVariantsBulkCreate($productId: ID!, $variants: [ProductVariantsBulkInput!]!, $strategy: ProductVariantsBulkCreateStrategy) {
