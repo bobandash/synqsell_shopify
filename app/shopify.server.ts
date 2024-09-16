@@ -31,6 +31,10 @@ const shopify = shopifyApp({
       deliveryMethod: DeliveryMethod.Http,
       callbackUrl: '/webhooks',
     },
+    PRODUCTS_DELETE: {
+      deliveryMethod: DeliveryMethod.EventBridge,
+      arn: 'arn:aws:events:us-east-2::event-source/aws.partner/shopify.com/153436192769/aws',
+    },
   },
   hooks: {
     afterAuth: async ({ session }) => {

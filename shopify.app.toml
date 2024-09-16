@@ -1,9 +1,9 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "c2ff24913d6d89792234763f0830c676"
+client_id = "2c3db0b06834a9b20de60ef4b15c8228"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://maldives-life-oval-cartridge.trycloudflare.com"
+application_url = "https://adventure-created-albany-resumes.trycloudflare.com"
 embedded = true
 
 [build]
@@ -13,13 +13,13 @@ include_config_on_deploy = true
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read_assigned_fulfillment_orders,read_inventory,read_locations,read_orders,read_products,read_third_party_fulfillment_orders,write_assigned_fulfillment_orders,write_fulfillments,write_inventory,write_orders,write_products"
+scopes = "read_assigned_fulfillment_orders,read_inventory,read_locations,read_orders,read_products,read_shipping,read_third_party_fulfillment_orders,write_assigned_fulfillment_orders,write_fulfillments,write_inventory,write_orders,write_products,write_shipping"
 
 [auth]
 redirect_urls = [
-  "https://maldives-life-oval-cartridge.trycloudflare.com/auth/callback",
-  "https://maldives-life-oval-cartridge.trycloudflare.com/auth/shopify/callback",
-  "https://maldives-life-oval-cartridge.trycloudflare.com/api/auth/callback"
+  "https://adventure-created-albany-resumes.trycloudflare.com/auth/callback",
+  "https://adventure-created-albany-resumes.trycloudflare.com/auth/shopify/callback",
+  "https://adventure-created-albany-resumes.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]
@@ -27,7 +27,7 @@ api_version = "2024-07"
 
   [[webhooks.subscriptions]]
   topics = [ "app/uninstalled", "products/delete", "products/update" ]
-  uri = "arn:aws:events:us-east-2::event-source/aws.partner/shopify.com/144025485313/SynqSell"
+  uri = "arn:aws:events:us-east-2::event-source/aws.partner/shopify.com/153436192769/aws"
 
 [pos]
 embedded = false
