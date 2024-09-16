@@ -13,7 +13,7 @@ include_config_on_deploy = true
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read_assigned_fulfillment_orders,read_inventory,read_locations,read_orders,read_products,read_shipping,read_third_party_fulfillment_orders,write_assigned_fulfillment_orders,write_fulfillments,write_inventory,write_orders,write_products,write_shipping"
+scopes = "read_assigned_fulfillment_orders,read_inventory,read_locations,read_orders,read_products,read_shipping,read_third_party_fulfillment_orders,write_assigned_fulfillment_orders,write_fulfillments,write_inventory,write_orders,write_products,write_shipping,write_merchant_managed_fulfillment_orders"
 
 [auth]
 redirect_urls = [
@@ -25,9 +25,9 @@ redirect_urls = [
 [webhooks]
 api_version = "2024-07"
 
-  [[webhooks.subscriptions]]
-  topics = [ "app/uninstalled", "products/delete", "products/update" ]
-  uri = "arn:aws:events:us-east-2::event-source/aws.partner/shopify.com/153436192769/aws"
+[[webhooks.subscriptions]]
+topics = [ "app/uninstalled", "products/delete", "products/update", "fulfillment_orders/order_routing_complete" ]
+uri = "arn:aws:events:us-east-2::event-source/aws.partner/shopify.com/153436192769/aws"
 
 [pos]
 embedded = false
