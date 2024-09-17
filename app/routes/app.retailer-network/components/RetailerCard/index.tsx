@@ -3,6 +3,7 @@ import {
   Card,
   Icon,
   InlineStack,
+  Link,
   Text,
   Thumbnail,
 } from '@shopify/polaris';
@@ -48,8 +49,8 @@ const SupplierCard: FC<Props> = ({ retailer, setSelectedRetailerId }) => {
   return (
     <Card>
       <BlockStack gap="200">
-        <InlineStack align="space-between" blockAlign="start">
-          <InlineStack gap={'300'}>
+        <div className={`${styles['card-container']}`}>
+          <div>
             {logo ? (
               <Thumbnail source={logo} size="large" alt={`${name} logo`} />
             ) : (
@@ -59,39 +60,40 @@ const SupplierCard: FC<Props> = ({ retailer, setSelectedRetailerId }) => {
                 alt="Default logo image"
               />
             )}
-            <BlockStack>
-              <Text variant="headingLg" as="h2" fontWeight="bold">
-                {name}
-              </Text>
-              <a
-                href={website}
-                target="_blank"
-                rel="noreferrer"
-                className={`${styles['link']}`}
-              >
+          </div>
+          <div>
+            <Text variant="headingLg" as="h2" fontWeight="bold" truncate>
+              {name}
+            </Text>
+            <div className={`${styles['link']} ${styles['truncate']}`}>
+              <Link url={website} target="_blank">
                 {website}
-              </a>
-              <Text variant="bodyMd" as="p">
-                {address ?? ''}
-              </Text>
-              <InlineStack gap={'150'} align={'start'}>
-                {allSocialMediaLinks.map((link) => (
-                  <SocialIcon
-                    key={uuidv4()}
-                    url={link}
-                    target="_blank"
-                    className={styles['logo']}
-                  />
-                ))}
-              </InlineStack>
-            </BlockStack>
-          </InlineStack>
+              </Link>
+            </div>
+            <Text variant="bodyMd" as="p">
+              {address ?? ''}
+            </Text>
+            <InlineStack gap={'150'} align={'start'}>
+              {allSocialMediaLinks.map((link) => (
+                <SocialIcon
+                  key={uuidv4()}
+                  url={link}
+                  target="_blank"
+                  className={styles['logo']}
+                />
+              ))}
+            </InlineStack>
+          </div>
           <InlineStack gap={'200'}>
-            <a href={`mailto:${email}`} title={email}>
+            <Link
+              url={`mailto:${email}`}
+              target="_blank"
+              accessibilityLabel="Shopify website"
+            >
               <Icon source={EmailIcon} tone="base" />
-            </a>
+            </Link>
           </InlineStack>
-        </InlineStack>
+        </div>
         <BlockStack>
           <Text variant="headingMd" as="h3">
             About Us:

@@ -9,6 +9,7 @@ import {
   Card,
   IndexFilters,
   IndexTable,
+  Link,
   Page,
   type TabProps,
   Text,
@@ -355,16 +356,19 @@ const Row: FC<RowMarkupProps> = ({ data, index, selected }) => {
       <IndexTable.Cell>{name}</IndexTable.Cell>
       <IndexTable.Cell>{email}</IndexTable.Cell>
       <IndexTable.Cell>
-        <a
-          href={website}
-          target="_blank"
-          rel="noreferrer"
+        <div
           onClick={(e) => {
             e.stopPropagation();
           }}
         >
-          Link
-        </a>
+          <Link
+            url={website}
+            target="_blank"
+            accessibilityLabel="Shopify website"
+          >
+            Link
+          </Link>
+        </div>
       </IndexTable.Cell>
       <IndexTable.Cell>
         {hasMetSalesThreshold ? 'True' : 'False'}

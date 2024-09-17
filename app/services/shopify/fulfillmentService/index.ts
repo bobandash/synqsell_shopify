@@ -89,7 +89,7 @@ export async function createFulfillmentService(
     if (
       !fulfillmentServiceCreate ||
       !fulfillmentServiceCreate.fulfillmentService ||
-      fulfillmentServiceCreate.userErrors
+      fulfillmentServiceCreate.userErrors.length > 0
     ) {
       throw getUserError({
         defaultMessage:

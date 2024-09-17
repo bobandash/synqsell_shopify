@@ -3,7 +3,7 @@
   height: 24px !important;
 }
 
-.link {
+.link a {
   color: #0066fe;
   text-decoration: none;
   font-weight: 700;
@@ -47,4 +47,17 @@
 
 .rounded {
   border-radius: 8px;
+}
+
+.card-container {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr) 24px;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.truncate {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }

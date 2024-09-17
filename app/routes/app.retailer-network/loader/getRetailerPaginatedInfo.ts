@@ -33,6 +33,10 @@ export type Retailer = {
   profile: Profile;
 };
 
+type PriceListJsonify = PriceList & {
+  createdAt: string;
+};
+
 type Profile = {
   id: string;
   name: string;
@@ -57,9 +61,6 @@ type SocialMediaLink = {
 };
 
 type PriceList = Prisma.PriceListGetPayload<{}>;
-export type PriceListJsonify = PriceList & {
-  createdAt: string;
-};
 
 type SupplierPaginatedInfoPrisma = Prisma.SessionGetPayload<{
   select: {
