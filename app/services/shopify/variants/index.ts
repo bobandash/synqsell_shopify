@@ -138,14 +138,12 @@ export async function getVariantCreationInputWithAccessToken(
             cost: prismaData.supplierProfit,
             sku: sku,
           },
-          ...(inventoryQuantity && {
-            inventoryQuantities: [
-              {
-                availableQuantity: inventoryQuantity,
-                locationId: shopifyLocationId,
-              },
-            ],
-          }),
+          inventoryQuantities: [
+            {
+              availableQuantity: inventoryQuantity ?? 0,
+              locationId: shopifyLocationId,
+            },
+          ],
           optionValues: selectedOptions.map((option) => {
             return {
               name: option.value,
@@ -205,6 +203,7 @@ export async function createVariants(
   graphql: GraphQL,
 ) {
   try {
+    console.log(shopifyProductCreationInput);
     const data =
       await mutateGraphQLAdminData<ProductVariantsBulkCreateMutation>(
         graphql,
