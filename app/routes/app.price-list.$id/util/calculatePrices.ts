@@ -50,7 +50,6 @@ function calculateRetailerPayment({
   }
 
   if (!isWholesalePriceList) {
-    console.log(calculateRetailerPaymentGivenMargin(price, margin));
     return calculateRetailerPaymentGivenMargin(price, margin);
   }
   return calculatePriceDifference(price, wholesalePrice);

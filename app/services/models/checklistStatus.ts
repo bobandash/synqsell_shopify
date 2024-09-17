@@ -34,7 +34,6 @@ async function isValidChecklistStatusId(checklistStatusId: string) {
 
 async function hasChecklistStatus(sessionId: string, checklistItemId: string) {
   try {
-    console.log(checklistItemId);
     const checklistStatus = await db.checklistStatus.findFirst({
       where: {
         checklistItemId,

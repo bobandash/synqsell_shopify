@@ -128,7 +128,6 @@ export async function deleteVariantsTx(
   variantIds: string[],
 ) {
   try {
-    console.log(variantIds);
     const deletedVariants = await tx.variant.deleteMany({
       where: {
         id: {

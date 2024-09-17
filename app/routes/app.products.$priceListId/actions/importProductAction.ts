@@ -221,7 +221,7 @@ export async function importProductAction(
     ]);
 
     const retailerNewShopifyProductId = await createShopifyProduct(
-      productId,
+      product.shopifyProductId,
       supplierSession,
       supplierName,
       graphql,

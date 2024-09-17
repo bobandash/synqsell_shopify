@@ -17,6 +17,7 @@ async function fetchAndValidateGraphQLData<T>(
     body: JSON.stringify({ query, variables }),
   });
   const { data } = await response.json();
+  console.log(data);
   if (!data) {
     throw new Error('No data returned from GraphQL query');
   }
