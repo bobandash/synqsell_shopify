@@ -4,8 +4,8 @@ import {
   Card,
   Divider,
   Image,
+  Link,
   Text,
-  UnstyledLink,
 } from '@shopify/polaris';
 import { ImageIcon } from '~/assets';
 import sharedStyles from '~/shared.module.css';
@@ -44,10 +44,15 @@ const ProductCard: FC<Props> = ({ product, fulfillmentService }) => {
           <BlockStack gap={'100'}>
             <BlockStack>
               {brandName && (
-                <div className={`${sharedStyles['bold-link-container']}`}>
-                  <UnstyledLink url={priceListUrl} truncate={'true'}>
-                    {brandName}
-                  </UnstyledLink>
+                <div
+                  className={`${sharedStyles['bold-link-container']}`}
+                  title={brandName}
+                >
+                  <Link url={priceListUrl}>
+                    <Text as="span" truncate>
+                      {brandName}
+                    </Text>
+                  </Link>
                 </div>
               )}
               <div title={productName}>

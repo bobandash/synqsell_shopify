@@ -124,6 +124,10 @@ button.green > p {
   font-weight: 700;
 }
 
+.bold-link-container > a:hover {
+  text-decoration: none;
+}
+
 .inline-block {
   display: inline-block;
 }
