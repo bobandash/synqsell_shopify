@@ -33,7 +33,11 @@ const shopify = shopifyApp({
     },
     PRODUCTS_DELETE: {
       deliveryMethod: DeliveryMethod.EventBridge,
-      arn: 'arn:aws:events:us-east-2::event-source/aws.partner/shopify.com/153436192769/aws',
+      arn: process.env.EVENT_SOURCE_ARN ?? '',
+    },
+    FULFILLMENT_ORDERS_ORDER_ROUTING_COMPLETE: {
+      deliveryMethod: DeliveryMethod.EventBridge,
+      arn: process.env.EVENT_SOURCE_ARN ?? '',
     },
   },
   hooks: {
