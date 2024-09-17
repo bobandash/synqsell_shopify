@@ -3,7 +3,7 @@
 client_id = "2c3db0b06834a9b20de60ef4b15c8228"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://felt-continuous-vacancies-coated.trycloudflare.com"
+application_url = "https://bend-macintosh-recorded-headed.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read_assigned_fulfillment_orders,read_inventory,read_locations,read_or
 
 [auth]
 redirect_urls = [
-  "https://felt-continuous-vacancies-coated.trycloudflare.com/auth/callback",
-  "https://felt-continuous-vacancies-coated.trycloudflare.com/auth/shopify/callback",
-  "https://felt-continuous-vacancies-coated.trycloudflare.com/api/auth/callback"
+  "https://bend-macintosh-recorded-headed.trycloudflare.com/auth/callback",
+  "https://bend-macintosh-recorded-headed.trycloudflare.com/auth/shopify/callback",
+  "https://bend-macintosh-recorded-headed.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]

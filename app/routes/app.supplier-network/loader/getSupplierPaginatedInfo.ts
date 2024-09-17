@@ -121,6 +121,9 @@ async function getPrismaUnformattedSupplierInfo({
       ...(cursor && { cursor: { id: cursor } }),
       ...(cursor && { skip: 1 }),
       where: {
+        id: {
+          not: sessionId,
+        },
         roles: {
           some: {
             name: ROLES.SUPPLIER,
