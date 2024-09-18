@@ -190,7 +190,7 @@ model Product {
   shopifyProductId String
   priceListId      String
   createdAt        DateTime          @default(now())
-  priceList        PriceList         @relation(fields: [priceListId], references: [id])
+  priceList        PriceList         @relation(fields: [priceListId], references: [id], onDelete: Cascade)
   variants         Variant[]
   importedProducts ImportedProduct[]
 }
@@ -225,7 +225,7 @@ model ImportedProduct {
   shopifyProductId            String
   retailerId                  String
   importedAt                  DateTime                     @default(now())
-  prismaProduct               Product                      @relation(fields: [prismaProductId], references: [id])
+  prismaProduct               Product                      @relation(fields: [prismaProductId], references: [id], onDelete: Cascade)
   session                     Session                      @relation(fields: [retailerId], references: [id])
   importedVariants            ImportedVariant[]
   importedProductTransactions ImportedProductTransaction[]
@@ -237,7 +237,7 @@ model ImportedVariant {
   importedProductId     String
   prismaVariantId       String
   primaVariant          Variant                @relation(fields: [prismaVariantId], references: [id])
-  importedProduct       ImportedProduct        @relation(fields: [importedProductId], references: [id])
+  importedProduct       ImportedProduct        @relation(fields: [importedProductId], references: [id], onDelete: Cascade)
   importedInventoryItem ImportedInventoryItem?
 }
 
@@ -247,7 +247,7 @@ model ImportedInventoryItem {
   importedVariantId      String          @unique
   prismaInventoryItemId  String
   prismaInventoryItem    InventoryItem   @relation(fields: [prismaInventoryItemId], references: [id])
-  importedVariant        ImportedVariant @relation(fields: [importedVariantId], references: [id])
+  importedVariant        ImportedVariant @relation(fields: [importedVariantId], references: [id], onDelete: Cascade)
 }
 
 model ImportedProductTransaction {
