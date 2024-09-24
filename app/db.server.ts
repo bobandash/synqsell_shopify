@@ -5,10 +5,7 @@ declare global {
 }
 
 const prisma: PrismaClient = global.prisma || new PrismaClient();
-const databaseUrl =
-  process.env.NODE_ENV === 'development'
-    ? process.env.DEV_DATABASE_URL
-    : process.env.DATABASE_URL;
+const databaseUrl = process.env.DATABASE_URL;
 
 if (process.env.NODE_ENV !== 'production') {
   if (!global.prisma) {

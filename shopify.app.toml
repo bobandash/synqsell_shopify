@@ -3,7 +3,7 @@
 client_id = "2c3db0b06834a9b20de60ef4b15c8228"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://complicated-anticipated-civilian-cayman.trycloudflare.com"
+application_url = "https://ties-brand-pan-wt.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read_assigned_fulfillment_orders,read_inventory,read_locations,read_or
 
 [auth]
 redirect_urls = [
-  "https://complicated-anticipated-civilian-cayman.trycloudflare.com/auth/callback",
-  "https://complicated-anticipated-civilian-cayman.trycloudflare.com/auth/shopify/callback",
-  "https://complicated-anticipated-civilian-cayman.trycloudflare.com/api/auth/callback"
+  "https://ties-brand-pan-wt.trycloudflare.com/auth/callback",
+  "https://ties-brand-pan-wt.trycloudflare.com/auth/shopify/callback",
+  "https://ties-brand-pan-wt.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]

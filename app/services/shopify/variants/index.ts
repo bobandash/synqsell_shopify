@@ -203,7 +203,6 @@ export async function createVariants(
   graphql: GraphQL,
 ) {
   try {
-    console.log(shopifyProductCreationInput);
     const data =
       await mutateGraphQLAdminData<ProductVariantsBulkCreateMutation>(
         graphql,
