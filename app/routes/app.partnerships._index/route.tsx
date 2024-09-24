@@ -11,9 +11,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const { session } = await authenticate.admin(request);
     const { id: sessionId } = session;
     const [isRetailer, isSupplier] = await Promise.all([
-      hasRole(sessionId, ROLES.ADMIN),
+      hasRole(sessionId, ROLES.RETAILER),
       hasRole(sessionId, ROLES.SUPPLIER),
     ]);
+
     if (isRetailer) {
       return redirect('/app/partnerships/supplier');
     } else if (isSupplier) {
@@ -28,7 +29,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       StatusCodes.UNAUTHORIZED,
     );
   } catch (error) {
-    console.error(error);
     throw getJSONError(error, 'admin network');
   }
 };

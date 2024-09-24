@@ -48,9 +48,9 @@ export async function getCarrierService(sessionId: string, graphql: GraphQL) {
   // retrieve all the carrier services
   try {
     const carrierServices = await getAllCarrierServices(graphql);
-    const filteredCarrierServices = carrierServices.filter(
-      ({ name }) => name === CARRIER_SERVICE_NAME,
-    );
+    const filteredCarrierServices = carrierServices.filter(({ name }) => {
+      return name === CARRIER_SERVICE_NAME;
+    });
 
     if (filteredCarrierServices.length === 0) {
       return null;

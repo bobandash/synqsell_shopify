@@ -59,7 +59,7 @@ export async function getStartedSupplierAction(
     return json(
       {
         message:
-          'Your request to become a supplier has been submitted successfully. Please wait for the app owner to review your app.',
+          'Your request to become a supplier has been submitted successfully. Please wait for the app owner to review your request.',
       },
       {
         status: supplierAccessRequestExists
