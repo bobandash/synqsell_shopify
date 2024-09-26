@@ -261,7 +261,8 @@ model Order {
 
 model OrderLineItem {
   id                             String    @id @default(uuid())
-  shopifyVariantId               String
+  retailerShopifyVariantId       String
+  supplierShopifyVariantId       String
   retailPricePerUnit             Decimal   @db.Decimal(10, 2)
   amountPayablePerUnit           Decimal   @db.Decimal(10, 2) // retrieve the supplier agreed upon profit
   shopifyRetailerOrderLineItemId String

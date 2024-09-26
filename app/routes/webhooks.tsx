@@ -14,7 +14,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     case 'APP_UNINSTALLED':
       break;
     case 'PRODUCTS_UPDATE':
-      console.log('products updated: ', payload);
       break;
     case 'PRODUCTS_DELETE':
       console.log('products deleted: ', payload);

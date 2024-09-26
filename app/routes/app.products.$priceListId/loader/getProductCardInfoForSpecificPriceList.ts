@@ -91,7 +91,7 @@ export async function getProductCardInfoFromPriceList(
         const productDetails =
           mapShopifyProductIdToProductDetails.get(shopifyProductId);
         console.log(shopifyProductId);
-        console.log(productDetails);
+        console.log(productDetails?.title);
         if (!productDetails) {
           throw new Error(
             'Shopify product details is missing for product card.',

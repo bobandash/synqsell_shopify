@@ -74,8 +74,17 @@ export const PARTNERSHIP_REQUEST_STATUS = {
   PENDING: 'PENDING',
 } as const;
 
+export const ORDER_PAYMENT_STATUS = {
+  INCOMPLETE: 'INCOMPLETE',
+  PARTIALLY_PAID: 'PARTIALLY_PAID',
+  PAID: 'PAID',
+} as const;
+
 export type PartnershipRequestTypeProps =
   (typeof PARTNERSHIP_REQUEST_TYPE)[keyof typeof PARTNERSHIP_REQUEST_TYPE];
+
+export type OrderPaymentStatusProps =
+  (typeof ORDER_PAYMENT_STATUS)[keyof typeof ORDER_PAYMENT_STATUS];
 
 export type PartnershipRequestStatusProps =
   (typeof PARTNERSHIP_REQUEST_STATUS)[keyof typeof PARTNERSHIP_REQUEST_STATUS];

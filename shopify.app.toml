@@ -3,7 +3,7 @@
 client_id = "2c3db0b06834a9b20de60ef4b15c8228"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://uv-holmes-scanners-constant.trycloudflare.com"
+application_url = "https://county-pavilion-smell-support.trycloudflare.com"
 embedded = true
 
 [build]
@@ -13,13 +13,13 @@ include_config_on_deploy = true
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read_assigned_fulfillment_orders,read_inventory,read_locations,read_orders,read_products,read_shipping,read_third_party_fulfillment_orders,write_assigned_fulfillment_orders,write_fulfillments,write_inventory,write_merchant_managed_fulfillment_orders,write_orders,write_products,write_shipping"
+scopes = "read_assigned_fulfillment_orders,read_inventory,read_locations,read_orders,read_products,read_shipping,read_third_party_fulfillment_orders,write_assigned_fulfillment_orders,write_draft_orders,write_fulfillments,write_inventory,write_merchant_managed_fulfillment_orders,write_orders,write_products,write_shipping"
 
 [auth]
 redirect_urls = [
-  "https://uv-holmes-scanners-constant.trycloudflare.com/auth/callback",
-  "https://uv-holmes-scanners-constant.trycloudflare.com/auth/shopify/callback",
-  "https://uv-holmes-scanners-constant.trycloudflare.com/api/auth/callback"
+  "https://county-pavilion-smell-support.trycloudflare.com/auth/callback",
+  "https://county-pavilion-smell-support.trycloudflare.com/auth/shopify/callback",
+  "https://county-pavilion-smell-support.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]
