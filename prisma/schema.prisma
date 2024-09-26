@@ -257,6 +257,15 @@ model Order {
   supplier                          Session         @relation("SupplierOrder", fields: [supplierId], references: [id])
   payments                          Payment[]
   orderLineItems                    OrderLineItem[]
+  fulfillments                      Fulfillment[]
+}
+
+model Fulfillment {
+  id                           String @id @default(uuid())
+  supplierShopifyFulfillmentId String
+  retailerShopifyFulfillmentId String
+  orderId                      String
+  order                        Order  @relation(fields: [orderId], references: [id])
 }
 
 model OrderLineItem {
