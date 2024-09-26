@@ -22,22 +22,11 @@ const shopify = shopifyApp({
   future: {
     unstable_newEmbeddedAuthStrategy: true,
   },
+  // This should not be called w/ EventBridge; results in duplicate webhook registration
   webhooks: {
     BULK_OPERATIONS_FINISH: {
       deliveryMethod: DeliveryMethod.Http,
       callbackUrl: '/webhooks',
-    },
-    PRODUCTS_UPDATE: {
-      deliveryMethod: DeliveryMethod.Http,
-      callbackUrl: '/webhooks',
-    },
-    PRODUCTS_DELETE: {
-      deliveryMethod: DeliveryMethod.EventBridge,
-      arn: process.env.EVENT_SOURCE_ARN ?? '',
-    },
-    FULFILLMENT_ORDERS_ORDER_ROUTING_COMPLETE: {
-      deliveryMethod: DeliveryMethod.EventBridge,
-      arn: process.env.EVENT_SOURCE_ARN ?? '',
     },
   },
   hooks: {

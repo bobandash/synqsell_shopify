@@ -3,7 +3,7 @@
 client_id = "2c3db0b06834a9b20de60ef4b15c8228"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://county-pavilion-smell-support.trycloudflare.com"
+application_url = "https://affair-renewable-maximize-stamps.trycloudflare.com"
 embedded = true
 
 [build]
@@ -13,13 +13,13 @@ include_config_on_deploy = true
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "write_assigned_fulfillment_orders,read_assigned_fulfillment_orders,read_inventory,read_locations,read_orders,read_products,read_shipping,write_third_party_fulfillment_orders,read_third_party_fulfillment_orders,write_assigned_fulfillment_orders,write_draft_orders,write_fulfillments,write_inventory,write_merchant_managed_fulfillment_orders,write_orders,write_products,write_shipping"
+scopes = "read_assigned_fulfillment_orders,read_inventory,read_locations,read_orders,read_products,read_shipping,read_third_party_fulfillment_orders,write_assigned_fulfillment_orders,write_draft_orders,write_fulfillments,write_inventory,write_merchant_managed_fulfillment_orders,write_orders,write_products,write_shipping,write_third_party_fulfillment_orders"
 
 [auth]
 redirect_urls = [
-  "https://county-pavilion-smell-support.trycloudflare.com/auth/callback",
-  "https://county-pavilion-smell-support.trycloudflare.com/auth/shopify/callback",
-  "https://county-pavilion-smell-support.trycloudflare.com/api/auth/callback"
+  "https://affair-renewable-maximize-stamps.trycloudflare.com/auth/callback",
+  "https://affair-renewable-maximize-stamps.trycloudflare.com/auth/shopify/callback",
+  "https://affair-renewable-maximize-stamps.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]
@@ -28,6 +28,8 @@ api_version = "2024-07"
   [[webhooks.subscriptions]]
   topics = [
   "app/uninstalled",
+  "fulfillment_events/create",
+  "fulfillment_events/delete",
   "fulfillment_orders/order_routing_complete",
   "products/delete",
   "products/update"

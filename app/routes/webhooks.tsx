@@ -2,7 +2,7 @@ import type { ActionFunctionArgs } from '@remix-run/node';
 import { authenticate } from '../shopify.server';
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { topic, admin, payload } = await authenticate.webhook(request);
+  const { topic, admin } = await authenticate.webhook(request);
 
   if (!admin) {
     // The admin context isn't returned if the webhook fired after a shop was uninstalled.
@@ -16,10 +16,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     case 'PRODUCTS_UPDATE':
       break;
     case 'PRODUCTS_DELETE':
-      console.log('products deleted: ', payload);
       break;
     case 'BULK_OPERATIONS_FINISH':
-      console.log(payload);
       break;
     case 'CUSTOMERS_DATA_REQUEST':
     case 'CUSTOMERS_REDACT':
