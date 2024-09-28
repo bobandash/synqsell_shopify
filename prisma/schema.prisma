@@ -250,7 +250,7 @@ model Order {
   retailerId                        String
   supplierId                        String
   shippingCost                      Decimal         @default(0) @db.Decimal(10, 2)
-  paymentStatus                     String // CAN BE INCOMPLETE, PARTIALLY_PAID, or PAID
+  paymentStatus                     String // CAN BE INCOMPLETE, PARTIALLY_PAID, PAID, CANCELLED
   createdAt                         DateTime        @default(now())
   updatedAt                         DateTime        @default(now())
   retailer                          Session         @relation("RetailerOrder", fields: [retailerId], references: [id])

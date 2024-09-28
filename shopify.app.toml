@@ -3,7 +3,7 @@
 client_id = "2c3db0b06834a9b20de60ef4b15c8228"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://affair-renewable-maximize-stamps.trycloudflare.com"
+application_url = "https://sq-staffing-kelly-filters.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read_assigned_fulfillment_orders,read_inventory,read_locations,read_or
 
 [auth]
 redirect_urls = [
-  "https://affair-renewable-maximize-stamps.trycloudflare.com/auth/callback",
-  "https://affair-renewable-maximize-stamps.trycloudflare.com/auth/shopify/callback",
-  "https://affair-renewable-maximize-stamps.trycloudflare.com/api/auth/callback"
+  "https://sq-staffing-kelly-filters.trycloudflare.com/auth/callback",
+  "https://sq-staffing-kelly-filters.trycloudflare.com/auth/shopify/callback",
+  "https://sq-staffing-kelly-filters.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]
@@ -28,9 +28,11 @@ api_version = "2024-07"
   [[webhooks.subscriptions]]
   topics = [
   "app/uninstalled",
-  "fulfillment_events/create",
-  "fulfillment_events/delete",
+  "fulfillment_orders/cancelled",
   "fulfillment_orders/order_routing_complete",
+  "fulfillments/create",
+  "fulfillments/update",
+  "orders/cancelled",
   "products/delete",
   "products/update"
 ]

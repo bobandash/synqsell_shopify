@@ -114,7 +114,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 const Admin = () => {
   const data = useLoaderData<
     typeof loader
-  >() as unknown as GetSupplierAccessRequestJSONProps[];
+  >() as GetSupplierAccessRequestJSONProps[];
   const actionData = useActionData<typeof action>();
 
   const resourceName = {

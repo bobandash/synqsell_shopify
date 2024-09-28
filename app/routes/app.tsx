@@ -54,6 +54,7 @@ export default function App() {
             <>
               <Link to="/app/partnerships">Partnerships</Link>
               <Link to="/app/settings">Settings</Link>
+              <Link to="/app/payments">Payment Integration</Link>
             </>
           )}
         </NavMenu>
