@@ -1,4 +1,4 @@
-import { json, redirect } from '@remix-run/node';
+import { json } from '@remix-run/node';
 import type { LoaderFunctionArgs } from '@remix-run/node';
 import { StatusCodes } from 'http-status-codes';
 import { ROLES } from '~/constants';
@@ -8,7 +8,7 @@ import { getJSONError } from '~/util';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
-    const { session } = await authenticate.admin(request);
+    const { session, redirect } = await authenticate.admin(request);
     const { id: sessionId } = session;
     const [isRetailer, isSupplier] = await Promise.all([
       hasRole(sessionId, ROLES.RETAILER),

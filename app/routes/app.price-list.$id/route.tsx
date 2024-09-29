@@ -91,7 +91,7 @@ type LoaderDataProps = {
 
 export const action = async ({ request, params }: ActionFunctionArgs) => {
   try {
-    const { session } = await authenticate.admin(request);
+    const { session, redirect } = await authenticate.admin(request);
     const { id: sessionId } = session;
     const formData = await request.formData();
     const { id: priceListId } = params;
@@ -105,6 +105,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       return await createPriceListAndCompleteChecklistItemAction(
         data as PriceListActionData,
         sessionId,
+        redirect,
       );
     }
     return await updateAllPriceListInformationAction(

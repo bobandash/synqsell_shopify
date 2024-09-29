@@ -3,7 +3,6 @@ import { updateChecklistStatusTx } from '~/services/models/checklistStatus';
 import { CHECKLIST_ITEM_KEYS } from '~/constants';
 import { errorHandler } from '~/services/util';
 import { addProductsTx } from '~/services/models/product';
-import { redirect } from '@remix-run/node';
 import type { PriceListActionData } from '../types';
 import type { Prisma } from '@prisma/client';
 import {
@@ -12,6 +11,7 @@ import {
 } from './schemas';
 import { updatePartnershipsInPriceListTx } from './util';
 import { addVariantsTx } from '~/services/models/variants';
+import type { RedirectFunction } from 'node_modules/@shopify/shopify-app-remix/dist/ts/server/authenticate/admin/helpers/redirect';
 
 export async function createPriceListTx(
   tx: Prisma.TransactionClient,
@@ -61,6 +61,7 @@ export async function createPriceListTx(
 async function createPriceListAndCompleteChecklistItemAction(
   data: PriceListActionData,
   sessionId: string,
+  redirect: RedirectFunction,
 ) {
   try {
     await priceListDataSchema.validate(data);
