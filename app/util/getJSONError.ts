@@ -23,8 +23,9 @@ function getJSONError(error: unknown, route: string) {
     });
   }
 
-  logger.error(`Unhandled error ${error} at ${route}`);
   logger.error(error);
+  logger.error(`Unhandled error ${error} at ${route}`);
+
   return json('Unhandled: An internal server error occurred.', {
     status: 500,
   });

@@ -32,6 +32,7 @@ import {
   useActionData,
   useLoaderData,
   useLocation,
+  useNavigate,
   useSubmit as useRemixSubmit,
 } from '@remix-run/react';
 import { isEmail } from './util/customValidation';
@@ -112,7 +113,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const logo = formDataObject.logo ?? null;
     const logoUrl = logo ? await uploadFile(logo) : null;
 
-    // TODO: low priority, below is really bad code, you could just pass all the params together
+    // TODO: refactor, you could just pass all the params together
     const { name, email, biography, desiredProducts } = dataBesidesLogo;
     const {
       facebookLink,
@@ -162,7 +163,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 };
 
-const Settings = () => {
+const UserSettings = () => {
   const loaderData = useLoaderData<typeof loader>() as LoaderDataProps;
   const actionData = useActionData<typeof action>();
   const {
@@ -170,10 +171,10 @@ const Settings = () => {
     roles: rolesData,
     socialMediaLinks: socialMediaData,
   } = loaderData;
-
   const { isRetailer, isSupplier } = useRoleContext();
   const location = useLocation();
   const shopify = useAppBridge();
+  const navigate = useNavigate();
   const [logo, setLogo] = useState<DropZoneImageFileProps>(
     profileData.logo ? { url: profileData.logo, altText: 'Logo' } : null,
   );
@@ -275,16 +276,20 @@ const Settings = () => {
     },
   });
 
+  const navigatePaymentSettings = useCallback(() => {
+    navigate('/app/settings/payment');
+  }, [navigate]);
+
   return (
-    <Form method="post" onSubmit={submit} action={location.pathname}>
-      <Page
-        title="Settings"
-        primaryAction={
-          <Button submit variant="primary">
-            Save
-          </Button>
-        }
-      >
+    <Page
+      title="Settings"
+      primaryAction={{
+        content: 'Payment Integration',
+        helpText: 'Navigate to stripe integration.',
+        onAction: navigatePaymentSettings,
+      }}
+    >
+      <Form method="post" onSubmit={submit} action={location.pathname}>
         <Box paddingBlockEnd={'400'}>
           <Layout>
             <Layout.AnnotatedSection
@@ -401,37 +406,9 @@ const Settings = () => {
           </Button>
         </div>
         <PaddedBox />
-      </Page>
-    </Form>
+      </Form>
+    </Page>
   );
 };
 
-export default Settings;
-
-// !!! TODO: add email preferences, not important for MVP */}
-/* <Text as="h2" variant="headingSm">
-Email Notifications
-</Text>
-{isRetailer && (
-<>
-  <Checkbox
-    label="New incoming partnership requests."
-    checked={true}
-  />
-  <Checkbox
-    label="Updates to partnered suppliers, such as price changes and new products."
-    checked={true}
-  />
-  <Checkbox
-    label="New suppliers that joined SynqSell you might be interested in."
-    checked={true}
-  />
-</>
-)}
-
-{isSupplier && (
-<Checkbox
-  label="New retailers that join SynqSell that you may be interested in partnering with."
-  checked={true}
-/>
-)} */
+export default UserSettings;
