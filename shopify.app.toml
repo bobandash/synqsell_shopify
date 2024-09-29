@@ -3,7 +3,7 @@
 client_id = "2c3db0b06834a9b20de60ef4b15c8228"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://tax-auditor-strain-ontario.trycloudflare.com"
+application_url = "https://sampling-south-relevance-counted.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read_assigned_fulfillment_orders,read_inventory,read_locations,read_or
 
 [auth]
 redirect_urls = [
-  "https://tax-auditor-strain-ontario.trycloudflare.com/auth/callback",
-  "https://tax-auditor-strain-ontario.trycloudflare.com/auth/shopify/callback",
-  "https://tax-auditor-strain-ontario.trycloudflare.com/api/auth/callback"
+  "https://sampling-south-relevance-counted.trycloudflare.com/auth/callback",
+  "https://sampling-south-relevance-counted.trycloudflare.com/auth/shopify/callback",
+  "https://sampling-south-relevance-counted.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]

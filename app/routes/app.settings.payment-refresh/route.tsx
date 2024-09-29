@@ -2,6 +2,7 @@ import { json, type LoaderFunctionArgs } from '@remix-run/node';
 import { useLoaderData } from '@remix-run/react';
 import { useEffect } from 'react';
 import createAccountLink from '~/services/stripe/onboarding';
+import { authenticate } from '~/shopify.server';
 
 type LoaderData = {
   onboardingUrl: string;
@@ -9,7 +10,12 @@ type LoaderData = {
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
-    const { origin: appBaseUrl, searchParams } = new URL(request.url);
+    const {
+      session: { shop },
+    } = await authenticate.admin(request);
+    const url = new URL(request.url);
+    const searchParams = url.searchParams;
+    const appBaseUrl = `https://${shop}/admin/apps/synqsell/`;
     const accountId = searchParams.get('accountId');
     if (!accountId) {
       throw json({ error: 'No account id was provided' });
@@ -26,7 +32,7 @@ const StripePaymentRefresh = () => {
 
   useEffect(() => {
     if (onboardingUrl) {
-      window.open(onboardingUrl);
+      open(onboardingUrl, '_top');
     }
   }, [onboardingUrl]);
 

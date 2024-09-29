@@ -1,10 +1,5 @@
 import { Button, Card, Icon, InlineStack, Page, Text } from '@shopify/polaris';
 import { useCallback, useEffect, useState } from 'react';
-import { useStripeConnect } from './hooks/useStripeConnect';
-import {
-  ConnectAccountOnboarding,
-  ConnectComponentsProvider,
-} from '@stripe/react-connect-js';
 import type { ActionFunctionArgs, LoaderFunctionArgs } from '@remix-run/node';
 import { json } from '@remix-run/node';
 import { useFetcher, useLoaderData, useNavigate } from '@remix-run/react';
@@ -42,12 +37,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const {
       session: { id: sessionId, shop },
     } = await authenticate.admin(request);
-    const { searchParams } = new URL(request.url);
-    const accountId = searchParams.get('accountId');
-    if (accountId) {
-      searchParams.delete('accountId');
-    }
+    const url = new URL(request.url);
+    const searchParams = url.searchParams;
     const appBaseUrl = `https://${shop}/admin/apps/synqsell/`;
+    const accountId = searchParams.get('accountId');
     const hasStripeAccountInDb = await userHasStripeAccount(sessionId);
     // when the user exits or completes the onboarding process with the return url
     if (accountId && !hasStripeAccountInDb) {
@@ -81,20 +74,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
 const PaymentSettings = () => {
   const navigate = useNavigate();
-  const {
-    stripePublishableKey,
-    appBaseUrl,
-
-    hasStripeAccountInDb,
-  } = useLoaderData<typeof loader>() as LoaderData;
-  const [onboardingExited, setOnboardingExited] = useState(false);
-  const [connectedAccountId, setConnectedAccountId] = useState<string>('');
+  const { appBaseUrl, hasStripeAccountInDb } = useLoaderData<
+    typeof loader
+  >() as LoaderData;
   const [stripeOnboardingUrl, setStripeOnboardingUrl] = useState<string>('');
-  const stripeConnectInstance = useStripeConnect(
-    connectedAccountId,
-    stripePublishableKey,
-  );
-
   const navigateUserSettings = useCallback(() => {
     navigate('/app/settings/user');
   }, [navigate]);
@@ -118,8 +101,7 @@ const PaymentSettings = () => {
     ) {
       const data = beginStripeOnboardingFetcher.data;
       if (data) {
-        const { accountId, onboardingUrl } = data as BeginStripeOnboardingData;
-        setConnectedAccountId(accountId);
+        const { onboardingUrl } = data as BeginStripeOnboardingData;
         setStripeOnboardingUrl(onboardingUrl);
       }
     }
@@ -128,9 +110,9 @@ const PaymentSettings = () => {
 
   useEffect(() => {
     if (stripeOnboardingUrl) {
-      window.open(stripeOnboardingUrl);
+      open(stripeOnboardingUrl, '_top');
     }
-  }, [stripeOnboardingUrl]); // handle refresh url logic https://docs.stripe.com/api/account_links/create#create_account_link-refresh_url
+  }, [stripeOnboardingUrl]);
 
   return (
     <Page
@@ -167,12 +149,6 @@ const PaymentSettings = () => {
           </InlineStack>
         </Card>
       )}
-      {stripeConnectInstance && (
-        <ConnectComponentsProvider connectInstance={stripeConnectInstance}>
-          <ConnectAccountOnboarding onExit={() => setOnboardingExited(true)} />
-        </ConnectComponentsProvider>
-      )}
-      {onboardingExited && <div>You have left the onboarding process.</div>}
     </Page>
   );
 };
