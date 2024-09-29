@@ -101,7 +101,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 const SupplierNetwork = () => {
   const { retailerPaginatedInfo, priceLists } = useLoaderData<
     typeof loader
-  >() as RetailerPaginatedInfoProps;
+  >() as unknown as RetailerPaginatedInfoProps; // TODO: fix unknown typing
 
   const actionData = useActionData<typeof action>();
   const [retailers, setRetailers] = useState<Retailer[]>(

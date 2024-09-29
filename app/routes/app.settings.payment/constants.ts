@@ -1,0 +1,3 @@
+export const INTENTS = {
+  CREATE_ACCOUNT: 'CREATE_ACCOUNT',
+};
