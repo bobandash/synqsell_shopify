@@ -8,7 +8,12 @@ export function getStripePublishableKey() {
 
 export async function createStripeAccount() {
   try {
-    const account = await stripe.accounts.create({});
+    const account = await stripe.accounts.create({
+      capabilities: {
+        transfers: { requested: true },
+        card_payments: { requested: true },
+      },
+    });
     return account;
   } catch (error) {
     throw new Error(
@@ -21,13 +26,15 @@ export async function createStripeAccount() {
 export async function isAccountOnboarded(accountId: string) {
   try {
     const account = await stripe.accounts.retrieve(accountId);
-    return (
+
+    const onboardedStatus =
       account.details_submitted &&
       account.charges_enabled &&
       account.payouts_enabled &&
       account.requirements?.currently_due?.length === 0 &&
-      account.requirements.disabled_reason === null
-    );
+      account.requirements.disabled_reason === null;
+
+    return onboardedStatus;
   } catch (error) {
     throw new Error(
       'An error occurred when checking if account was onboarded in Stripe API:',
@@ -43,6 +50,7 @@ export async function createAccountLink(accountId: string, appBaseUrl: string) {
       refresh_url: `${appBaseUrl}/app/settings/payment-refresh?accountId=${accountId}`,
       return_url: `${appBaseUrl}/app/settings/payment?accountId=${accountId}`,
       type: 'account_onboarding',
+      collect: 'eventually_due',
     });
     return accountLink;
   } catch (error) {

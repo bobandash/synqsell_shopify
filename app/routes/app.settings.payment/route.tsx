@@ -1,4 +1,4 @@
-import { Button, Page } from '@shopify/polaris';
+import { Button, Card, Icon, InlineStack, Page, Text } from '@shopify/polaris';
 import { useCallback, useEffect, useState } from 'react';
 import { useStripeConnect } from './hooks/useStripeConnect';
 import {
@@ -24,11 +24,11 @@ import {
   userHasStripeAccount,
 } from '~/services/models/stripeAccount';
 import { authenticate } from '~/shopify.server';
+import { CheckCircleIcon } from '@shopify/polaris-icons';
 
 type LoaderData = {
   appBaseUrl: string;
   stripePublishableKey: string;
-  onboardingUrl: string;
   hasStripeAccountInDb: boolean;
 };
 
@@ -44,19 +44,20 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     } = await authenticate.admin(request);
     const { searchParams } = new URL(request.url);
     const accountId = searchParams.get('accountId');
+    if (accountId) {
+      searchParams.delete('accountId');
+    }
     const appBaseUrl = `https://${shop}/admin/apps/synqsell/`;
-    let onboardingUrl = '';
     const hasStripeAccountInDb = await userHasStripeAccount(sessionId);
     // when the user exits or completes the onboarding process with the return url
     if (accountId && !hasStripeAccountInDb) {
       const isStripeAccountOnboarded = await isAccountOnboarded(accountId);
       if (isStripeAccountOnboarded) {
-        await addStripeAccount(accountId, sessionId);
+        await addStripeAccount(sessionId, accountId);
       }
     }
     const stripePublishableKey = getStripePublishableKey();
     return json({
-      onboardingUrl,
       appBaseUrl, // base url w/out any paths
       stripePublishableKey,
       hasStripeAccountInDb,
@@ -83,14 +84,12 @@ const PaymentSettings = () => {
   const {
     stripePublishableKey,
     appBaseUrl,
-    onboardingUrl,
+
     hasStripeAccountInDb,
   } = useLoaderData<typeof loader>() as LoaderData;
   const [onboardingExited, setOnboardingExited] = useState(false);
   const [connectedAccountId, setConnectedAccountId] = useState<string>('');
-  const [stripeOnboardingUrl, setStripeOnboardingUrl] = useState<string>(
-    onboardingUrl ?? '',
-  );
+  const [stripeOnboardingUrl, setStripeOnboardingUrl] = useState<string>('');
   const stripeConnectInstance = useStripeConnect(
     connectedAccountId,
     stripePublishableKey,
@@ -143,7 +142,7 @@ const PaymentSettings = () => {
         onAction: navigateUserSettings,
       }}
     >
-      {!hasStripeAccountInDb && (
+      {!hasStripeAccountInDb ? (
         <div>
           <Button
             variant={'primary'}
@@ -155,6 +154,18 @@ const PaymentSettings = () => {
               : 'Start Onboarding Process'}
           </Button>
         </div>
+      ) : (
+        // TODO: Figure out what to display for this
+        <Card>
+          <InlineStack gap="100">
+            <div>
+              <Icon source={CheckCircleIcon} tone="base" />
+            </div>
+            <Text variant="bodyLg" as="h2">
+              Stripe Connect has been successfully integrated.
+            </Text>
+          </InlineStack>
+        </Card>
       )}
       {stripeConnectInstance && (
         <ConnectComponentsProvider connectInstance={stripeConnectInstance}>
