@@ -3,7 +3,7 @@
 client_id = "2c3db0b06834a9b20de60ef4b15c8228"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://designing-knives-subscription-your.trycloudflare.com"
+application_url = "https://neck-tokyo-typical-mono.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read_assigned_fulfillment_orders,read_inventory,read_locations,read_or
 
 [auth]
 redirect_urls = [
-  "https://designing-knives-subscription-your.trycloudflare.com/auth/callback",
-  "https://designing-knives-subscription-your.trycloudflare.com/auth/shopify/callback",
-  "https://designing-knives-subscription-your.trycloudflare.com/api/auth/callback"
+  "https://neck-tokyo-typical-mono.trycloudflare.com/auth/callback",
+  "https://neck-tokyo-typical-mono.trycloudflare.com/auth/shopify/callback",
+  "https://neck-tokyo-typical-mono.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]

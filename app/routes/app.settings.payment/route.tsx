@@ -8,42 +8,58 @@ import {
 import type { ActionFunctionArgs, LoaderFunctionArgs } from '@remix-run/node';
 import { json } from '@remix-run/node';
 import { useFetcher, useLoaderData, useNavigate } from '@remix-run/react';
-import { getStripePublishableKey } from '~/services/stripe/onboarding';
+import {
+  getStripePublishableKey,
+  isAccountOnboarded,
+} from '~/services/stripe/onboarding';
 import { convertFormDataToObject } from '~/util';
 import { INTENTS } from './constants';
 import {
   beginStripeOnboarding,
   type BeginStripeOnboardingData,
-} from './server/actions';
+} from './actions';
 import { StatusCodes } from 'http-status-codes';
-import { createAccountLink } from './server/util';
+import {
+  addStripeAccount,
+  userHasStripeAccount,
+} from '~/services/models/stripeAccount';
+import { authenticate } from '~/shopify.server';
 
 type LoaderData = {
-  appPaymentUrl: string;
+  appBaseUrl: string;
   stripePublishableKey: string;
-  onboardingUrl?: string;
+  onboardingUrl: string;
+  hasStripeAccountInDb: boolean;
 };
 
 type BeginStripeOnboardingFormData = {
   intent: string;
-  appPaymentUrl: string;
+  appBaseUrl: string;
 };
 
-export const loader = async ({ request, params }: LoaderFunctionArgs) => {
+export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
-    const url = new URL(request.url);
-    const appPaymentUrl = `${url.origin}${url.pathname}`;
-    const queryParams = url.searchParams;
-    const accountId = queryParams.get('accountId');
+    const {
+      session: { id: sessionId, shop },
+    } = await authenticate.admin(request);
+    const { searchParams } = new URL(request.url);
+    const accountId = searchParams.get('accountId');
+    const appBaseUrl = `https://${shop}/admin/apps/synqsell/`;
     let onboardingUrl = '';
-    if (accountId) {
-      onboardingUrl = (await createAccountLink(accountId, appPaymentUrl)).url;
+    const hasStripeAccountInDb = await userHasStripeAccount(sessionId);
+    // when the user exits or completes the onboarding process with the return url
+    if (accountId && !hasStripeAccountInDb) {
+      const isStripeAccountOnboarded = await isAccountOnboarded(accountId);
+      if (isStripeAccountOnboarded) {
+        await addStripeAccount(accountId, sessionId);
+      }
     }
     const stripePublishableKey = getStripePublishableKey();
     return json({
-      ...(onboardingUrl ? { onboardingUrl } : {}),
-      appPaymentUrl,
+      onboardingUrl,
+      appBaseUrl, // base url w/out any paths
       stripePublishableKey,
+      hasStripeAccountInDb,
     });
   } catch (error) {
     throw json(error);
@@ -57,16 +73,19 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   switch (intent) {
     case INTENTS.CREATE_ACCOUNT:
       const data = formDataObject as BeginStripeOnboardingFormData;
-      return beginStripeOnboarding(data.appPaymentUrl);
+      return beginStripeOnboarding(data.appBaseUrl);
   }
   return json({ data: 'Not Implemented' }, StatusCodes.NOT_IMPLEMENTED);
 };
 
 const PaymentSettings = () => {
   const navigate = useNavigate();
-  const { stripePublishableKey, appPaymentUrl, onboardingUrl } = useLoaderData<
-    typeof loader
-  >() as LoaderData;
+  const {
+    stripePublishableKey,
+    appBaseUrl,
+    onboardingUrl,
+    hasStripeAccountInDb,
+  } = useLoaderData<typeof loader>() as LoaderData;
   const [onboardingExited, setOnboardingExited] = useState(false);
   const [connectedAccountId, setConnectedAccountId] = useState<string>('');
   const [stripeOnboardingUrl, setStripeOnboardingUrl] = useState<string>(
@@ -88,10 +107,10 @@ const PaymentSettings = () => {
 
   const handleBeginOnboarding = useCallback(() => {
     beginStripeOnboardingFetcher.submit(
-      { intent: INTENTS.CREATE_ACCOUNT, appPaymentUrl: appPaymentUrl },
+      { intent: INTENTS.CREATE_ACCOUNT, appBaseUrl: appBaseUrl },
       { method: 'POST' },
     );
-  }, [beginStripeOnboardingFetcher, appPaymentUrl]);
+  }, [beginStripeOnboardingFetcher, appBaseUrl]);
 
   useEffect(() => {
     if (
@@ -110,7 +129,7 @@ const PaymentSettings = () => {
 
   useEffect(() => {
     if (stripeOnboardingUrl) {
-      window.open(stripeOnboardingUrl, '_blank');
+      window.open(stripeOnboardingUrl);
     }
   }, [stripeOnboardingUrl]); // handle refresh url logic https://docs.stripe.com/api/account_links/create#create_account_link-refresh_url
 
@@ -124,7 +143,7 @@ const PaymentSettings = () => {
         onAction: navigateUserSettings,
       }}
     >
-      {!connectedAccountId && (
+      {!hasStripeAccountInDb && (
         <div>
           <Button
             variant={'primary'}
@@ -137,7 +156,6 @@ const PaymentSettings = () => {
           </Button>
         </div>
       )}
-      {/* I don't really know what the below code is for yet */}
       {stripeConnectInstance && (
         <ConnectComponentsProvider connectInstance={stripeConnectInstance}>
           <ConnectAccountOnboarding onExit={() => setOnboardingExited(true)} />
