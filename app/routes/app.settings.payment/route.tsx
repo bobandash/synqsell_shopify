@@ -3,11 +3,8 @@ import {
   BlockStack,
   Button,
   Card,
-  Icon,
-  InlineStack,
   Layout,
   Page,
-  Text,
 } from '@shopify/polaris';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ActionFunctionArgs, LoaderFunctionArgs } from '@remix-run/node';
@@ -27,7 +24,6 @@ import {
 } from './actions';
 import { StatusCodes } from 'http-status-codes';
 import { authenticate } from '~/shopify.server';
-import { CheckCircleIcon } from '@shopify/polaris-icons';
 import { useRoleContext } from '~/context/RoleProvider';
 import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
@@ -281,16 +277,7 @@ const PaymentSettings = () => {
                 </Button>
               </Card>
             ) : (
-              <Card>
-                <InlineStack gap="100">
-                  <div>
-                    <Icon source={CheckCircleIcon} tone="base" />
-                  </div>
-                  <Text variant="bodyLg" as="h2">
-                    Stripe Connect has been successfully integrated.
-                  </Text>
-                </InlineStack>
-              </Card>
+              <SuccessfulIntegration text="Stripe Connect has been successfully integrated." />
             )}
           </Layout.AnnotatedSection>
         )}
