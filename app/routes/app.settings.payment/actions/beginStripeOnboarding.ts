@@ -1,7 +1,7 @@
 import { json } from '@remix-run/node';
 import createAccountLink, {
   createStripeAccount,
-} from '~/services/stripe/onboarding';
+} from '~/services/stripe/stripeConnect';
 
 type BeginStripeOnboardingData = {
   onboardingUrl: string;

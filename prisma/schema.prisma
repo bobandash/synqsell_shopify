@@ -8,37 +8,38 @@ datasource db {
 }
 
 model Session {
-  id                           String                 @id
+  id                           String                  @id
   shop                         String
   state                        String
-  isOnline                     Boolean                @default(false)
+  isOnline                     Boolean                 @default(false)
   scope                        String?
-  expires                      DateTime?              @db.Timestamp(6)
+  expires                      DateTime?               @db.Timestamp(6)
   accessToken                  String
   userId                       BigInt?
   firstName                    String?
   lastName                     String?
   email                        String?
-  accountOwner                 Boolean                @default(false)
+  accountOwner                 Boolean                 @default(false)
   locale                       String?
-  collaborator                 Boolean?               @default(false)
-  emailVerified                Boolean?               @default(false)
+  collaborator                 Boolean?                @default(false)
+  emailVerified                Boolean?                @default(false)
   carrierService               CarrierService?
   checklistStatuses            ChecklistStatus[]
   fulfillmentService           FulfillmentService?
   importedProducts             ImportedProduct[]
-  retailerPartnerships         Partnership[]          @relation("RetailerPartnership")
-  supplierPartnerships         Partnership[]          @relation("SupplierPartnership")
-  recipientPartnershipRequests PartnershipRequest[]   @relation("RecipientPartnershipRequest")
-  senderPartnershipRequests    PartnershipRequest[]   @relation("SenderPartnershipRequest")
+  retailerPartnerships         Partnership[]           @relation("RetailerPartnership")
+  supplierPartnerships         Partnership[]           @relation("SupplierPartnership")
+  recipientPartnershipRequests PartnershipRequest[]    @relation("RecipientPartnershipRequest")
+  senderPartnershipRequests    PartnershipRequest[]    @relation("SenderPartnershipRequest")
   priceLists                   PriceList[]
   roles                        Role[]
   supplierAccessRequest        SupplierAccessRequest?
   userPreference               UserPreference?
   userProfile                  UserProfile?
-  retailerOrders               Order[]                @relation("RetailerOrder")
-  supplierOrders               Order[]                @relation("SupplierOrder")
-  stripeAccount                StripeAccount?
+  retailerOrders               Order[]                 @relation("RetailerOrder")
+  supplierOrders               Order[]                 @relation("SupplierOrder")
+  stripeAccount                StripeConnectAccount?
+  StripeCustomerAccount        StripeCustomerAccount[]
 }
 
 model FulfillmentService {
@@ -120,7 +121,7 @@ model UserProfile {
   sessionId       String           @unique
   address         String?
   website         String
-  currencyCode    String           @default("USD")
+  currencyCode    String
   socialMediaLink SocialMediaLink?
   session         Session          @relation(fields: [sessionId], references: [id])
 }
@@ -300,11 +301,20 @@ model Payment {
   fulfillment   Fulfillment @relation(fields: [fulfillmentId], references: [id])
 }
 
-model StripeAccount {
+model StripeConnectAccount {
   id              String   @id @default(uuid())
-  stripeAccountId String
-  sessionId       String   @unique
-  session         Session  @relation(fields: [sessionId], references: [id])
+  stripeAccountId String   @unique
+  supplierId      String   @unique
+  session         Session  @relation(fields: [supplierId], references: [id])
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+model StripeCustomerAccount {
+  id               String   @id @default(uuid())
+  stripeCustomerId String   @unique
+  retailerId       String   @unique
+  session          Session  @relation(fields: [retailerId], references: [id])
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }

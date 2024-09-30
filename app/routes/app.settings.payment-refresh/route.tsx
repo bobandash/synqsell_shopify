@@ -1,7 +1,7 @@
 import { json, type LoaderFunctionArgs } from '@remix-run/node';
 import { useLoaderData } from '@remix-run/react';
 import { useEffect } from 'react';
-import createAccountLink from '~/services/stripe/onboarding';
+import createAccountLink from '~/services/stripe/stripeConnect';
 import { authenticate } from '~/shopify.server';
 
 type LoaderData = {

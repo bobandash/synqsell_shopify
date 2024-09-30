@@ -1,6 +1,9 @@
 import { stripe } from '~/routes/singletons';
+import { errorHandler } from '../util';
 
-//https://docs.stripe.com/connect/hosted-onboarding
+// https://docs.stripe.com/connect/hosted-onboarding
+// functions related to stripe connect o build the marketplace
+// this is for the supplier
 export function getStripePublishableKey() {
   const publishableKey = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY;
   return publishableKey;
@@ -16,9 +19,10 @@ export async function createStripeAccount() {
     });
     return account;
   } catch (error) {
-    throw new Error(
-      'An error occurred when calling the Stripe API to create an account:',
-      error as Error,
+    throw errorHandler(
+      error,
+      'An error occurred when calling the Stripe API to create an account.',
+      createStripeAccount,
     );
   }
 }
@@ -36,9 +40,10 @@ export async function isAccountOnboarded(accountId: string) {
 
     return onboardedStatus;
   } catch (error) {
-    throw new Error(
-      'An error occurred when checking if account was onboarded in Stripe API:',
-      error as Error,
+    throw errorHandler(
+      error,
+      'An error occurred when checking if account was onboarded in Stripe API.',
+      createStripeAccount,
     );
   }
 }
@@ -54,9 +59,10 @@ export async function createAccountLink(accountId: string, appBaseUrl: string) {
     });
     return accountLink;
   } catch (error) {
-    throw new Error(
-      'An error occurred when calling the Stripe API to create an account link:',
-      error as Error,
+    throw errorHandler(
+      error,
+      'An error occurred when calling the Stripe API to create an account link.',
+      createAccountLink,
     );
   }
 }
