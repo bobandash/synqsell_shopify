@@ -261,14 +261,6 @@ model Order {
   fulfillments                      Fulfillment[]
 }
 
-model Fulfillment {
-  id                           String @id @default(uuid())
-  supplierShopifyFulfillmentId String
-  retailerShopifyFulfillmentId String
-  orderId                      String
-  order                        Order  @relation(fields: [orderId], references: [id])
-}
-
 model OrderLineItem {
   id                             String    @id @default(uuid())
   retailerShopifyVariantId       String
@@ -287,14 +279,25 @@ model OrderLineItem {
   priceList                      PriceList @relation(fields: [priceListId], references: [id])
 }
 
+model Fulfillment {
+  id                           String   @id @default(uuid())
+  supplierShopifyFulfillmentId String
+  retailerShopifyFulfillmentId String
+  orderId                      String
+  order                        Order    @relation(fields: [orderId], references: [id])
+  payment                      Payment?
+}
+
 model Payment {
-  id            String   @id @default(uuid())
+  id            String      @id @default(uuid())
   orderId       String
-  stripeEventId String   @unique
+  stripeEventId String      @unique
   status        String // need to listen to stripe's webhooks for this
-  amount        Decimal  @db.Decimal(10, 2)
-  createdAt     DateTime @default(now())
-  order         Order    @relation(fields: [orderId], references: [id])
+  amount        Decimal     @db.Decimal(10, 2)
+  createdAt     DateTime    @default(now())
+  fulfillmentId String      @unique
+  order         Order       @relation(fields: [orderId], references: [id])
+  fulfillment   Fulfillment @relation(fields: [fulfillmentId], references: [id])
 }
 
 model StripeAccount {
