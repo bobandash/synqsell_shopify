@@ -25,19 +25,23 @@ import { ROLES } from '~/constants';
 import { useRoleContext } from '~/context/RoleProvider';
 import { hasRole } from '~/services/models/roles';
 import { authenticate } from '~/shopify.server';
-import { convertFormDataToObject, getJSONError } from '~/util';
+import {
+  convertFormDataToObject,
+  createJSONMessage,
+  getJSONError,
+} from '~/util';
 import getSupplierPartnershipInfo from './loader/getSupplierPartnershipInfo';
 import { INTENTS, MODALS, RETAILER_ACCESS_REQUEST_STATUS } from './constants';
 import {
   approveRetailersAction,
   changePermissionRetailersAction,
   rejectRemoveRetailersAction,
-} from './action';
+} from './actions';
 import type {
   ApproveRetailersActionProps,
   ChangePermissionsRetailersAction,
   RejectRemoveRetailersActionProps,
-} from './action';
+} from './actions';
 import type { PriceListJSON, RowData } from './types';
 import { useAppBridge } from '@shopify/app-bridge-react';
 import { useField, useForm } from '@shopify/react-form';
@@ -60,19 +64,18 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     } = await authenticate.admin(request);
     const isSupplier = await hasRole(sessionId, ROLES.SUPPLIER);
     if (!isSupplier) {
-      throw json(
-        {
-          message:
-            'User is not a supplier. Unauthorized to view retailer partnership requests.',
-        },
+      throw createJSONMessage(
+        'User is not a supplier. Unauthorized to view retailer partnership requests.',
         StatusCodes.UNAUTHORIZED,
       );
     }
-    const partnershipInfo = await getSupplierPartnershipInfo(sessionId);
-    const priceLists = await getAllPriceLists(sessionId);
-    return json({ partnershipInfo, priceLists }, StatusCodes.OK);
+    const [partnershipInfo, priceLists] = await Promise.all([
+      getSupplierPartnershipInfo(sessionId),
+      getAllPriceLists(sessionId),
+    ]);
+    return json({ partnershipInfo, priceLists }, { status: StatusCodes.OK });
   } catch (error) {
-    throw getJSONError(error, 'retailer partnerships');
+    throw getJSONError(error, '/app/partnerships/retailer');
   }
 };
 
@@ -95,10 +98,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           data as ChangePermissionsRetailersAction,
         );
     }
-    return json(
-      { message: 'Functionality has not been implemented yet.' },
-      StatusCodes.NOT_IMPLEMENTED,
-    );
+    return createJSONMessage('Not Implemented.', StatusCodes.NOT_IMPLEMENTED);
   } catch (error) {
     throw getJSONError(error, 'admin network');
   }

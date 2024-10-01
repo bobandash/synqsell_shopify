@@ -8,10 +8,9 @@ import {
   deletePartnershipsTx,
   hasPartnership,
 } from '~/services/models/partnership';
-import { getJSONError } from '~/util';
 import db from '~/db.server';
-import { json } from '@remix-run/node';
 import { StatusCodes } from 'http-status-codes';
+import { createJSONMessage } from '~/util';
 
 export type RejectRemoveRetailersActionProps = {
   intent: IntentsProps;
@@ -19,6 +18,7 @@ export type RejectRemoveRetailersActionProps = {
   partnershipIds: string[];
 };
 
+// TODO: simplify these yup schemas
 const rejectRemoveRetailersActionSchema = object({
   intent: string().required().oneOf([INTENTS.REJECT_REMOVE_RETAILERS]),
   partnershipRequestIds: array()
@@ -56,20 +56,16 @@ const rejectRemoveRetailersActionSchema = object({
 export async function rejectRemoveRetailersAction(
   data: RejectRemoveRetailersActionProps,
 ) {
-  try {
-    await rejectRemoveRetailersActionSchema.validate(data);
-    const { partnershipRequestIds, partnershipIds } = data;
-    await db.$transaction(async (tx) => {
-      await Promise.all([
-        deletePartnershipsTx(tx, partnershipIds),
-        deletePartnershipRequestsTx(tx, partnershipRequestIds),
-      ]);
-    });
-    return json(
-      { message: 'Successfully removed partnerships.' },
-      StatusCodes.OK,
-    );
-  } catch (error) {
-    throw getJSONError(error, 'supplier partnerships');
-  }
+  await rejectRemoveRetailersActionSchema.validate(data);
+  const { partnershipRequestIds, partnershipIds } = data;
+  await db.$transaction(async (tx) => {
+    await Promise.all([
+      deletePartnershipsTx(tx, partnershipIds),
+      deletePartnershipRequestsTx(tx, partnershipRequestIds),
+    ]);
+  });
+  return createJSONMessage(
+    'Successfully removed partnerships.',
+    StatusCodes.OK,
+  );
 }

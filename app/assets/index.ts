@@ -4,3 +4,4 @@ export { default as AddSquare } from './AddSquare.svg';
 export { default as PlusIcon } from './PlusIcon.svg';
 export { default as ToolsIcon } from './ToolsIcon.svg';
 export { default as ImageIcon } from './ImageIcon.png';
+export { default as WarningIcon } from './WarningIcon.png';

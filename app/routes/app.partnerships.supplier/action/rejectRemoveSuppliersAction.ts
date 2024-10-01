@@ -8,10 +8,9 @@ import {
   deletePartnershipsTx,
   hasPartnership,
 } from '~/services/models/partnership';
-import { getJSONError } from '~/util';
 import db from '~/db.server';
-import { json } from '@remix-run/node';
 import { StatusCodes } from 'http-status-codes';
+import { createJSONMessage } from '~/util';
 
 export type RejectRemoveSuppliersActionProps = {
   intent: IntentsProps;
@@ -56,20 +55,17 @@ const rejectRemoveSuppliersActionSchema = object({
 export async function rejectRemoveSuppliersAction(
   data: RejectRemoveSuppliersActionProps,
 ) {
-  try {
-    await rejectRemoveSuppliersActionSchema.validate(data);
-    const { partnershipRequestIds, partnershipIds } = data;
-    await db.$transaction(async (tx) => {
-      await Promise.all([
-        deletePartnershipsTx(tx, partnershipIds),
-        deletePartnershipRequestsTx(tx, partnershipRequestIds),
-      ]);
-    });
-    return json(
-      { message: 'Successfully removed partnerships.' },
-      StatusCodes.OK,
-    );
-  } catch (error) {
-    throw getJSONError(error, 'supplier partnerships');
-  }
+  await rejectRemoveSuppliersActionSchema.validate(data);
+  const { partnershipRequestIds, partnershipIds } = data;
+  await db.$transaction(async (tx) => {
+    await Promise.all([
+      deletePartnershipsTx(tx, partnershipIds),
+      deletePartnershipRequestsTx(tx, partnershipRequestIds),
+    ]);
+  });
+
+  return createJSONMessage(
+    'Successfully removed partnerships.',
+    StatusCodes.OK,
+  );
 }

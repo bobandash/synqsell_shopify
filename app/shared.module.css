@@ -87,6 +87,10 @@ button.green > p {
   color: var(--green);
 }
 
+.error-image-container > img {
+  width: 80px;
+}
+
 /* for card containers */
 .card-image-container {
   width: 100%;

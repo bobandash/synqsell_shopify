@@ -46,7 +46,7 @@ const getStartedRetailerSchema = object({
     }),
 });
 
-type getRetailerData = InferType<typeof getStartedRetailerSchema>;
+type RetailerData = InferType<typeof getStartedRetailerSchema>;
 
 // Types for the data functions
 export type GetStartedRetailerActionData = {
@@ -63,7 +63,7 @@ export async function getStartedRetailerAction(
 ) {
   try {
     await getStartedRetailerSchema.validate(formDataObject);
-    const { checklistItemId } = formDataObject as unknown as getRetailerData;
+    const { checklistItemId } = formDataObject as RetailerData;
     const [
       checklistStatusCompleted,
       fulfillmentServiceExists,
@@ -189,66 +189,61 @@ async function createOrGetFields(
   let retailerRole;
   let carrierService;
 
-  try {
-    const fields = await getExistingFieldsOrUndefined(
-      checklistStatusCompleted,
-      fulfillmentServiceExists,
-      hasRetailerRole,
-      hasCarrierService,
+  const fields = await getExistingFieldsOrUndefined(
+    checklistStatusCompleted,
+    fulfillmentServiceExists,
+    hasRetailerRole,
+    hasCarrierService,
+    sessionId,
+    checklistItemId,
+  );
+  fulfillmentService = fields.fulfillmentService;
+  checklistStatus = fields.checklistStatus;
+  retailerRole = fields.retailerRole;
+  carrierService = fields.carrierService;
+
+  const checklistStatusId = (
+    await getChecklistStatus(sessionId, checklistItemId)
+  ).id;
+
+  // this must be created first because it's created in the db and shopify admin api
+  if (!fulfillmentService) {
+    fulfillmentService = await getOrCreateFulfillmentService(
       sessionId,
-      checklistItemId,
+      graphql,
     );
-    fulfillmentService = fields.fulfillmentService;
-    checklistStatus = fields.checklistStatus;
-    retailerRole = fields.retailerRole;
-    carrierService = fields.carrierService;
-
-    const checklistStatusId = (
-      await getChecklistStatus(sessionId, checklistItemId)
-    ).id;
-
-    // this must be created first because it's created in the db and shopify admin api
-    if (!fulfillmentService) {
-      fulfillmentService = await getOrCreateFulfillmentService(
-        sessionId,
-        graphql,
-      );
-    }
-
-    if (!carrierService) {
-      carrierService = await getOrCreateCarrierService(sessionId, graphql);
-    }
-
-    if (!checklistStatus && !retailerRole) {
-      const newRoleAndChecklistStatus =
-        await createRoleAndCompleteChecklistItem(
-          sessionId,
-          ROLES.RETAILER,
-          checklistStatusId,
-        );
-      retailerRole = newRoleAndChecklistStatus.role;
-      checklistStatus = newRoleAndChecklistStatus.checklistStatus;
-    }
-
-    if (!checklistStatus) {
-      checklistStatus = await markCheckListStatus(checklistStatusId, true);
-    }
-    if (!retailerRole) {
-      retailerRole = await addRole(sessionId, ROLES.RETAILER);
-    }
-
-    return json(
-      {
-        carrierService,
-        fulfillmentService,
-        checklistStatus,
-        role: retailerRole,
-      },
-      {
-        status: StatusCodes.CREATED,
-      },
-    );
-  } catch (error) {
-    throw getJSONError(error, 'index');
   }
+
+  if (!carrierService) {
+    carrierService = await getOrCreateCarrierService(sessionId, graphql);
+  }
+
+  if (!checklistStatus && !retailerRole) {
+    const newRoleAndChecklistStatus = await createRoleAndCompleteChecklistItem(
+      sessionId,
+      ROLES.RETAILER,
+      checklistStatusId,
+    );
+    retailerRole = newRoleAndChecklistStatus.role;
+    checklistStatus = newRoleAndChecklistStatus.checklistStatus;
+  }
+
+  if (!checklistStatus) {
+    checklistStatus = await markCheckListStatus(checklistStatusId, true);
+  }
+  if (!retailerRole) {
+    retailerRole = await addRole(sessionId, ROLES.RETAILER);
+  }
+
+  return json(
+    {
+      carrierService,
+      fulfillmentService,
+      checklistStatus,
+      role: retailerRole,
+    },
+    {
+      status: StatusCodes.CREATED,
+    },
+  );
 }

@@ -13,7 +13,11 @@ import {
   type LoaderFunctionArgs,
 } from '@remix-run/node';
 import { StatusCodes } from 'http-status-codes';
-import { convertFormDataToObject, getJSONError } from '~/util';
+import {
+  convertFormDataToObject,
+  createJSONMessage,
+  getJSONError,
+} from '~/util';
 import { authenticate } from '~/shopify.server';
 import { hasRole } from '~/services/models/roles';
 import { ROLES } from '~/constants';
@@ -33,8 +37,8 @@ import { PaddedBox } from '~/components';
 import { ChevronLeftIcon, ChevronRightIcon } from '@shopify/polaris-icons';
 import { useCallback, useEffect, useState } from 'react';
 import { INTENTS, MODALS } from './constants';
-import { requestAccessAction } from './action';
-import type { RequestAccessFormData } from './action/requestAccessAction';
+import { requestAccessAction } from './actions';
+import type { RequestAccessFormData } from './actions/requestAccessAction';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
@@ -53,12 +57,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }
 
     if (!isRetailer) {
-      throw json(
-        { error: { message: 'Unauthorized. User is not retailer.' } },
+      throw createJSONMessage(
+        'Unauthorized. User is not retailer.',
         StatusCodes.UNAUTHORIZED,
       );
     }
-
     const supplierInfo = await getSupplierPaginatedInfo({
       isReverseDirection,
       sessionId,
@@ -66,7 +69,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     });
     return json(supplierInfo, StatusCodes.OK);
   } catch (error) {
-    throw getJSONError(error, 'supplier network');
+    throw getJSONError(error, '/app/supplier-network');
   }
 };
 
@@ -84,9 +87,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           sessionId,
         );
     }
-    return json({ error: 'Not implemented' }, StatusCodes.NOT_IMPLEMENTED);
+    return createJSONMessage('Not Implemented', StatusCodes.NOT_IMPLEMENTED);
   } catch (error) {
-    throw getJSONError(error, 'supplier-network');
+    return getJSONError(error, '/app/supplier-network');
   }
 };
 

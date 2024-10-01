@@ -245,7 +245,7 @@ export async function importProductAction(
         message: `The product has been successfully imported to your store.`,
         productId: productId,
       },
-      StatusCodes.OK,
+      { status: StatusCodes.OK },
     );
   } catch (error) {
     throw getJSONError(error, 'Price List');

@@ -4,8 +4,7 @@ import { isValidPartnershipRequest } from '~/services/models/partnershipRequest'
 import { approvePartnershipRequestBulk } from '~/services/transactions';
 import { PARTNERSHIP_REQUEST_TYPE } from '~/constants';
 import { StatusCodes } from 'http-status-codes';
-import { json } from '@remix-run/node';
-import { getJSONError } from '~/util';
+import { createJSONMessage } from '~/util';
 
 export type ApproveRetailersActionProps = {
   intent: IntentsProps;
@@ -34,18 +33,15 @@ const approveSuppliersActionSchema = object({
 export async function approveRetailersAction(
   data: ApproveRetailersActionProps,
 ) {
-  try {
-    await approveSuppliersActionSchema.validate(data);
-    const { partnershipRequestIds } = data;
-    await approvePartnershipRequestBulk(
-      partnershipRequestIds,
-      PARTNERSHIP_REQUEST_TYPE.SUPPLIER,
-    );
-    return json(
-      { message: 'Successfully approved partnerships.' },
-      StatusCodes.CREATED,
-    );
-  } catch (error) {
-    throw getJSONError(error, 'retailer partnerships');
-  }
+  await approveSuppliersActionSchema.validate(data);
+  const { partnershipRequestIds } = data;
+  await approvePartnershipRequestBulk(
+    partnershipRequestIds,
+    PARTNERSHIP_REQUEST_TYPE.SUPPLIER,
+  );
+
+  return createJSONMessage(
+    'Successfully approved partnerships.',
+    StatusCodes.CREATED,
+  );
 }

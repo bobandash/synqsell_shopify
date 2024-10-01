@@ -1,10 +1,10 @@
-import { json } from '@remix-run/node';
 import type { LoaderFunctionArgs } from '@remix-run/node';
+import { useLoaderData } from '@remix-run/react';
 import { StatusCodes } from 'http-status-codes';
 import { ROLES } from '~/constants';
 import { hasRole } from '~/services/models/roles';
 import { authenticate } from '~/shopify.server';
-import { getJSONError } from '~/util';
+import { createJSONMessage, getJSONError } from '~/util';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
@@ -21,11 +21,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       return redirect('/app/partnerships/retailer');
     }
 
-    return json(
-      {
-        message:
-          'User is not retailer or supplier. Unauthorized to view price list.',
-      },
+    throw createJSONMessage(
+      'User is not retailer or supplier. Unauthorized to view partnership information.',
       StatusCodes.UNAUTHORIZED,
     );
   } catch (error) {
@@ -34,6 +31,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 const Partnerships = () => {
+  useLoaderData();
   return null;
 };
 

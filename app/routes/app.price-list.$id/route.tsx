@@ -44,7 +44,11 @@ import {
 } from '~/constants';
 
 import { authenticate } from '~/shopify.server';
-import { convertFormDataToObject, getJSONError } from '~/util';
+import {
+  convertFormDataToObject,
+  createJSONMessage,
+  getJSONError,
+} from '~/util';
 import {
   categoryChoices,
   formatPriceListFields,
@@ -76,12 +80,7 @@ import { userHasPriceList } from '~/services/models/priceList';
 import { getExistingPriceListData } from './loader/getExistingPriceListData';
 import { getNewPriceListData } from './loader/getNewPriceListData';
 import type { PartnershipRowData } from './loader/getPartnershipData';
-import {
-  createPriceListAndCompleteChecklistItemAction,
-  updateAllPriceListInformationAction,
-} from './actions';
-import createHttpError from 'http-errors';
-import getJSONBadgeError from '~/util/getJSONBadgeError';
+import { createPriceListAction, updatePriceListInfoAction } from './actions';
 
 type LoaderDataProps = {
   settingsData: Settings;
@@ -96,31 +95,26 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
     const formData = await request.formData();
     const { id: priceListId } = params;
     if (!priceListId) {
-      throw json('There is no price list id.', {
-        status: StatusCodes.BAD_REQUEST,
-      });
+      return createJSONMessage(
+        'There is no price list id',
+        StatusCodes.BAD_REQUEST,
+      );
     }
     const data = convertFormDataToObject(formData);
     if (priceListId === 'new') {
-      return await createPriceListAndCompleteChecklistItemAction(
+      return await createPriceListAction(
         data as PriceListActionData,
         sessionId,
         redirect,
       );
     }
-    return await updateAllPriceListInformationAction(
+    return await updatePriceListInfoAction(
       priceListId,
       data as PriceListActionData,
       sessionId,
     );
   } catch (error) {
-    if (error instanceof createHttpError.BadRequest) {
-      return getJSONBadgeError({
-        statusCode: error.statusCode,
-        message: error.message,
-      });
-    }
-    throw getJSONError(error, 'settings');
+    return getJSONError(error, '/app/price-list/$id');
   }
 };
 
@@ -136,16 +130,18 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     let data = null;
 
     if (!priceListId) {
-      throw json('Price list id is empty', {
-        status: StatusCodes.BAD_REQUEST,
-      });
+      throw createJSONMessage(
+        'Price list id is empty',
+        StatusCodes.BAD_REQUEST,
+      );
     }
 
     const hasPriceList = await userHasPriceList(sessionId, priceListId);
     if (!isNew && !hasPriceList) {
-      throw json('User does not have price list.', {
-        status: StatusCodes.BAD_REQUEST,
-      });
+      throw createJSONMessage(
+        'User does not own this price list.',
+        StatusCodes.UNAUTHORIZED,
+      );
     }
 
     if (!isNew) {
@@ -155,7 +151,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     }
     return json(data, StatusCodes.OK);
   } catch (error) {
-    throw getJSONError(error, 'price list');
+    throw getJSONError(error, '/app/price-list/$id');
   }
 };
 
@@ -190,7 +186,7 @@ const CreateEditPriceList = () => {
   const [error, setError] = useState('');
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // write message with feedback
+  // this is for pending message
   useEffect(() => {
     if (actionData && 'message' in actionData) {
       shopify.toast.show(actionData.message);

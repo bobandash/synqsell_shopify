@@ -15,7 +15,7 @@ type Props = {
   setRetailerPaymentBanner: React.Dispatch<React.SetStateAction<BannerState>>;
 };
 
-// TODO: allow suppliers and retailers to change their integration...
+// TODO: allow suppliers and retailers to change their integration
 // https://docs.stripe.com/payments/save-and-reuse?platform=web&ui=elements#:~:text=A%20SetupIntent%20is%20an%20object%20that%20represents%20your,Dashboard%20settings%20or%20you%20can%20list%20them%20manually.
 const PaymentForm: FC<Props> = ({ appBaseUrl, setRetailerPaymentBanner }) => {
   const stripe = useStripe();

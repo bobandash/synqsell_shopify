@@ -1,9 +1,10 @@
-import { json } from '@remix-run/node';
+import { StatusCodes } from 'http-status-codes';
 import { CHECKLIST_ITEM_KEYS } from '~/constants';
 import {
   getChecklistStatus,
   markCheckListStatus,
 } from '~/services/models/checklistStatus';
+import { createJSONMessage } from '~/util';
 async function finishStripePaymentsOnboarding(sessionId: string) {
   const checklistStatus = await getChecklistStatus(
     sessionId,
@@ -11,9 +12,10 @@ async function finishStripePaymentsOnboarding(sessionId: string) {
   );
   await markCheckListStatus(checklistStatus.id, true);
 
-  return json({
-    message: 'Completed checklist item for supplier payments setup.',
-  });
+  return createJSONMessage(
+    'Completed checklist item for supplier payments setup',
+    StatusCodes.OK,
+  );
 }
 
 export default finishStripePaymentsOnboarding;

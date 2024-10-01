@@ -17,7 +17,11 @@ import {
 } from '@shopify/polaris';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRoleContext } from '~/context/RoleProvider';
-import { convertFormDataToObject, getJSONError } from '~/util';
+import {
+  convertFormDataToObject,
+  createJSONMessage,
+  getJSONError,
+} from '~/util';
 import { authenticate } from '~/shopify.server';
 import { StatusCodes } from 'http-status-codes';
 import type { ActionFunctionArgs, LoaderFunctionArgs } from '@remix-run/node';
@@ -46,12 +50,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     } = await authenticate.admin(request);
     const isRetailer = await hasRole(sessionId, ROLES.RETAILER);
     if (!isRetailer) {
-      throw json(
-        {
-          message:
-            'User is not retailer. Unauthorized to view supplier partnership requests.',
-        },
-        StatusCodes.UNAUTHORIZED,
+      throw createJSONMessage(
+        'User is not retailer. Unauthorized to view supplier partnership requests.',
+        StatusCodes.NOT_IMPLEMENTED,
       );
     }
 
@@ -76,14 +77,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         return await rejectRemoveSuppliersAction(
           data as RejectRemoveSuppliersActionProps,
         );
-      default:
-        return json(
-          { message: 'Functionality has not been implemented yet.' },
-          StatusCodes.NOT_IMPLEMENTED,
-        );
     }
+
+    return createJSONMessage(
+      'Functionality has not been implemented yet.',
+      StatusCodes.NOT_IMPLEMENTED,
+    );
   } catch (error) {
-    throw getJSONError(error, 'admin network');
+    throw getJSONError(error, '/app/partnerships/supplier');
   }
 };
 

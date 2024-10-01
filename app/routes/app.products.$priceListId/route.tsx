@@ -6,7 +6,11 @@ import {
 import { Button, InlineGrid, InlineStack, Page } from '@shopify/polaris';
 import { StatusCodes } from 'http-status-codes';
 import { authenticate } from '~/shopify.server';
-import { convertFormDataToObject, getJSONError } from '~/util';
+import {
+  convertFormDataToObject,
+  createJSONMessage,
+  getJSONError,
+} from '~/util';
 import { isValidPriceList } from '~/services/models/priceList';
 import {
   useLoaderData,
@@ -66,17 +70,15 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     let cursor = next || prev || null;
 
     if (!(await isValidPriceList(priceListId))) {
-      throw json(
-        { error: 'Price list could not be found.' },
+      throw createJSONMessage(
+        'Price list could not be found.',
         StatusCodes.NOT_FOUND,
       );
     }
 
     if (!(await hasAccessToViewPriceList(priceListId, sessionId))) {
-      throw json(
-        {
-          error: 'You do not have access to view products in this price list.',
-        },
+      throw createJSONMessage(
+        'You do not have access to view products in this price list.',
         StatusCodes.UNAUTHORIZED,
       );
     }
@@ -91,7 +93,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
       await getPriceListsWithAccessForSpecificSupplier(priceListId, sessionId);
     return json({ productCardInfo, priceListsWithAccess }, StatusCodes.OK);
   } catch (error) {
-    throw getJSONError(error, 'products');
+    throw getJSONError(error, '/products/priceListId');
   }
 };
 
@@ -109,10 +111,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         const data = formDataObject as ImportProductFormData;
         return await importProductAction(data, sessionId, graphql);
     }
-    return json({ message: 'Not Implemented' }, StatusCodes.NOT_IMPLEMENTED);
+    return createJSONMessage('Not implemented.', StatusCodes.UNAUTHORIZED);
   } catch (error) {
-    console.error(error);
-    throw getJSONError(error, 'products');
+    return getJSONError(error, '/products/priceListId');
   }
 };
 
@@ -193,24 +194,23 @@ const PriceListProducts = () => {
 
   // to render between different price lists in the ui
   const actionGroups = useMemo(() => {
-    return priceListsWithAccess.length > 0
-      ? [
-          {
-            title: 'Price List',
-            onClick: (openActions: () => void) => {
-              openActions();
-            },
-            actions: priceListsWithAccess.map((priceList) => {
-              return {
-                content: priceList.name,
-                onAction: () => {
-                  navigate(`/app/products/${priceList.id}`);
-                },
-              };
-            }),
+    if (priceListsWithAccess.length === 0) {
+      return undefined;
+    }
+    return [
+      {
+        title: 'Price List',
+        onClick: (openActions: () => void) => {
+          openActions();
+        },
+        actions: priceListsWithAccess.map((priceList) => ({
+          content: priceList.name,
+          onAction: () => {
+            navigate(`/app/products/${priceList.id}`);
           },
-        ]
-      : undefined;
+        })),
+      },
+    ];
   }, [priceListsWithAccess, navigate]);
 
   return (

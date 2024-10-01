@@ -5,12 +5,11 @@ import {
   partnershipRequestIdListSchema,
   priceListIdListSchema,
 } from '~/schemas/models';
-import { getJSONError } from '~/util';
 import type { Prisma } from '@prisma/client';
 import { errorHandler } from '~/services/util';
 import db from '~/db.server';
-import { json } from '@remix-run/node';
 import { StatusCodes } from 'http-status-codes';
+import { createJSONMessage } from '~/util';
 
 export type ChangePermissionsRetailersAction = {
   intent: IntentsProps;
@@ -44,7 +43,6 @@ async function updatePartnershipsPriceListPermissionsTx(
 ) {
   try {
     const priceListIdData = priceListIds.map((id) => ({ id }));
-
     await updatePartnershipsPriceListPermissionsTxSchema.validate({
       partnershipIds,
       priceListIds,
@@ -110,29 +108,24 @@ async function updatePartnershipRequestsPriceListPermissionsTx(
 export async function changePermissionRetailersAction(
   data: ChangePermissionsRetailersAction,
 ) {
-  try {
-    await changePermissionRetailersActionSchema.validate(data);
-    const { partnershipIds, partnershipRequestIds, selectedPriceListIds } =
-      data;
-    await db.$transaction(async (tx) => {
-      await Promise.all([
-        updatePartnershipsPriceListPermissionsTx(
-          tx,
-          partnershipIds,
-          selectedPriceListIds,
-        ),
-        updatePartnershipRequestsPriceListPermissionsTx(
-          tx,
-          partnershipRequestIds,
-          selectedPriceListIds,
-        ),
-      ]);
-    });
-    return json(
-      { message: 'Successfully updated price list permissions.' },
-      StatusCodes.OK,
-    );
-  } catch (error) {
-    throw getJSONError(error, 'retailer partnerships');
-  }
+  await changePermissionRetailersActionSchema.validate(data);
+  const { partnershipIds, partnershipRequestIds, selectedPriceListIds } = data;
+  await db.$transaction(async (tx) => {
+    await Promise.all([
+      updatePartnershipsPriceListPermissionsTx(
+        tx,
+        partnershipIds,
+        selectedPriceListIds,
+      ),
+      updatePartnershipRequestsPriceListPermissionsTx(
+        tx,
+        partnershipRequestIds,
+        selectedPriceListIds,
+      ),
+    ]);
+  });
+  return createJSONMessage(
+    'Successfully updated price list permissions.',
+    StatusCodes.OK,
+  );
 }

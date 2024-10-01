@@ -20,10 +20,10 @@ import type {
 import {
   noPriceListGeneralModificationIfExists,
   priceListDataSchema,
-} from './schemas';
+} from './util/schemas';
 import { updatePartnershipsInPriceListTx } from './util';
-import { json } from '@remix-run/node';
 import { StatusCodes } from 'http-status-codes';
+import { createJSONMessage } from '~/util';
 
 export async function updatePriceListSettings(
   sessionId: string,
@@ -289,8 +289,8 @@ async function updateAllPriceListInformationAction(
       ]);
     });
 
-    return json(
-      { message: 'Successfully updated price list.' },
+    return createJSONMessage(
+      'Successfully updated price list.',
       StatusCodes.OK,
     );
   } catch (error) {

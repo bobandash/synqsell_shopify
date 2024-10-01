@@ -22,6 +22,7 @@ async function handleStripeCustomerAccount(
 
   const hasStripeCustomerAccountInDb =
     await userHasStripeCustomerAccount(sessionId);
+
   if (!hasStripeCustomerAccountInDb) {
     const customer = await createCustomer();
     customerId = customer.id;
@@ -30,6 +31,7 @@ async function handleStripeCustomerAccount(
     customerId = (await getStripeCustomerAccount(sessionId)).stripeCustomerId;
     hasCustomerPaymentMethod = await hasPaymentMethod(customerId);
   }
+
   clientSecret = await getClientSecret(customerId);
   return { clientSecret, hasCustomerPaymentMethod };
 }

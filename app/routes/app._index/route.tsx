@@ -1,4 +1,4 @@
-import { Page, Layout, BlockStack, Box } from '@shopify/polaris';
+import { Page, Layout, BlockStack } from '@shopify/polaris';
 import { authenticate } from '~/shopify.server';
 import type { ActionFunctionArgs, LoaderFunctionArgs } from '@remix-run/node';
 import {
@@ -6,20 +6,12 @@ import {
   getMissingChecklistIds,
   getTablesAndStatuses,
 } from '~/services/models/checklistTable';
-import {
-  Await,
-  defer,
-  isRouteErrorResponse,
-  useActionData,
-  useLoaderData,
-  useRouteError,
-} from '@remix-run/react';
+import { Await, defer, useActionData, useLoaderData } from '@remix-run/react';
 import { Suspense, useEffect } from 'react';
 import {
   createUserPreferences,
   hasUserPreferences,
 } from '~/services/models/userPreferences';
-import logger from '~/logger';
 import { INTENTS, MODALS } from './constants';
 import {
   toggleChecklistVisibilityAction,
@@ -31,6 +23,7 @@ import { hasProfile } from '~/services/models/userProfile';
 import { ChecklistTables } from './asyncComponents';
 import { TableSkeleton } from './components/Skeleton';
 import { getOrCreateProfile } from '~/services/helper/userProfile';
+import { PaddedBox } from '~/components';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
@@ -47,21 +40,18 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     if (!userPreferencesExist) {
       await createUserPreferences(sessionId);
     }
-
     if (!profileExists) {
       await getOrCreateProfile(sessionId, admin.graphql);
     }
-
     if (missingChecklistIds) {
       await createMissingChecklistStatuses(missingChecklistIds, sessionId);
     }
-
     const tablesPromise = await getTablesAndStatuses(sessionId);
     return defer({
       tables: tablesPromise,
     });
   } catch (error) {
-    throw getJSONError(error, 'index');
+    throw getJSONError(error, '/app/_index');
   }
 };
 
@@ -84,7 +74,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         return getStartedSupplierAction(formDataObject, sessionId);
     }
   } catch (error) {
-    logger.error(error);
+    return getJSONError(error, '/app/_index');
   }
 };
 
@@ -106,45 +96,16 @@ function Index() {
         <Layout>
           <Layout.Section>
             <Suspense fallback={<TableSkeleton />}>
-              <Await
-                resolve={loaderData}
-                errorElement={<div>Oops, something wrong with the API!</div>}
-              >
+              <Await resolve={loaderData}>
                 <ChecklistTables />
               </Await>
             </Suspense>
           </Layout.Section>
         </Layout>
       </BlockStack>
-      <Box paddingBlockEnd={'400'} />
+      <PaddedBox />
     </Page>
   );
-}
-
-export function ErrorBoundary() {
-  const error = useRouteError();
-
-  if (isRouteErrorResponse(error)) {
-    return (
-      <div>
-        <h1>
-          {error.status} {error.statusText}
-        </h1>
-        <p>{error.data}</p>
-      </div>
-    );
-  } else if (error instanceof Error) {
-    return (
-      <div>
-        <h1>Error</h1>
-        <p>{error.message}</p>
-        <p>The stack trace is:</p>
-        <pre>{error.stack}</pre>
-      </div>
-    );
-  } else {
-    return <h1>Unknown Error</h1>;
-  }
 }
 
 export default Index;

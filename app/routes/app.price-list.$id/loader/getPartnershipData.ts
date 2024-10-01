@@ -1,4 +1,3 @@
-import { getJSONError } from '~/util';
 import db from '~/db.server';
 import { errorHandler } from '~/services/util';
 import type { Prisma } from '@prisma/client';
@@ -104,41 +103,37 @@ export async function getPartnershipData(
   sessionId: string,
   priceListId?: string,
 ) {
-  try {
-    let selectedPartnershipsDataFmt: PartnershipRowData[] = [];
-    if (priceListId) {
-      const partnershipsInPriceList = await getPartnershipsInPriceList(
-        sessionId,
-        priceListId,
-      );
-      selectedPartnershipsDataFmt = formatPartnershipRawData(
-        partnershipsInPriceList,
-        true,
-      );
-    }
-    const notSelectedPartnershipsData =
-      await getAllAvailablePartnershipsNotSelected(
-        sessionId,
-        selectedPartnershipsDataFmt,
-      );
-    const notSelectedPartnershipsDataFmt = formatPartnershipRawData(
-      notSelectedPartnershipsData,
-      false,
+  let selectedPartnershipsDataFmt: PartnershipRowData[] = [];
+  if (priceListId) {
+    const partnershipsInPriceList = await getPartnershipsInPriceList(
+      sessionId,
+      priceListId,
     );
-    const allPartnershipsDataFmt = selectedPartnershipsDataFmt
-      .concat(notSelectedPartnershipsDataFmt)
-      .sort((a, b) => {
-        if (a.retailerName < b.retailerName) {
-          return -1;
-        }
-        if (a.retailerName > b.retailerName) {
-          return 1;
-        }
-        return 0;
-      });
-
-    return allPartnershipsDataFmt;
-  } catch (error) {
-    throw getJSONError(error, 'price list form');
+    selectedPartnershipsDataFmt = formatPartnershipRawData(
+      partnershipsInPriceList,
+      true,
+    );
   }
+  const notSelectedPartnershipsData =
+    await getAllAvailablePartnershipsNotSelected(
+      sessionId,
+      selectedPartnershipsDataFmt,
+    );
+  const notSelectedPartnershipsDataFmt = formatPartnershipRawData(
+    notSelectedPartnershipsData,
+    false,
+  );
+  const allPartnershipsDataFmt = selectedPartnershipsDataFmt
+    .concat(notSelectedPartnershipsDataFmt)
+    .sort((a, b) => {
+      if (a.retailerName < b.retailerName) {
+        return -1;
+      }
+      if (a.retailerName > b.retailerName) {
+        return 1;
+      }
+      return 0;
+    });
+
+  return allPartnershipsDataFmt;
 }

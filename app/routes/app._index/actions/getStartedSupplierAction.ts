@@ -4,13 +4,12 @@ import {
   getOrCreateSupplierAccessRequest,
   hasSupplierAccessRequest,
 } from '~/services/models/supplierAccessRequest';
-import { getJSONError } from '~/util';
-import { json } from '@remix-run/node';
 import { StatusCodes } from 'http-status-codes';
 import { getChecklistStatus } from '~/services/models/checklistStatus';
 import { INTENTS } from '../constants';
 import { checklistItemIdMatchesKey } from '~/services/models/checklistItem';
 import { CHECKLIST_ITEM_KEYS } from '~/constants';
+import { createJSONMessage } from '~/util';
 
 export type GetStartedSupplierActionData = {
   supplierAccessRequest: {
@@ -45,29 +44,15 @@ export async function getStartedSupplierAction(
   formDataObject: FormDataObject,
   sessionId: string,
 ) {
-  try {
-    await getStartedSupplierSchema.validate(formDataObject);
-    const { checklistItemId } =
-      formDataObject as unknown as getStartedSupplierData;
-    const checklistStatus = await getChecklistStatus(
-      sessionId,
-      checklistItemId,
-    );
-    const supplierAccessRequestExists =
-      await hasSupplierAccessRequest(sessionId);
-    await getOrCreateSupplierAccessRequest(sessionId, checklistStatus.id);
-    return json(
-      {
-        message:
-          'Your request to become a supplier has been submitted successfully. Please wait for the app owner to review your request.',
-      },
-      {
-        status: supplierAccessRequestExists
-          ? StatusCodes.OK
-          : StatusCodes.CREATED,
-      },
-    );
-  } catch (error) {
-    throw getJSONError(error, 'index');
-  }
+  await getStartedSupplierSchema.validate(formDataObject);
+  const { checklistItemId } =
+    formDataObject as unknown as getStartedSupplierData;
+  const checklistStatus = await getChecklistStatus(sessionId, checklistItemId);
+  const supplierAccessRequestExists = await hasSupplierAccessRequest(sessionId);
+  await getOrCreateSupplierAccessRequest(sessionId, checklistStatus.id);
+
+  return createJSONMessage(
+    'Your request to become a supplier has been submitted successfully. Please wait for the app owner to review your request.',
+    supplierAccessRequestExists ? StatusCodes.OK : StatusCodes.CREATED,
+  );
 }

@@ -1,5 +1,5 @@
 import { array, object, string } from 'yup';
-import { getJSONError } from '~/util';
+import { createJSONMessage } from '~/util';
 import { INTENTS } from '../constants';
 import { hasSession } from '~/services/models/session';
 import { isValidPriceList } from '~/services/models/priceList';
@@ -9,7 +9,6 @@ import {
   PARTNERSHIP_REQUEST_TYPE,
 } from '~/constants';
 import { StatusCodes } from 'http-status-codes';
-import { json } from '@remix-run/node';
 import db from '~/db.server';
 import { updateChecklistStatusTx } from '~/services/models/checklistStatus';
 import { createOrUpdatePartnershipRequestTx } from '~/services/models/partnershipRequest';
@@ -70,38 +69,32 @@ const initiatePartnershipActionSchema = object({
 async function initiatePartnershipAction(
   props: InitiatePartnershipActionProps,
 ) {
-  try {
-    await initiatePartnershipActionSchema.validate(props);
-    const { retailerId, message, supplierId, priceListIds } = props;
-    await db.$transaction(async (tx) => {
-      await Promise.all([
-        updateChecklistStatusTx(
-          tx,
-          supplierId,
-          CHECKLIST_ITEM_KEYS.SUPPLIER_EXPLORE_NETWORK,
-          true,
-        ),
-        createOrUpdatePartnershipRequestTx({
-          tx,
-          priceListIds,
-          recipientId: retailerId,
-          senderId: supplierId,
-          message: message,
-          type: PARTNERSHIP_REQUEST_TYPE.SUPPLIER,
-          status: PARTNERSHIP_REQUEST_STATUS.PENDING,
-        }),
-      ]);
-    });
+  await initiatePartnershipActionSchema.validate(props);
+  const { retailerId, message, supplierId, priceListIds } = props;
+  await db.$transaction(async (tx) => {
+    await Promise.all([
+      updateChecklistStatusTx(
+        tx,
+        supplierId,
+        CHECKLIST_ITEM_KEYS.SUPPLIER_EXPLORE_NETWORK,
+        true,
+      ),
+      createOrUpdatePartnershipRequestTx({
+        tx,
+        priceListIds,
+        recipientId: retailerId,
+        senderId: supplierId,
+        message: message,
+        type: PARTNERSHIP_REQUEST_TYPE.SUPPLIER,
+        status: PARTNERSHIP_REQUEST_STATUS.PENDING,
+      }),
+    ]);
+  });
 
-    return json(
-      {
-        message: 'Successfully sent supplier partnership request to retailer.',
-      },
-      StatusCodes.CREATED,
-    );
-  } catch (error) {
-    throw getJSONError(error, 'retailer network');
-  }
+  return createJSONMessage(
+    'Successfully sent supplier partnership request to retailer.',
+    StatusCodes.CREATED,
+  );
 }
 
 export default initiatePartnershipAction;

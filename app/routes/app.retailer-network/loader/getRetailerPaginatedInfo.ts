@@ -33,7 +33,7 @@ export type Retailer = {
   profile: Profile;
 };
 
-type PriceListJsonify = PriceList & {
+type PriceListJsonify = Omit<PriceList, 'createdAt'> & {
   createdAt: string;
 };
 

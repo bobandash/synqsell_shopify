@@ -11,11 +11,11 @@ import {
   PARTNERSHIP_REQUEST_STATUS,
   PARTNERSHIP_REQUEST_TYPE,
 } from '~/constants';
-import { json } from '@remix-run/node';
 import { StatusCodes } from 'http-status-codes';
-import { getJSONError } from '~/util';
 import db from '~/db.server';
 import { updateChecklistStatusTx } from '~/services/models/checklistStatus';
+import { sessionIdSchema } from '~/schemas/models';
+import { createJSONMessage } from '~/util';
 
 export type RequestAccessFormData = {
   intent: IntentsProps;
@@ -46,54 +46,40 @@ const formDataObjectSchema = object({
   message: string().required(),
 });
 
-const sessionIdSchema = string()
-  .required()
-  .test(
-    'is-valid-session-id',
-    'Session id must be valid',
-    async (sessionId) => {
-      const sessionExists = await hasSession(sessionId);
-      return sessionExists;
-    },
-  );
-
 export async function requestAccessAction(
   formDataObject: RequestAccessFormData,
   sessionId: string,
 ) {
-  try {
+  await Promise.all([
+    formDataObjectSchema.validate(formDataObject),
+    sessionIdSchema.validate(sessionId),
+  ]);
+  const { priceListSupplierId, message } = formDataObject;
+  const generalPriceListId = (await getGeneralPriceList(sessionId)).id;
+  await db.$transaction(async (tx) => {
     await Promise.all([
-      formDataObjectSchema.validate(formDataObject),
-      sessionIdSchema.validate(sessionId),
+      updateChecklistStatusTx(
+        tx,
+        sessionId,
+        CHECKLIST_ITEM_KEYS.RETAILER_REQUEST_PARTNERSHIP,
+        true,
+      ),
+      createOrUpdatePartnershipRequestTx({
+        tx,
+        priceListIds: [generalPriceListId],
+        recipientId: priceListSupplierId,
+        senderId: sessionId,
+        message: message,
+        type: PARTNERSHIP_REQUEST_TYPE.RETAILER,
+        status: PARTNERSHIP_REQUEST_STATUS.PENDING,
+      }),
     ]);
-    const { priceListSupplierId, message } = formDataObject;
-    const generalPriceListId = (await getGeneralPriceList(sessionId)).id;
-    await db.$transaction(async (tx) => {
-      await Promise.all([
-        updateChecklistStatusTx(
-          tx,
-          sessionId,
-          CHECKLIST_ITEM_KEYS.RETAILER_REQUEST_PARTNERSHIP,
-          true,
-        ),
-        createOrUpdatePartnershipRequestTx({
-          tx,
-          priceListIds: [generalPriceListId],
-          recipientId: priceListSupplierId,
-          senderId: sessionId,
-          message: message,
-          type: PARTNERSHIP_REQUEST_TYPE.RETAILER,
-          status: PARTNERSHIP_REQUEST_STATUS.PENDING,
-        }),
-      ]);
-    });
-    return json(
-      { message: 'Successfully created partnership request.' },
-      StatusCodes.CREATED,
-    );
-  } catch (error) {
-    throw getJSONError(error, 'supplier network');
-  }
+  });
+
+  return createJSONMessage(
+    'Successfully created partnership request.',
+    StatusCodes.CREATED,
+  );
 }
 
 export default requestAccessAction;

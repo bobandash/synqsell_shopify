@@ -1,8 +1,10 @@
 import { json, type LoaderFunctionArgs } from '@remix-run/node';
 import { useLoaderData } from '@remix-run/react';
+import { StatusCodes } from 'http-status-codes';
 import { useEffect } from 'react';
 import createAccountLink from '~/services/stripe/stripeConnect';
 import { authenticate } from '~/shopify.server';
+import { createJSONMessage, getJSONError } from '~/util';
 
 type LoaderData = {
   onboardingUrl: string;
@@ -18,12 +20,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const appBaseUrl = `https://${shop}/admin/apps/synqsell/`;
     const accountId = searchParams.get('accountId');
     if (!accountId) {
-      throw json({ error: 'No account id was provided' });
+      throw createJSONMessage(
+        'No account id was provided',
+        StatusCodes.BAD_REQUEST,
+      );
     }
     const accountLink = await createAccountLink(accountId, appBaseUrl);
     return json({ onboardingUrl: accountLink.url });
   } catch (error) {
-    throw json(error);
+    throw getJSONError(error, '/app/settings/payment-refresh');
   }
 };
 

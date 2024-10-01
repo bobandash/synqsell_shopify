@@ -12,7 +12,11 @@ import {
   type LoaderFunctionArgs,
 } from '@remix-run/node';
 import { StatusCodes } from 'http-status-codes';
-import { convertFormDataToObject, getJSONError } from '~/util';
+import {
+  convertFormDataToObject,
+  createJSONMessage,
+  getJSONError,
+} from '~/util';
 import { authenticate } from '~/shopify.server';
 import { hasRole } from '~/services/models/roles';
 import { ROLES } from '~/constants';
@@ -59,8 +63,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }
 
     if (!isSupplier) {
-      throw json(
-        { error: { message: 'Unauthorized. User is not supplier.' } },
+      throw createJSONMessage(
+        'Unauthorized. User is not supplier.',
         StatusCodes.UNAUTHORIZED,
       );
     }
@@ -73,7 +77,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
     return json({ retailerPaginatedInfo, priceLists }, StatusCodes.OK);
   } catch (error) {
-    throw getJSONError(error, 'supplier network');
+    throw getJSONError(error, '/app/retailer-network');
   }
 };
 
@@ -91,9 +95,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           ...(formDataObject as InitiatePartnershipData),
         });
     }
-    return json({ error: 'Not implemented' }, StatusCodes.NOT_IMPLEMENTED);
+
+    return createJSONMessage('Not implemented', StatusCodes.NOT_IMPLEMENTED);
   } catch (error) {
-    throw getJSONError(error, 'supplier-network');
+    return getJSONError(error, '/app/retailer-network');
   }
 };
 
@@ -101,7 +106,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 const SupplierNetwork = () => {
   const { retailerPaginatedInfo, priceLists } = useLoaderData<
     typeof loader
-  >() as unknown as RetailerPaginatedInfoProps; // TODO: fix unknown typing
+  >() as RetailerPaginatedInfoProps;
 
   const actionData = useActionData<typeof action>();
   const [retailers, setRetailers] = useState<Retailer[]>(

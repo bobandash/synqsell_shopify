@@ -20,8 +20,11 @@ import {
   type ActionFunctionArgs,
   type LoaderFunctionArgs,
 } from '@remix-run/node';
-import logger from '~/logger';
-import { convertFormDataToObject, getJSONError } from '~/util';
+import {
+  convertFormDataToObject,
+  createJSONMessage,
+  getJSONError,
+} from '~/util';
 import { authenticate } from '~/shopify.server';
 import { StatusCodes } from 'http-status-codes';
 import { useEffect, useState } from 'react';
@@ -40,8 +43,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const priceListTableInfo = await getPriceListTableInfo(sessionId);
     return json(priceListTableInfo, { status: StatusCodes.OK });
   } catch (error) {
-    logger.error(error);
-    throw getJSONError(error, 'price list');
+    throw getJSONError(error, '/app/price-list/index');
   }
 };
 
@@ -56,13 +58,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       case INTENTS.DELETE_PRICE_LIST:
         return await deletePriceListAction(formDataObject, sessionId);
     }
-    return json(
-      { error: { message: 'Not Implemented. Please contact support.' } },
-      { status: StatusCodes.NOT_IMPLEMENTED },
-    );
+    return createJSONMessage('Not Implemented.', StatusCodes.NOT_IMPLEMENTED);
   } catch (error) {
-    logger.error(error);
-    throw json('error');
+    return getJSONError(error, '/app/price-list/index');
   }
 };
 

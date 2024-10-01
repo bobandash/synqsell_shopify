@@ -8,7 +8,7 @@ import type { Prisma } from '@prisma/client';
 import {
   noMoreThanOneGeneralPriceListSchema,
   priceListDataSchema,
-} from './schemas';
+} from './util/schemas';
 import { updatePartnershipsInPriceListTx } from './util';
 import { addVariantsTx } from '~/services/models/variants';
 import type { RedirectFunction } from 'node_modules/@shopify/shopify-app-remix/dist/ts/server/authenticate/admin/helpers/redirect';

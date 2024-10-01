@@ -16,7 +16,11 @@ import {
   useSearchParams,
 } from '@remix-run/react';
 import { getStripePublishableKey } from '~/services/stripe/stripeConnect';
-import { convertFormDataToObject } from '~/util';
+import {
+  convertFormDataToObject,
+  createJSONMessage,
+  getJSONError,
+} from '~/util';
 import { FETCHER_KEYS, INTENTS } from './constants';
 import {
   beginStripePaymentsOnboarding,
@@ -88,29 +92,32 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       hasCustomerPaymentMethod,
     });
   } catch (error) {
-    console.error(error);
-    throw json(error);
+    throw getJSONError(error, '/app/settings/payment');
   }
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  let formData = await request.formData();
-  const intent = formData.get('intent');
-  const {
-    session: { id: sessionId },
-  } = await authenticate.admin(request);
+  try {
+    let formData = await request.formData();
+    const intent = formData.get('intent');
+    const {
+      session: { id: sessionId },
+    } = await authenticate.admin(request);
 
-  const formDataObject = convertFormDataToObject(formData);
-  switch (intent) {
-    case INTENTS.CREATE_STRIPE_PAYMENTS_ACCOUNT:
-      const data = formDataObject as BeginStripeOnboardingFormData;
-      return await beginStripePaymentsOnboarding(data.appBaseUrl);
-    case INTENTS.FINISH_STRIPE_PAYMENTS_ONBOARDING:
-      return await finishStripePaymentsOnboarding(sessionId);
-    case INTENTS.FINISH_STRIPE_CONNECT_ONBOARDING:
-      return await finishStripeConnectOnboarding(sessionId);
+    const formDataObject = convertFormDataToObject(formData);
+    switch (intent) {
+      case INTENTS.CREATE_STRIPE_PAYMENTS_ACCOUNT:
+        const data = formDataObject as BeginStripeOnboardingFormData;
+        return await beginStripePaymentsOnboarding(data.appBaseUrl);
+      case INTENTS.FINISH_STRIPE_PAYMENTS_ONBOARDING:
+        return await finishStripePaymentsOnboarding(sessionId);
+      case INTENTS.FINISH_STRIPE_CONNECT_ONBOARDING:
+        return await finishStripeConnectOnboarding(sessionId);
+    }
+    return createJSONMessage('Not Implemented', StatusCodes.NOT_IMPLEMENTED);
+  } catch (error) {
+    return getJSONError(error, '/app/settings/payment');
   }
-  return json({ data: 'Not Implemented' }, StatusCodes.NOT_IMPLEMENTED);
 };
 
 const PaymentSettings = () => {

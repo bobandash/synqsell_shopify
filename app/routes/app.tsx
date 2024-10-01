@@ -1,6 +1,12 @@
 import type { HeadersFunction, LoaderFunctionArgs } from '@remix-run/node';
 import { json } from '@remix-run/node';
-import { Link, Outlet, useLoaderData, useRouteError } from '@remix-run/react';
+import {
+  isRouteErrorResponse,
+  Link,
+  Outlet,
+  useLoaderData,
+  useRouteError,
+} from '@remix-run/react';
 import { boundary } from '@shopify/shopify-app-remix/server';
 import { AppProvider } from '@shopify/shopify-app-remix/react';
 import { NavMenu } from '@shopify/app-bridge-react';
@@ -12,6 +18,19 @@ import { useState } from 'react';
 import { RoleProvider } from '~/context/RoleProvider';
 import { getJSONError } from '~/util';
 import logger from '~/logger';
+import {
+  BlockStack,
+  Card,
+  InlineStack,
+  Page,
+  Text,
+  Image,
+  Link as PolarisLink,
+} from '@shopify/polaris';
+import { PaddedBox } from '~/components';
+import sharedStyles from '~/shared.module.css';
+import { getReasonPhrase } from 'http-status-codes';
+import { WarningIcon } from '~/assets';
 
 export const links = () => [{ rel: 'stylesheet', href: polarisStyles }];
 
@@ -65,7 +84,55 @@ export default function App() {
 
 // Shopify needs Remix to catch some thrown responses, so that their headers are included in the response.
 export function ErrorBoundary() {
-  return boundary.error(useRouteError());
+  const error = useRouteError();
+  let reason = 'Unhandled error. Please contact support.';
+  let status = 500;
+  if (isRouteErrorResponse(error)) {
+    if (error && 'message' in error) {
+      reason = error.message as string;
+    }
+    status = error.status;
+  }
+
+  return (
+    <Page>
+      <Card>
+        <PaddedBox />
+        <BlockStack gap="200">
+          <InlineStack align="center">
+            <div className={`${sharedStyles['error-image-container']}`}>
+              <Image source={WarningIcon} alt={'Warning Icon'} />
+            </div>
+          </InlineStack>
+          <Text
+            variant="heading2xl"
+            as="h1"
+            fontWeight="bold"
+            alignment="center"
+          >
+            {status} {getReasonPhrase(status)}
+          </Text>
+          <Text
+            variant="headingXl"
+            as="h2"
+            fontWeight="bold"
+            alignment="center"
+          >
+            {reason}
+          </Text>
+          <Text variant="bodyLg" as="p" fontWeight="bold" alignment="center">
+            Navigate back to <PolarisLink url="/app">main screen</PolarisLink>{' '}
+            or{' '}
+            <PolarisLink url="mailto:support@synqsell.com">
+              contact support
+            </PolarisLink>
+            .
+          </Text>
+        </BlockStack>
+        <PaddedBox />
+      </Card>
+    </Page>
+  );
 }
 
 export const headers: HeadersFunction = (headersArgs) => {

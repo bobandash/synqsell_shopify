@@ -27,7 +27,11 @@ import {
   type SocialMediaDataProps,
   type ProfileProps,
 } from '~/services/models/userProfile';
-import { convertFormDataToObject, getJSONError } from '~/util';
+import {
+  convertFormDataToObject,
+  createJSONMessage,
+  getJSONError,
+} from '~/util';
 import {
   useActionData,
   useLoaderData,
@@ -36,7 +40,6 @@ import {
   useSubmit as useRemixSubmit,
 } from '@remix-run/react';
 import { isEmail } from './util/customValidation';
-import logger from '~/logger';
 import styles from '~/shared.module.css';
 import { useAppBridge } from '@shopify/app-bridge-react';
 import { getRoles, type RolePropsJSON } from '~/services/models/roles';
@@ -113,7 +116,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const logo = formDataObject.logo ?? null;
     const logoUrl = logo ? await uploadFile(logo) : null;
 
-    // TODO: refactor, you could just pass all the params together
+    // TODO: Refactor model to be more flexible so you don't have to destructure props in future
     const { name, email, biography, desiredProducts } = dataBesidesLogo;
     const {
       facebookLink,
@@ -151,15 +154,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       socialMediaLinks,
       visibilityObj,
     );
-    return json(
-      { message: 'Successfully updated user settings.' },
+
+    return createJSONMessage(
+      'Successfully updated user settings.',
       StatusCodes.OK,
     );
   } catch (error) {
-    if (error instanceof Error) {
-      logger.error(error.message);
-      throw getJSONError(error, 'settings');
-    }
+    throw getJSONError(error, '/app/settings/user');
   }
 };
 

@@ -19,7 +19,6 @@ import {
 import type { IndexTableHeading } from '@shopify/polaris/build/ts/src/components/IndexTable';
 import type { NonEmptyArray } from '@shopify/polaris/build/ts/src/types';
 import { StatusCodes } from 'http-status-codes';
-import logger from '~/logger';
 import { type FC, useCallback, useEffect, useMemo, useState } from 'react';
 import { ACCESS_REQUEST_STATUS, ROLES } from '~/constants';
 import { hasRole } from '~/services/models/roles';
@@ -28,14 +27,18 @@ import {
   type GetSupplierAccessRequestJSONProps,
 } from '~/services/models/supplierAccessRequest';
 import { authenticate } from '~/shopify.server';
-import { convertFormDataToObject, getJSONError } from '~/util';
-import { type BulkActionsProps } from '@shopify/polaris/build/ts/src/components/BulkActions';
 import {
-  type supplierAccessRequestInformationProps,
-  updateSupplierAccess,
-} from '~/services/transactions';
+  convertFormDataToObject,
+  createJSONMessage,
+  getJSONError,
+} from '~/util';
+import { type BulkActionsProps } from '@shopify/polaris/build/ts/src/components/BulkActions';
 import { useAppBridge } from '@shopify/app-bridge-react';
 import { convertToDate } from '../util';
+import {
+  updateSupplierAccessAction,
+  type SupplierAccessRequestInfo,
+} from './actions';
 
 type RowMarkupProps = {
   data: GetSupplierAccessRequestJSONProps;
@@ -45,7 +48,7 @@ type RowMarkupProps = {
 
 type ActionData = {
   intent: 'approve' | 'reject';
-  supplierAccessRequestInfo: supplierAccessRequestInformationProps[];
+  supplierAccessRequestInfo: SupplierAccessRequestInfo[];
 };
 
 const INTENTS = {
@@ -59,13 +62,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const { id: sessionId } = session;
     const isAdmin = await hasRole(sessionId, ROLES.ADMIN);
     if (!isAdmin) {
-      logger.error(`${sessionId} is not an admin.`);
-      throw json({ error: 'Unauthorized' }, StatusCodes.UNAUTHORIZED);
+      throw createJSONMessage(
+        'Unauthorized. User is not an admin.',
+        StatusCodes.UNAUTHORIZED,
+      );
     }
     const supplierAccessRequests = await getAllSupplierAccessRequests();
     return json(supplierAccessRequests, StatusCodes.OK);
   } catch (error) {
-    throw getJSONError(error, 'admin network');
+    throw getJSONError(error, '/app/admin');
   }
 };
 
@@ -75,39 +80,31 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const data = convertFormDataToObject(formData) as ActionData;
     const { intent, supplierAccessRequestInfo } = data;
     if (!supplierAccessRequestInfo) {
-      return json(
-        { message: 'There were no suppliers selected.' },
-        { status: StatusCodes.BAD_REQUEST },
+      return createJSONMessage(
+        'There were no suppliers selected.',
+        StatusCodes.BAD_REQUEST,
       );
     }
 
     switch (intent) {
       case INTENTS.APPROVE:
-        await updateSupplierAccess(
+        return await updateSupplierAccessAction(
           supplierAccessRequestInfo,
           ACCESS_REQUEST_STATUS.APPROVED,
         );
-        return json(
-          { message: 'Suppliers were successfully approved.' },
-          StatusCodes.OK,
-        );
       case INTENTS.REJECT:
-        await updateSupplierAccess(
+        return await updateSupplierAccessAction(
           supplierAccessRequestInfo,
           ACCESS_REQUEST_STATUS.REJECTED,
         );
-        return json(
-          { message: 'Suppliers were successfully rejected.' },
-          StatusCodes.OK,
-        );
-      default:
-        return json(
-          { message: 'Intent not implemented' },
-          StatusCodes.NOT_IMPLEMENTED,
-        );
     }
+
+    return createJSONMessage(
+      'Intent not implemented',
+      StatusCodes.NOT_IMPLEMENTED,
+    );
   } catch (error) {
-    throw getJSONError(error, 'admin network');
+    return getJSONError(error, '/app/admin');
   }
 };
 
@@ -234,9 +231,7 @@ const Admin = () => {
 
   const getSelectedSessionAndAccessIds = useCallback(() => {
     const selectedAccessRequestIdSet = new Set(selectedResources);
-    const selectedSessionAndAccessIds: supplierAccessRequestInformationProps[] =
-      [];
-
+    const selectedSessionAndAccessIds: SupplierAccessRequestInfo[] = [];
     filteredData.forEach((data) => {
       const { sessionId, id } = data;
       if (selectedAccessRequestIdSet.has(id)) {
@@ -246,7 +241,6 @@ const Admin = () => {
         });
       }
     });
-
     return selectedSessionAndAccessIds;
   }, [selectedResources, filteredData]);
 
