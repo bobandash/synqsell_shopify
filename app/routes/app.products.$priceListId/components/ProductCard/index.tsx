@@ -9,7 +9,6 @@ import {
 } from '@shopify/polaris';
 import { ImageIcon } from '~/assets';
 import sharedStyles from '~/shared.module.css';
-import type { FulfillmentService } from '@prisma/client';
 import type { ProductCardJSON } from '../../types';
 import PricingDetails from './PricingDetails';
 import type { FC } from 'react';
@@ -17,15 +16,10 @@ import ProductCardBtn from './ProductCardBtn';
 
 type Props = {
   product: ProductCardJSON;
-  fulfillmentService: FulfillmentService;
   isSubmitting: boolean;
 };
 
-const ProductCard: FC<Props> = ({
-  product,
-  fulfillmentService,
-  isSubmitting,
-}) => {
+const ProductCard: FC<Props> = ({ product, isSubmitting }) => {
   const { brandName, title, variants } = product;
   const primaryImage =
     product.mediaImageUrl && product.mediaAlt !== null
@@ -71,11 +65,7 @@ const ProductCard: FC<Props> = ({
               variant={product.variants[0]}
               currencySign={product.currencySign}
             />
-            <ProductCardBtn
-              product={product}
-              fulfillmentService={fulfillmentService}
-              isSubmitting={isSubmitting}
-            />
+            <ProductCardBtn product={product} isSubmitting={isSubmitting} />
           </BlockStack>
         </Box>
       </BlockStack>

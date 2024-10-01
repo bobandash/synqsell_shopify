@@ -1,10 +1,6 @@
 import { type InferType, object, string } from 'yup';
 import { INTENTS } from '../constants';
-import {
-  fulfillmentServiceIdSchema,
-  productIdSchema,
-  sessionIdSchema,
-} from '~/schemas/models';
+import { productIdSchema, sessionIdSchema } from '~/schemas/models';
 import type { GraphQL } from '~/types';
 import { json } from '@remix-run/node';
 import { StatusCodes } from 'http-status-codes';
@@ -20,7 +16,7 @@ import {
 } from '~/services/shopify/products';
 import { getSession, type Session } from '~/services/models/session';
 import { getPriceList } from '~/services/models/priceList';
-import { getFulfillmentService } from '~/services/models/fulfillmentService';
+import { userGetFulfillmentService } from '~/services/models/fulfillmentService';
 import { getProfile } from '~/services/models/userProfile';
 import {
   createVariants,
@@ -48,7 +44,6 @@ export type ImportProductFormData = InferType<typeof formDataObjectSchema>;
 const formDataObjectSchema = object({
   intent: string().oneOf([INTENTS.IMPORT_PRODUCT]).required(),
   productId: productIdSchema,
-  fulfillmentServiceId: fulfillmentServiceIdSchema,
 });
 
 const importProductActionSchema = object({
@@ -207,12 +202,10 @@ export async function importProductAction(
 ) {
   try {
     await importProductActionSchema.validate({ formDataObject, sessionId });
-
-    // get initial fields
-    const { productId, fulfillmentServiceId } = formDataObject;
+    const { productId } = formDataObject;
     const [product, { shopifyLocationId }] = await Promise.all([
       getAllProductDetails(productId),
-      getFulfillmentService(fulfillmentServiceId),
+      userGetFulfillmentService(sessionId),
     ]);
     const priceList = await getPriceList(product.priceListId);
     const [supplierSession, { name: supplierName }] = await Promise.all([

@@ -3,8 +3,8 @@ import { errorHandler } from '~/services/util';
 import type { Prisma } from '@prisma/client';
 import { priceListIdSchema, sessionIdSchema } from '~/schemas/models';
 import db from '~/db.server';
-import { getProductStatus, hasAccessToImportPriceList } from './util';
-import { getPriceList } from '~/services/models/priceList';
+import { getProductStatus } from './util';
+import { getPriceList, getRetailerIds } from '~/services/models/priceList';
 import { getProfile } from '~/services/models/userProfile';
 import { getBasicProductDetailsWithAccessToken } from '~/services/shopify/products';
 import { createMapIdToRestObj, getCurrencySign } from '~/routes/util';
@@ -35,6 +35,38 @@ type ProductCardInfoFromPriceList = {
   nextCursor: string | null;
   prevCursor: string | null;
 };
+
+const hasRetailerAccessToImportPriceListSchema = object({
+  priceListId: priceListIdSchema,
+  sessionId: sessionIdSchema,
+});
+
+// check if user has permission to view the price list
+async function hasAccessToImportPriceList(
+  priceListId: string,
+  sessionId: string,
+) {
+  try {
+    await hasRetailerAccessToImportPriceListSchema.validate({
+      priceListId,
+      sessionId,
+    });
+    const requiresApprovalToImport = (await getPriceList(priceListId))
+      .requiresApprovalToImport;
+    const retailerIds = await getRetailerIds(priceListId);
+    if (!requiresApprovalToImport || retailerIds.includes(sessionId)) {
+      return true;
+    }
+    return false;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to check if user has access to import products from price list.',
+      hasAccessToImportPriceList,
+      { priceListId, sessionId },
+    );
+  }
+}
 
 export async function getProductCardInfoFromPriceList(
   props: GetPaginatedProductCardsInfoProps,

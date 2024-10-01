@@ -4,16 +4,14 @@ import sharedStyles from '~/shared.module.css';
 import { Text } from '@shopify/polaris';
 import { useLocation, useSubmit } from '@remix-run/react';
 import { INTENTS, PRODUCT_STATUS } from '../../constants';
-import type { FulfillmentService } from '../../loader';
 
 type Props = {
   product: ProductCardJSON;
-  fulfillmentService: FulfillmentService;
   isSubmitting: boolean;
 };
 
 const ProductCardBtn: FC<Props> = (props) => {
-  const { product, fulfillmentService, isSubmitting } = props;
+  const { product, isSubmitting } = props;
   const { productStatus } = product;
   const remixSubmit = useSubmit();
   const { pathname } = useLocation();
@@ -23,14 +21,13 @@ const ProductCardBtn: FC<Props> = (props) => {
       {
         productId: product.id,
         intent: INTENTS.IMPORT_PRODUCT,
-        fulfillmentServiceId: fulfillmentService.id,
       },
       {
         method: 'post',
         action: pathname,
       },
     );
-  }, [product, pathname, remixSubmit, fulfillmentService]);
+  }, [product, pathname, remixSubmit]);
 
   if (productStatus === PRODUCT_STATUS.IMPORTED) {
     return (

@@ -7,7 +7,6 @@ import { Button, InlineGrid, InlineStack, Page } from '@shopify/polaris';
 import { StatusCodes } from 'http-status-codes';
 import { authenticate } from '~/shopify.server';
 import { convertFormDataToObject, getJSONError } from '~/util';
-import hasAccessToViewPriceList from './loader/util/hasAccessToViewPriceList';
 import { isValidPriceList } from '~/services/models/priceList';
 import {
   useLoaderData,
@@ -21,10 +20,11 @@ import {
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon } from '@shopify/polaris-icons';
 import { PaddedBox } from '~/components';
-import type { PriceListWithAccess, FulfillmentService } from './loader';
-import { getPriceListsWithAccessForSpecificSupplier } from './loader';
-import { hasAccessToImportPriceList } from './loader/util';
-import { userGetFulfillmentService } from '~/services/models/fulfillmentService';
+import type { PriceListWithAccess } from './loader';
+import {
+  getPriceListsWithAccessForSpecificSupplier,
+  hasAccessToViewPriceList,
+} from './loader';
 import { importProductAction, type ImportProductFormData } from './actions';
 import { INTENTS } from './constants';
 import { getProductCardInfoFromPriceList } from './loader/getProductCardInfoForSpecificPriceList';
@@ -40,7 +40,6 @@ type ProductCardInfo = {
 type LoaderData = {
   productCardInfo: ProductCardInfo;
   priceListsWithAccess: PriceListWithAccess[];
-  fulfillmentService: FulfillmentService;
 };
 
 type ImportProductAction = {
@@ -56,74 +55,41 @@ type ActionData = ImportProductAction | NotImplementedAction | undefined;
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   try {
-    const { priceListId } = params;
     const {
       session: { id: sessionId },
     } = await authenticate.admin(request);
-
-    // cursor logic
+    const priceListId = params.priceListId ?? '';
     const { searchParams } = new URL(request.url);
     const next = searchParams.get('next');
     const prev = searchParams.get('prev');
     const isReverseDirection = prev ? true : false;
-    let cursor = null;
-    if (next) {
-      cursor = next;
-    } else if (prev) {
-      cursor = prev;
-    }
-    const fulfillmentService = await userGetFulfillmentService(sessionId);
-    if (!priceListId) {
-      return json(
-        {
-          productCardInfo: {
-            products: [],
-            nextCursor: null,
-            prevCursor: null,
-          } as ProductCardInfo,
-          priceListsWithAccess: [] as PriceListWithAccess[],
-          fulfillmentService: fulfillmentService,
-        },
-        StatusCodes.NOT_IMPLEMENTED,
-      );
-    }
-    // case: searching for products in a specific price list
-    const priceListExists = isValidPriceList(priceListId);
-    if (!priceListExists) {
+    let cursor = next || prev || null;
+
+    if (!(await isValidPriceList(priceListId))) {
       throw json(
         { error: 'Price list could not be found.' },
         StatusCodes.NOT_FOUND,
       );
     }
-    const [hasAccessToView, hasAccessToImport] = await Promise.all([
-      hasAccessToViewPriceList(priceListId, sessionId),
-      hasAccessToImportPriceList(priceListId, sessionId),
-    ]);
 
-    if (!hasAccessToImport && !hasAccessToView) {
+    if (!(await hasAccessToViewPriceList(priceListId, sessionId))) {
       throw json(
         {
-          error: 'User is unauthorized to view products with this price list.',
+          error: 'You do not have access to view products in this price list.',
         },
         StatusCodes.UNAUTHORIZED,
       );
     }
 
-    let productCardInfo;
-    if (priceListId) {
-      productCardInfo = await getProductCardInfoFromPriceList({
-        priceListId,
-        isReverseDirection,
-        sessionId,
-        ...(cursor && { cursor }),
-      });
-    }
+    const productCardInfo = await getProductCardInfoFromPriceList({
+      priceListId,
+      isReverseDirection,
+      sessionId,
+      ...(cursor && { cursor }),
+    });
     const priceListsWithAccess =
       await getPriceListsWithAccessForSpecificSupplier(priceListId, sessionId);
-    return json(
-      { productCardInfo, priceListsWithAccess, fulfillmentService },
-      StatusCodes.OK,
-    );
+    return json({ productCardInfo, priceListsWithAccess }, StatusCodes.OK);
   } catch (error) {
     throw getJSONError(error, 'products');
   }
@@ -158,7 +124,6 @@ const PriceListProducts = () => {
       prevCursor: initialPrevCursor,
     },
     priceListsWithAccess,
-    fulfillmentService,
   } = useLoaderData<typeof loader>() as LoaderData;
   const actionData = useActionData<typeof action>() as ActionData;
 
@@ -259,7 +224,6 @@ const PriceListProducts = () => {
           <ProductCard
             key={product.id}
             product={product}
-            fulfillmentService={fulfillmentService}
             isSubmitting={submittingProductIds.has(product.id)}
           />
         ))}
