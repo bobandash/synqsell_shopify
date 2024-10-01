@@ -1,9 +1,3 @@
-// four states
-// 1. requested approval
-// 2. import
-// 3. imported
-// 4. approved
-
 import { useCallback, type FC } from 'react';
 import type { ProductCardJSON } from '../../types';
 import sharedStyles from '~/shared.module.css';
@@ -15,10 +9,11 @@ import type { FulfillmentService } from '../../loader';
 type Props = {
   product: ProductCardJSON;
   fulfillmentService: FulfillmentService;
+  isSubmitting: boolean;
 };
 
 const ProductCardBtn: FC<Props> = (props) => {
-  const { product, fulfillmentService } = props;
+  const { product, fulfillmentService, isSubmitting } = props;
   const { productStatus } = product;
   const remixSubmit = useSubmit();
   const { pathname } = useLocation();
@@ -55,9 +50,10 @@ const ProductCardBtn: FC<Props> = (props) => {
       <button
         className={`${sharedStyles['green']} ${sharedStyles['btn']}`}
         onClick={handleImportProduct}
+        disabled={isSubmitting}
       >
         <Text as="p" variant="bodySm" fontWeight="medium">
-          Import Product
+          {isSubmitting ? 'Importing' : 'Import Product'}
         </Text>
       </button>
     );

@@ -248,7 +248,10 @@ export async function importProductAction(
     });
 
     return json(
-      { message: `The product has been successfully imported to your store.` },
+      {
+        message: `The product has been successfully imported to your store.`,
+        productId: productId,
+      },
       StatusCodes.OK,
     );
   } catch (error) {

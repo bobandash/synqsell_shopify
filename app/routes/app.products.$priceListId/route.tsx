@@ -15,6 +15,8 @@ import {
   useRevalidator,
   useNavigate,
   useParams,
+  useNavigation,
+  useActionData,
 } from '@remix-run/react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon } from '@shopify/polaris-icons';
@@ -35,11 +37,22 @@ type ProductCardInfo = {
   prevCursor: string | null;
 };
 
-type LoaderDataProps = {
+type LoaderData = {
   productCardInfo: ProductCardInfo;
   priceListsWithAccess: PriceListWithAccess[];
   fulfillmentService: FulfillmentService;
 };
+
+type ImportProductAction = {
+  message: string;
+  productId: string;
+};
+
+type NotImplementedAction = {
+  message: string;
+};
+
+type ActionData = ImportProductAction | NotImplementedAction | undefined;
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   try {
@@ -119,27 +132,20 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
 export const action = async ({ request }: ActionFunctionArgs) => {
   try {
     const {
-      session,
+      session: { id: sessionId },
       admin: { graphql },
     } = await authenticate.admin(request);
-    const { id: sessionId } = session;
     let formData = await request.formData();
     const intent = formData.get('intent');
     const formDataObject = convertFormDataToObject(formData);
     switch (intent) {
       case INTENTS.IMPORT_PRODUCT:
-        return await importProductAction(
-          formDataObject as ImportProductFormData,
-          sessionId,
-          graphql,
-        );
+        const data = formDataObject as ImportProductFormData;
+        return await importProductAction(data, sessionId, graphql);
     }
-
-    return json(
-      { productCardInfo: [], priceListsWithAccess: [] },
-      StatusCodes.NOT_IMPLEMENTED,
-    );
+    return json({ message: 'Not Implemented' }, StatusCodes.NOT_IMPLEMENTED);
   } catch (error) {
+    console.error(error);
     throw getJSONError(error, 'products');
   }
 };
@@ -153,15 +159,20 @@ const PriceListProducts = () => {
     },
     priceListsWithAccess,
     fulfillmentService,
-  } = useLoaderData<typeof loader>() as LoaderDataProps;
+  } = useLoaderData<typeof loader>() as LoaderData;
+  const actionData = useActionData<typeof action>() as ActionData;
 
   const [products, setProducts] = useState<ProductCardJSON[]>(initialProducts);
   const [nextCursor, setNextCursor] = useState(initialNextCursor);
   const [prevCursor, setPrevCursor] = useState(initialPrevCursor);
+  const [submittingProductIds, setSubmittingProductIds] = useState<Set<string>>(
+    new Set(),
+  );
   const [, setSearchParams] = useSearchParams();
   const revalidator = useRevalidator();
   const navigate = useNavigate();
   const { priceListId } = useParams();
+  const navigation = useNavigation();
   const headerName = useMemo(() => {
     const priceList = priceListsWithAccess.filter(
       ({ id }) => id === priceListId,
@@ -192,6 +203,28 @@ const PriceListProducts = () => {
       revalidator.revalidate();
     }
   }, [prevCursor, setSearchParams, revalidator]);
+
+  // optimistically render the submitting status for product import
+  useEffect(() => {
+    const productId = (navigation?.formData?.get('productId') as string) ?? '';
+    if (productId) {
+      setSubmittingProductIds((prev) => new Set(prev).add(productId));
+    }
+  }, [navigation]);
+
+  useEffect(() => {
+    if (
+      navigation.state === 'idle' &&
+      actionData &&
+      'productId' in actionData
+    ) {
+      setSubmittingProductIds((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(actionData.productId);
+        return newSet;
+      });
+    }
+  }, [navigation, actionData]);
 
   // to render between different price lists in the ui
   const actionGroups = useMemo(() => {
@@ -227,6 +260,7 @@ const PriceListProducts = () => {
             key={product.id}
             product={product}
             fulfillmentService={fulfillmentService}
+            isSubmitting={submittingProductIds.has(product.id)}
           />
         ))}
       </InlineGrid>

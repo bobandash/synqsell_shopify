@@ -18,9 +18,14 @@ import ProductCardBtn from './ProductCardBtn';
 type Props = {
   product: ProductCardJSON;
   fulfillmentService: FulfillmentService;
+  isSubmitting: boolean;
 };
 
-const ProductCard: FC<Props> = ({ product, fulfillmentService }) => {
+const ProductCard: FC<Props> = ({
+  product,
+  fulfillmentService,
+  isSubmitting,
+}) => {
   const { brandName, title, variants } = product;
   const primaryImage =
     product.mediaImageUrl && product.mediaAlt !== null
@@ -69,6 +74,7 @@ const ProductCard: FC<Props> = ({ product, fulfillmentService }) => {
             <ProductCardBtn
               product={product}
               fulfillmentService={fulfillmentService}
+              isSubmitting={isSubmitting}
             />
           </BlockStack>
         </Box>
