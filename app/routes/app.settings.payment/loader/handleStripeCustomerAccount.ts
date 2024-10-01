@@ -1,5 +1,5 @@
 import {
-  addInitialStripeCustomerAccount,
+  addInitialStripeCustomerAccount as addInitialStripeCustomerAccountDb,
   getStripeCustomerAccount,
   userHasStripeCustomerAccount,
 } from '~/services/models/stripeCustomerAccount';
@@ -26,7 +26,7 @@ async function handleStripeCustomerAccount(
   if (!hasStripeCustomerAccountInDb) {
     const customer = await createCustomer();
     customerId = customer.id;
-    await addInitialStripeCustomerAccount(sessionId, customer.id);
+    await addInitialStripeCustomerAccountDb(sessionId, customer.id);
   } else {
     customerId = (await getStripeCustomerAccount(sessionId)).stripeCustomerId;
     hasCustomerPaymentMethod = await hasPaymentMethod(customerId);
