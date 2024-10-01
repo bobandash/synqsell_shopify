@@ -101,7 +101,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       const data = formDataObject as BeginStripeOnboardingFormData;
       return beginStripeOnboarding(data.appBaseUrl);
     case INTENTS.CREATE_PAYMENT_SOURCE:
-      console.log(formDataObject);
       break;
   }
   return json({ data: 'Not Implemented' }, StatusCodes.NOT_IMPLEMENTED);
@@ -126,7 +125,6 @@ const PaymentSettings = () => {
 
   useEffect(() => {
     const accountId = searchParams.get('accountId');
-    console.log(accountId);
     if (accountId) {
       if (hasStripeConnectAccount) {
         setSupplierPaymentBanner({
