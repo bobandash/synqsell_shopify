@@ -294,7 +294,9 @@ model Payment {
   orderId       String
   stripeEventId String      @unique
   status        String // need to listen to stripe's webhooks for this
-  amount        Decimal     @db.Decimal(10, 2)
+  orderPaid     Decimal     @db.Decimal(10, 2)
+  shippingPaid  Decimal     @db.Decimal(10, 2)
+  totalPaid     Decimal     @db.Decimal(10, 2)
   createdAt     DateTime    @default(now())
   fulfillmentId String      @unique
   order         Order       @relation(fields: [orderId], references: [id])
