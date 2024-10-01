@@ -62,7 +62,7 @@ type SocialMediaLink = {
 
 type PriceList = Prisma.PriceListGetPayload<{}>;
 
-type SupplierPaginatedInfoPrisma = Prisma.SessionGetPayload<{
+type RetailerPaginatedInfoPrisma = Prisma.SessionGetPayload<{
   select: {
     id: true;
     userProfile: {
@@ -79,7 +79,7 @@ type GetRetailerPaginatedInfoProps = {
   cursor: string | null;
 };
 
-type GetPrismaUnformattedSupplierInfo = GetRetailerPaginatedInfoProps & {
+type GetPrismaUnformattedRetailerInfo = GetRetailerPaginatedInfoProps & {
   take: number;
 };
 
@@ -112,7 +112,7 @@ async function getPrismaUnformattedRetailerInfo({
   sessionId,
   take,
   cursor,
-}: GetPrismaUnformattedSupplierInfo) {
+}: GetPrismaUnformattedRetailerInfo) {
   try {
     // the only suppliers that should show up are suppliers with a general price list and at least one product in the price list
     // NOTE: this takes one more than usual in order to check if has more
@@ -219,7 +219,7 @@ async function getPartnershipStatus(
 }
 
 async function cleanUpRetailerPrismaData(
-  retailerRawData: SupplierPaginatedInfoPrisma[],
+  retailerRawData: RetailerPaginatedInfoPrisma[],
   sessionId: string,
 ) {
   // cleans up retailer data and adds approval status to the prisma data
@@ -272,6 +272,7 @@ async function cleanUpRetailerPrismaData(
   }
 }
 
+// TODO: implement stripe webhook and change
 export async function getRetailerPaginatedInfo({
   isReverseDirection,
   sessionId,
