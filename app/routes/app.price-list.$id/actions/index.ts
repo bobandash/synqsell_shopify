@@ -1,2 +1,2 @@
-export { default as createPriceListAndCompleteChecklistItemAction } from './createPriceListAndCompleteChecklistItem';
-export { default as updateAllPriceListInformationAction } from './updateAllPriceListInformation';
+export { default as createPriceListAction } from './createPriceListAction';
+export { default as updatePriceListInfoAction } from './updatePriceListInfoAction';
