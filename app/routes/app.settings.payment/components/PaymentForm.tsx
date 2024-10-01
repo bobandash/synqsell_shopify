@@ -6,8 +6,9 @@ import {
 } from '@stripe/react-stripe-js';
 import { useCallback, useEffect, useState, type FC } from 'react';
 import { useAppBridge } from '@shopify/app-bridge-react';
-import { useSearchParams } from '@remix-run/react';
+import { useFetcher, useSearchParams } from '@remix-run/react';
 import type { BannerState } from '../types';
+import { FETCHER_KEYS, INTENTS } from '../constants';
 
 type Props = {
   appBaseUrl: string;
@@ -21,6 +22,19 @@ const PaymentForm: FC<Props> = ({ appBaseUrl, setRetailerPaymentBanner }) => {
   const shopify = useAppBridge();
   const [error, setError] = useState('');
   const [searchParams, setSearchParams] = useSearchParams();
+
+  const finishOnboardingFetcher = useFetcher({
+    key: FETCHER_KEYS.FINISH_STRIPE_ONBOARDING,
+  });
+
+  const handleFinishPaymentsOnboarding = useCallback(() => {
+    finishOnboardingFetcher.submit(
+      {
+        intent: INTENTS.FINISH_STRIPE_PAYMENTS_ONBOARDING,
+      },
+      { method: 'POST' },
+    );
+  }, [finishOnboardingFetcher]);
 
   const retrievePaymentMethodId = useCallback(
     async (setupIntentClientSecret: string) => {
@@ -41,6 +55,7 @@ const PaymentForm: FC<Props> = ({ appBaseUrl, setRetailerPaymentBanner }) => {
               text: 'Success! Your retailer payment method has been saved.',
               tone: 'success',
             });
+            handleFinishPaymentsOnboarding();
             break;
           case 'processing':
             setRetailerPaymentBanner({
@@ -57,7 +72,7 @@ const PaymentForm: FC<Props> = ({ appBaseUrl, setRetailerPaymentBanner }) => {
         }
       }, 5000);
     },
-    [stripe, setRetailerPaymentBanner],
+    [stripe, setRetailerPaymentBanner, handleFinishPaymentsOnboarding],
   );
 
   useEffect(() => {
@@ -68,10 +83,7 @@ const PaymentForm: FC<Props> = ({ appBaseUrl, setRetailerPaymentBanner }) => {
       'setup_intent_client_secret',
     );
     if (setupIntentClientSecret) {
-      const params = new URLSearchParams();
-      setSearchParams(params, {
-        preventScrollReset: true,
-      });
+      setSearchParams({}, { preventScrollReset: true });
       retrievePaymentMethodId(setupIntentClientSecret);
     }
   }, [searchParams, stripe, setSearchParams, retrievePaymentMethodId]);

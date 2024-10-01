@@ -48,8 +48,16 @@ async function main() {
                 buttonText: "Edit brand profile",
               },
               {
-                key: CHECKLIST_ITEM_KEYS.RETAILER_REQUEST_PARTNERSHIP,
+                key: CHECKLIST_ITEM_KEYS.RETAILER_ADD_PAYMENT_METHOD,
                 position: 3,
+                header: "Add Payment Method",
+                subheader:
+                  "Add a card integrated with Stripe to reliably pay suppliers when the shipment is marked delivered.",
+                buttonText: "Get Access",
+              },
+              {
+                key: CHECKLIST_ITEM_KEYS.RETAILER_REQUEST_PARTNERSHIP,
+                position: 4,
                 header: "Request a partnership with a supplier",
                 subheader:
                   "Partner with a supplier and get access to their price lists.",
@@ -57,7 +65,7 @@ async function main() {
               },
               {
                 key: CHECKLIST_ITEM_KEYS.RETAILER_IMPORT_PRODUCT,
-                position: 4,
+                position: 5,
                 header: "Import a product to your store",
                 subheader:
                   "Easily import products from our partnered suppliers with just a few clicks. Inventory levels are automatically synchronized with your store, ensuring accurate stock information at all times.",
@@ -92,8 +100,16 @@ async function main() {
                 buttonText: "Edit brand profile",
               },
               {
-                key: CHECKLIST_ITEM_KEYS.SUPPLIER_MANAGE_ZONES,
+                key: CHECKLIST_ITEM_KEYS.SUPPLIER_ADD_PAYMENT_METHOD,
                 position: 3,
+                header: "Create a Connect Account",
+                subheader:
+                  "Securely integrate your bank account to automatically receive payments from retailers when an order is fulfilled.",
+                buttonText: "Get Access",
+              },
+              {
+                key: CHECKLIST_ITEM_KEYS.SUPPLIER_MANAGE_ZONES,
+                position: 4,
                 header: "Manage your shipping zones and rates",
                 subheader:
                   "Determine the shipping costs you want to charge for your products.",
@@ -101,7 +117,7 @@ async function main() {
               },
               {
                 key: CHECKLIST_ITEM_KEYS.SUPPLIER_CREATE_PRICE_LIST,
-                position: 4,
+                position: 5,
                 header: "Create a price list",
                 subheader:
                   "Create a price list, which will be shown in your brand profile. A private price list will only be shown to retailers you invite.",
@@ -109,7 +125,7 @@ async function main() {
               },
               {
                 key: CHECKLIST_ITEM_KEYS.SUPPLIER_EXPLORE_NETWORK,
-                position: 5,
+                position: 6,
                 header: "Request a partnership with a retailer",
                 subheader:
                   "Connect with interested retailers or reach out to those in our network to explore partnership opportunities.",

@@ -16,8 +16,11 @@ function getChecklistBtnFunction(
     case CHECKLIST_ITEM_KEYS.RETAILER_GET_STARTED:
       btnFunction = () => openModal(shopify, MODALS.BECOME_RETAILER);
       break;
+    case CHECKLIST_ITEM_KEYS.RETAILER_ADD_PAYMENT_METHOD:
+      btnFunction = () => navigate('/app/settings/payment');
+      break;
     case CHECKLIST_ITEM_KEYS.RETAILER_CUSTOMIZE_PROFILE:
-      btnFunction = () => navigate('/app/settings');
+      btnFunction = () => navigate('/app/settings/user');
       break;
     case CHECKLIST_ITEM_KEYS.RETAILER_REQUEST_PARTNERSHIP:
       btnFunction = () => navigate('/app/supplier-network');
@@ -29,7 +32,10 @@ function getChecklistBtnFunction(
       btnFunction = () => openModal(shopify, MODALS.BECOME_SUPPLIER);
       break;
     case CHECKLIST_ITEM_KEYS.SUPPLIER_CUSTOMIZE_PROFILE:
-      btnFunction = () => navigate('/app/settings');
+      btnFunction = () => navigate('/app/settings/user');
+      break;
+    case CHECKLIST_ITEM_KEYS.SUPPLIER_ADD_PAYMENT_METHOD:
+      btnFunction = () => navigate('/app/settings/payment');
       break;
     case CHECKLIST_ITEM_KEYS.SUPPLIER_CREATE_PRICE_LIST:
       btnFunction = () => navigate('/app/price-list');

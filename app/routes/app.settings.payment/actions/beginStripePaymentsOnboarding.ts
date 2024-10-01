@@ -7,10 +7,10 @@ type BeginStripeOnboardingData = {
   onboardingUrl: string;
 };
 
-async function beginStripeOnboarding(appBaseUrl: string) {
+async function beginStripePaymentsOnboarding(appBaseUrl: string) {
   const account = await createStripeAccount();
   const accountLink = await createAccountLink(account.id, appBaseUrl);
   return json({ onboardingUrl: accountLink.url });
 }
 
-export { beginStripeOnboarding, type BeginStripeOnboardingData };
+export { beginStripePaymentsOnboarding, type BeginStripeOnboardingData };

@@ -17,9 +17,11 @@ import {
 } from '@remix-run/react';
 import { getStripePublishableKey } from '~/services/stripe/stripeConnect';
 import { convertFormDataToObject } from '~/util';
-import { INTENTS } from './constants';
+import { FETCHER_KEYS, INTENTS } from './constants';
 import {
-  beginStripeOnboarding,
+  beginStripePaymentsOnboarding,
+  finishStripeConnectOnboarding,
+  finishStripePaymentsOnboarding,
   type BeginStripeOnboardingData,
 } from './actions';
 import { StatusCodes } from 'http-status-codes';
@@ -94,14 +96,19 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 export const action = async ({ request }: ActionFunctionArgs) => {
   let formData = await request.formData();
   const intent = formData.get('intent');
+  const {
+    session: { id: sessionId },
+  } = await authenticate.admin(request);
 
   const formDataObject = convertFormDataToObject(formData);
   switch (intent) {
-    case INTENTS.CREATE_ACCOUNT:
+    case INTENTS.CREATE_STRIPE_PAYMENTS_ACCOUNT:
       const data = formDataObject as BeginStripeOnboardingFormData;
-      return beginStripeOnboarding(data.appBaseUrl);
-    case INTENTS.CREATE_PAYMENT_SOURCE:
-      break;
+      return await beginStripePaymentsOnboarding(data.appBaseUrl);
+    case INTENTS.FINISH_STRIPE_PAYMENTS_ONBOARDING:
+      return await finishStripePaymentsOnboarding(sessionId);
+    case INTENTS.FINISH_STRIPE_CONNECT_ONBOARDING:
+      return await finishStripeConnectOnboarding(sessionId);
   }
   return json({ data: 'Not Implemented' }, StatusCodes.NOT_IMPLEMENTED);
 };
@@ -123,6 +130,19 @@ const PaymentSettings = () => {
     useState<BannerState>({ text: '', tone: 'undefined' });
   const [searchParams, setSearchParams] = useSearchParams();
 
+  const finishOnboardingFetcher = useFetcher({
+    key: FETCHER_KEYS.FINISH_STRIPE_ONBOARDING,
+  });
+
+  const handleFinishConnectOnboarding = useCallback(() => {
+    finishOnboardingFetcher.submit(
+      {
+        intent: INTENTS.FINISH_STRIPE_PAYMENTS_ONBOARDING,
+      },
+      { method: 'POST' },
+    );
+  }, [finishOnboardingFetcher]);
+
   useEffect(() => {
     const accountId = searchParams.get('accountId');
     if (accountId) {
@@ -136,6 +156,7 @@ const PaymentSettings = () => {
           newParams.delete('accountId');
           return newParams;
         });
+        handleFinishConnectOnboarding();
       } else {
         // calls the return url but either onboarding was not complete / missing some details
         setSupplierPaymentBanner({
@@ -144,7 +165,12 @@ const PaymentSettings = () => {
         });
       }
     }
-  }, [searchParams, hasStripeConnectAccount, setSearchParams]);
+  }, [
+    searchParams,
+    hasStripeConnectAccount,
+    setSearchParams,
+    handleFinishConnectOnboarding,
+  ]);
 
   const dismissRetailerPaymentBanner = useCallback(() => {
     setRetailerPaymentBanner({
@@ -168,30 +194,33 @@ const PaymentSettings = () => {
   }, [stripePublishableKey]);
 
   // form fetcher for handling stripe connect onboarding
-  const beginStripeOnboardingFetcher = useFetcher({
-    key: INTENTS.CREATE_ACCOUNT,
+  const beginStripePaymentsOnboardingFetcher = useFetcher({
+    key: FETCHER_KEYS.CREATE_STRIPE_PAYMENTS_ACCOUNT,
   });
 
-  const handleBeginOnboarding = useCallback(() => {
-    beginStripeOnboardingFetcher.submit(
-      { intent: INTENTS.CREATE_ACCOUNT, appBaseUrl: appBaseUrl },
+  const handleBeginPaymentsOnboarding = useCallback(() => {
+    beginStripePaymentsOnboardingFetcher.submit(
+      {
+        intent: INTENTS.CREATE_STRIPE_PAYMENTS_ACCOUNT,
+        appBaseUrl: appBaseUrl,
+      },
       { method: 'POST' },
     );
-  }, [beginStripeOnboardingFetcher, appBaseUrl]);
+  }, [beginStripePaymentsOnboardingFetcher, appBaseUrl]);
 
   useEffect(() => {
     if (
-      beginStripeOnboardingFetcher.state == 'idle' &&
-      beginStripeOnboardingFetcher.data
+      beginStripePaymentsOnboardingFetcher.state == 'idle' &&
+      beginStripePaymentsOnboardingFetcher.data
     ) {
-      const data = beginStripeOnboardingFetcher.data;
+      const data = beginStripePaymentsOnboardingFetcher.data;
       if (data) {
         const { onboardingUrl } = data as BeginStripeOnboardingData;
         setStripeOnboardingUrl(onboardingUrl);
       }
     }
-    beginStripeOnboardingFetcher.data = undefined;
-  }, [beginStripeOnboardingFetcher]);
+    beginStripePaymentsOnboardingFetcher.data = undefined;
+  }, [beginStripePaymentsOnboardingFetcher]);
 
   useEffect(() => {
     if (stripeOnboardingUrl) {
@@ -266,10 +295,12 @@ const PaymentSettings = () => {
               <Card>
                 <Button
                   variant={'primary'}
-                  onClick={handleBeginOnboarding}
-                  disabled={beginStripeOnboardingFetcher.state === 'submitting'}
+                  onClick={handleBeginPaymentsOnboarding}
+                  disabled={
+                    beginStripePaymentsOnboardingFetcher.state === 'submitting'
+                  }
                 >
-                  {beginStripeOnboardingFetcher.state === 'submitting'
+                  {beginStripePaymentsOnboardingFetcher.state === 'submitting'
                     ? 'Creating a connected account'
                     : 'Start Onboarding Process'}
                 </Button>
