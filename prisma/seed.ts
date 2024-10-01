@@ -108,16 +108,8 @@ async function main() {
                 buttonText: "Get Access",
               },
               {
-                key: CHECKLIST_ITEM_KEYS.SUPPLIER_MANAGE_ZONES,
-                position: 4,
-                header: "Manage your shipping zones and rates",
-                subheader:
-                  "Determine the shipping costs you want to charge for your products.",
-                buttonText: "Edit shipping rates",
-              },
-              {
                 key: CHECKLIST_ITEM_KEYS.SUPPLIER_CREATE_PRICE_LIST,
-                position: 5,
+                position: 4,
                 header: "Create a price list",
                 subheader:
                   "Create a price list, which will be shown in your brand profile. A private price list will only be shown to retailers you invite.",
@@ -125,7 +117,7 @@ async function main() {
               },
               {
                 key: CHECKLIST_ITEM_KEYS.SUPPLIER_EXPLORE_NETWORK,
-                position: 6,
+                position: 5,
                 header: "Request a partnership with a retailer",
                 subheader:
                   "Connect with interested retailers or reach out to those in our network to explore partnership opportunities.",
