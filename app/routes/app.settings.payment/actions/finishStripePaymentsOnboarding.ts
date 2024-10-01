@@ -1,15 +1,16 @@
 import { StatusCodes } from 'http-status-codes';
 import { CHECKLIST_ITEM_KEYS } from '~/constants';
+import { getChecklistItem } from '~/services/models/checklistItem';
 import {
   getChecklistStatus,
   markCheckListStatus,
 } from '~/services/models/checklistStatus';
 import { createJSONMessage } from '~/util';
 async function finishStripePaymentsOnboarding(sessionId: string) {
-  const checklistStatus = await getChecklistStatus(
-    sessionId,
-    CHECKLIST_ITEM_KEYS.RETAILER_ADD_PAYMENT_METHOD,
-  );
+  const checklistItemId = (
+    await getChecklistItem(CHECKLIST_ITEM_KEYS.RETAILER_ADD_PAYMENT_METHOD)
+  ).id;
+  const checklistStatus = await getChecklistStatus(sessionId, checklistItemId);
   await markCheckListStatus(checklistStatus.id, true);
 
   return createJSONMessage(

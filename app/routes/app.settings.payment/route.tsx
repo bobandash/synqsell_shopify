@@ -34,15 +34,17 @@ import { useRoleContext } from '~/context/RoleProvider';
 import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import { getProfile } from '~/services/models/userProfile';
-import PaymentForm from './components/PaymentForm';
 import { hasRole } from '~/services/models/roles';
 import { ROLES } from '~/constants';
 import { handleStripeCustomerAccount } from './loader';
 import type { BannerState } from './types';
 import { PaddedBox } from '~/components';
-import SuccessfulIntegration from './components/SuccessfulIntegration';
-import TermsOfService from './components/TermsOfService';
 import handleStripeConnectAccount from './loader/handleStripeConnectAccount';
+import {
+  PaymentForm,
+  SuccessfulIntegration,
+  TermsOfService,
+} from './components';
 
 type LoaderData = {
   userCurrency: string;
@@ -235,6 +237,8 @@ const PaymentSettings = () => {
     }
   }, [stripeOnboardingUrl]);
 
+  // handle stripe payments onboarding feedback
+
   return (
     <Page
       title={'Payment Integrations'}
@@ -278,18 +282,15 @@ const PaymentSettings = () => {
             title="Payment Method (Retailer)"
             description="Add a payment method to securely pay suppliers with Stripe."
           >
-            {hasCustomerPaymentMethod ? (
-              <SuccessfulIntegration text="Payment method was successfully added." />
-            ) : (
-              <Card>
-                <Elements stripe={stripePromise} options={{ clientSecret }}>
-                  <PaymentForm
-                    appBaseUrl={appBaseUrl}
-                    setRetailerPaymentBanner={setRetailerPaymentBanner}
-                  />
-                </Elements>
-              </Card>
-            )}
+            <Card>
+              <Elements stripe={stripePromise} options={{ clientSecret }}>
+                <PaymentForm
+                  appBaseUrl={appBaseUrl}
+                  setRetailerPaymentBanner={setRetailerPaymentBanner}
+                  hasCustomerPaymentMethod={hasCustomerPaymentMethod}
+                />
+              </Elements>
+            </Card>
           </Layout.AnnotatedSection>
         )}
         {isSupplier && (
@@ -313,7 +314,9 @@ const PaymentSettings = () => {
                 </Button>
               </Card>
             ) : (
-              <SuccessfulIntegration text="Stripe Connect has been successfully integrated." />
+              <Card>
+                <SuccessfulIntegration text="Stripe Connect has been successfully integrated." />
+              </Card>
             )}
           </Layout.AnnotatedSection>
         )}

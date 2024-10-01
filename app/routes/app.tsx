@@ -14,7 +14,7 @@ import polarisStyles from '@shopify/polaris/build/esm/styles.css?url';
 import { authenticate } from '../shopify.server';
 import { getRoles } from '~/services/models/roles';
 import { ROLES } from '~/constants';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { RoleProvider } from '~/context/RoleProvider';
 import { getJSONError } from '~/util';
 import logger from '~/logger';
@@ -48,8 +48,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export default function App() {
-  const { apiKey, roleNames: initalRoles } = useLoaderData<typeof loader>();
-  const [roles, setRoles] = useState(new Set(initalRoles));
+  const { apiKey, roleNames: dbRoles } = useLoaderData<typeof loader>();
+  const [roles, setRoles] = useState(new Set(dbRoles));
+  useEffect(() => {
+    setRoles(new Set(dbRoles));
+  }, [dbRoles]);
+
   const isSupplier = roles.has(ROLES.SUPPLIER);
   const isRetailer = roles.has(ROLES.RETAILER);
   const isAdmin = roles.has(ROLES.ADMIN);
@@ -63,10 +67,10 @@ export default function App() {
           </Link>
           {isAdmin && <Link to="/app/admin">Admin</Link>}
           {isRetailer && (
-            <Link to="/app/retailer-network">Retailer Network</Link>
+            <Link to="/app/supplier-network">Supplier Network</Link>
           )}
           {isSupplier && (
-            <Link to="/app/supplier-network">Supplier Network</Link>
+            <Link to="/app/retailer-network">Retailer Network</Link>
           )}
           {isSupplier && <Link to="/app/price-list">Price Lists</Link>}
           {(isSupplier || isRetailer) && (

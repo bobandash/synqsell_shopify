@@ -9,15 +9,21 @@ import { useAppBridge } from '@shopify/app-bridge-react';
 import { useFetcher, useSearchParams } from '@remix-run/react';
 import type { BannerState } from '../types';
 import { FETCHER_KEYS, INTENTS } from '../constants';
+import SuccessfulIntegration from './SuccessfulIntegration';
 
 type Props = {
   appBaseUrl: string;
   setRetailerPaymentBanner: React.Dispatch<React.SetStateAction<BannerState>>;
+  hasCustomerPaymentMethod: boolean;
 };
 
 // TODO: allow suppliers and retailers to change their integration
 // https://docs.stripe.com/payments/save-and-reuse?platform=web&ui=elements#:~:text=A%20SetupIntent%20is%20an%20object%20that%20represents%20your,Dashboard%20settings%20or%20you%20can%20list%20them%20manually.
-const PaymentForm: FC<Props> = ({ appBaseUrl, setRetailerPaymentBanner }) => {
+const PaymentForm: FC<Props> = ({
+  appBaseUrl,
+  setRetailerPaymentBanner,
+  hasCustomerPaymentMethod,
+}) => {
   const stripe = useStripe();
   const elements = useElements();
   const shopify = useAppBridge();
@@ -83,9 +89,16 @@ const PaymentForm: FC<Props> = ({ appBaseUrl, setRetailerPaymentBanner }) => {
     const setupIntentClientSecret = searchParams.get(
       'setup_intent_client_secret',
     );
+    console.log(setupIntentClientSecret);
     if (setupIntentClientSecret) {
-      setSearchParams({}, { preventScrollReset: true });
       retrievePaymentMethodId(setupIntentClientSecret);
+      setSearchParams((prev) => {
+        const newParams = new URLSearchParams(prev);
+        newParams.delete('setup_intent_client_secret');
+        newParams.delete('setup_intent');
+        newParams.delete('redirect_status');
+        return newParams;
+      });
     }
   }, [searchParams, stripe, setSearchParams, retrievePaymentMethodId]);
 
@@ -115,6 +128,12 @@ const PaymentForm: FC<Props> = ({ appBaseUrl, setRetailerPaymentBanner }) => {
       });
     }
   }, [error, shopify]);
+
+  if (hasCustomerPaymentMethod) {
+    return (
+      <SuccessfulIntegration text="Payment method was successfully added." />
+    );
+  }
 
   return (
     <Form onSubmit={handleSubmit}>

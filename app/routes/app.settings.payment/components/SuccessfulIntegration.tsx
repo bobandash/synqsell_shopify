@@ -1,4 +1,4 @@
-import { BlockStack, Card, Icon, InlineStack, Text } from '@shopify/polaris';
+import { BlockStack, Icon, InlineStack, Text } from '@shopify/polaris';
 import { CheckCircleIcon } from '@shopify/polaris-icons';
 import type { FC } from 'react';
 
@@ -9,18 +9,16 @@ type Props = {
 const SuccessfulIntegration: FC<Props> = (props) => {
   const { text } = props;
   return (
-    <Card>
-      <BlockStack gap="200">
-        <InlineStack gap="100">
-          <div>
-            <Icon source={CheckCircleIcon} tone="base" />
-          </div>
-          <Text variant="headingMd" as="h2" fontWeight="bold">
-            {text}
-          </Text>
-        </InlineStack>
-      </BlockStack>
-    </Card>
+    <BlockStack gap="200">
+      <InlineStack gap="100">
+        <div>
+          <Icon source={CheckCircleIcon} tone="base" />
+        </div>
+        <Text variant="headingMd" as="h2" fontWeight="bold">
+          {text}
+        </Text>
+      </InlineStack>
+    </BlockStack>
   );
 };
 
