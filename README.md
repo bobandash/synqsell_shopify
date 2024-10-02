@@ -14,7 +14,7 @@
 </div>
 
 <!-- TABLE OF CONTENTS -->
-<details>
+<details open>
   <summary>Table of Contents</summary>
   <ol>
     <li>
@@ -29,6 +29,7 @@
       <ul>
         <li><a href="#prerequisites">Prerequisites</a></li>
         <li><a href="#installation">Installation</a></li>
+        <li><a href="#uninstallation">Uninstallation</a></li>
       </ul>
     </li>
     <li><a href="#architecture">Architecture</a></li>
@@ -68,6 +69,7 @@ Pending deployment on the Shopify App Store
 ### Built With
 * [![Remix][Remix.run]][Remix-url]
 * [![Typescript][Typescript]][Typescript-url]
+* [![GraphQL][GraphQL]][GraphQL-url]
 * [![Prisma][Prisma]][Prisma-url]
 * [![PostgreSQL][PostgreSQL]][PostgreSQL-url]
 * [![Shopify Polaris][Shopify-Polaris]][Shopify-Polaris-url]
@@ -78,22 +80,139 @@ Pending deployment on the Shopify App Store
 * [![Stripe][Stripe]][Stripe-url]
 
 ## Getting Started
-
-To get a local copy up and running follow these steps.
+<strong>Note: because this application uses AWS resources to handle real-time data synchronization between SynqSell's database and Shopify, we need to provision cloud resources, which will cost money.</strong>
+<br /><br />
+To get a local copy up and running follow these steps:
 
 ### Prerequisites
 1. Install npm
     ```sh
     npm install npm@latest -g
     ```
-2. Become a [Shopify Partner](https://www.shopify.com/partners)
-3. Register for a Stripe Account that has access to [Stripe Payments](https://dashboard.stripe.com/register) and [Stripe Connect](https://dashboard.stripe.com/register/connect)
-  - Store and retrieve the [Test API Keys](https://docs.stripe.com/keys)
+2. Register for a Stripe Account that has access to [Stripe Payments](https://dashboard.stripe.com/register) and [Stripe Connect](https://dashboard.stripe.com/register/connect)
+    - For the Stripe connect account, create it with the following [settings](https://docs.stripe.com/connect/design-an-integration?connect-onboarding-surface=hosted&connect-dashboard-type=full&connect-economic-model=revshare&connect-loss-liability-owner=stripe&connect-charge-type=direct)
+    - Securely store and retrieve the [Stripe's Test API Keys](https://docs.stripe.com/keys)
 4. Create an [AWS account](https://aws.amazon.com/) and set up an [administrative IAM](https://www.sweetprocess.com/procedures/_eG30mkvYDrfAmevj78A0i6E1GZE/add-an-administrator-to-your-amazon-aws-account/)
-  - Store and retrieve an [access key id and secret access key](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html#Using_CreateAccessKey)
-  - Install [SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html) 
+    - Retrieve and securely store the [access key id and secret access key](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html#Using_CreateAccessKey)
+    - Install [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) and [SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html)
+    - Navigate to AWS Secrets Manager
+      - Create a secrets manager resource that stores your Stripe secret access key (key name: STRIPE_SECRET_API_KEY)
+      - Securely store the ARN of the Secrets Manager Resource
+    - Navigate to EC2
+      - Create a key-pair at the "Network & Security" > "Key Pairs" tab (choose the .PEM file extension option)
+      - Securely store both the key pair name and the generated .PEM file
+6. Become a [Shopify Partner](https://www.shopify.com/partners)
+    - Set up a connection between [AWS Eventbridge and Shopify](https://shopify.dev/docs/apps/build/webhooks/subscribe/get-started?framework=remix&deliveryMethod=eventBridge) (step 1.1)
+    - Securely store the generated event bus and event source ARN
+7. <strong>(Windows Only)</strong> OpenSSH may not be installed by default for windows. Install [OpenSSH](https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse?tabs=gui&pivots=windows-server-2025).
 
 ### Installation
+For AWS:
+1. Change the working directory to synqsell_webhooks
+    ```sh
+    cd synqsell_webhooks
+    ```
+2. Build the template.yaml file
+    ```sh
+    sam build
+    ```
+3. Deploy your cloud resources onto your AWS account with parameters relevant to the resources you created in the prerequisites step
+    ```sh
+    sam deploy --parameter-overrides BastionHostKeyName=<ParameterValue1> StripeSecretsManagerARN=<ParameterValue2> EventBusArn=<ParameterValue3> MyCidrIP=<ParameterValue4>
+    ```
+    - `<BastionHostKeyName>` - Key name generated in Prerequisites Step 4's "Navigate to EC2" subsection
+    - `<StripeSecretsManagerARN>` - ARN generated in Prerequisites Step 4's "Navigate to AWS Secrets Manager" subsection
+    - `<EventBusArn>` - ARN of EventBus generated in Prerequisites Step 6
+    - `<MyCidrIP>` - Your [public IP address](https://www.whatismyip.com/) (meant to only allow VPC access from your local IP)
+4. Important values will be outputted in the terminal after the changeset is deployed. Please record these values, which are important in setting up the local application
+
+For the Shopify Application:
+1. Open your terminal as an administrator
+2. Create a tunnel from your local database to RDS via the bastion host created:
+    ```sh
+    ssh -i <BASTION_KEY.PEM> -NL 8886:postgres.<DB_ENDPOINT>.<AWS_REGION>.<RDS-RESOURCE-ARN>:5432 ec2-user@<BASTION_HOST_IP> -v
+    ```
+    - `<BASTION_KEY.PEM>` - The private key file you generated and downloaded in Prerequisites Step 4's "Navigate to EC2" subsection
+    - `<AWS_REGION>`, `<RDS-RESOURCE_ARN>`, `<BASTION_HOST_IP>` - Found in the CloudFormation/SAM outputs after deployment.
+3. Open another terminal instance in your IDE
+4. Change the working directory to synqsell_shopify
+    ```sh
+    cd synqsell_shopify
+    ```
+5. Obtain your database password
+   ```sh
+    aws secretsmanager get-secret-value --secret-id <DB_SECRETS_ARN> --query 'SecretString.password' --output text
+   ```
+    - `<DB_SECRETS_ARN>` - Found in the CloudFormation/SAM outputs after deployment.
+6. Create an .env file inside the working directory and copy and paste the values in the .sample.env
+   - `<DATABASE_URL>` - postgresql://postgres:<DB_PASSWORD>@localhost:8886/postgres, with the DB_PASSWORD being the password you obtained in step 5
+   - `<AWS_ACCESS_KEY_ID>` and `<AWS_SECRET_ACCESS_KEY>` - Generated and stored in Prerequisites Step 4's first subsection
+   - `<STRIPE_SECRET_API_KEY>` and `<REACT_APP_STRIPE_PUBLISHABLE_KEY>` - Generated and stored in Prerequisites Step 2
+   - `<ADMIN_SESSION_ID>` - Leave blank. You will have to look in the database after the first user has been created and get the session id
+   - Default Values - `<NODE_ENV>`: development, `<LOG_LEVEL`: info
+   - Rest - If not specified explicitly, these values are found in the CloudFormation/SAM outputs after deployment.
+8. Run the following command. It should simultaneously run the seed command to populate your database with the default values.
+      ```sh
+    npm run dev
+    ```
+10. Open the preview url that was generated in the terminal.
+11. Open pgAdmin4 or a software of your choice in which you can access the Session Table data
+12. Modify the `ADMIN_SESSION_ID` in the .env file to be the session id
+13. Run the following command in another terminal:
+      ```sh
+    npx prisma db seed
+    ```
+14. Refresh your preview, and your Shopify account should become an admin of the application
+15. Add more stores to the application and start importing products from other stores!
+
+### Uninstallation
+When you are done with the local development, navigate to AWS CloudFormation on AWS and delete the stack, so you are not billed for the resources that are in use.
+
+## Architecture
+
+## Features At A Glance
+
+## Technical Approach and Obstacles
+This section delves into the rationale behind key technical decisions when working with this project and highlights the challenges I encountered during the project's development.
+<br />
+<br />
+In regards to automated testing, I purposely chose to not write many automated tests. This was for a few reasons:
+<ul>
+  <li><strong>Development Team Size:</strong> As the sole developer on this project, the risk of unexpected breaking changes is minimized. This allows for a more agile development process without the immediate need for extensive test coverage.</li>
+  <li><strong>Anticipated Future Changes:</strong> Given the early nature of this SaaS application, I expect significant changes and modifications to the SaaS. Investing a lot of time in automated tests could just lead to inefficient use of development resources.</li>
+  <li><strong>Focus on MVP and User Feedback:</strong> My goal was to create an MVP or POC to gather real-world feedback as soon as possible. In doing so, the future development direction and user needs could be identified more rapidly.</li>
+</ul>
+<br />
+However, I wanted to also balance this project as learning opportunity, to experiment and deepen my knowledge in technologies such as:
+<ul>
+  <li>
+    <strong>Remix.run:</strong> 
+    Prior to this project, I had never used a full-stack web framework before. I had used Next.js, but I never used the full-stack web capabilities of Next.js (I would make a standard API call to a separate backend service, and update the UI based on that). In Remix.run, I originally started development under the assumption that actions were the equivalent of **`POST`**
+  </li>
+  <li><strong>AWS:</strong></li>
+  <li><strong>:</strong></li>
+</ul>
+
+ 
+
+However, even though my main priority was to get user feedback as soon as possible, I had a lot of knowledge gaps that I needed to fill, and I also wanted to spend time learning how to build a scalable application through cloud services like AWS. I recently completed the Certificated Cloud Practiioner Certificate, but I only had a little practical experience working with the Cloud prior to this project, so I wanted to take this project as a learning opportunity to use AWS/IaC to build the foundations of a scalable application, even if I didn't have users yet. 
+
+
+## Roadmap
+
+## Contributing
+This GitHub repo will host the public version of the MVP/PoC. There will be a separate, private repo with new features / changes. If you would like to contribute to the live application, please reach out to me at brucehsu1126@gmail.com. I would love to work with other developers to build a better platform that's helps both manufacturers and retailers sell more products.
+
+## License
+
+## Contact
+For questions about this project, or if you just want to connect, please feel free to reach me out! [Bruce Hsu](https://www.linkedin.com/in/brucehsu1126/), email: brucehsu1126@gmail.com
+
+## Acknowledgements
+Servers perfect for asking questions about Shopify App Development and frantically searching with Control-F to figure out poorly documented APIs and features 😂
+- [Shopify Slack Channel](https://join.slack.com/t/shopifypartners/shared_invite/zt-sdr2quab-mGkzkttZ2hnVm0~8noSyvw)
+- [Remix Discord Server](https://rmx.as/discord)
+
 
 
 <!-- MARKDOWN LINKS & IMAGES -->
@@ -101,6 +220,8 @@ To get a local copy up and running follow these steps.
 [Remix-url]: https://remix.run/
 [Typescript]: https://img.shields.io/badge/TYPESCRIPT-%23F0F0F0?style=for-the-badge&logo=typescript&logoColor=%23FFFFFF&color=%233178C6
 [Typescript-url]: https://www.typescriptlang.org/
+[GraphQL]: https://img.shields.io/badge/GRAPHQL-black?style=for-the-badge&logo=graphql&logoColor=%23FFFFFF&color=%23E10098
+[graphql-url]: https://graphql.org/
 [Shopify-Polaris]: https://img.shields.io/badge/SHOPIFY%20POLARIS-%23F0F0F0?style=for-the-badge&logo=shopify&logoColor=FFFFFF&color=%237AB55C
 [Shopify-Polaris-url]: https://polaris.shopify.com/
 [Shopify-Webhooks]: https://img.shields.io/badge/SHOPIFY%20WEBHOOKS-%23F0F0F0?style=for-the-badge&logo=shopify&logoColor=FFFFFF&color=%237AB55C
@@ -117,6 +238,7 @@ To get a local copy up and running follow these steps.
 [NodeJs-url]: https://nodejs.org/en
 [Stripe]: https://img.shields.io/badge/STRIPE-%23F0F0F0?style=for-the-badge&logo=stripe&logoColor=FFFFFF&color=%23008CDD
 [Stripe-url]: https://stripe.com/
+
 
 
 
