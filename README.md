@@ -93,6 +93,7 @@ To get a local copy up and running follow these steps.
   - Store and retrieve an [access key id and secret access key](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html#Using_CreateAccessKey)
   - Install [SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html) 
 
+### Installation
 
 
 <!-- MARKDOWN LINKS & IMAGES -->
