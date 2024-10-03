@@ -35,7 +35,6 @@
     <li><a href="#architecture">Architecture</a></li>
     <li><a href="#features-at-a-glance">Features At A Glance</a></li>
     <li><a href="#technical-approach-and-obstacles">Technical Approach and Obstacles</a></li>
-    <li><a href="#roadmap">Roadmap</a></li>
     <li><a href="#contributing">Contributing</a></li>
     <li><a href="#license">License</a></li>
     <li><a href="#contact">Contact</a></li>
@@ -184,21 +183,23 @@ In regards to automated testing, I purposely chose to not write many automated t
 </ul>
 <br />
 However, I wanted to also balance this project as learning opportunity, to experiment and deepen my knowledge in technologies such as:
-<ul>
-  <li>
-    <strong>Remix.run:</strong> 
-    Prior to this project, I had never used a full-stack web framework before. I had used Next.js, but I never used the full-stack web capabilities of Next.js (I would make a standard API call to a separate backend service, and update the UI based on that). In Remix.run, I originally started development under the assumption that actions were the equivalent of **`POST`**
-  </li>
-  <li><strong>AWS:</strong></li>
-  <li><strong>:</strong></li>
-</ul>
 
- 
+### Remix.run
+Prior to this project, I had never used a full-stack web framework before. While I had used Next.js, but I never used the full-stack web capabilities of Next.js, instead relying on separate backend services for API calls. In Remix.run, I originally developed under the assumption that actions were the equivalent of POST, DELETE, PATCH API in traditional backends, returning JSON data to update the UI, 
+<br />
+<br />
+However, as I delved deeper into the project and Remix's documentation, I realized this approach wasn't optimal, and that actions automatically trigger the route's loader (the GET request to server-side render the page again). This meant I could simplify my code and allow my UI to automatically update based on the refreshed loader data whenever my route calls an action. This relevation sparked a paradigm shift in my thinking: I understood at a higher-level the trade-offs between tightly coupling your backend and frontend together into a full-stack framework and keeping a loosely coupled backend and frontend. While you sacrifice the ability to make your backend API consumable by multiple frontend, it significantly streamlines the development for a single frontend consumer with UI rendering depends on actions.
+<br />
+<br />
+As a sidenote, for a platform like Shopify that's encouraging most of their app developers to switch to embedded apps (apps running within an iFrame on Shopify, creating a seamless experience for merchants), setting the default development experience as a full-stack framework like Remix both makes it easier for Shopify developers to create an app and more more challenging to migrate to a non-embedded app in the future. This highlights an important consideration in the future for choosing a development approach for platform-specific applications.
 
-However, even though my main priority was to get user feedback as soon as possible, I had a lot of knowledge gaps that I needed to fill, and I also wanted to spend time learning how to build a scalable application through cloud services like AWS. I recently completed the Certificated Cloud Practiioner Certificate, but I only had a little practical experience working with the Cloud prior to this project, so I wanted to take this project as a learning opportunity to use AWS/IaC to build the foundations of a scalable application, even if I didn't have users yet. 
+### AWS
+Despite this project's early stage, I made the concious decision to learn and implement scalable cloud solutions using AWS. While I recently obtained the AWS Certified Cloud Practioner certification, I recognized that the certificate primarily involved memorizing AWS microservices rather than gaining practial experience. 
 
+<br />
+In this project, I wanted to move beyond theoretical knowledge and acquire hands-on experience in using AWS microservices and IaC tools like CloudFormation/AWS SAM. When developing AWS Lambda functions, I initially struggled with manually testing if the functions were properly receiving Shopify's webhooks and updating the database. Despite my general approach of minimizing automated tests, I initially resorted to writing integration tests to verify function calls, aiming to maximize development efficiency. However, after, I later learned about AWS SAM Accelerate and log watch features. These tools allowed me to sync Lambda function code with my AWS infrastructure in real-time, eliminating the need for frequent deployments or extensive integration testing. This hands-on approach, while challenging, provided invaluable insights into cloud-based application development and significantly enhanced my practical skills with AWS services.
 
-## Roadmap
+These are a few of the problems that I faced when developing on this app. All in all, I learned a tremdous amount developing this project, and I'm personally excited to further my knowledge of development, cloud computing, system design, and other concepts in the future.
 
 ## Contributing
 This GitHub repo will host the public version of the MVP/PoC. There will be a separate, private repo with new features / changes. If you would like to contribute to the live application, please reach out to me at brucehsu1126@gmail.com. I would love to work with other developers to build a better platform that's helps both manufacturers and retailers sell more products.
