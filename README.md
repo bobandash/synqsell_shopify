@@ -196,9 +196,12 @@ As a sidenote, for a platform like Shopify that's encouraging most of their app 
 ### AWS
 Despite this project's early stage, I made the concious decision to learn and implement scalable cloud solutions using AWS. While I recently obtained the AWS Certified Cloud Practioner certification, I recognized that the certificate primarily involved memorizing AWS microservices rather than gaining practial experience. 
 
+In this project, I wanted to move beyond theoretical knowledge and acquire hands-on experience in using AWS microservices and IaC tools like CloudFormation/AWS SAM. When developing AWS Lambda functions, I initially struggled with manually testing if the functions were properly receiving Shopify's webhooks and updating the database. Despite my general approach of minimizing automated tests, I initially resorted to writing integration tests to verify function calls, aiming to maximize development efficiency. 
 <br />
-In this project, I wanted to move beyond theoretical knowledge and acquire hands-on experience in using AWS microservices and IaC tools like CloudFormation/AWS SAM. When developing AWS Lambda functions, I initially struggled with manually testing if the functions were properly receiving Shopify's webhooks and updating the database. Despite my general approach of minimizing automated tests, I initially resorted to writing integration tests to verify function calls, aiming to maximize development efficiency. However, after, I later learned about AWS SAM Accelerate and log watch features. These tools allowed me to sync Lambda function code with my AWS infrastructure in real-time, eliminating the need for frequent deployments or extensive integration testing. This hands-on approach, while challenging, provided invaluable insights into cloud-based application development and significantly enhanced my practical skills with AWS services.
-
+<br />
+However, after, I later learned about AWS SAM Accelerate and log watch features. These tools allowed me to sync Lambda function code with my AWS infrastructure in real-time, eliminating the need for frequent deployments or extensive integration testing. This hands-on approach, while challenging, provided invaluable insights into cloud-based application development and significantly enhanced my practical skills with AWS services.
+<br />
+<br />
 These are a few of the problems that I faced when developing on this app. All in all, I learned a tremdous amount developing this project, and I'm personally excited to further my knowledge of development, cloud computing, system design, and other concepts in the future.
 
 ## Contributing
