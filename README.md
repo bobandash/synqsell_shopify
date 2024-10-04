@@ -171,7 +171,8 @@ When you are done with the local development, navigate to AWS CloudFormation on 
 This is the current architecture of Synqsell. Note: the system purposely currently has many single points of failures. This is intentional because of the application's lack of users; I strongly believe that the architecture will grow and change with more load. For example, some things I notice are that the RDS should be deployed in multi-AZs with a master and stand-by replica; the application load balancer should route traffic to multiple EC2 instances hosting the web/server app, instead of just a single EC2. Also, for the sake of easy setup, I currently use a NAT Gateway, but to save on personal costs, I should technically convert it to a NAT instance until the application increases in users.
 <br />
 <br />
-![Synqsell Architecture](https://github.com/user-attachments/assets/960cef3a-8ea0-46ac-b023-39bbc1378c51)
+![Synqsell Architecture (1)](https://github.com/user-attachments/assets/b0f04dfd-7cbb-4ecf-b4dc-22dd2dfe9d56)
+
 
 ## Features At A Glance
 
