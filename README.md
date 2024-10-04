@@ -2,8 +2,7 @@
 <br />
 <div align="center">
   <a href="https://github.com/bobandash/synqsell_shopify">
-    <!-- TODO: ADD LOGO -->
-    {ADD LOGO HERE}
+  <img src="https://raw.githubusercontent.com/bobandash/synqsell_shopify/main/app/assets/logo.jpg" alt="Logo" width="120" height="120">
   </a>
   <h3 align="center">SynqSell</h3>
   <p align="center">
