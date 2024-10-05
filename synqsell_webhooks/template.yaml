@@ -1,0 +1,569 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform:
+  - AWS::Serverless-2016-10-31
+  - AWS::LanguageExtensions
+Description: >
+  SAM Template For all infrastructure for SynqSell
+
+# INITIAL SET UP: NEED TO PROVIDE A KEY-PAIR TO ACCESS BASTION HOST, can only be created manually because pem is only accessible in the beginning
+Parameters:
+  BastionHostKeyName:
+    Type: String
+    Description: Key name for SSH into bastion host for database access
+    Default: synqsell-key-pair
+
+  EventBusArn:
+    Type: String
+    Description: "The ARN of the Shopify Event Bus"
+    Default: arn:aws:events:us-east-2:149536473043:event-bus/aws.partner/shopify.com/153436192769/aws
+
+  StripeSecretsManagerARN:
+    Type: String
+    Description: "The ARN of Stripe Secrets"
+    Default: arn:aws:secretsmanager:us-east-2:149536473043:secret:stripeTestKeys-iNuIql
+
+  ShopifySourceName:
+    Type: String
+    Description: The source name for Shopify Events
+    Default: "shopify"
+
+  RDSDatabaseName:
+    Type: String
+    Description: The name of the database
+    Default: "postgres"
+
+  RDSDatabaseUsername:
+    Type: String
+    Description: The username of the master user
+    Default: "postgres"
+
+  MyCidrIP:
+    Type: String
+    Description: IP for rds access
+    Default: "76.18.73.68/32"
+
+Globals:
+  Api:
+    Cors:
+      AllowMethods: "'POST,OPTIONS'"
+      AllowHeaders: "'Content-Type,X-Shopify-Shop-Domain,X-Shopify-Hmac-SHA256'"
+      AllowOrigin: "'https://*.myshopify.com'"
+      MaxAge: "'300'"
+  Function:
+    Timeout: 3
+    Environment:
+      Variables:
+        DB_USER: !Ref RDSDatabaseUsername
+        DB_PASSWORD: !Sub "{{resolve:secretsmanager:${DatabaseRotationSecret}:SecretString:password}}"
+        DB_HOST: !GetAtt DatabaseRDS.Endpoint.Address
+        DB_PORT: !GetAtt DatabaseRDS.Endpoint.Port
+        DATABASE: !Ref RDSDatabaseName
+        STRIPE_SECRET_ARN: !Ref StripeSecretsManagerARN
+    LoggingConfig:
+      LogFormat: JSON
+    VpcConfig:
+      SecurityGroupIds:
+        - !Ref LambdaSecurityGroup
+      SubnetIds:
+        - !Ref PrivateSubnetOne
+        - !Ref PrivateSubnetTwo
+
+Resources:
+  ImageHostingS3:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: "synqsell-image-hosting"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+    Metadata:
+      Description: "Public S3 bucket for hosting publicly accessible images such logos for SynqSell"
+
+  ImageHostingS3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ImageHostingS3
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: PublicReadGetObject
+            Effect: Allow
+            Principal: "*"
+            Action: s3:GetObject
+            Resource: !Sub arn:aws:s3:::${ImageHostingS3}/*
+
+  MyVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      InstanceTenancy: default
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+
+  GatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref MyVPC
+      InternetGatewayId: !Ref InternetGateway
+
+  PrivateSubnetOne:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MyVPC
+      CidrBlock: !Select [0, !Cidr [!GetAtt MyVPC.CidrBlock, 3, 8]]
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: !Select [0, !GetAZs ""]
+
+  PrivateSubnetTwo:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MyVPC
+      CidrBlock: !Select [1, !Cidr [!GetAtt MyVPC.CidrBlock, 3, 8]]
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: !Select [1, !GetAZs ""]
+
+  PublicSubnetOne:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MyVPC
+      MapPublicIpOnLaunch: True
+      CidrBlock: !Select [2, !Cidr [!GetAtt MyVPC.CidrBlock, 3, 8]]
+      AvailabilityZone: !Select [0, !GetAZs ""]
+
+  PublicSubnetTwo:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MyVPC
+      CidrBlock: !Select [3, !Cidr [!GetAtt MyVPC.CidrBlock, 4, 8]]
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: !Select [1, !GetAZs ""]
+
+  # TODO: After confirm prod traction, add db password rotation
+  # https://aws.amazon.com/blogs/security/how-to-securely-provide-database-credentials-to-lambda-functions-by-using-aws-secrets-manager/#:~:text=Dynamic%20references%20provide%20a%20compact%2C%20powerful%20way%20for,the%20resolved%20value%2C%20keeping%20the%20database%20password%20safe.
+  DatabaseRotationSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: RDS database credentials
+      GenerateSecretString:
+        SecretStringTemplate: '{"username": "${!Ref RDSDatabaseUsername}"}'
+        GenerateStringKey: "password"
+        PasswordLength: 16
+        ExcludeCharacters: '$'';|&<>()[]{}!?*%^~`,:#\"'
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+
+  DatabaseSubnets:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet group for RDS instance
+      SubnetIds:
+        - !Ref PrivateSubnetOne
+        - !Ref PrivateSubnetTwo
+
+  DatabaseRDS:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBName: !Ref RDSDatabaseName
+      Engine: "postgres"
+      MasterUsername: !Ref RDSDatabaseUsername
+      MasterUserPassword: !Sub "{{resolve:secretsmanager:${DatabaseRotationSecret}:SecretString:password}}"
+      Port: "5432"
+      DBInstanceClass: "db.t3.micro"
+      AllocatedStorage: "20"
+      PubliclyAccessible: false
+      BackupRetentionPeriod: 7
+      MultiAZ: false
+      DBSubnetGroupName: !Ref DatabaseSubnets
+      VPCSecurityGroups:
+        - !GetAtt DatabaseSecurityGroup.GroupId
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+
+  DatabaseSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for database access
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref LambdaSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref BastionHostSecurityGroup
+      VpcId: !Ref MyVPC
+
+  # Need a Bastion host in public subnet
+  BastionHostSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for bastion host (local db access)
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref MyCidrIP
+      VpcId: !Ref MyVPC
+
+  BastionHost:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: ami-037774efca2da0726
+      InstanceType: t2.micro
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          GroupSet:
+            - !Ref BastionHostSecurityGroup
+          SubnetId: !Ref PublicSubnetOne
+      KeyName: !Ref BastionHostKeyName
+
+  LambdaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Lambda functions
+      VpcId: !Ref MyVPC
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref MyVPC
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: GatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetOneTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetOne
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnetTwoTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetTwo
+      RouteTableId: !Ref PublicRouteTable
+
+  NATGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NATGatewayEIP.AllocationId
+      SubnetId: !Ref PublicSubnetOne
+      Tags:
+        - Key: Name
+          Value: NATGateway
+
+  NATGatewayEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref MyVPC
+
+  PrivateSubnetOneTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnetOne
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateSubnetTwoTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnetTwo
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NATGateway
+
+  # Start Lambda Functions For Handling Shopify Webhooks
+  ProductsDeleteRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: products_delete_rule
+      EventPattern:
+        detail-type:
+          - "shopifyWebhook"
+        detail:
+          metadata:
+            X-Shopify-Topic:
+              - prefix: "products/delete"
+      EventBusName: !Ref EventBusArn
+      Targets:
+        - Arn: !GetAtt DeleteProductsFunction.Arn
+          Id: "DeleteProductsFunctionTarget"
+
+  DeleteProductsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: synqsell_products_delete
+      CodeUri: deleteProducts/
+      Handler: app.lambdaHandler
+      MemorySize: 1028
+      Timeout: 30
+      Runtime: nodejs20.x
+      Architectures:
+        - x86_64
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: false
+        EntryPoints:
+          - app.ts
+
+  ProductsDeletePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref DeleteProductsFunction
+      Action: "lambda:InvokeFunction"
+      Principal: "events.amazonaws.com"
+      SourceArn: !GetAtt ProductsDeleteRule.Arn
+
+  ProductsUpdateRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: products_update_rule
+      EventPattern:
+        detail-type:
+          - "shopifyWebhook"
+        detail:
+          metadata:
+            X-Shopify-Topic:
+              - prefix: "products/update"
+      EventBusName: !Ref EventBusArn
+      Targets:
+        - Arn: !GetAtt ProductsUpdateFunction.Arn
+          Id: "ProductsUpdateFunctionTarget"
+
+  ProductsUpdateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: synqsell_products_update
+      CodeUri: productsUpdate/
+      Handler: app.lambdaHandler
+      MemorySize: 1028
+      Timeout: 30
+      Runtime: nodejs20.x
+      Architectures:
+        - x86_64
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: false
+        EntryPoints:
+          - app.ts
+
+  ProductsUpdatePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ProductsUpdateFunction
+      Action: "lambda:InvokeFunction"
+      Principal: "events.amazonaws.com"
+      SourceArn: !GetAtt ProductsUpdateRule.Arn
+
+  FulfillmentOrderRoutingCompleteRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: order_routing_complete_rule
+      EventPattern:
+        detail-type:
+          - "shopifyWebhook"
+        detail:
+          metadata:
+            X-Shopify-Topic:
+              - prefix: "fulfillment_orders/order_routing_complete"
+      EventBusName: !Ref EventBusArn
+      Targets:
+        - Arn: !GetAtt FulfillmentOrderRoutingCompleteFunction.Arn
+          Id: "FulfillmentOrderRoutingCompleteFunctionTarget"
+
+  FulfillmentOrderRoutingCompleteFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: synqsell_order_routing_complete
+      CodeUri: fulfillmentOrdersOrderRoutingComplete/
+      Handler: app.lambdaHandler
+      MemorySize: 1028
+      Timeout: 30
+      Runtime: nodejs20.x
+      Architectures:
+        - x86_64
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: false
+        EntryPoints:
+          - app.ts
+
+  FulfillmentOrderRoutingPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref FulfillmentOrderRoutingCompleteFunction
+      Action: "lambda:InvokeFunction"
+      Principal: "events.amazonaws.com"
+      SourceArn: !GetAtt FulfillmentOrderRoutingCompleteRule.Arn
+
+  # fulfillments/create webhook
+  FulfillmentsCreateRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: fulfillments_create_rule
+      EventPattern:
+        detail-type:
+          - "shopifyWebhook"
+        detail:
+          metadata:
+            X-Shopify-Topic:
+              - prefix: "fulfillments/create"
+      EventBusName: !Ref EventBusArn
+      Targets:
+        - Arn: !GetAtt FulfillmentsCreateFunction.Arn
+          Id: "FulfillmentsCreateFunctionTarget"
+
+  FulfillmentsCreateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: synqsell_fulfillments_create
+      CodeUri: fulfillmentsCreate/
+      Handler: app.lambdaHandler
+      MemorySize: 1028
+      Timeout: 30
+      Runtime: nodejs20.x
+      Architectures:
+        - x86_64
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: false
+        EntryPoints:
+          - app.ts
+
+  FulfillmentsCreatePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref FulfillmentsCreateFunction
+      Action: "lambda:InvokeFunction"
+      Principal: "events.amazonaws.com"
+      SourceArn: !GetAtt FulfillmentsCreateRule.Arn
+
+  # orders/cancelled webhook
+  OrdersCancelledRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: orders_cancelled_rule
+      EventPattern:
+        detail-type:
+          - "shopifyWebhook"
+        detail:
+          metadata:
+            X-Shopify-Topic:
+              - prefix: "orders/cancelled"
+      EventBusName: !Ref EventBusArn
+      Targets:
+        - Arn: !GetAtt OrdersCancelledFunction.Arn
+          Id: "OrdersCancelledFunctionTarget"
+
+  OrdersCancelledFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: synqsell_orders_cancelled
+      CodeUri: ordersCancelled/
+      Handler: app.lambdaHandler
+      MemorySize: 1028
+      Timeout: 30
+      Runtime: nodejs20.x
+      Architectures:
+        - x86_64
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: false
+        EntryPoints:
+          - app.ts
+
+  OrdersCancelledPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref OrdersCancelledFunction
+      Action: "lambda:InvokeFunction"
+      Principal: "events.amazonaws.com"
+      SourceArn: !GetAtt OrdersCancelledRule.Arn
+
+  # fulfillments/update webhook
+  FulfillmentsUpdateRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: fulfillments_update_rule
+      EventPattern:
+        detail-type:
+          - "shopifyWebhook"
+        detail:
+          metadata:
+            X-Shopify-Topic:
+              - prefix: "fulfillments/update"
+      EventBusName: !Ref EventBusArn
+      Targets:
+        - Arn: !GetAtt FulfillmentsUpdateFunction.Arn
+          Id: "FulfillmentsUpdateFunctionTarget"
+
+  FulfillmentsUpdateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: synqsell_fulfillments_update
+      CodeUri: fulfillmentsUpdate/
+      Handler: app.lambdaHandler
+      MemorySize: 1028
+      Timeout: 30
+      Runtime: nodejs20.x
+      Architectures:
+        - x86_64
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - "secretsmanager:GetSecretValue"
+              Resource: !Ref StripeSecretsManagerARN
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: false
+        EntryPoints:
+          - app.ts
+
+  FulfillmentsUpdatePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref FulfillmentsUpdateFunction
+      Action: "lambda:InvokeFunction"
+      Principal: "events.amazonaws.com"
+      SourceArn: !GetAtt FulfillmentsUpdateRule.Arn
