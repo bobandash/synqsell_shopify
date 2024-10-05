@@ -147,7 +147,7 @@ For the Shopify Application:
     aws secretsmanager get-secret-value --secret-id <DB_SECRETS_ARN> --query 'SecretString.password' --output text
    ```
     - `<DB_SECRETS_ARN>` - Found in the CloudFormation/SAM outputs after deployment.
-6. Create an .env file inside the working directory and copy and paste the values in the .sample.env
+6. Create a .env file inside the working directory and copy and paste the values in the .sample.env
    - `<DATABASE_URL>` - postgresql://postgres:<DB_PASSWORD>@localhost:8886/postgres, with the DB_PASSWORD being the password you obtained in step 5
    - `<AWS_ACCESS_KEY_ID>` and `<AWS_SECRET_ACCESS_KEY>` - Generated and stored in Prerequisites Step 4's first subsection
    - `<STRIPE_SECRET_API_KEY>` and `<REACT_APP_STRIPE_PUBLISHABLE_KEY>` - Generated and stored in Prerequisites Step 3
@@ -158,9 +158,9 @@ For the Shopify Application:
       ```sh
     npm run dev
     ```
-10. Open the preview url that was generated in the terminal.
-11. Open pgAdmin4 or a software of your choice in which you can access the Session Table data
-12. Modify the `ADMIN_SESSION_ID` in the .env file to be the session id
+10. Open the preview URL that was generated in the terminal.
+11. Open pgAdmin4 or software of your choice in which you can access the Session Table data
+12. Modify the `ADMIN_SESSION_ID` in the .env file to be the session ID
 13. Run the following command in another terminal:
       ```sh
     npx prisma db seed
@@ -172,7 +172,7 @@ For the Shopify Application:
 When you are done with the local development, navigate to AWS CloudFormation on AWS and delete the stack, so you are not billed for the resources that are in use.
 
 ## Architecture
-This is the current architecture of Synqsell. Note: the system purposely currently has many single points of failures. This is intentional because of the application's lack of users; I strongly believe that the architecture will grow and change with more load. For example, some things I notice are that the RDS should be deployed in multi-AZs with a master and stand-by replica; the application load balancer should route traffic to multiple EC2 instances hosting the web/server app, instead of just a single EC2. Also, for the sake of easy setup, I currently use a NAT Gateway, but to save on personal costs, I should technically convert it to a NAT instance until the application increases in users.
+This is the current architecture of Synqsell. Note: the system purposely currently has many single points of failure. This is intentional because of the application's lack of users; I strongly believe that the architecture will grow and change with more load. For example, some things I notice are that the RDS should be deployed in multi-AZs with a master and stand-by replica; the application load balancer should route traffic to multiple EC2 instances hosting the web/server app, instead of just a single EC2. Also, for the sake of easy setup, I currently use a NAT Gateway, but to save on personal costs, I should technically convert it to a NAT instance until the application increases in users.
 <br />
 <br />
 ![Synqsell Architecture (1)](https://github.com/user-attachments/assets/b0f04dfd-7cbb-4ecf-b4dc-22dd2dfe9d56)
@@ -181,7 +181,7 @@ This is the current architecture of Synqsell. Note: the system purposely current
 ## Features At A Glance
 
 ## Technical Approach and Obstacles
-This section delves into the rationale behind key technical decisions when working with this project and highlights the challenges I encountered during the project's development.
+This section delves into the rationale behind key technical decisions when working on this project and highlights the challenges I encountered during the project's development.
 <br />
 <br />
 In regards to automated testing, I purposely chose to not write many automated tests. This was for a few reasons:
@@ -191,35 +191,45 @@ In regards to automated testing, I purposely chose to not write many automated t
   <li><strong>Focus on MVP and User Feedback:</strong> My goal was to create an MVP or POC to gather real-world feedback as soon as possible. In doing so, the future development direction and user needs could be identified more rapidly.</li>
 </ul>
 <br />
-However, I wanted to also balance this project as learning opportunity, to experiment and deepen my knowledge in technologies such as:
+However, I wanted to also balance this project as a learning opportunity, to experiment and deepen my knowledge of technologies such as:
 
 ### Remix.run
-Prior to this project, I had never used a full-stack web framework before. While I had used Next.js, but I never used the full-stack web capabilities of Next.js, instead relying on separate backend services for API calls. In Remix.run, I originally developed under the assumption that actions were the equivalent of POST, DELETE, PATCH API in traditional backends, returning JSON data to update the UI, 
+Before this project, I had never used a full-stack web framework before. While I had used Next.js, I never used the full-stack web capabilities of Next.js, instead relying on separate backend services for API calls. In Remix.run, I originally developed under the assumption that actions were the equivalent of POST, DELETE, PATCH API in traditional backends, returning JSON data to update the UI, 
 <br />
 <br />
-However, as I delved deeper into the project and Remix's documentation, I realized this approach wasn't optimal, and that actions automatically trigger the route's loader (the GET request to server-side render the page again). This meant I could simplify my code and allow my UI to automatically update based on the refreshed loader data whenever my route calls an action. This relevation sparked a paradigm shift in my thinking: I understood at a higher-level the trade-offs between tightly coupling your backend and frontend together into a full-stack framework and keeping a loosely coupled backend and frontend. While you sacrifice the ability to make your backend API consumable by multiple frontend, it significantly streamlines the development for a single frontend consumer with UI rendering depends on actions.
+However, as I delved deeper into the project and Remix's documentation, I realized this approach wasn't optimal, and that actions automatically trigger the route's loader (the GET request to server-side render the page again). This meant I could simplify my code and allow my UI to automatically update based on the refreshed loader data whenever my route calls an action. This revelation sparked a paradigm shift in my thinking: I understood at a higher level the trade-offs between tightly coupling your backend and frontend together into a full-stack framework and keeping a loosely coupled backend and frontend. While you sacrifice the ability to make your backend API consumable by multiple frontend, it significantly streamlines the development for a single frontend consumer with UI rendering depending on actions.
 <br />
 <br />
-As a sidenote, for a platform like Shopify that's encouraging most of their app developers to switch to embedded apps (apps running within an iFrame on Shopify, creating a seamless experience for merchants), setting the default development experience as a full-stack framework like Remix both makes it easier for Shopify developers to create an app and more more challenging to migrate to a non-embedded app in the future. This highlights an important consideration in the future for choosing a development approach for platform-specific applications.
+As a side note, for a platform like Shopify that's encouraging most of their app developers to switch to embedded apps (apps running within an iFrame on Shopify, creating a seamless experience for merchants), setting the default development experience as a full-stack framework like Remix both makes it easier for Shopify developers to create an app and more more challenging to migrate to a non-embedded app in the future. This highlights an important consideration in the future for choosing a development approach for platform-specific applications.
 
 ### AWS
-Despite this project's early stage, I made the concious decision to learn and implement scalable cloud solutions using AWS. While I recently obtained the AWS Certified Cloud Practioner certification, I recognized that the certificate primarily involved memorizing AWS microservices rather than gaining practical experience. 
+Despite this project's early stage, I made the conscious decision to learn and implement scalable cloud solutions using AWS. While I recently obtained the AWS Certified Cloud Practioner certification, I recognized that the certificate primarily involved memorizing AWS microservices rather than gaining practical experience. 
 
 In this project, I wanted to move beyond theoretical knowledge and acquire hands-on experience in using AWS microservices and IaC tools like CloudFormation/AWS SAM. When developing AWS Lambda functions, I initially struggled with manually testing if the functions were properly receiving Shopify's webhooks and updating the database. Despite my general approach of minimizing automated tests, I initially resorted to writing integration tests to verify function calls, aiming to maximize development efficiency. 
 <br />
 <br />
-However, after, I later learned about AWS SAM Accelerate and log watch features. These tools allowed me to sync Lambda function code with my AWS infrastructure in real-time, eliminating the need for frequent deployments or extensive integration testing. This hands-on approach, while challenging, provided invaluable insights into cloud-based application development and significantly enhanced my practical skills with AWS services.
+However,, I later learned about AWS SAM Accelerate and log watch features. These tools allowed me to sync Lambda function code with my AWS infrastructure in real-time, eliminating the need for frequent deployments or extensive integration testing. This hands-on approach, while challenging, provided invaluable insights into cloud-based application development and significantly enhanced my practical skills with AWS services.
 <br />
 <br />
-These are a few of the problems that I faced when developing on this app. All in all, I learned a tremdous amount developing this project, and I'm personally excited to further my knowledge of development, cloud computing, system design, and other concepts in the future.
+These are a few of the problems that I faced when developing this app. All in all, I learned a tremendous amount developing this project, and I'm personally excited to further my knowledge of development, cloud computing, system design, and other concepts in the future.
 
 ## Contributing
-This GitHub repo will host the public version of the MVP/PoC. There will be a separate, private repo with new features / changes. If you would like to contribute to the live application, please reach out to me at brucehsu1126@gmail.com. I would love to work with other developers to build a better platform that's helps both manufacturers and retailers sell more products.
+This GitHub repo will host the public version of the MVP/PoC. There will be a separate, private repo with new features/changes. If you would like to contribute to the live application, please reach out to me at brucehsu1126@gmail.com. I would love to work with other developers to build a better platform that's helps both manufacturers and retailers sell more products.
 
 ## License
+This project is primarily intended for portfolio and educational purposes. 
+
+Copyright (c) Bruce Hsu
+
+While this code is publicly viewable, it is not open-source. All rights are reserved. 
+No use, modification, or distribution is permitted without explicit permission from the author.
+
+For potential employers: You are granted permission to review, run, and evaluate this code as part of the job application process.
+
+If you wish to use this code for any other purpose, please contact brucehsu1126@gmail.com for permission.
 
 ## Contact
-For questions about this project, or if you just want to connect, please feel free to reach me out! [Bruce Hsu](https://www.linkedin.com/in/brucehsu1126/), email: brucehsu1126@gmail.com
+For questions about this project, or if you just want to connect, please feel free to reach out! [Bruce Hsu](https://www.linkedin.com/in/brucehsu1126/), email: brucehsu1126@gmail.com
 
 ## Acknowledgements
 Servers perfect for asking questions about Shopify App Development and frantically searching with Control-F to figure out poorly documented APIs and features 😂
