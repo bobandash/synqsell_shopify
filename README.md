@@ -87,7 +87,8 @@ To get a local copy up and running follow these steps:
     ```sh
     npm install npm@latest -g
     ```
-2. Register for a Stripe Account that has access to [Stripe Payments](https://dashboard.stripe.com/register) and [Stripe Connect](https://dashboard.stripe.com/register/connect)
+2. Install [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
+3. Register for a Stripe Account that has access to [Stripe Payments](https://dashboard.stripe.com/register) and [Stripe Connect](https://dashboard.stripe.com/register/connect)
     - For the Stripe connect account, create it with the following [settings](https://docs.stripe.com/connect/design-an-integration?connect-onboarding-surface=hosted&connect-dashboard-type=full&connect-economic-model=revshare&connect-loss-liability-owner=stripe&connect-charge-type=direct)
     - Securely store and retrieve the [Stripe's Test API Keys](https://docs.stripe.com/keys)
 4. Create an [AWS account](https://aws.amazon.com/) and set up an [administrative IAM](https://www.sweetprocess.com/procedures/_eG30mkvYDrfAmevj78A0i6E1GZE/add-an-administrator-to-your-amazon-aws-account/)
@@ -99,9 +100,13 @@ To get a local copy up and running follow these steps:
     - Navigate to EC2
       - Create a key-pair at the "Network & Security" > "Key Pairs" tab (choose the .PEM file extension option)
       - Securely store both the key pair name and the generated .PEM file
-6. Become a [Shopify Partner](https://www.shopify.com/partners)
+5. Become a [Shopify Partner](https://www.shopify.com/partners)
     - Set up a connection between [AWS Eventbridge and Shopify](https://shopify.dev/docs/apps/build/webhooks/subscribe/get-started?framework=remix&deliveryMethod=eventBridge) (step 1.1)
     - Securely store the generated event bus and event source ARN
+6. Clone the repository containing all the code
+    ```sh
+    git clone https://github.com/bobandash/synqsell_shopify.git
+    ```
 7. <strong>(Windows Only)</strong> OpenSSH may not be installed by default for windows. Install [OpenSSH](https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse?tabs=gui&pivots=windows-server-2025).
 
 ### Installation
@@ -120,7 +125,7 @@ For AWS:
     ```
     - `<BastionHostKeyName>` - Key name generated in Prerequisites Step 4's "Navigate to EC2" subsection
     - `<StripeSecretsManagerARN>` - ARN generated in Prerequisites Step 4's "Navigate to AWS Secrets Manager" subsection
-    - `<EventBusArn>` - ARN of EventBus generated in Prerequisites Step 6
+    - `<EventBusArn>` - ARN of EventBus generated in Prerequisites Step 5
     - `<MyCidrIP>` - Your [public IP address](https://www.whatismyip.com/) (meant to only allow VPC access from your local IP)
 4. Important values will be outputted in the terminal after the changeset is deployed. Please record these values, which are important in setting up the local application
 
@@ -145,7 +150,7 @@ For the Shopify Application:
 6. Create an .env file inside the working directory and copy and paste the values in the .sample.env
    - `<DATABASE_URL>` - postgresql://postgres:<DB_PASSWORD>@localhost:8886/postgres, with the DB_PASSWORD being the password you obtained in step 5
    - `<AWS_ACCESS_KEY_ID>` and `<AWS_SECRET_ACCESS_KEY>` - Generated and stored in Prerequisites Step 4's first subsection
-   - `<STRIPE_SECRET_API_KEY>` and `<REACT_APP_STRIPE_PUBLISHABLE_KEY>` - Generated and stored in Prerequisites Step 2
+   - `<STRIPE_SECRET_API_KEY>` and `<REACT_APP_STRIPE_PUBLISHABLE_KEY>` - Generated and stored in Prerequisites Step 3
    - `<ADMIN_SESSION_ID>` - Leave blank. You will have to look in the database after the first user has been created and get the session id
    - Default Values - `<NODE_ENV>`: development, `<LOG_LEVEL`: info
    - Rest - If not specified explicitly, these values are found in the CloudFormation/SAM outputs after deployment.
