@@ -2,7 +2,7 @@
 <br />
 <div align="center">
   <a href="https://github.com/bobandash/synqsell_shopify">
-  <img src="https://raw.githubusercontent.com/bobandash/synqsell_shopify/synqsell_app/main/app/assets/logo.png" alt="Logo" width="120" height="120">
+  <img src="https://github.com/bobandash/synqsell_shopify/blob/main/synqsell_app/app/assets/SynqSell.png" alt="Logo" width="120" height="120">
   </a>
   <h3 align="center">SynqSell</h3>
   <p align="center">
