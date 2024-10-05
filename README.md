@@ -104,6 +104,10 @@ To get a local copy up and running follow these steps:
 5. Create an [AWS account](https://aws.amazon.com/) and set up an [administrative IAM](https://www.sweetprocess.com/procedures/_eG30mkvYDrfAmevj78A0i6E1GZE/add-an-administrator-to-your-amazon-aws-account/)
    - Retrieve and securely store the [access key id and secret access key](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html#Using_CreateAccessKey)
    - Install [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) and [SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html)
+   - Configure your computer to use your AWS account in CLI commands
+     ```sh
+     aws configure
+     ```
    - Navigate to AWS Secrets Manager
      - Create a secrets manager resource that stores your Stripe secret access key (key name: STRIPE_SECRET_API_KEY)
      - Securely store the ARN of the Secrets Manager Resource

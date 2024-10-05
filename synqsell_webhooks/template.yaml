@@ -7,21 +7,6 @@ Description: >
 
 # INITIAL SET UP: NEED TO PROVIDE A KEY-PAIR TO ACCESS BASTION HOST, can only be created manually because pem is only accessible in the beginning
 Parameters:
-  BastionHostKeyName:
-    Type: String
-    Description: Key name for SSH into bastion host for database access
-    Default: synqsell-key-pair
-
-  EventBusArn:
-    Type: String
-    Description: "The ARN of the Shopify Event Bus"
-    Default: arn:aws:events:us-east-2:149536473043:event-bus/aws.partner/shopify.com/153436192769/aws
-
-  StripeSecretsManagerARN:
-    Type: String
-    Description: "The ARN of Stripe Secrets"
-    Default: arn:aws:secretsmanager:us-east-2:149536473043:secret:stripeTestKeys-iNuIql
-
   ShopifySourceName:
     Type: String
     Description: The source name for Shopify Events
@@ -36,6 +21,22 @@ Parameters:
     Type: String
     Description: The username of the master user
     Default: "postgres"
+
+  # Parameter values that have to be overridden depending on the AWS account and user IP
+  BastionHostKeyName:
+    Type: String
+    Description: Key name for SSH into bastion host for database access
+    Default: synqsell-key-pair
+
+  EventBusArn:
+    Type: String
+    Description: "The ARN of the Shopify Event Bus"
+    Default: arn:aws:events:us-east-2:149536473043:event-bus/aws.partner/shopify.com/153436192769/aws
+
+  StripeSecretsManagerARN:
+    Type: String
+    Description: "The ARN of Stripe Secrets"
+    Default: arn:aws:secretsmanager:us-east-2:149536473043:secret:stripeTestKeys-iNuIql
 
   MyCidrIP:
     Type: String
@@ -153,7 +154,7 @@ Resources:
         SecretStringTemplate: '{"username": "${!Ref RDSDatabaseUsername}"}'
         GenerateStringKey: "password"
         PasswordLength: 16
-        ExcludeCharacters: '$'';|&<>()[]{}!?*%^~`,:#\"'
+        ExcludeCharacters: '$'';|&<>()[]{}!?*%^~`,:#/\"@/\\ "'
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
 
@@ -567,3 +568,11 @@ Resources:
       Action: "lambda:InvokeFunction"
       Principal: "events.amazonaws.com"
       SourceArn: !GetAtt FulfillmentsUpdateRule.Arn
+
+Outputs:
+  S3BUCKET:
+    Description: S3 Bucket Name Storing All SynqSell Logos
+    Value: !Ref ImageHostingS3
+  AWSREGION:
+    Description: AWS Region of Deployed Resources
+    Value: !Ref AWS::Region

@@ -18,7 +18,7 @@ export async function uploadFile(file: File) {
   // returns image url of the uploaded file
   try {
     const bucketName = process.env.S3_BUCKET ?? '';
-    const region = process.env.S3_REGION ?? '';
+    const region = process.env.AWS_REGION ?? '';
     const client = new S3Client({
       region,
       credentials: {
