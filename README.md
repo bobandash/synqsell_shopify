@@ -83,7 +83,7 @@ Pending deployment on the Shopify App Store
 To get a local copy up and running follow these steps:
 
 ### Prerequisites
-1. Install npm
+1. Install [Node.js](https://nodejs.org/en) and the latest version of npm
     ```sh
     npm install npm@latest -g
     ```
