@@ -5,4 +5,4 @@ export { default as PlusIcon } from './PlusIcon.svg';
 export { default as ToolsIcon } from './ToolsIcon.svg';
 export { default as ImageIcon } from './ImageIcon.png';
 export { default as WarningIcon } from './WarningIcon.png';
-export { default as Logo } from './logo.png';
+export { default as SynqSell } from './SynqSell.png';
