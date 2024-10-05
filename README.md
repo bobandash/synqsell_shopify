@@ -173,7 +173,10 @@ For the Shopify Application:
 When you are done with the local development, navigate to AWS CloudFormation on AWS and delete the stack, so you are not billed for the resources in use.
 
 ## Architecture
-This is the current architecture of Synqsell. Note: the architecture currently has many single points of failure. This is intentional because of the application's lack of users; If the application scales with more users, the architecture should continue to evolve alongside the growth. For example, when there are more users, the RDS should be deployed in multi-AZs with a master and stand-by replica; the application load balancer should route traffic to multiple EC2 instances hosting the web/server app, instead of just a single EC2. Also, for easy setup, I currently use a NAT Gateway. Still, to save on personal costs, I should convert it to a NAT instance until the application increases in users.
+This is the current architecture of Synqsell. 
+<br />
+<br />
+Note: the architecture currently has many single points of failure. This is intentional because of the application's lack of users; If the application scales with more users, the architecture should continue to evolve alongside the growth. For example, when there are more users, the RDS should be deployed in multi-AZs with a master and stand-by replica; the application load balancer should route traffic to multiple EC2 instances hosting the web/server app, instead of just a single EC2. Also, for easy setup, I currently use a NAT Gateway. However, to save on personal costs, I should have converted the NAT Gateway to a NAT instance.
 <br />
 <br />
 ![Synqsell Architecture (1)](https://github.com/user-attachments/assets/b0f04dfd-7cbb-4ecf-b4dc-22dd2dfe9d56)
@@ -209,10 +212,10 @@ Despite this project's early stage, I decided to learn and implement scalable cl
 In this project, I wanted to move beyond theoretical knowledge and acquire hands-on experience using AWS microservices and IaC tools like CloudFormation/AWS SAM. When developing AWS Lambda functions, I initially struggled with manually testing if the functions were properly receiving Shopify's webhooks and updating the database. Despite my general approach of minimizing automated tests, I initially resorted to writing integration tests to verify function calls, aiming to maximize development efficiency. 
 <br />
 <br />
-However,, I later learned about AWS SAM Accelerate and log watch features. These tools allowed me to sync Lambda function code with my AWS infrastructure in real-time, eliminating the need for frequent deployments or extensive integration testing. This hands-on approach, while challenging, provided invaluable insights into cloud-based application development and significantly enhanced my practical skills with AWS services.
+However, I later learned about AWS SAM Accelerate and log watch features. These tools allowed me to sync Lambda function code with my AWS infrastructure in real-time, eliminating the need for frequent deployments or extensive integration testing. This hands-on approach, while challenging, provided invaluable insights into cloud-based application development and significantly enhanced my practical skills with AWS services.
 <br />
 <br />
-These are a few of the problems that I faced when developing this app. All in all, I learned a tremendous amount developing this project, and I'm excited to further my knowledge of development, cloud computing, system design, and other concepts.
+These are a few problems that I faced when developing this app. I learned a tremendous amount developing this project, and I'm excited to further my knowledge of development, cloud computing, system design, and other concepts.
 
 ## Contributing
 This GitHub repo will host the public version of the MVP/PoC. There will be a separate, private repo with new features/changes. If you would like to contribute to the live application, please reach out to me at brucehsu1126@gmail.com. I would love to work with other developers to build a better platform that helps both manufacturers and retailers sell more products.
