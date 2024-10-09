@@ -1,0 +1,101 @@
+import { composeGid } from '@shopify/admin-graphql-api-utilities';
+import { APIGatewayProxyResult } from 'aws-lambda';
+import { PoolClient } from 'pg';
+import { DELETE_PRODUCT_MUTATION } from './graphql';
+import { initializePool, mutateAndValidateGraphQLData } from '/opt/nodejs/utils';
+import { ShopifyEvent } from './types';
+
+async function isRetailerProduct(shopifyDeletedProductId: string, client: PoolClient) {
+    const productQuery = `SELECT FROM "ImportedProduct" WHERE "shopifyProductId" = $1 LIMIT 1`;
+    const res = await client.query(productQuery, [shopifyDeletedProductId]);
+    return res.rows.length > 0;
+}
+
+async function isSupplierProduct(shopifyDeletedProductId: string, client: PoolClient) {
+    const productQuery = `SELECT FROM "Product" WHERE "shopifyProductId" = $1 LIMIT 1`;
+    const res = await client.query(productQuery, [shopifyDeletedProductId]);
+    return res.rows.length > 0;
+}
+
+async function handleSupplierProduct(shopifyDeletedProductId: string, client: PoolClient) {
+    // delete all the retailer's products,
+    try {
+        const allRetailerImportedProductsQuery = `
+            SELECT "ImportedProduct"."shopifyProductId", "Session"."shop", "Session"."accessToken"
+            FROM "Product"
+            INNER JOIN "ImportedProduct" ON "Product"."id" = "ImportedProduct"."prismaProductId"
+            INNER JOIN "Session" ON "ImportedProduct"."retailerId" = "Session"."id"
+            WHERE "Product"."shopifyProductId" = $1
+        `;
+        const res = await client.query(allRetailerImportedProductsQuery, [shopifyDeletedProductId]);
+        const deleteRetailerImportedProductPromises = res.rows.map(({ shopifyProductId, shop, accessToken }) => {
+            return mutateAndValidateGraphQLData(
+                shop,
+                accessToken,
+                DELETE_PRODUCT_MUTATION,
+                {
+                    id: shopifyProductId,
+                },
+                'Could not delete product for retailer.',
+            );
+        });
+        await Promise.all(deleteRetailerImportedProductPromises);
+        const deleteSupplierProductMutation = `DELETE FROM "Product" WHERE "shopifyProductId" = $1`;
+        await client.query(deleteSupplierProductMutation, [shopifyDeletedProductId]);
+    } catch (error) {
+        console.error(error);
+        throw new Error('Failed to handle supplier product deletion');
+    }
+}
+
+async function handleRetailerProduct(shopifyDeletedProductId: string, client: PoolClient) {
+    const productDeleteMutation = `DELETE FROM "ImportedProduct" WHERE "shopifyProductId" = $1`;
+    await client.query(productDeleteMutation, [shopifyDeletedProductId]);
+}
+
+export const lambdaHandler = async (event: ShopifyEvent): Promise<APIGatewayProxyResult> => {
+    let client: null | PoolClient = null;
+    try {
+        const pool = initializePool();
+        const {
+            detail: { payload },
+        } = event;
+        const { id } = payload;
+        const shopifyDeletedProductId = composeGid('Product', id);
+        client = await pool.connect();
+        const isRetailerProductResult = await isRetailerProduct(shopifyDeletedProductId, client);
+        const isSupplierProductResult = await isSupplierProduct(shopifyDeletedProductId, client);
+
+        if (!isSupplierProductResult && !isRetailerProductResult) {
+            return {
+                statusCode: 200,
+                body: JSON.stringify({
+                    message: 'There were no products to delete.',
+                }),
+            };
+        } else if (isSupplierProductResult) {
+            await handleSupplierProduct(shopifyDeletedProductId, client);
+        } else if (isRetailerProductResult) {
+            await handleRetailerProduct(shopifyDeletedProductId, client);
+        }
+
+        return {
+            statusCode: 200,
+            body: JSON.stringify({
+                message: 'Successfully deleted products from database.',
+            }),
+        };
+    } catch (error) {
+        return {
+            statusCode: 500,
+            body: JSON.stringify({
+                message: 'Could not delete products.',
+                error: (error as Error).message,
+            }),
+        };
+    } finally {
+        if (client) {
+            client.release();
+        }
+    }
+};

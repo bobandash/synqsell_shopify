@@ -1,0 +1,8 @@
+{
+  "compilerOptions": {
+    "noEmit": false,
+    "rootDir": ".",
+    "outDir": "../../../.aws-sam/build/UtilLayer/nodejs",
+    "module": "commonjs"
+  }
+}

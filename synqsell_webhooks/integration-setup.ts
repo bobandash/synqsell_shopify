@@ -9,7 +9,7 @@ import dotenv from "dotenv";
 
 dotenv.config({ path: "./.env.test" });
 
-const pool = new Pool({
+const mockPool = new Pool({
   host: process.env.TEST_DB_HOST || "localhost",
   port: Number(process.env.TEST_DB_PORT) || 5432,
   database: process.env.TEST_DB_NAME || "postgres",
@@ -21,7 +21,7 @@ const pool = new Pool({
 });
 
 async function clearAllTables() {
-  const client = await pool.connect();
+  const client = await mockPool.connect();
   try {
     await client.query("BEGIN");
 
@@ -67,4 +67,4 @@ async function clearAllTables() {
   }
 }
 
-export { pool, clearAllTables };
+export { mockPool, clearAllTables };

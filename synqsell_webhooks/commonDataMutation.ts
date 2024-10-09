@@ -25,7 +25,7 @@ export const DEFAULT_ITEMS = {
 // most common sample case
 // creates 1 product with 1 variant, and 1 inventory item id
 // 1 imported product, 1 imported variant, and 1 imported inventory item id
-export const priceListWithProductAndImportedProductMutation = `
+export const SAMPLE_DATA_MUTATION = `
   BEGIN;
 
   INSERT INTO "Session" (id, "shop", "state", "accessToken")
