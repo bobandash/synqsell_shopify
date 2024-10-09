@@ -142,7 +142,7 @@ For AWS:
    - `<BastionHostKeyName>` - Key name generated in Prerequisites Step 5's "Navigate to EC2" subsection
    - `<StripeSecretsManagerARN>` - ARN generated in Prerequisites Step 5's "Navigate to AWS Secrets Manager" subsection
    - `<EventBusArn>` - ARN of EventBus generated in Prerequisites Step 6
-   - `<MyCidrIP>` - Your [public IP address](https://www.whatismyip.com/) (meant to only allow VPC access from your local IP)
+   - `<MyCidrIP>` - Your [public IP address](https://www.whatismyip.com/) with /32 appended at the end of your public IP (e.g. 123.252.10.81/32)
 4. Important values will be outputted in the terminal after the changeset is deployed. Please record these values, which are important in setting up the local application
 
 For the Shopify Application:
@@ -150,18 +150,18 @@ For the Shopify Application:
 1. Open your terminal as an administrator
 2. Create a tunnel from your local database to RDS via the bastion host created:
    ```sh
-   ssh -i <BASTION_KEY.PEM> -NL 8886:postgres.<DB_ENDPOINT>.<AWS_REGION>.<RDS-RESOURCE-ARN>:5432 ec2-user@<BASTION_HOST_IP> -v
+   ssh -i <BASTION_KEY.PEM> -NL 8886:<DB_ENDPOINT_ADDRESS>:5432 ec2-user@<BASTION_HOST_IP> -v
    ```
-   - `<BASTION_KEY.PEM>` - The private key file you generated and downloaded in Prerequisites Step 5's "Navigate to EC2" subsection
-   - `<AWS_REGION>`, `<RDS-RESOURCE_ARN>`, `<BASTION_HOST_IP>` - Found in the CloudFormation/SAM outputs after deployment.
+   - `<BASTION_KEY.PEM>` - The file path of the private key file you generated and downloaded in Prerequisites Step 5's "Navigate to EC2" subsection
+   - `<DB_ENDPOINT_ADDRESS>`, `<BASTION_HOST_IP>` - Found in the CloudFormation/SAM outputs after deployment.
 3. Open another terminal instance in your IDE
-4. Change the working directory to synqsell_shopify
+4. Change the working directory to synqsell_app
    ```sh
-   cd synqsell_shopify
+   cd synqsell_app
    ```
-5. Obtain your database password
+5. Obtain your database password (the "password" field from this output)
    ```sh
-    aws secretsmanager get-secret-value --secret-id <DB_SECRETS_ARN> --query 'SecretString.password' --output text
+    aws secretsmanager get-secret-value --secret-id <DB_SECRETS_ARN> --query 'SecretString' --output text
    ```
    - `<DB_SECRETS_ARN>` - Found in the CloudFormation/SAM outputs after deployment.
 6. Create a .env file inside the working directory and copy and paste the values in the .sample.env
@@ -218,7 +218,7 @@ However, I wanted to also balance this project as a learning opportunity, to exp
 
 ### Remix.run
 
-Before this project, I had never used a full-stack web framework before. While I had used Next.js, I never used the full-stack web capabilities of Next.js, instead, I relied on separate backend services for API calls. In Remix.run, I originally developed under the assumption that actions were the equivalent of POST, DELETE, PATCH API in traditional backends, returning JSON data to update the UI,
+Before this project, I had never used a full-stack web framework before. While I had used Next.js, I never used the full-stack web capabilities of Next.js, instead, I relied on separate backend services for API calls. In Remix.run, I originally developed under the assumption that actions were the equivalent of POST, DELETE, PATCH API in traditional backends, returning JSON data to update the UI.
 <br />
 <br />
 However, as I delved deeper into the project and Remix's documentation, I realized this approach wasn't optimal, and that actions automatically trigger the route's loader (the GET request to server-side render the page again). This meant I could simplify my code and allow my UI to automatically update based on the refreshed loader data whenever my route calls an action. This revelation sparked a paradigm shift in my thinking: I understood at a higher level the trade-offs between tightly coupling your backend and frontend into a full-stack framework and keeping a loosely coupled backend and frontend. While you sacrifice the ability to make your backend API consumable by multiple frontend, it significantly streamlines the development for a single frontend consumer with UI rendering depending on actions.

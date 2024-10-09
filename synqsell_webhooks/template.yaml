@@ -570,9 +570,18 @@ Resources:
       SourceArn: !GetAtt FulfillmentsUpdateRule.Arn
 
 Outputs:
-  S3BUCKET:
-    Description: S3 Bucket Name Storing All SynqSell Logos
+  s3Bucket:
+    Description: S3 bucket name for storing all the merchants' logos
     Value: !Ref ImageHostingS3
-  AWSREGION:
+  awsRegion:
     Description: AWS Region of Deployed Resources
     Value: !Ref AWS::Region
+  dbEndpointAddress:
+    Description: The connection endpoint for the database
+    Value: !GetAtt DatabaseRDS.Endpoint.Address
+  bastionHostPublicIP:
+    Description: Public IP of your bastion host
+    Value: !GetAtt BastionHost.PublicIp
+  dbSecretsARN:
+    Description: The ARN of the Secrets Manager storing the database rotation secret
+    Value: !Ref DatabaseRotationSecret

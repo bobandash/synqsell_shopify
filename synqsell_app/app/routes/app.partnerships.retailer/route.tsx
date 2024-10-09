@@ -104,7 +104,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 };
 
-// TODO: handle bug where queries are reset when approve / reject suppliers
 const RetailerPartnerships = () => {
   const { partnershipInfo, priceLists } = useLoaderData<
     typeof loader
