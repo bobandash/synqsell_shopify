@@ -42,10 +42,8 @@
 </details>
 
 ## About The Project
+![image](https://github.com/user-attachments/assets/2317aef8-2a5b-4fdd-95ad-fbe742d0d974)
 
-<!-- TODO: INSERT SCREENSHOT OF PROJECT -->
-
-{ADD SCREENSHOT OF MAIN FEATURES OF PROJECT}
 
 When I worked in the eCommerce space selling anime merchandise, I had some key observations:
 
