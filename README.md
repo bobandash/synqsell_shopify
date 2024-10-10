@@ -20,6 +20,7 @@
       <a href="#about-the-project">About The Project</a>
       <ul>
         <li><a href="#deployment">Deployment</a></li>
+        <li><a href="#features-at-a-glance">Features At A Glance</a></li>
         <li><a href="#built-with">Built With</a></li>
       </ul>
     </li>
@@ -32,7 +33,6 @@
       </ul>
     </li>
     <li><a href="#architecture">Architecture</a></li>
-    <li><a href="#features-at-a-glance">Features At A Glance</a></li>
     <li><a href="#technical-approach-and-obstacles">Technical Approach and Obstacles</a></li>
     <li><a href="#contributing">Contributing</a></li>
     <li><a href="#license">License</a></li>
@@ -70,6 +70,9 @@ Pending deployment on the Shopify App Store
 
 {ADD SCREENSHOT OF PENDING APPROVAL STATUS}
 
+### Features At A Glance
+
+Because this application requires cloud resources, seeing the application locally will require money. So, I created a [notion writeup with images of SynqSell's main features](https://aback-thistle-ade.notion.site/Features-At-A-Glance-8be5cba5a5254a67bb59845c5b1c738a).
 ### Built With
 
 - [![Remix][Remix.run]][Remix-url]
@@ -179,6 +182,10 @@ For the Shopify Application:
    ```
 8. Open the preview URL that was generated in the terminal. Your database migrations should start running.
 9. Open pgAdmin4 or software of your choice in which you can access the Session Table data
+   - `<Host name>` - localhost
+   - `<Port>` - 8886
+   - `<Username>` - postgres
+   - `<Password>` - Retrieved in step 5 
 10. Modify the `ADMIN_SESSION_ID` in the .env file to be the id generated in the session table
 11. Run the following command:
     ```sh
@@ -200,8 +207,6 @@ Note: the architecture currently has many single points of failure. This is inte
 <br />
 <br />
 ![Synqsell Architecture (1)](https://github.com/user-attachments/assets/b0f04dfd-7cbb-4ecf-b4dc-22dd2dfe9d56)
-
-## Features At A Glance
 
 ## Technical Approach and Obstacles
 
