@@ -96,12 +96,16 @@ To get a local copy up and running follow these steps:
    ```sh
    npm install npm@latest -g
    ```
-2. Install [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
-3. Install [pgAdmin4](https://www.postgresql.org/ftp/pgadmin/pgadmin4/v8.12/windows/)
-4. Register for a Stripe Account that has access to [Stripe Payments](https://dashboard.stripe.com/register) and [Stripe Connect](https://dashboard.stripe.com/register/connect)
+2. Install the Shopify CLI
+   ```sh
+   npm install -g @shopify/cli@latest
+   ```
+3. Install [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
+4. Install [pgAdmin4](https://www.postgresql.org/ftp/pgadmin/pgadmin4/v8.12/windows/)
+5. Register for a Stripe Account that has access to [Stripe Payments](https://dashboard.stripe.com/register) and [Stripe Connect](https://dashboard.stripe.com/register/connect)
    - For the Stripe connect account, create it with the following [settings](https://docs.stripe.com/connect/design-an-integration?connect-onboarding-surface=hosted&connect-dashboard-type=full&connect-economic-model=revshare&connect-loss-liability-owner=stripe&connect-charge-type=direct)
    - Securely store and retrieve the [Stripe's Test API Keys](https://docs.stripe.com/keys)
-5. Create an [AWS account](https://aws.amazon.com/) and set up an [administrative IAM](https://www.sweetprocess.com/procedures/_eG30mkvYDrfAmevj78A0i6E1GZE/add-an-administrator-to-your-amazon-aws-account/)
+6. Create an [AWS account](https://aws.amazon.com/) and set up an [administrative IAM](https://www.sweetprocess.com/procedures/_eG30mkvYDrfAmevj78A0i6E1GZE/add-an-administrator-to-your-amazon-aws-account/)
    - Retrieve and securely store the [access key id and secret access key](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html#Using_CreateAccessKey)
    - Install [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) and [SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html)
    - Configure your computer to use your AWS account in CLI commands
@@ -114,14 +118,14 @@ To get a local copy up and running follow these steps:
    - Navigate to EC2
      - Create a key-pair at the "Network & Security" > "Key Pairs" tab (choose the .PEM file extension option)
      - Securely store both the key pair name and the generated .PEM file
-6. Become a [Shopify Partner](https://www.shopify.com/partners)
+7. Become a [Shopify Partner](https://www.shopify.com/partners)
    - Set up a connection between [AWS Eventbridge and Shopify](https://shopify.dev/docs/apps/build/webhooks/subscribe/get-started?framework=remix&deliveryMethod=eventBridge) (step 1.1)
    - Securely store the generated event bus and event source ARN
-7. Clone the repository containing all the code
+8. Clone the repository containing all the code
    ```sh
    git clone https://github.com/bobandash/synqsell_shopify.git
    ```
-8. <strong>(Windows Only)</strong> OpenSSH may not be installed by default for windows. Install [OpenSSH](https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse?tabs=gui&pivots=windows-server-2025).
+9. <strong>(Windows Only)</strong> OpenSSH may not be installed by default for windows. Install [OpenSSH](https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse?tabs=gui&pivots=windows-server-2025).
 
 ### Installation
 
@@ -139,9 +143,7 @@ For AWS:
    ```sh
    sam deploy --parameter-overrides BastionHostKeyName=<ParameterValue1> StripeSecretsManagerARN=<ParameterValue2> EventBusArn=<ParameterValue3> MyCidrIP=<ParameterValue4>
    ```
-   - `<BastionHostKeyName>` - Key name generated in Prerequisites Step 5's "Navigate to EC2" subsection
-   - `<StripeSecretsManagerARN>` - ARN generated in Prerequisites Step 5's "Navigate to AWS Secrets Manager" subsection
-   - `<EventBusArn>` - ARN of EventBus generated in Prerequisites Step 6
+   - `<BastionHostKeyName>`, `<StripeSecretsManagerARN>`, `<EventBusArn>` - Generated in Prerequisites
    - `<MyCidrIP>` - Your [public IP address](https://www.whatismyip.com/) with /32 appended at the end of your public IP (e.g. 123.252.10.81/32)
 4. Important values will be outputted in the terminal after the changeset is deployed. Please record these values, which are important in setting up the local application
 
@@ -152,7 +154,7 @@ For the Shopify Application:
    ```sh
    ssh -i <BASTION_KEY.PEM> -NL 8886:<DB_ENDPOINT_ADDRESS>:5432 ec2-user@<BASTION_HOST_IP> -v
    ```
-   - `<BASTION_KEY.PEM>` - The file path of the private key file you generated and downloaded in Prerequisites Step 5's "Navigate to EC2" subsection
+   - `<BASTION_KEY.PEM>` - The file path of the private key file you generated and downloaded in Prerequisites
    - `<DB_ENDPOINT_ADDRESS>`, `<BASTION_HOST_IP>` - Found in the CloudFormation/SAM outputs after deployment.
 3. Open another terminal instance in your IDE
 4. Change the working directory to synqsell_app
@@ -166,23 +168,23 @@ For the Shopify Application:
    - `<DB_SECRETS_ARN>` - Found in the CloudFormation/SAM outputs after deployment.
 6. Create a .env file inside the working directory and copy and paste the values in the .sample.env
    - `<DATABASE_URL>` - postgresql://postgres:<DB_PASSWORD>@localhost:8886/postgres, with the DB_PASSWORD being the password you obtained in step 5
-   - `<AWS_ACCESS_KEY_ID>` and `<AWS_SECRET_ACCESS_KEY>` - Generated and stored in Prerequisites Step 5's first subsection
-   - `<STRIPE_SECRET_API_KEY>` and `<REACT_APP_STRIPE_PUBLISHABLE_KEY>` - Generated and stored in Prerequisites Step 3
+   - `<AWS_ACCESS_KEY_ID>` and `<AWS_SECRET_ACCESS_KEY>` - Generated and stored in Prerequisites
+   - `<STRIPE_SECRET_API_KEY>` and `<REACT_APP_STRIPE_PUBLISHABLE_KEY>` - Generated and stored in Prerequisites
    - `<ADMIN_SESSION_ID>` - Leave blank. You will have to look in the database after the first user has been created and get the session id
    - Default Values - `<NODE_ENV>`: development, `<LOG_LEVEL`: info
    - Rest - If not specified explicitly, these values are found in the CloudFormation/SAM outputs after deployment.
-7. Run the following command. It should simultaneously run the seed command to populate your database with the default values.
+7. Run the following command to start the application.
    ```sh
    npm run dev
    ```
-8. Open the preview URL that was generated in the terminal.
+8. Open the preview URL that was generated in the terminal. Your database migrations should start running.
 9. Open pgAdmin4 or software of your choice in which you can access the Session Table data
-10. Modify the `ADMIN_SESSION_ID` in the .env file to be the session ID
-11. Run the following command in another terminal:
+10. Modify the `ADMIN_SESSION_ID` in the .env file to be the id generated in the session table
+11. Run the following command:
     ```sh
     npx prisma db seed
     ```
-12. Refresh your preview, and your Shopify account should become an admin of the application
+12. Refresh your preview, and your Shopify account should become an admin of the application and the checklist tables should be loaded.
 13. Add more stores to the application and start importing products from other stores!
 
 ### Uninstallation
