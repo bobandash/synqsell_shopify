@@ -169,7 +169,7 @@ export async function updateVariantsTx(
     throw errorHandler(
       error,
       'Failed to update variant wholesale price in transaction.',
-      deleteVariantsTx,
+      updateVariantsTx,
       {
         variants,
       },

@@ -159,7 +159,7 @@ async function getProductStatus(
 // returns the data of the variants to add, remove, and update
 // the problem with variants is that when a product is deleted, it should cascade delete the variants as well
 // so that's why you have to use the transaction instead and call this when products are already deleted
-// TODO: this should be refactored for smaller functions after MVP
+// TODO: This has to be refactored after the MVP... not production level code
 async function getVariantStatusTx(
   tx: Prisma.TransactionClient,
   priceListId: string,
@@ -270,24 +270,30 @@ async function updateAllPriceListInformationAction(
     const { shopifyProductIdsToAdd, prismaProductIdsToRemove } =
       await getProductStatus(priceListId, shopifyProductIds);
 
-    await db.$transaction(async (tx) => {
-      // variants can only be created after all the products are created because they depend on the product db's id
-      await Promise.all([
-        addProductsTx(tx, sessionId, priceListId, shopifyProductIdsToAdd),
-        deleteProductsTx(tx, priceListId, prismaProductIdsToRemove),
-      ]);
+    await db.$transaction(
+      async (tx) => {
+        await Promise.all([
+          addProductsTx(tx, sessionId, priceListId, shopifyProductIdsToAdd),
+          deleteProductsTx(tx, priceListId, prismaProductIdsToRemove),
+        ]);
 
-      const { variantsToAdd, prismaIdsToRemoveInVariant, variantsToUpdate } =
-        await getVariantStatusTx(tx, priceListId, products);
+        // variant status has to be inside the transaction because products have to be created before any variants are created
+        const { variantsToAdd, prismaIdsToRemoveInVariant, variantsToUpdate } =
+          await getVariantStatusTx(tx, priceListId, products);
 
-      await Promise.all([
-        deleteVariantsTx(tx, prismaIdsToRemoveInVariant),
-        updateVariantsTx(tx, variantsToUpdate),
-        addVariantsTx(tx, variantsToAdd),
-        updatePriceListSettingsTx(tx, sessionId, priceListId, settings),
-        updatePartnershipsInPriceListTx(tx, priceListId, partnerships),
-      ]);
-    });
+        await Promise.all([
+          deleteVariantsTx(tx, prismaIdsToRemoveInVariant),
+          updateVariantsTx(tx, variantsToUpdate),
+          addVariantsTx(tx, variantsToAdd),
+          updatePriceListSettingsTx(tx, sessionId, priceListId, settings),
+          updatePartnershipsInPriceListTx(tx, priceListId, partnerships),
+        ]);
+      },
+      {
+        maxWait: 20000, // TODO: Find a better way to handle this logic
+        timeout: 60000,
+      },
+    );
 
     return createJSONMessage(
       'Successfully updated price list.',
