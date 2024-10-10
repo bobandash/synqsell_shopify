@@ -102,7 +102,6 @@ export async function addVariantsTx(
     const createdVariants = await tx.variant.createManyAndReturn({
       data: variantsData,
     });
-
     const inventoryItemData = variants.map(({ inventoryItem }, index) => {
       return {
         shopifyInventoryItemId: inventoryItem.shopifyInventoryItemId,
@@ -112,7 +111,6 @@ export async function addVariantsTx(
     await tx.inventoryItem.createMany({
       data: inventoryItemData,
     });
-    return createdVariants;
   } catch (error) {
     throw errorHandler(
       error,

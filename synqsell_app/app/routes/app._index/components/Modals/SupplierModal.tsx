@@ -1,6 +1,6 @@
 import { Modal, type ShopifyGlobal, TitleBar } from '@shopify/app-bridge-react';
 import { INTENTS, MODALS } from '../../constants';
-import { useSubmit } from '@remix-run/react';
+import { useNavigation, useSubmit } from '@remix-run/react';
 import { type FC, useCallback } from 'react';
 import { useField, useForm } from '@shopify/react-form';
 
@@ -11,6 +11,9 @@ type Props = {
 
 const SupplierModal: FC<Props> = ({ checklistItemId, shopify }) => {
   const remixSubmit = useSubmit();
+  // only a single modal can be open at a time, so it's okay to use form instead of fetchers for this route
+  const navigate = useNavigation();
+  const isSubmitting = navigate.state === 'submitting';
 
   const supplierForm = useForm({
     fields: {
@@ -61,8 +64,12 @@ const SupplierModal: FC<Props> = ({ checklistItemId, shopify }) => {
       </div>
       <TitleBar title="Become a supplier on SynqSell">
         <button onClick={hideModal}>Cancel</button>
-        <button variant={'primary'} onClick={handleSubmitForm}>
-          Request Access
+        <button
+          variant={'primary'}
+          onClick={handleSubmitForm}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? 'Requesting Access' : 'Request Access'}
         </button>
       </TitleBar>
     </Modal>

@@ -92,7 +92,7 @@ export async function addProductsTx(
     throw errorHandler(
       error,
       'Failed to add products to price list.',
-      deleteProductsTx,
+      addProductsTx,
       { sessionId, priceListId, shopifyProductIdsToAdd },
     );
   }

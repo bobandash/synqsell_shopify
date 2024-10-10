@@ -145,6 +145,11 @@ export async function approveSuppliers(
         ),
       ]);
     });
+
+    return createJSONMessage(
+      'Suppliers were successfully approved.',
+      StatusCodes.OK,
+    );
   } catch (error) {
     throw errorHandler(
       error,
@@ -179,6 +184,11 @@ async function rejectSuppliers(
         ),
       ]);
     });
+
+    return createJSONMessage(
+      'Suppliers were successfully rejected.',
+      StatusCodes.OK,
+    );
   } catch (error) {
     throw errorHandler(
       error,
@@ -195,15 +205,10 @@ export async function updateSupplierAccessAction(
 ) {
   try {
     if (status === ACCESS_REQUEST_STATUS.REJECTED) {
-      await rejectSuppliers(supplierAccessRequestInfo);
+      return await rejectSuppliers(supplierAccessRequestInfo);
     } else if (status === ACCESS_REQUEST_STATUS.APPROVED) {
-      await approveSuppliers(supplierAccessRequestInfo);
+      return await approveSuppliers(supplierAccessRequestInfo);
     }
-
-    return createJSONMessage(
-      'Suppliers were successfully rejected.',
-      StatusCodes.OK,
-    );
   } catch (error) {
     throw errorHandler(
       error,

@@ -3,7 +3,7 @@ import type { ShopifyGlobal } from '@shopify/app-bridge-react';
 import { INTENTS, MODALS } from '../../constants';
 import { type FC, useCallback } from 'react';
 import { useField, useForm } from '@shopify/react-form';
-import { useSubmit } from '@remix-run/react';
+import { useNavigation, useSubmit } from '@remix-run/react';
 
 type Props = {
   checklistItemId: string | null;
@@ -12,6 +12,9 @@ type Props = {
 
 const RetailerModal: FC<Props> = ({ checklistItemId, shopify }) => {
   const remixSubmit = useSubmit();
+  // only a single modal can be open at a time, so it's okay to use form instead of fetchers for this route
+  const navigate = useNavigation();
+  const isSubmitting = navigate.state === 'submitting';
 
   const retailerForm = useForm({
     fields: {
@@ -51,8 +54,12 @@ const RetailerModal: FC<Props> = ({ checklistItemId, shopify }) => {
       </p>
       <TitleBar title="Become a retailer on SynqSell">
         <button onClick={hideModal}>Cancel</button>
-        <button variant={'primary'} onClick={handleSubmitForm}>
-          Join SynqSell
+        <button
+          variant={'primary'}
+          onClick={handleSubmitForm}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? 'Joining SynqSell' : 'Join SynqSell'}
         </button>
       </TitleBar>
     </Modal>

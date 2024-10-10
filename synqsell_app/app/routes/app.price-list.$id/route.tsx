@@ -7,6 +7,7 @@ import {
   useActionData,
   useLoaderData,
   useLocation,
+  useNavigation,
   useParams,
   useSubmit as useRemixSubmit,
   useSearchParams,
@@ -114,6 +115,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       sessionId,
     );
   } catch (error) {
+    console.error(error);
     return getJSONError(error, '/app/price-list/$id');
   }
 };
@@ -157,6 +159,8 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
 
 const CreateEditPriceList = () => {
   const location = useLocation();
+  const transition = useNavigation();
+  const isSubmitting = transition.state === 'submitting';
   const { settingsData, productsData, partnershipsData } = useLoaderData<
     typeof loader
   >() as LoaderDataProps;
@@ -700,8 +704,8 @@ const CreateEditPriceList = () => {
             </BlockStack>
           </Box>
           <div className={styles['center-right']}>
-            <Button submit variant="primary">
-              Save
+            <Button submit variant="primary" disabled={isSubmitting}>
+              {isSubmitting ? 'Saving' : 'Save'}
             </Button>
           </div>
           <PaddedBox />

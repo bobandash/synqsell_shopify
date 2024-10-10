@@ -3,7 +3,7 @@ import { INTENTS, MODALS } from '../constants';
 import { Modal, TitleBar, useAppBridge } from '@shopify/app-bridge-react';
 import { Form } from '@shopify/polaris';
 import { useField, useForm } from '@shopify/react-form';
-import { useSubmit as useRemixSubmit } from '@remix-run/react';
+import { useNavigation, useSubmit as useRemixSubmit } from '@remix-run/react';
 
 type Props = {
   priceListIds: string[];
@@ -17,6 +17,8 @@ const DeletePriceListModal: FC<Props> = ({ priceListIds }) => {
   }, [shopify]);
 
   const remixSubmit = useRemixSubmit();
+  const navigation = useNavigation();
+  const isSubmitting = navigation.state === 'submitting';
 
   const { submit } = useForm({
     fields: {
@@ -54,10 +56,15 @@ const DeletePriceListModal: FC<Props> = ({ priceListIds }) => {
           value={JSON.stringify(priceListIds)}
         />
       </Form>
-      <TitleBar title="Delete Price Lists">
+      <TitleBar title="Delete Price List(s)">
         <button onClick={hideModal}>Cancel</button>
-        <button variant={'primary'} tone={'critical'} onClick={submit}>
-          Delete
+        <button
+          variant={'primary'}
+          tone={'critical'}
+          onClick={submit}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? 'Deleting' : 'Delete'}
         </button>
       </TitleBar>
     </Modal>

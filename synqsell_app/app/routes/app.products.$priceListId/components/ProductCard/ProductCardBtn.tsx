@@ -32,7 +32,7 @@ const ProductCardBtn: FC<Props> = (props) => {
   if (productStatus === PRODUCT_STATUS.IMPORTED) {
     return (
       <button
-        className={`${sharedStyles['green']} ${sharedStyles['btn']} ${sharedStyles['disabled']}`}
+        className={`${sharedStyles['blue']} ${sharedStyles['btn']} ${sharedStyles['disabled']}`}
         disabled={true}
       >
         <Text as="p" variant="bodySm" fontWeight="medium">
