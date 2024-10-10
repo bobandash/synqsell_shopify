@@ -37,6 +37,7 @@ import {
   useLoaderData,
   useLocation,
   useNavigate,
+  useNavigation,
   useSubmit as useRemixSubmit,
 } from '@remix-run/react';
 import { isEmail } from './util/customValidation';
@@ -172,6 +173,9 @@ const UserSettings = () => {
     roles: rolesData,
     socialMediaLinks: socialMediaData,
   } = loaderData;
+  const transition = useNavigation();
+  const isSubmitting = transition.state === 'submitting';
+
   const { isRetailer, isSupplier } = useRoleContext();
   const location = useLocation();
   const shopify = useAppBridge();
@@ -402,8 +406,8 @@ const UserSettings = () => {
           </Layout>
         </Box>
         <div className={styles['center-right']}>
-          <Button submit variant="primary">
-            Save
+          <Button submit variant="primary" disabled={isSubmitting}>
+            {isSubmitting ? 'Saving' : 'Save'}
           </Button>
         </div>
         <PaddedBox />

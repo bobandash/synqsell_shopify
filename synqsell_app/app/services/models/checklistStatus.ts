@@ -145,7 +145,7 @@ async function updateChecklistStatusTx(
     throw errorHandler(
       error,
       'Failed to update checklist status in transaction.',
-      updateChecklistStatusBatchTx,
+      updateChecklistStatusTx,
       { sessionId, checklistItemKey, isCompleted },
     );
   }

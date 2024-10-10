@@ -36,8 +36,10 @@ async function updateRoleAndChecklistItemTx(
   checklistItemKey: ChecklistItemKeysOptionsProps,
 ) {
   try {
-    await updateRoleVisibilityTx(tx, sessionId, role, isVisibleInNetwork);
-    await updateChecklistStatusTx(tx, sessionId, checklistItemKey, true);
+    await Promise.all([
+      updateRoleVisibilityTx(tx, sessionId, role, isVisibleInNetwork),
+      updateChecklistStatusTx(tx, sessionId, checklistItemKey, true),
+    ]);
   } catch (error) {
     throw errorHandler(
       error,
@@ -82,6 +84,7 @@ export default async function updateSettings(
       await updateUserProfileTx(tx, sessionId, profileData, socialMediaData);
     });
   } catch (error) {
+    console.error(error);
     throw errorHandler(
       error,
       'Failed to update user settings.',

@@ -87,6 +87,7 @@ function Index() {
       shopify.modal.hide(MODALS.BECOME_RETAILER);
       shopify.modal.hide(MODALS.BECOME_SUPPLIER);
       shopify.toast.show(actionData.message);
+      actionData.message = null;
     }
   }, [actionData]);
 
