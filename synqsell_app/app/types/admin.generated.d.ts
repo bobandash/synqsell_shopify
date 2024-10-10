@@ -141,6 +141,16 @@ export type ProfileDefaultsQuery = { shop: (
     & { billingAddress: Pick<AdminTypes.ShopAddress, 'city' | 'provinceCode' | 'country'> }
   ) };
 
+export type StorefrontAccessTokenCreateMutationVariables = AdminTypes.Exact<{
+  input: AdminTypes.StorefrontAccessTokenInput;
+}>;
+
+
+export type StorefrontAccessTokenCreateMutation = { storefrontAccessTokenCreate?: AdminTypes.Maybe<{ userErrors: Array<Pick<AdminTypes.UserError, 'field' | 'message'>>, shop: Pick<AdminTypes.Shop, 'id'>, storefrontAccessToken?: AdminTypes.Maybe<(
+      Pick<AdminTypes.StorefrontAccessToken, 'accessToken' | 'title'>
+      & { accessScopes: Array<Pick<AdminTypes.AccessScope, 'handle'>> }
+    )> }> };
+
 export type VariantBasicInfoQueryVariables = AdminTypes.Exact<{
   query?: AdminTypes.InputMaybe<AdminTypes.Scalars['String']['input']>;
   first?: AdminTypes.InputMaybe<AdminTypes.Scalars['Int']['input']>;
@@ -203,6 +213,7 @@ interface GeneratedMutationTypes {
   "#graphql\n  mutation fulfillmentServiceCreate(\n    $name: String!\n    $callbackUrl: URL!\n    $trackingSupport: Boolean!\n  ) {\n    fulfillmentServiceCreate(\n      name: $name\n      callbackUrl: $callbackUrl\n      trackingSupport: $trackingSupport\n    ) {\n      fulfillmentService {\n        id\n        serviceName\n        callbackUrl\n        location {\n          id\n        }\n        trackingSupport\n      }\n      userErrors {\n        field\n        message\n      }\n    }\n  }\n": {return: FulfillmentServiceCreateMutation, variables: FulfillmentServiceCreateMutationVariables},
   "#graphql\n  mutation ActivateInventoryItem($inventoryItemId: ID!, $locationId: ID!, $available: Int) {\n    inventoryActivate(inventoryItemId: $inventoryItemId, locationId: $locationId, available: $available) {\n      inventoryLevel {\n        id\n        quantities(names: [\"available\"]) {\n          name\n          quantity\n        }\n        item {\n          id\n        }\n        location {\n          id\n        }\n      }\n    }\n  }\n": {return: ActivateInventoryItemMutation, variables: ActivateInventoryItemMutationVariables},
   "#graphql \n  mutation ProductCreate($input: ProductInput!, $media: [CreateMediaInput!]) {\n    productCreate(input: $input, media: $media) {\n      product {\n        id\n      }\n      userErrors {\n        message\n        field\n      }\n    }\n  }\n": {return: ProductCreateMutation, variables: ProductCreateMutationVariables},
+  "#graphql \n  mutation StorefrontAccessTokenCreate($input: StorefrontAccessTokenInput!) {\n      storefrontAccessTokenCreate(input: $input) {\n        userErrors {\n          field\n          message\n        }\n        shop {\n          id\n        }\n        storefrontAccessToken {\n          accessScopes {\n            handle\n          }\n          accessToken\n          title\n        }\n      }\n    }\n": {return: StorefrontAccessTokenCreateMutation, variables: StorefrontAccessTokenCreateMutationVariables},
   "#graphql\n  mutation productVariantsBulkCreate($productId: ID!, $variants: [ProductVariantsBulkInput!]!, $strategy: ProductVariantsBulkCreateStrategy) {\n      productVariantsBulkCreate(productId: $productId, variants: $variants, strategy: $strategy) {\n        product {\n          id\n        }\n        productVariants {\n          id\n          inventoryItem {\n            id\n          }\n        }\n        userErrors {\n          field\n          message\n        }\n      }\n    }\n": {return: ProductVariantsBulkCreateMutation, variables: ProductVariantsBulkCreateMutationVariables},
 }
 declare module '@shopify/admin-api-client' {

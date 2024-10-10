@@ -5,14 +5,11 @@ import {
 } from '../models/fulfillmentService';
 import {
   getOrCreateFulfillmentService as shopifyGetOrCreateFulfillmentService,
-  deleteFulfillmentService as shopifyDeleteFulfillmentService,
   getFulfillmentService as shopifyGetFulfillmentService,
 } from '../shopify/fulfillmentService';
-import logger from '~/logger';
 import { errorHandler } from '../util';
 
 // this is the coordinator for creating a fulfillment service on Shopify and for the prisma db
-// TODO: refactor to not be try-catch hell
 export async function getOrCreateFulfillmentService(
   sessionId: string,
   graphql: GraphQL,
@@ -29,25 +26,6 @@ export async function getOrCreateFulfillmentService(
     );
     return prismaFulfillmentService;
   } catch (error) {
-    if (shopifyFulfillmentService) {
-      try {
-        await shopifyDeleteFulfillmentService(
-          shopifyFulfillmentService.id,
-          graphql,
-        );
-      } catch (error) {
-        logger.error(
-          'Failed to delete fulfillment service in shopify during rollback',
-          { sessionId },
-        );
-        throw errorHandler(
-          error,
-          'Failed to delete fulfillment service during rollback. Please contact support.',
-          getOrCreateFulfillmentService,
-          { sessionId },
-        );
-      }
-    }
     throw errorHandler(
       error,
       'Failed to create fulfillment service',

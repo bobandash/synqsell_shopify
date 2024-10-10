@@ -24,25 +24,40 @@ import { ChecklistTables } from './asyncComponents';
 import { TableSkeleton } from './components/Skeleton';
 import { getOrCreateProfile } from '~/services/helper/userProfile';
 import { PaddedBox } from '~/components';
+import { hasStorefrontAccessToken } from '~/services/models/session';
+import { getOrCreateStorefrontAccessToken } from './loader/storefrontAccessToken';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
-    const { session, admin } = await authenticate.admin(request);
+    const {
+      session,
+      admin: { graphql },
+    } = await authenticate.admin(request);
     const { id: sessionId } = session;
-    const [userPreferencesExist, profileExists, missingChecklistIds] =
-      await Promise.all([
-        hasUserPreferences(sessionId),
-        hasProfile(sessionId),
-        getMissingChecklistIds(sessionId),
-      ]);
+    const [
+      userPreferencesExist,
+      profileExists,
+      missingChecklistIds,
+      storefrontAccessTokenExists,
+    ] = await Promise.all([
+      hasUserPreferences(sessionId),
+      hasProfile(sessionId),
+      getMissingChecklistIds(sessionId),
+      hasStorefrontAccessToken(sessionId),
+    ]);
 
     // initialization of user
     if (!userPreferencesExist) {
       await createUserPreferences(sessionId);
     }
     if (!profileExists) {
-      await getOrCreateProfile(sessionId, admin.graphql);
+      await getOrCreateProfile(sessionId, graphql);
     }
+
+    if (!storefrontAccessTokenExists) {
+      await getOrCreateStorefrontAccessToken(sessionId, graphql);
+    }
+
     if (missingChecklistIds) {
       await createMissingChecklistStatuses(missingChecklistIds, sessionId);
     }
