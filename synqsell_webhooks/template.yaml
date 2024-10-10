@@ -5,6 +5,8 @@ Transform:
 Description: >
   SAM Template For all infrastructure for SynqSell
 
+# TODO: Refactor: change the hardcoded values like stage name, or api gateway routes
+# TODO: add lambda layers for shared functions
 # INITIAL SET UP: NEED TO PROVIDE A KEY-PAIR TO ACCESS BASTION HOST, can only be created manually because pem is only accessible in the beginning
 Parameters:
   ShopifySourceName:
@@ -41,7 +43,7 @@ Parameters:
   MyCidrIP:
     Type: String
     Description: IP for rds access
-    Default: "76.18.73.68/32"
+    Default: 123.252.10.81/32
 
 Globals:
   Api:
@@ -293,6 +295,80 @@ Resources:
       RouteTableId: !Ref PrivateRouteTable
       DestinationCidrBlock: 0.0.0.0/0
       NatGatewayId: !Ref NATGateway
+
+  # Start API Gateway for handling shipping rate calculation
+  APIGateway:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: APIGateway
+
+  DeliveryCarrierServiceApiResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt APIGateway.RootResourceId
+      RestApiId: !Ref APIGateway
+      PathPart: deliveryCarrierService
+
+  DeliveryCarrierServiceCallback:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !Ref DeliveryCarrierServiceApiResource
+      RestApiId: !Ref APIGateway
+      PathPart: callback
+
+  APIGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      RestApiId: !Ref APIGateway
+      StageName: dev
+    DependsOn:
+      - DeliveryCarrierServiceApiMethod
+
+  # https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-api-integration-types.html
+  DeliveryCarrierServiceApiMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ResourceId: !Ref DeliveryCarrierServiceCallback
+      RestApiId: !Ref APIGateway
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DeliveryCarrierServiceFunction.Arn}/invocations
+
+  DeliveryCarrierServiceFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: synqsell_delivery_carrier_service
+      CodeUri: deliveryCarrierService/
+      Handler: app.lambdaHandler
+      MemorySize: 1028
+      Timeout: 30
+      Runtime: nodejs20.x
+      Architectures:
+        - x86_64
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: false
+        EntryPoints:
+          - app.ts
+
+  # https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-control-access-using-iam-policies-to-invoke-api.html
+  DeliveryCarrierServicePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref DeliveryCarrierServiceFunction
+      Action: "lambda:InvokeFunction"
+      Principal: "apigateway.amazonaws.com"
+      SourceArn: !Sub
+        - arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiId}/*/${HttpMethod}/${ResourcePath}
+        - ApiId: !Ref APIGateway
+          HttpMethod: POST
+          ResourcePath: !Join ["/", ["deliveryCarrierService", "callback"]]
 
   # Start Lambda Functions For Handling Shopify Webhooks
   ProductsDeleteRule:
@@ -585,3 +661,8 @@ Outputs:
   dbSecretsARN:
     Description: The ARN of the Secrets Manager storing the database rotation secret
     Value: !Ref DatabaseRotationSecret
+  deliveryServiceCallbackUrl:
+    Description: The public callback endpoint for calculating shipping rates on Shopify
+    Value: !Sub
+      - https://${ApiID}.execute-api.${AWS::Region}.amazonaws.com/dev/deliveryCarrierService/callback
+      - ApiID: !Ref APIGateway
