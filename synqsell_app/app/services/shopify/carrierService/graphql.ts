@@ -20,6 +20,7 @@ export const GET_INITIAL_CARRIER_SERVICES = `#graphql
         node {
           id
           name
+          callbackUrl
         }
       }
       pageInfo {
@@ -37,6 +38,7 @@ export const GET_SUBSEQUENT_CARRIER_SERVICES = `#graphql
         node {
           id
           name
+          callbackUrl
         }
       }
       pageInfo {

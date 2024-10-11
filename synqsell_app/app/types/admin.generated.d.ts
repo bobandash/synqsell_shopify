@@ -13,14 +13,14 @@ export type CarrierServiceCreateMutation = { carrierServiceCreate?: AdminTypes.M
 export type InitialCarrierServicesQueryVariables = AdminTypes.Exact<{ [key: string]: never; }>;
 
 
-export type InitialCarrierServicesQuery = { carrierServices: { edges: Array<{ node: Pick<AdminTypes.DeliveryCarrierService, 'id' | 'name'> }>, pageInfo: Pick<AdminTypes.PageInfo, 'hasNextPage' | 'endCursor'> } };
+export type InitialCarrierServicesQuery = { carrierServices: { edges: Array<{ node: Pick<AdminTypes.DeliveryCarrierService, 'id' | 'name' | 'callbackUrl'> }>, pageInfo: Pick<AdminTypes.PageInfo, 'hasNextPage' | 'endCursor'> } };
 
 export type SubsequentCarrierServicesQueryVariables = AdminTypes.Exact<{
   after: AdminTypes.Scalars['String']['input'];
 }>;
 
 
-export type SubsequentCarrierServicesQuery = { carrierServices: { edges: Array<{ node: Pick<AdminTypes.DeliveryCarrierService, 'id' | 'name'> }>, pageInfo: Pick<AdminTypes.PageInfo, 'hasNextPage' | 'endCursor'> } };
+export type SubsequentCarrierServicesQuery = { carrierServices: { edges: Array<{ node: Pick<AdminTypes.DeliveryCarrierService, 'id' | 'name' | 'callbackUrl'> }>, pageInfo: Pick<AdminTypes.PageInfo, 'hasNextPage' | 'endCursor'> } };
 
 export type AllFulfillmentServicesQueryVariables = AdminTypes.Exact<{ [key: string]: never; }>;
 
@@ -194,8 +194,8 @@ export type ProductVariantsBulkCreateMutation = { productVariantsBulkCreate?: Ad
     )>>, userErrors: Array<Pick<AdminTypes.ProductVariantsBulkCreateUserError, 'field' | 'message'>> }> };
 
 interface GeneratedQueryTypes {
-  "#graphql\n  query initialCarrierServices {\n    carrierServices(first:5) {\n      edges {\n        node {\n          id\n          name\n        }\n      }\n      pageInfo {\n        hasNextPage\n        endCursor\n      }\n    }\n  }\n": {return: InitialCarrierServicesQuery, variables: InitialCarrierServicesQueryVariables},
-  "#graphql\n  query subsequentCarrierServices($after: String!) {\n    carrierServices(after: $after, first:5) {\n      edges {\n        node {\n          id\n          name\n        }\n      }\n      pageInfo {\n        hasNextPage\n        endCursor\n      }\n    }\n  }\n": {return: SubsequentCarrierServicesQuery, variables: SubsequentCarrierServicesQueryVariables},
+  "#graphql\n  query initialCarrierServices {\n    carrierServices(first:5) {\n      edges {\n        node {\n          id\n          name\n          callbackUrl\n        }\n      }\n      pageInfo {\n        hasNextPage\n        endCursor\n      }\n    }\n  }\n": {return: InitialCarrierServicesQuery, variables: InitialCarrierServicesQueryVariables},
+  "#graphql\n  query subsequentCarrierServices($after: String!) {\n    carrierServices(after: $after, first:5) {\n      edges {\n        node {\n          id\n          name\n          callbackUrl\n        }\n      }\n      pageInfo {\n        hasNextPage\n        endCursor\n      }\n    }\n  }\n": {return: SubsequentCarrierServicesQuery, variables: SubsequentCarrierServicesQueryVariables},
   "#graphql\n  query allFulfillmentServices {\n    shop {\n      fulfillmentServices {\n        id\n        serviceName\n        callbackUrl\n        location {\n          id\n        }\n        trackingSupport\n      }\n    }\n  }\n": {return: AllFulfillmentServicesQuery, variables: AllFulfillmentServicesQueryVariables},
   "#graphql \n  query ProductBasicInfo($query: String, $first: Int){\n    products(query: $query, first: $first) {\n      edges {\n        node {\n          id\n          title\n          media(first: 1) {\n            edges {\n              node {\n                id\n                alt\n                preview {\n                  image {\n                    url\n                  }\n                }\n              }\n            }\n          }\n          variantsCount {\n            count\n          }\n          onlineStoreUrl\n        }\n      }\n    }\n  }\n": {return: ProductBasicInfoQuery, variables: ProductBasicInfoQueryVariables},
   "#graphql\n  query ProductCreationInformation($id: ID!) {\n    product(id: $id){\n      id\n      category {\n        id\n      }\n      descriptionHtml\n      productType\n      isGiftCard\n      options {\n        name\n        position\n        optionValues {\n          name\n        }\n      }\n      requiresSellingPlan\n      status\n      tags\n      title\n      mediaCount {\n        count\n      }\n    }\n  }\n": {return: ProductCreationInformationQuery, variables: ProductCreationInformationQueryVariables},

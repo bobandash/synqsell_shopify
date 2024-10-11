@@ -41,7 +41,7 @@ export async function getOrCreateCarrierService(
   } catch (error) {
     throw errorHandler(
       error,
-      'Failed to get or create carrier service.',
+      'Failed to get or create delivery carrier service.',
       getOrCreateCarrierService,
       {
         sessionId,

@@ -15,6 +15,7 @@ import { getUserError } from '../util';
 type CarrierServiceDetail = {
   id: string;
   name: string;
+  callbackUrl: string;
 };
 
 // helper function for getCarrierService
@@ -38,6 +39,7 @@ async function getAllCarrierServices(graphql: GraphQL) {
       carrierServices.push({
         id: node.id,
         name: node.name ?? '',
+        callbackUrl: node.callbackUrl ?? '',
       });
     });
     endCursor = edgesData.pageInfo.endCursor ?? '';
@@ -52,7 +54,6 @@ export async function getCarrierService(sessionId: string, graphql: GraphQL) {
   // retrieve all the carrier services
   try {
     const carrierServices = await getAllCarrierServices(graphql);
-    console.log(carrierServices);
     const filteredCarrierServices = carrierServices.filter(({ name }) => {
       return name === CARRIER_SERVICE_NAME;
     });
