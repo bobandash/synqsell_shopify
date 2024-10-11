@@ -67,3 +67,24 @@ export type Session = {
     emailVerified?: boolean;
     storefrontAccessToken?: string;
 };
+
+export type BuyerIdentityInput = {
+    buyerIdentity: {
+        countryCode: string;
+        deliveryAddressPreferences: {
+            deliveryAddress: {
+                address1: string;
+                address2?: string;
+                city: string;
+                country: string;
+                province: string;
+                zip: string;
+            };
+        };
+    };
+};
+
+export type OrderShopifyVariantDetail = {
+    id: string;
+    quantity: number;
+};
