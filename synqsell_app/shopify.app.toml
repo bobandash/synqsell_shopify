@@ -3,7 +3,7 @@
 client_id = "2c3db0b06834a9b20de60ef4b15c8228"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://ef-rm-masters-byte.trycloudflare.com"
+application_url = "https://ends-entered-models-recreation.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read_assigned_fulfillment_orders,read_customers,read_inventory,read_lo
 
 [auth]
 redirect_urls = [
-  "https://ef-rm-masters-byte.trycloudflare.com/auth/callback",
-  "https://ef-rm-masters-byte.trycloudflare.com/auth/shopify/callback",
-  "https://ef-rm-masters-byte.trycloudflare.com/api/auth/callback"
+  "https://ends-entered-models-recreation.trycloudflare.com/auth/callback",
+  "https://ends-entered-models-recreation.trycloudflare.com/auth/shopify/callback",
+  "https://ends-entered-models-recreation.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]

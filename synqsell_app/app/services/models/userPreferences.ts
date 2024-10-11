@@ -54,31 +54,16 @@ export async function getUserPreferences(
   }
 }
 
-// TODO: refactor to use yup
-async function validateCreateUserPreferences(sessionId: string) {
-  try {
-    if (await hasUserPreferences(sessionId)) {
-      const logMessage = `User preferences already exists for user.`;
-      logger.error(logMessage, { sessionId });
-      throw new createHttpError.BadRequest(logMessage);
-    }
-  } catch (error) {
-    throw errorHandler(
-      error,
-      `User preferences already exists for user.`,
-      validateCreateUserPreferences,
-      {
-        sessionId,
-      },
-    );
-  }
-}
-
 export async function createUserPreferences(
   sessionId: string,
 ): Promise<UserPreferenceData> {
   try {
-    await validateCreateUserPreferences(sessionId);
+    const userPreferencesExist = await hasUserPreferences(sessionId);
+    if (userPreferencesExist) {
+      throw new createHttpError.BadRequest(
+        'User preferences already exist for user.',
+      );
+    }
     const newUserPreference = await db.userPreference.create({
       data: {
         sessionId: sessionId,
@@ -94,6 +79,23 @@ export async function createUserPreferences(
       {
         sessionId,
       },
+    );
+  }
+}
+
+export async function getOrCreateUserPreferences(sessionId: string) {
+  try {
+    const userPreferencesExist = await hasUserPreferences(sessionId);
+    if (userPreferencesExist) {
+      return getUserPreferences(sessionId);
+    }
+    return createUserPreferences(sessionId);
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to get or create user preferences.',
+      getOrCreateUserPreferences,
+      { sessionId },
     );
   }
 }

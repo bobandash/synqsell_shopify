@@ -28,11 +28,6 @@ import {
 import { errorHandler } from '~/services/util';
 import { INTENTS } from '../constants';
 import { checklistItemIdMatchesKey } from '~/services/models/checklistItem';
-import {
-  userGetCarrierService,
-  userHasCarrierService,
-} from '~/services/models/carrierService';
-import { getOrCreateCarrierService } from '~/services/helper/carrierService';
 
 const getStartedRetailerSchema = object({
   intent: string().oneOf([INTENTS.RETAILER_GET_STARTED]),
@@ -55,6 +50,8 @@ export type GetStartedRetailerActionData = {
   role: RoleProps;
 };
 
+// TODO: I have to refactor this route after MVP is deployed, this is not scalable code
+
 // Guard check for fetcher data
 export async function getStartedRetailerAction(
   graphql: GraphQL,
@@ -68,19 +65,16 @@ export async function getStartedRetailerAction(
       checklistStatusCompleted,
       fulfillmentServiceExists,
       hasRetailerRole,
-      hasCarrierService,
     ] = await Promise.all([
       isChecklistStatusCompleted(sessionId, checklistItemId),
       hasFulfillmentService(sessionId, graphql),
       hasRole(sessionId, ROLES.RETAILER),
-      userHasCarrierService(sessionId),
     ]);
 
     if (
       checklistStatusCompleted &&
       fulfillmentServiceExists &&
-      hasRetailerRole &&
-      hasCarrierService
+      hasRetailerRole
     ) {
       const completedFields = await handleCompleted(sessionId, checklistItemId);
       return completedFields;
@@ -90,7 +84,6 @@ export async function getStartedRetailerAction(
       checklistStatusCompleted,
       fulfillmentServiceExists,
       hasRetailerRole,
-      hasCarrierService,
       graphql,
       sessionId,
       checklistItemId,
@@ -133,7 +126,6 @@ async function getExistingFieldsOrUndefined(
   checklistStatusCompleted: boolean,
   fulfillmentServiceExists: boolean,
   hasRetailerRole: boolean,
-  hasCarrierService: boolean,
   sessionId: string,
   checklistItemId: string,
 ) {
@@ -147,14 +139,10 @@ async function getExistingFieldsOrUndefined(
     const retailerRole = hasRetailerRole
       ? await getRole(sessionId, ROLES.RETAILER)
       : undefined;
-    const carrierService = hasCarrierService
-      ? await userGetCarrierService(sessionId)
-      : undefined;
     return {
       fulfillmentService,
       checklistStatus,
       retailerRole,
-      carrierService,
     };
   } catch (error) {
     throw errorHandler(
@@ -164,7 +152,6 @@ async function getExistingFieldsOrUndefined(
       {
         checklistStatusCompleted,
         fulfillmentServiceExists,
-        hasCarrierService,
         hasRetailerRole,
         sessionId,
         checklistItemId,
@@ -174,12 +161,10 @@ async function getExistingFieldsOrUndefined(
 }
 
 // Either all these fields should be created or none should be created
-// TODO: refactor after deploying mvp
 async function createOrGetFields(
   checklistStatusCompleted: boolean,
   fulfillmentServiceExists: boolean,
   hasRetailerRole: boolean,
-  hasCarrierService: boolean,
   graphql: GraphQL,
   sessionId: string,
   checklistItemId: string,
@@ -187,20 +172,17 @@ async function createOrGetFields(
   let fulfillmentService;
   let checklistStatus;
   let retailerRole;
-  let carrierService;
 
   const fields = await getExistingFieldsOrUndefined(
     checklistStatusCompleted,
     fulfillmentServiceExists,
     hasRetailerRole,
-    hasCarrierService,
     sessionId,
     checklistItemId,
   );
   fulfillmentService = fields.fulfillmentService;
   checklistStatus = fields.checklistStatus;
   retailerRole = fields.retailerRole;
-  carrierService = fields.carrierService;
 
   const checklistStatusId = (
     await getChecklistStatus(sessionId, checklistItemId)
@@ -213,11 +195,6 @@ async function createOrGetFields(
       graphql,
     );
   }
-
-  if (!carrierService) {
-    carrierService = await getOrCreateCarrierService(sessionId, graphql);
-  }
-
   if (!checklistStatus && !retailerRole) {
     const newRoleAndChecklistStatus = await createRoleAndCompleteChecklistItem(
       sessionId,
@@ -237,7 +214,6 @@ async function createOrGetFields(
 
   return json(
     {
-      carrierService,
       fulfillmentService,
       checklistStatus,
       role: retailerRole,

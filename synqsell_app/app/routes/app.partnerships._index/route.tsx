@@ -26,7 +26,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       StatusCodes.UNAUTHORIZED,
     );
   } catch (error) {
-    throw getJSONError(error, 'admin network');
+    throw getJSONError(error, '/partnerships/_index');
   }
 };
 

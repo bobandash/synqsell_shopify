@@ -66,3 +66,21 @@ export async function userGetCarrierService(retailerId: string) {
     );
   }
 }
+
+export async function deleteCarrierService(retailerId: string) {
+  try {
+    const deletedCarrierService = await db.carrierService.delete({
+      where: {
+        retailerId,
+      },
+    });
+    return deletedCarrierService;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to delete carrier service.',
+      deleteCarrierService,
+      { retailerId },
+    );
+  }
+}

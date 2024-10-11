@@ -26,6 +26,7 @@ import {
   hasProfile,
   type SocialMediaDataProps,
   type ProfileProps,
+  getProfile,
 } from '~/services/models/userProfile';
 import {
   convertFormDataToObject,
@@ -51,7 +52,6 @@ import {
   PaddedBox,
   type DropZoneImageFileProps,
 } from '~/components';
-import { getOrCreateProfile } from '~/services/helper/userProfile';
 import { uploadFile } from '~/services/aws/s3';
 import { StatusCodes } from 'http-status-codes';
 
@@ -82,11 +82,11 @@ type LoaderDataProps = {
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
-    const { session, admin } = await authenticate.admin(request);
+    const { session } = await authenticate.admin(request);
     const { id: sessionId } = session;
     const hasExistingProfile = await hasProfile(sessionId);
     const [profileWithSocialMediaLinks, roles] = await Promise.all([
-      getOrCreateProfile(sessionId, admin.graphql),
+      getProfile(sessionId),
       getRoles(sessionId),
     ]);
     const { socialMediaLink: socialMediaLinks, ...profile } =

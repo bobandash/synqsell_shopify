@@ -8,10 +8,6 @@ import {
 } from '~/services/models/checklistTable';
 import { Await, defer, useActionData, useLoaderData } from '@remix-run/react';
 import { Suspense, useEffect } from 'react';
-import {
-  createUserPreferences,
-  hasUserPreferences,
-} from '~/services/models/userPreferences';
 import { INTENTS, MODALS } from './constants';
 import {
   toggleChecklistVisibilityAction,
@@ -19,13 +15,12 @@ import {
   getStartedSupplierAction,
 } from './actions';
 import { convertFormDataToObject, getJSONError } from '~/util';
-import { hasProfile } from '~/services/models/userProfile';
 import { ChecklistTables } from './asyncComponents';
 import { TableSkeleton } from './components/Skeleton';
-import { getOrCreateProfile } from '~/services/helper/userProfile';
 import { PaddedBox } from '~/components';
-import { hasStorefrontAccessToken } from '~/services/models/session';
 import { getOrCreateStorefrontAccessToken } from './loader/storefrontAccessToken';
+import { getOrCreateCarrierService, getOrCreateProfile } from './loader';
+import { getOrCreateUserPreferences } from '~/services/models/userPreferences';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
@@ -34,30 +29,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       admin: { graphql },
     } = await authenticate.admin(request);
     const { id: sessionId } = session;
-    const [
-      userPreferencesExist,
-      profileExists,
-      missingChecklistIds,
-      storefrontAccessTokenExists,
-    ] = await Promise.all([
-      hasUserPreferences(sessionId),
-      hasProfile(sessionId),
-      getMissingChecklistIds(sessionId),
-      hasStorefrontAccessToken(sessionId),
+
+    // for initializing the application with required data to run the app
+    await Promise.all([
+      getOrCreateCarrierService(sessionId, graphql),
+      getOrCreateStorefrontAccessToken(sessionId, graphql),
+      getOrCreateProfile(sessionId, graphql),
+      getOrCreateUserPreferences(sessionId),
     ]);
 
-    // initialization of user
-    if (!userPreferencesExist) {
-      await createUserPreferences(sessionId);
-    }
-    if (!profileExists) {
-      await getOrCreateProfile(sessionId, graphql);
-    }
-
-    if (!storefrontAccessTokenExists) {
-      await getOrCreateStorefrontAccessToken(sessionId, graphql);
-    }
-
+    const missingChecklistIds = await getMissingChecklistIds(sessionId);
     if (missingChecklistIds) {
       await createMissingChecklistStatuses(missingChecklistIds, sessionId);
     }

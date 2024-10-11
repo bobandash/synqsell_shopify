@@ -1,7 +1,11 @@
 import type { GraphQL } from '~/types';
-import { createProfile, getProfile, hasProfile } from '../models/userProfile';
-import { getProfileDefaults } from '../shopify/profile';
-import { errorHandler } from '../util';
+import {
+  createProfile,
+  getProfile,
+  hasProfile,
+} from '~/services/models/userProfile';
+import { getProfileDefaults } from '~/services/shopify/profile';
+import { errorHandler } from '~/services/util';
 
 export async function getOrCreateProfile(sessionId: string, graphql: GraphQL) {
   try {

@@ -28,7 +28,7 @@ export async function getOrCreateFulfillmentService(
   } catch (error) {
     throw errorHandler(
       error,
-      'Failed to create fulfillment service',
+      'Failed to create fulfillment service in shopify or database',
       getOrCreateFulfillmentService,
       { sessionId },
     );

@@ -3,7 +3,7 @@ import { PoolClient } from 'pg';
 import { composeGid } from '@shopify/admin-graphql-api-utilities';
 import initializePool from './db';
 import { BackupResponse, EmptyResponse, SampleResponse } from './constants';
-import { ShippingRateRequest } from './types';
+import { Session, ShippingRateRequest } from './types';
 
 // https://shopify.dev/docs/api/admin-graphql/2024-07/objects/DeliveryCarrierService
 async function hasSynqSellItems(shopifyVariantIds: string[], client: PoolClient) {
@@ -13,7 +13,19 @@ async function hasSynqSellItems(shopifyVariantIds: string[], client: PoolClient)
     return count > 0;
 }
 
+// async function getSession(sessionId: string, client: PoolClient) {
+//     try {
+//         const sessionQuery = `SELECT * FROM "Session" WHERE "id" = $1`;
+//         const res = await client.query(sessionQuery, [sessionId]);
+//         const session: Session = res.rows[0];
+//         return session;
+//     } catch (error) {
+//         throw new Error('Failed to get session ' + sessionId);
+//     }
+// }
+
 export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+    const storeId = event.queryStringParameters?.storeId;
     let client: null | PoolClient = null;
     try {
         const pool = initializePool();

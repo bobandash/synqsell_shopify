@@ -8,6 +8,10 @@ import {
 } from './graphql';
 import { getUserError } from '../util';
 
+// https://shopify.dev/docs/api/admin-graphql/2024-01/objects/DeliveryCarrierService
+// By creating a carrier service, when the customer goes to the checkout screen, we can put custom shipping rates
+// the callback url is in a public endpoint from a lambda function with the API Gateway as the trigger
+
 type CarrierServiceDetail = {
   id: string;
   name: string;
@@ -48,6 +52,7 @@ export async function getCarrierService(sessionId: string, graphql: GraphQL) {
   // retrieve all the carrier services
   try {
     const carrierServices = await getAllCarrierServices(graphql);
+    console.log(carrierServices);
     const filteredCarrierServices = carrierServices.filter(({ name }) => {
       return name === CARRIER_SERVICE_NAME;
     });
@@ -71,11 +76,20 @@ export async function createCarrierService(
   graphql: GraphQL,
 ) {
   try {
+    const callbackUrl = process.env.CARRIER_SERVICE_CALLBACK_URL
+      ? `${process.env.CARRIER_SERVICE_CALLBACK_URL}?sessionId=${sessionId}`
+      : '';
+
+    console.log(callbackUrl);
+
+    if (!callbackUrl) {
+      throw new Error('Carrier service callback url is not defined.');
+    }
     const response = await graphql(CREATE_CARRIER_SERVICE, {
       variables: {
         input: {
           active: true,
-          callbackUrl: process.env.CARRIER_SERVICE_CALLBACK_URL ?? '',
+          callbackUrl,
           name: CARRIER_SERVICE_NAME,
           supportsServiceDiscovery: false,
         },
