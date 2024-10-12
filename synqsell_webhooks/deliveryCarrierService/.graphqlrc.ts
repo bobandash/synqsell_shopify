@@ -12,12 +12,6 @@ function getConfig() {
                 documents: ['./graphql/storefront/*.{js,ts,jsx,tsx}'],
                 outputDir: './types/storefront',
             }),
-            admin: shopifyApiProject({
-                apiType: ApiType.Admin,
-                apiVersion: LATEST_API_VERSION,
-                documents: ['./*.{js,ts,jsx,tsx}'],
-                outputDir: './types/admin',
-            }),
         },
     };
 
