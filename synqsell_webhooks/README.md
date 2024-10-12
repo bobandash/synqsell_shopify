@@ -1,20 +1,44 @@
-# synqsell_lambda
+# SynqSell SAM
 
-## For testing functions, I'm only testing the main cases
+This section stores all the lambda functions to handle the Shopify webhook topics necessary for SynqSell, the public API endpoint to calculate an orders' shipping cost, and the Cloudformation/AWS SAM template to deploy the application.
+
+To reference how to set up the project, please click <a href="https://github.com/bobandash/synqsell_shopify">here</a>.
 
 ## Common Commands
 
-I can choose what to view when I sync
+Here are a list of common commands used for development.
 
-## TODO: Write documentation about thi slater
+- To build the template.yaml / cloudformation template
+  ```sh
+  sam build
+  ```
+- To validate the template.yaml after building to make sure there's no errors
+  ```sh
+  sam validate
+  ```
+- To deploy the sam application
+  ```sh
+  sam deploy --parameter-overrides BastionHostKeyName=<ParameterValue1> StripeSecretsManagerARN=<ParameterValue2> EventBusArn=<ParameterValue3> MyCidrIP=<ParameterValue4>
+  ```
+- When developing in the lambda function, and you need Shopify graphql's type safety
+  ```sh
+  npm run graphql-codegen -- --watch
+  ```
+- When developing in lambda, and you need real-time logs in your console
+  ```sh
+  sam logs -n <FunctionName> --stack-name Synqsell -t
+  ```
+  - `<FunctionName>` - this is found in your CloudFormation template
+- When you want to sync your local changes into the deployed cloudformation stack without running sam build + sam deploy everytime
+  ```sh
+  sam sync --stack-name Synqsell --resource-id <FunctionName>
+  ```
+  - `<FunctionName>` - this is found in your CloudFormation template
 
-https://gist.github.com/kshailen/0d4f78596b0ab12659be908163ed1fc2
-ssh -i "bastion_key.pem" -NL 8886:postgress.cpypigm0kth7.us-east-1.rds.amazonaws.com:5432 ec2-user@132.5.10.11 -v
+Below is the README.md when initializing SAM. I will delete in the future, but for now, it may contain some information I need, so I'm keeping it for now
 
 sam logs -n ProductsUpdateFunction --stack-name Synqsell -t
-sam sync --stack-name Synqsell --resource-id ProductsUpdate
 
-npm run graphql-codegen -- --watch
 This project contains source code and supporting files for a serverless application that you can deploy with the SAM CLI. It includes the following files and folders.
 
 - hello-world - Code for the application's Lambda function written in TypeScript.
