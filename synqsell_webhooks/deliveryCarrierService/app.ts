@@ -2,8 +2,8 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import type { PoolClient } from 'pg';
 import { composeGid } from '@shopify/admin-graphql-api-utilities';
 import initializePool from './db';
-import { BackupResponse, EmptyResponse, SampleResponse } from './constants';
-import { BuyerIdentityInput, Session, ShippingRateRequest } from './types';
+import { BackupResponse, EmptyResponse } from './constants';
+import { BuyerIdentityInput, ShippingRateRequest } from './types';
 import { getShippingRates, orderHasImportedItems } from './helper';
 
 // https://shopify.dev/docs/api/admin-graphql/2024-07/objects/DeliveryCarrierService
