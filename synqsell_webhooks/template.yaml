@@ -340,7 +340,7 @@ Resources:
   DeliveryCarrierServiceFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: synqsell_delivery_carrier_service
+      FunctionName: delivery_carrier_service
       CodeUri: deliveryCarrierService/
       Handler: app.lambdaHandler
       MemorySize: 1028
@@ -370,27 +370,127 @@ Resources:
           HttpMethod: POST
           ResourcePath: !Join ["/", ["deliveryCarrierService", "callback"]]
 
-  # Start Lambda Functions For Handling Shopify Webhooks
-  ProductsDeleteRule:
+  # https://docs.aws.amazon.com/lambda/latest/dg/with-sqs.html
+  # for queue to ensure retry mechanism for webhook delivery
+  WebhookSQS:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: "webhook_queue.fifo"
+      FifoQueue: true
+      ContentBasedDeduplication: true
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt WebhookDLQ.Arn
+        maxReceiveCount: 3
+
+  ShopifyWebhookRule:
     Type: AWS::Events::Rule
     Properties:
-      Name: products_delete_rule
+      Name: sqs_rule
       EventPattern:
         detail-type:
           - "shopifyWebhook"
         detail:
           metadata:
             X-Shopify-Topic:
-              - prefix: "products/delete"
+              - prefix: ""
       EventBusName: !Ref EventBusArn
       Targets:
-        - Arn: !GetAtt DeleteProductsFunction.Arn
-          Id: "DeleteProductsFunctionTarget"
+        - Arn: !GetAtt WebhookSQS.Arn
+          Id: "WebhookSQSTarget"
+          SqsParameters:
+            MessageGroupId: "ShopifyWebhookMessages"
 
+  EventBridgeSQSPolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref WebhookSQS
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action:
+              - "SQS:SendMessage"
+            Resource: !GetAtt WebhookSQS.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !GetAtt ShopifyWebhookRule.Arn
+
+  WebhookDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: "webhook_dead_letter_queue.fifo"
+      FifoQueue: true
+      ContentBasedDeduplication: true
+
+  # Coordinator Lambda Function that invokes lambda functions for handling shopify webhook topics
+  CoordinatorFunctionExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      Policies:
+        - PolicyName: SQSAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - sqs:GetQueueAttributes
+                Resource: !GetAtt WebhookSQS.Arn
+        - PolicyName: LambdaInvokePolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: "*"
+
+  CoordinatorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: webhooks_coordinator
+      CodeUri: webhooksCoordinator/
+      Handler: app.lambdaHandler
+      MemorySize: 1028
+      Timeout: 30
+      Runtime: nodejs20.x
+      Role: !GetAtt CoordinatorFunctionExecutionRole.Arn
+      Architectures:
+        - x86_64
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: false
+        EntryPoints:
+          - app.ts
+
+  SQSQueueTrigger:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      EventSourceArn: !GetAtt WebhookSQS.Arn
+      FunctionName: !Ref CoordinatorFunction
+      Enabled: true
+
+  # Start Lambda Functions For Handling Shopify Webhooks
   DeleteProductsFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: synqsell_products_delete
+      FunctionName: products_delete
       CodeUri: deleteProducts/
       Handler: app.lambdaHandler
       MemorySize: 1028
@@ -407,34 +507,10 @@ Resources:
         EntryPoints:
           - app.ts
 
-  ProductsDeletePermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !Ref DeleteProductsFunction
-      Action: "lambda:InvokeFunction"
-      Principal: "events.amazonaws.com"
-      SourceArn: !GetAtt ProductsDeleteRule.Arn
-
-  ProductsUpdateRule:
-    Type: AWS::Events::Rule
-    Properties:
-      Name: products_update_rule
-      EventPattern:
-        detail-type:
-          - "shopifyWebhook"
-        detail:
-          metadata:
-            X-Shopify-Topic:
-              - prefix: "products/update"
-      EventBusName: !Ref EventBusArn
-      Targets:
-        - Arn: !GetAtt ProductsUpdateFunction.Arn
-          Id: "ProductsUpdateFunctionTarget"
-
   ProductsUpdateFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: synqsell_products_update
+      FunctionName: products_update
       CodeUri: productsUpdate/
       Handler: app.lambdaHandler
       MemorySize: 1028
@@ -451,34 +527,10 @@ Resources:
         EntryPoints:
           - app.ts
 
-  ProductsUpdatePermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !Ref ProductsUpdateFunction
-      Action: "lambda:InvokeFunction"
-      Principal: "events.amazonaws.com"
-      SourceArn: !GetAtt ProductsUpdateRule.Arn
-
-  FulfillmentOrderRoutingCompleteRule:
-    Type: AWS::Events::Rule
-    Properties:
-      Name: order_routing_complete_rule
-      EventPattern:
-        detail-type:
-          - "shopifyWebhook"
-        detail:
-          metadata:
-            X-Shopify-Topic:
-              - prefix: "fulfillment_orders/order_routing_complete"
-      EventBusName: !Ref EventBusArn
-      Targets:
-        - Arn: !GetAtt FulfillmentOrderRoutingCompleteFunction.Arn
-          Id: "FulfillmentOrderRoutingCompleteFunctionTarget"
-
   FulfillmentOrderRoutingCompleteFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: synqsell_order_routing_complete
+      FunctionName: order_routing_complete
       CodeUri: fulfillmentOrdersOrderRoutingComplete/
       Handler: app.lambdaHandler
       MemorySize: 1028
@@ -495,35 +547,11 @@ Resources:
         EntryPoints:
           - app.ts
 
-  FulfillmentOrderRoutingPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !Ref FulfillmentOrderRoutingCompleteFunction
-      Action: "lambda:InvokeFunction"
-      Principal: "events.amazonaws.com"
-      SourceArn: !GetAtt FulfillmentOrderRoutingCompleteRule.Arn
-
   # fulfillments/create webhook
-  FulfillmentsCreateRule:
-    Type: AWS::Events::Rule
-    Properties:
-      Name: fulfillments_create_rule
-      EventPattern:
-        detail-type:
-          - "shopifyWebhook"
-        detail:
-          metadata:
-            X-Shopify-Topic:
-              - prefix: "fulfillments/create"
-      EventBusName: !Ref EventBusArn
-      Targets:
-        - Arn: !GetAtt FulfillmentsCreateFunction.Arn
-          Id: "FulfillmentsCreateFunctionTarget"
-
   FulfillmentsCreateFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: synqsell_fulfillments_create
+      FunctionName: fulfillments_create
       CodeUri: fulfillmentsCreate/
       Handler: app.lambdaHandler
       MemorySize: 1028
@@ -540,35 +568,10 @@ Resources:
         EntryPoints:
           - app.ts
 
-  FulfillmentsCreatePermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !Ref FulfillmentsCreateFunction
-      Action: "lambda:InvokeFunction"
-      Principal: "events.amazonaws.com"
-      SourceArn: !GetAtt FulfillmentsCreateRule.Arn
-
-  # orders/cancelled webhook
-  OrdersCancelledRule:
-    Type: AWS::Events::Rule
-    Properties:
-      Name: orders_cancelled_rule
-      EventPattern:
-        detail-type:
-          - "shopifyWebhook"
-        detail:
-          metadata:
-            X-Shopify-Topic:
-              - prefix: "orders/cancelled"
-      EventBusName: !Ref EventBusArn
-      Targets:
-        - Arn: !GetAtt OrdersCancelledFunction.Arn
-          Id: "OrdersCancelledFunctionTarget"
-
   OrdersCancelledFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: synqsell_orders_cancelled
+      FunctionName: orders_cancelled
       CodeUri: ordersCancelled/
       Handler: app.lambdaHandler
       MemorySize: 1028
@@ -585,35 +588,10 @@ Resources:
         EntryPoints:
           - app.ts
 
-  OrdersCancelledPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !Ref OrdersCancelledFunction
-      Action: "lambda:InvokeFunction"
-      Principal: "events.amazonaws.com"
-      SourceArn: !GetAtt OrdersCancelledRule.Arn
-
-  # fulfillments/update webhook
-  FulfillmentsUpdateRule:
-    Type: AWS::Events::Rule
-    Properties:
-      Name: fulfillments_update_rule
-      EventPattern:
-        detail-type:
-          - "shopifyWebhook"
-        detail:
-          metadata:
-            X-Shopify-Topic:
-              - prefix: "fulfillments/update"
-      EventBusName: !Ref EventBusArn
-      Targets:
-        - Arn: !GetAtt FulfillmentsUpdateFunction.Arn
-          Id: "FulfillmentsUpdateFunctionTarget"
-
   FulfillmentsUpdateFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: synqsell_fulfillments_update
+      FunctionName: fulfillments_update
       CodeUri: fulfillmentsUpdate/
       Handler: app.lambdaHandler
       MemorySize: 1028
@@ -636,14 +614,6 @@ Resources:
         Sourcemap: false
         EntryPoints:
           - app.ts
-
-  FulfillmentsUpdatePermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !Ref FulfillmentsUpdateFunction
-      Action: "lambda:InvokeFunction"
-      Principal: "events.amazonaws.com"
-      SourceArn: !GetAtt FulfillmentsUpdateRule.Arn
 
 Outputs:
   s3Bucket:

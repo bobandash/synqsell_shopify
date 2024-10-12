@@ -228,7 +228,6 @@ async function getSupplierShippingRate(
 }
 
 // helper functions for calculateTotalShippingRates
-
 // for when the supplier/retailer is international shipping, while the other is domestic shipping
 function getCustomShippingRates(allShippingRates: SupplierShippingRate[]) {
     const totalShippingRates: TotalShippingRateResponse = allShippingRates.reduce(
