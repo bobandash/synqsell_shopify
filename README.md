@@ -204,7 +204,8 @@ This is the current architecture of Synqsell.
 Note: the architecture currently has many single points of failure. This is intentional because of the application's lack of users; If the application scales with more users, the architecture should continue to evolve alongside the growth. For example, when there are more users, the RDS should be deployed in multi-AZs with a master and stand-by replica; the application load balancer should route traffic to multiple EC2 instances hosting the web/server app, instead of just a single EC2. Also, for easy setup, I currently use a NAT Gateway. However, to save on personal costs, I should have converted the NAT Gateway to a NAT instance.
 <br />
 <br />
-![Synqsell Architecture (1)](https://github.com/user-attachments/assets/b0f04dfd-7cbb-4ecf-b4dc-22dd2dfe9d56)
+![Synqsell Architecture (2)](https://github.com/user-attachments/assets/524ce31d-2c4a-47ff-92a7-aeafa9d70e29)
+
 
 ## Technical Approach and Obstacles
 
