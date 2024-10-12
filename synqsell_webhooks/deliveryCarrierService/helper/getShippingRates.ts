@@ -3,6 +3,7 @@ import { createMapToRestObj } from '../util';
 import { BuyerIdentityInput, OrderShopifyVariantDetail, Session } from '../types';
 import { CART_CREATE_MUTATION } from '../graphql/storefront/graphql';
 import { DeliveryGroupsFragment } from '../types/storefront/storefront.generated';
+import { SERVICE_CODE, SHIPPING_RATE } from '../constants';
 
 type ImportedVariantDetail = {
     retailerShopifyVariantId: string;
@@ -38,13 +39,6 @@ type ShippingRateResponse = {
     service_code: string;
     currency: string;
     total_price: string;
-};
-
-const SHIPPING_RATES = {
-    ECONOMY: 'Economy',
-    STANDARD: 'Standard',
-    INTERNATIONAL: 'International Shipping',
-    CUSTOM: 'Custom',
 };
 
 // ==============================================================================================================
@@ -235,16 +229,16 @@ function getCustomShippingRates(allShippingRates: SupplierShippingRate[]) {
             const currCustomRate = acc.rates[0];
             const { amount, currencyCode, title } = shippingRate;
 
-            if (currCustomRate && (title === SHIPPING_RATES.ECONOMY || title === SHIPPING_RATES.INTERNATIONAL)) {
+            if (currCustomRate && (title === SHIPPING_RATE.ECONOMY || title === SHIPPING_RATE.INTERNATIONAL)) {
                 acc.rates[0] = {
                     ...currCustomRate,
                     total_price: (parseFloat(currCustomRate.total_price) + parseFloat(amount)).toString(),
                 };
-            } else if (title === SHIPPING_RATES.ECONOMY || title === SHIPPING_RATES.INTERNATIONAL) {
+            } else if (title === SHIPPING_RATE.ECONOMY || title === SHIPPING_RATE.INTERNATIONAL) {
                 acc.rates.push({
-                    service_name: SHIPPING_RATES.CUSTOM,
+                    service_name: SHIPPING_RATE.CUSTOM,
                     description: 'Includes tracking',
-                    service_code: 'standard_shipping',
+                    service_code: SERVICE_CODE.CUSTOM,
                     currency: currencyCode,
                     total_price: amount,
                 });
@@ -271,7 +265,7 @@ function getDomesticShippingRates(allShippingRates: SupplierShippingRate[]) {
                     total_price: (parseFloat(currCustomRate.total_price) + parseFloat(amount)).toString(),
                 };
             } else {
-                const serviceCode = title === SHIPPING_RATES.ECONOMY ? 'standard_shipping' : 'expedited_mail';
+                const serviceCode = title === SHIPPING_RATE.ECONOMY ? SERVICE_CODE.STANDARD : SERVICE_CODE.EXPEDITED;
                 acc.rates.push({
                     service_name: title,
                     description: description,
@@ -302,9 +296,9 @@ function getInternationalShippingRates(allShippingRates: SupplierShippingRate[])
                 };
             } else {
                 acc.rates.push({
-                    service_name: SHIPPING_RATES.INTERNATIONAL,
+                    service_name: SHIPPING_RATE.INTERNATIONAL,
                     description: description,
-                    service_code: 'economy_international', // TODO: Figure out where the service codes are
+                    service_code: SERVICE_CODE.ECONOMY_INTERNATIONAL,
                     currency: currencyCode,
                     total_price: amount,
                 });
@@ -328,9 +322,9 @@ function getInternationalShippingRates(allShippingRates: SupplierShippingRate[])
 function calculateTotalShippingRates(shippingRatesBySupplier: SupplierShippingRatesMap) {
     const allShippingRates = Array.from(shippingRatesBySupplier.values()).flatMap((rates) => rates);
     const hasEconomyOrStandard =
-        allShippingRates.filter(({ title }) => title === SHIPPING_RATES.ECONOMY || title === SHIPPING_RATES.STANDARD)
+        allShippingRates.filter(({ title }) => title === SHIPPING_RATE.ECONOMY || title === SHIPPING_RATE.STANDARD)
             .length > 0;
-    const hasInternational = allShippingRates.filter(({ title }) => title === SHIPPING_RATES.INTERNATIONAL).length > 0;
+    const hasInternational = allShippingRates.filter(({ title }) => title === SHIPPING_RATE.INTERNATIONAL).length > 0;
     // TODO: I believe that setting up multi-currency is adopted in most stores, so the currency should be the same (presentment currency in customer's local currency), but should verify
     const isMultiCurrency = new Set(allShippingRates.map(({ currencyCode }) => currencyCode)).size > 1;
 

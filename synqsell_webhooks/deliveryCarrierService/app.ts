@@ -2,7 +2,7 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import type { PoolClient } from 'pg';
 import { composeGid } from '@shopify/admin-graphql-api-utilities';
 import initializePool from './db';
-import { BackupResponse, EmptyResponse } from './constants';
+import { RESPONSE } from './constants';
 import { BuyerIdentityInput, ShippingRateRequest } from './types';
 import { getShippingRates, orderHasImportedItems } from './helper';
 
@@ -18,7 +18,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
     }
 
     if (!request) {
-        return EmptyResponse;
+        return RESPONSE.EMPTY;
     }
     try {
         const pool = initializePool();
@@ -49,7 +49,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
 
         const hasImportedItems = await orderHasImportedItems(orderShopifyVariantIds, client);
         if (!hasImportedItems) {
-            return EmptyResponse;
+            return RESPONSE.EMPTY;
         }
         const shippingRates = await getShippingRates(sessionId, orderShopifyVariantDetails, buyerIdentityInput, client);
 
@@ -59,7 +59,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
         };
     } catch (error) {
         console.error((error as Error).message);
-        return BackupResponse;
+        return RESPONSE.BACKUP;
     } finally {
         if (client) {
             client.release();
