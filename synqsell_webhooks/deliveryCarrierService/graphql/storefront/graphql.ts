@@ -7,6 +7,7 @@ const DELIVERY_GROUP_FRAGMENT = `#graphql
           deliveryOptions {
             title
             handle
+            description
             estimatedCost {
               amount
               currencyCode

@@ -50,7 +50,7 @@ export type GetStartedRetailerActionData = {
   role: RoleProps;
 };
 
-// TODO: I have to refactor this route after MVP is deployed, this is not scalable code
+// TODO: I have to refactor this action after MVP is deployed, this is not scalable code
 
 // Guard check for fetcher data
 export async function getStartedRetailerAction(

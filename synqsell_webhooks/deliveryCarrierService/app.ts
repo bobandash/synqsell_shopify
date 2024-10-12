@@ -53,7 +53,10 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
         }
         const shippingRates = await getShippingRates(sessionId, orderShopifyVariantDetails, buyerIdentityInput, client);
 
-        return SampleResponse;
+        return {
+            statusCode: 200,
+            body: JSON.stringify(shippingRates),
+        };
     } catch (error) {
         console.error((error as Error).message);
         return BackupResponse;

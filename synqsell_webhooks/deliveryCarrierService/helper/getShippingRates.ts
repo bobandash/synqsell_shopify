@@ -2,7 +2,7 @@ import type { PoolClient } from 'pg';
 import { createMapToRestObj } from '../util';
 import { BuyerIdentityInput, OrderShopifyVariantDetail, Session } from '../types';
 import { CART_CREATE_MUTATION } from '../graphql/storefront/graphql';
-import { meros } from 'meros';
+import { DeliveryGroupsFragment } from '../types/storefront/storefront.generated';
 
 type ImportedVariantDetail = {
     retailerShopifyVariantId: string;
@@ -13,6 +13,38 @@ type ImportedVariantDetail = {
 type ShopifyVariantIdAndQty = {
     shopifyVariantId: string;
     quantity: number;
+};
+
+type SubsequentCartCreateIncremental = {
+    data: DeliveryGroupsFragment;
+};
+
+type SupplierShippingRate = {
+    title: string;
+    amount: string;
+    currencyCode: string;
+    description: string;
+};
+
+type SupplierShippingRatesMap = Map<string, SupplierShippingRate[]>;
+
+type TotalShippingRateResponse = {
+    rates: ShippingRateResponse[];
+};
+
+type ShippingRateResponse = {
+    service_name: string;
+    description: string;
+    service_code: string;
+    currency: string;
+    total_price: string;
+};
+
+const SHIPPING_RATES = {
+    ECONOMY: 'Economy',
+    STANDARD: 'Standard',
+    INTERNATIONAL: 'International Shipping',
+    CUSTOM: 'Custom',
 };
 
 // ==============================================================================================================
@@ -35,7 +67,7 @@ async function getAllImportedVariants(retailerId: string, client: PoolClient): P
         const res = await client.query(query, [retailerId]);
         return res.rows as ImportedVariantDetail[];
     } catch {
-        throw new Error('Failed to get all imported variants the retailer has.');
+        throw new Error(`Failed to get all imported variants the retailer ${retailerId} has.`);
     }
 }
 
@@ -47,10 +79,10 @@ async function getShopifyVariantIdsAndQtyBySupplier(
     const shopifyVariantIdsAndQtyBySupplier = new Map<string, ShopifyVariantIdAndQty[]>(); // creates a map of supplier session id to array to supplier's shopify variant id
     const allRetailerImportedVariants = await getAllImportedVariants(retailerId, client);
     const supplierDetailsMap = createMapToRestObj(allRetailerImportedVariants, 'retailerShopifyVariantId'); // retailerShopifyVariantId => {supplierId, supplierShopifyVariantId}
-
     orderShopifyVariantDetails.forEach((orderShopifyVariantDetail) => {
         const { id: retailerShopifyVariantId, quantity } = orderShopifyVariantDetail;
         const supplierDetail = supplierDetailsMap.get(retailerShopifyVariantId);
+
         if (!supplierDetail) {
             // case: the supplier for the product was the retailer
             const prevValues = shopifyVariantIdsAndQtyBySupplier.get(retailerId) ?? [];
@@ -68,24 +100,11 @@ async function getShopifyVariantIdsAndQtyBySupplier(
             ]);
         }
     });
+
     return shopifyVariantIdsAndQtyBySupplier;
 }
 
-// helper function for getting the shipping rates for one supplier
-async function getStorefrontAccessToken(sessionId: string, client: PoolClient) {
-    try {
-        const sessionQuery = `SELECT "storefrontAccessToken" FROM "Session" WHERE "id" = $1`;
-        const res = await client.query(sessionQuery, [sessionId]);
-        const storefrontAccessToken = res.rows[0].storefrontAccessToken;
-        if (!storefrontAccessToken) {
-            throw new Error(`Session id ${sessionId} has no storefront access token.`);
-        }
-        return storefrontAccessToken as string;
-    } catch (error) {
-        throw new Error('Failed to get session ' + sessionId);
-    }
-}
-
+// helper functions for getSupplierShippingRate
 async function getSession(sessionId: string, client: PoolClient) {
     try {
         const query = `SELECT * FROM "Session" WHERE "id" = $1`;
@@ -100,14 +119,28 @@ async function getSession(sessionId: string, client: PoolClient) {
     }
 }
 
+function getParsedData(part: string) {
+    try {
+        const jsonString = part.split('\r\n\r\n')[1].trim();
+        const parsedData = JSON.parse(jsonString);
+        return parsedData;
+    } catch {
+        return null;
+    }
+}
+
 async function getSupplierShippingRate(
     supplierSessionId: string,
     shopifyVariantIdsAndQty: ShopifyVariantIdAndQty[],
     buyerIdentityInput: BuyerIdentityInput,
     client: PoolClient,
 ) {
-    const storefrontAccessToken = await getStorefrontAccessToken(supplierSessionId, client);
     const supplierSession = await getSession(supplierSessionId, client);
+    const storefrontAccessToken = supplierSession.storefrontAccessToken;
+    if (!storefrontAccessToken) {
+        throw new Error('Storefront access token does not exist for supplier session id ' + supplierSessionId);
+    }
+
     const cartCreateInput = {
         lines: shopifyVariantIdsAndQty.map((lineItem) => ({
             merchandiseId: lineItem.shopifyVariantId,
@@ -118,11 +151,13 @@ async function getSupplierShippingRate(
 
     // calculated carrier shipping rates are when the customer reach the checkout screen, and Shopify calculates the exact cost of USPS or any shipping carrier service to charge the customer
     // the CART_CREATE_MUTATION retrieves the calculated shipping rates and static shipping rates
-    // however, the only way to get calculated carrier shipping rates from Shopify is by using multipart responses, where data is provided in chunks
-    // so I have to use a package like meros or handle it manually
+    // however, the only way to get calculated carrier shipping rates from Shopify is by using multipart responses, where data is streamed into chunks
     // https://github.com/graphql/graphql-over-http/blob/c1acb54053679f08939c9cdcee00b72d77c42211/rfcs/IncrementalDelivery.md
+    // I tried using meros to decode it, but even though the "Content-Type: multipart/mixed; boundary=graphql", calling meros does not split it into parts
+    // TODO: Figure out how to use meros to decode response instead of doing it manually
+
     const url = `https://${supplierSession.shop}/api/2024-07/graphql.json`;
-    const parts = await fetch(url, {
+    const response = await fetch(url, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -134,16 +169,192 @@ async function getSupplierShippingRate(
                 input: cartCreateInput,
             },
         }),
-    }).then(meros);
+    });
 
-    if (!(Symbol.asyncIterator in parts)) {
-        throw new Error('Could not extract delivery group chunk.');
+    let result = '';
+    if (!response.body) {
+        throw new Error('Creating a cart does not have a response body.');
     }
-    for await (const part of parts) {
-        const { json } = part;
-        console.log(part);
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        result += decoder.decode(value, { stream: true });
+    }
+
+    const parts = result.split('--graphql');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const parsedDataArr: any[] = [];
+    const supplierShippingRate: SupplierShippingRate[] = [];
+    parts.forEach((part) => {
+        const parsedData = getParsedData(part);
+        if (parsedData) {
+            parsedDataArr.push(parsedData);
+        }
+    });
+
+    parsedDataArr.forEach((dataItem) => {
+        // case: initial streamed data response
+        if (dataItem.data?.cartCreate?.userErrors?.length > 0) {
+            throw new Error(dataItem.data.userErrors.join(' '));
+        }
+        // case: subsequent data streams
+        else if (dataItem.incremental?.[0]?.data?.deliveryGroups?.edges) {
+            dataItem.incremental.forEach((incremental: SubsequentCartCreateIncremental) => {
+                const deliveryGroups = incremental.data.deliveryGroups.edges;
+                deliveryGroups.forEach(({ node }) => {
+                    const deliveryOptions = node.deliveryOptions;
+                    deliveryOptions.forEach((option) => {
+                        const {
+                            title,
+                            estimatedCost: { amount, currencyCode },
+                            description,
+                        } = option;
+                        supplierShippingRate.push({
+                            title: title ?? '',
+                            amount: amount,
+                            currencyCode: currencyCode,
+                            description: description ?? '',
+                        });
+                    });
+                });
+            });
+        }
+    });
+
+    return supplierShippingRate;
+}
+
+// helper functions for calculateTotalShippingRates
+
+// for when the supplier/retailer is international shipping, while the other is domestic shipping
+function getCustomShippingRates(allShippingRates: SupplierShippingRate[]) {
+    const totalShippingRates: TotalShippingRateResponse = allShippingRates.reduce(
+        (acc, shippingRate) => {
+            const currCustomRate = acc.rates[0];
+            const { amount, currencyCode, title } = shippingRate;
+
+            if (currCustomRate && (title === SHIPPING_RATES.ECONOMY || title === SHIPPING_RATES.INTERNATIONAL)) {
+                acc.rates[0] = {
+                    ...currCustomRate,
+                    total_price: (parseFloat(currCustomRate.total_price) + parseFloat(amount)).toString(),
+                };
+            } else if (title === SHIPPING_RATES.ECONOMY || title === SHIPPING_RATES.INTERNATIONAL) {
+                acc.rates.push({
+                    service_name: SHIPPING_RATES.CUSTOM,
+                    description: 'Includes tracking',
+                    service_code: 'standard_shipping',
+                    currency: currencyCode,
+                    total_price: amount,
+                });
+            }
+            return acc;
+        },
+        {
+            rates: [] as ShippingRateResponse[],
+        },
+    );
+    return totalShippingRates;
+}
+
+function getDomesticShippingRates(allShippingRates: SupplierShippingRate[]) {
+    const totalShippingRates: TotalShippingRateResponse = allShippingRates.reduce(
+        (acc, shippingRate) => {
+            const { amount, currencyCode, title, description } = shippingRate;
+            const currCustomRateIndex = acc.rates.findIndex(({ service_name }) => service_name === title);
+
+            if (currCustomRateIndex !== -1) {
+                const currCustomRate = acc.rates[currCustomRateIndex];
+                acc.rates[currCustomRateIndex] = {
+                    ...currCustomRate,
+                    total_price: (parseFloat(currCustomRate.total_price) + parseFloat(amount)).toString(),
+                };
+            } else {
+                const serviceCode = title === SHIPPING_RATES.ECONOMY ? 'standard_shipping' : 'expedited_mail';
+                acc.rates.push({
+                    service_name: title,
+                    description: description,
+                    service_code: serviceCode,
+                    currency: currencyCode,
+                    total_price: amount,
+                });
+            }
+            return acc;
+        },
+        {
+            rates: [] as ShippingRateResponse[],
+        },
+    );
+    return totalShippingRates;
+}
+
+function getInternationalShippingRates(allShippingRates: SupplierShippingRate[]) {
+    const totalShippingRates: TotalShippingRateResponse = allShippingRates.reduce(
+        (acc, shippingRate) => {
+            const currCustomRate = acc.rates[0];
+            const { amount, currencyCode, description } = shippingRate;
+
+            if (currCustomRate) {
+                acc.rates[0] = {
+                    ...currCustomRate,
+                    total_price: (parseFloat(currCustomRate.total_price) + parseFloat(amount)).toString(),
+                };
+            } else {
+                acc.rates.push({
+                    service_name: SHIPPING_RATES.INTERNATIONAL,
+                    description: description,
+                    service_code: 'economy_international', // TODO: Figure out where the service codes are
+                    currency: currencyCode,
+                    total_price: amount,
+                });
+            }
+            return acc;
+        },
+        {
+            rates: [] as ShippingRateResponse[],
+        },
+    );
+    return totalShippingRates;
+}
+
+// TODO: In order to refactor this function, this feature requires talking to users
+// I don't know how other merchants set up their delivery profiles
+// By default, shopify has "Economy" and "Standard" set up for every merchant for domestic shipping (names cannot be changed)
+// while for international shipping, you can either use Calculated Carrier Cost or set a shipping rate manually
+// However, the name for the default shipping rate for international is custom and can be changed to any name (e.g. International, International Shipping, Worldwide)
+// For now, my implementation will be like this:
+// I'll use the default unchanged name "International Shipping" and sum up all the shipping costs for that name and return it, but I need to see how merchants in the real world setup their international profiles
+function calculateTotalShippingRates(shippingRatesBySupplier: SupplierShippingRatesMap) {
+    const allShippingRates = Array.from(shippingRatesBySupplier.values()).flatMap((rates) => rates);
+    const hasEconomyOrStandard =
+        allShippingRates.filter(({ title }) => title === SHIPPING_RATES.ECONOMY || title === SHIPPING_RATES.STANDARD)
+            .length > 0;
+    const hasInternational = allShippingRates.filter(({ title }) => title === SHIPPING_RATES.INTERNATIONAL).length > 0;
+    // TODO: I believe that setting up multi-currency is adopted in most stores, so the currency should be the same (presentment currency in customer's local currency), but should verify
+    const isMultiCurrency = new Set(allShippingRates.map(({ currencyCode }) => currencyCode)).size > 1;
+
+    if (!hasEconomyOrStandard && !hasInternational) {
+        throw new Error('There are no international or domestic shipping rates SynqSell can handle.');
+    }
+
+    if (isMultiCurrency) {
+        throw new Error("SynqSell does not handle shipping for shops that don't opt into multi-currency.");
+    }
+
+    // if a retailer imports a product from a supplier from a different country
+    // for a customer who buys the product, it's possible that the supplier's rate is international and retailer's rate is standard
+    // if that happens, then we just create a custom shipping rate with Economy + International Shipping to display to the user, until we get more user feedback
+    if (hasEconomyOrStandard && hasInternational) {
+        return getCustomShippingRates(allShippingRates);
+    } else if (hasEconomyOrStandard) {
+        return getDomesticShippingRates(allShippingRates);
+    } else {
+        return getInternationalShippingRates(allShippingRates);
     }
 }
+
 // ==============================================================================================================
 // END: HELPER FUNCTIONS FOR GETTING SHIPPING RATES
 // ==============================================================================================================
@@ -155,7 +366,6 @@ async function getShippingRates(
 ) {
     // get the delivery profiles and sum the values
     // I need to think about how to restrict retailers to have access to the carrier service api, this should be from the app, so it's ok
-
     const shopifyVariantIdsAndQtyBySupplier = await getShopifyVariantIdsAndQtyBySupplier(
         retailerSessionId,
         orderShopifyVariantDetails,
@@ -163,10 +373,10 @@ async function getShippingRates(
     );
 
     const supplierSessionIds = Array.from(shopifyVariantIdsAndQtyBySupplier.keys());
+    const shippingRatesBySupplier: SupplierShippingRatesMap = new Map();
 
-    // TODO: add all supplier shipping rates
-    const supplierShippingRates: void[] = [];
-    await Promise.all([
+    // this calculates the shipping rates for each supplier
+    await Promise.all(
         supplierSessionIds.map(async (sessionId) => {
             const shopifyVariantIdsAndQty = shopifyVariantIdsAndQtyBySupplier.get(sessionId) ?? []; // this should not null-coalesce, only for ts
             const supplierShippingRate = await getSupplierShippingRate(
@@ -175,39 +385,11 @@ async function getShippingRates(
                 buyerIdentityInput,
                 client,
             );
-            supplierShippingRates.push(supplierShippingRate);
+            shippingRatesBySupplier.set(sessionId, supplierShippingRate);
         }),
-    ]);
+    );
 
-    return {
-        rates: [
-            {
-                service_name: 'canadapost-overnight',
-                service_code: 'ON',
-                total_price: '1295',
-                description: 'This is the fastest option by far',
-                currency: 'CAD',
-                min_delivery_date: '2013-04-12 14:48:45 -0400',
-                max_delivery_date: '2013-04-12 14:48:45 -0400',
-            },
-            {
-                service_name: 'fedex-2dayground',
-                service_code: '2D',
-                total_price: '2934',
-                currency: 'USD',
-                min_delivery_date: '2013-04-12 14:48:45 -0400',
-                max_delivery_date: '2013-04-12 14:48:45 -0400',
-            },
-            {
-                service_name: 'fedex-priorityovernight',
-                service_code: '1D',
-                total_price: '3587',
-                currency: 'USD',
-                min_delivery_date: '2013-04-12 14:48:45 -0400',
-                max_delivery_date: '2013-04-12 14:48:45 -0400',
-            },
-        ],
-    };
+    return calculateTotalShippingRates(shippingRatesBySupplier);
 }
 
 export default getShippingRates;

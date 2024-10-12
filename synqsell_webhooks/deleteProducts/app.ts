@@ -121,6 +121,7 @@ export const lambdaHandler = async (event: ShopifyEvent): Promise<APIGatewayProx
             }),
         };
     } catch (error) {
+        console.error((error as Error).message)
         return {
             statusCode: 500,
             body: JSON.stringify({

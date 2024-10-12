@@ -8,7 +8,6 @@ export async function userHasCarrierService(retailerId: string) {
         retailerId,
       },
     });
-    console.log(carrierService);
     if (!carrierService) {
       return false;
     }
