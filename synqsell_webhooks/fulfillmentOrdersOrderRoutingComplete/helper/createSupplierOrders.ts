@@ -4,12 +4,14 @@ import { fetchAndValidateGraphQLData, mutateAndValidateGraphQLData } from '../ut
 import {
     DRAFT_ORDER_COMPLETE_MUTATION,
     DRAFT_ORDER_CREATE_MUTATION,
+    GET_FULFILLMENT_ORDER_CUSTOMER_DETAILS,
     GET_INITIAL_ORDER_DETAILS_DATABASE,
     GET_SUBSEQUENT_ORDER_DETAILS_DATABASE,
 } from '../graphql';
 import {
     DraftOrderCompleteMutation,
     DraftOrderCreateMutation,
+    FulfillmentOrderCustomerDetailsQuery,
     InitialOrderDetailsQuery,
     SubsequentOrderDetailsQuery,
 } from '../types/admin.generated';
@@ -47,10 +49,34 @@ type PriceDetail = {
     retailerPayment: string;
 };
 
+type OrderLineDetail = {
+    fulfillmentOrderLineItemId: string;
+    fulfillmentOrderLineItemQuantity: number;
+    shopifyVariantId: string;
+};
+
+type OrderLineDetailWithPriceList = OrderLineDetail & { priceListId: string };
+
 // ==============================================================================================================
 // START: ADD EQUIVALENT ORDER FROM FULFILLMENT ORDER ON SUPPLIER'S SHOPIFY STORE LOGIC
 // ==============================================================================================================
 // TODO: fill out https://docs.google.com/forms/d/e/1FAIpQLScmVTZRQNjOJ7RD738mL1lGeFjqKVe_FM2tO9xsm21QEo5Ozg/viewform to get sales channel priv
+async function getCustomerShippingDetails(fulfillmentOrderId: string, retailerSession: Session) {
+    const fulfillmentOrderQuery = await fetchAndValidateGraphQLData<FulfillmentOrderCustomerDetailsQuery>(
+        retailerSession.shop,
+        retailerSession.accessToken,
+        GET_FULFILLMENT_ORDER_CUSTOMER_DETAILS,
+        {
+            id: fulfillmentOrderId,
+        },
+    );
+    const customerShippingDetails = fulfillmentOrderQuery.fulfillmentOrder?.destination;
+    if (!customerShippingDetails) {
+        throw new Error('There was no data inside the customer shipping details');
+    }
+    return customerShippingDetails;
+}
+
 async function createDraftOrder(
     fulfillmentOrder: FulfillmentOrdersBySupplier,
     customerShippingDetails: CustomerShippingDetails,
@@ -369,10 +395,11 @@ async function createSupplierOrder(
 
 async function createSupplierOrders(
     fulfillmentOrdersBySupplier: FulfillmentOrdersBySupplier[],
+    shopifyFulfillmentOrderId: string,
     retailerSession: Session,
-    customerShippingDetails: CustomerShippingDetails,
     client: PoolClient,
 ) {
+    const customerShippingDetails = await getCustomerShippingDetails(shopifyFulfillmentOrderId, retailerSession);
     const createNewOrdersPromises = fulfillmentOrdersBySupplier.map((order) => {
         return createSupplierOrder(order, retailerSession, customerShippingDetails, client);
     });
