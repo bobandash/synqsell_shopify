@@ -75,6 +75,7 @@ Here are a list of features that are still needed before the application can be 
 - Create all relevant assets and bullet points for the Shopify app store
 - Add sales generated section for price list index table
 - Handle the app/uninstalled webhook for suppliers and retailers
+- Add ALB and EC2 to deploy web/application server
 - One final check to verify all API endpoints, webhooks, and application code work as intended
 
 Here are the nice to have features:
@@ -165,7 +166,7 @@ For AWS:
    sam deploy --parameter-overrides BastionHostKeyName=<ParameterValue1> StripeSecretsManagerARN=<ParameterValue2> EventBusArn=<ParameterValue3> MyCidrIP=<ParameterValue4>
    ```
    - `<BastionHostKeyName>`, `<StripeSecretsManagerARN>`, `<EventBusArn>` - Generated in Prerequisites
-   - `<MyCidrIP>` - Your [public IP address](https://www.whatismyip.com/) with /32 appended at the end of your public IP (e.g. 123.252.10.81/32)
+   - `<MyCidrIP>` - Your [public IP address](https://www.whatismyip.com/) with /32 appended at the end of your public IP
 4. Important values will be outputted in the terminal after the changeset is deployed. Please record these values, which are important in setting up the local application
 
 For the Shopify Application:

@@ -43,7 +43,7 @@ Parameters:
   MyCidrIP:
     Type: String
     Description: IP for rds access
-    Default: 123.252.10.81/32
+    Default: 123.123.123.123/32
 
 Globals:
   Api:
