@@ -20,6 +20,7 @@
       <a href="#about-the-project">About The Project</a>
       <ul>
         <li><a href="#deployment">Deployment</a></li>
+         <li><a href="#roadmap">Roadmap</a></li>     
         <li><a href="#features-at-a-glance">Features At A Glance</a></li>
         <li><a href="#built-with">Built With</a></li>
       </ul>
@@ -42,8 +43,8 @@
 </details>
 
 ## About The Project
-![image](https://github.com/user-attachments/assets/2317aef8-2a5b-4fdd-95ad-fbe742d0d974)
 
+![image](https://github.com/user-attachments/assets/2317aef8-2a5b-4fdd-95ad-fbe742d0d974)
 
 When I worked in the eCommerce space selling anime merchandise, I had some key observations:
 
@@ -62,15 +63,34 @@ These observations led me to a crucial question: could I create a risk-free meth
 
 ### Deployment
 
-Pending deployment on the Shopify App Store
+Status: Final stages. Preparing for submission on Shopify's App Store.
 
-<!-- TODO: INSERT SCREENSHOT OF PENDING APPROVAL STATUS -->
+### Roadmap
 
-{ADD SCREENSHOT OF PENDING APPROVAL STATUS}
+10/13/2024
+Here are a list of features that are still needed before the application can be submitted for review
+
+- Subscribe to Shopify's Privacy Webhook Topics
+- Use Stripe's webhook topics to ensure that the retailer has a valid payment method set up at all times
+- Create all relevant assets and bullet points for the Shopify app store
+- Add sales generated section for price list index table
+- Handle the app/uninstalled webhook for suppliers and retailers
+- One final check to verify all API endpoints, webhooks, and application code work as intended
+
+Here are the nice to have features:
+
+- Add skeleton loading pages to all other pages in the application (the homepage has a skeleton loading page)
+- Currency conversion for retailers and suppliers in different countries
+- Handle refunds for when a supplier or retailer refunds an order
+- If a supplier changes tracking details after 7 days, it should not affect the retailer's price list
+- Talk to users: need to see whether or not suppliers would want methods of increasing sales that the retailers can use (e.g. injecting Shopify liquid to theme to do a countdown for product launches)
+
+<!-- TODO: INSERT SCREENSHOT OF PENDING APPROVAL STATUS ONCE SUBMITTED -->
 
 ### Features At A Glance
 
 Because this application requires cloud resources, seeing the application locally will require money. So, I created a [notion writeup with images of SynqSell's main features](https://aback-thistle-ade.notion.site/Features-At-A-Glance-8be5cba5a5254a67bb59845c5b1c738a).
+
 ### Built With
 
 - [![Remix][Remix.run]][Remix-url]
@@ -183,7 +203,7 @@ For the Shopify Application:
    - `<Host name>` - localhost
    - `<Port>` - 8886
    - `<Username>` - postgres
-   - `<Password>` - Retrieved in step 5 
+   - `<Password>` - Retrieved in step 5
 10. Modify the `ADMIN_SESSION_ID` in the .env file to be the id generated in the session table
 11. Run the following command:
     ```sh
@@ -201,11 +221,10 @@ When you are done with the local development, navigate to AWS CloudFormation on 
 This is the current architecture of Synqsell.
 <br />
 <br />
-Note: the architecture currently has many single points of failure. This is intentional because of the application's lack of users; If the application scales with more users, the architecture should continue to evolve alongside the growth. For example, when there are more users, the RDS should be deployed in multi-AZs with a master and stand-by replica; the application load balancer should route traffic to multiple EC2 instances hosting the web/server app, instead of just a single EC2. Also, for easy setup, I currently use a NAT Gateway. However, to save on personal costs, I should have converted the NAT Gateway to a NAT instance.
+Note: the architecture currently has many single points of failure. This is intentional because of the application's lack of users; If the application scales with more users, the architecture should continue to evolve alongside the growth.
 <br />
 <br />
 ![Synqsell Architecture (2)](https://github.com/user-attachments/assets/524ce31d-2c4a-47ff-92a7-aeafa9d70e29)
-
 
 ## Technical Approach and Obstacles
 
