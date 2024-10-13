@@ -13,12 +13,8 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
     const request: ShippingRateRequest | null = event.body ? JSON.parse(event.body) : null;
     const sessionId = event.queryStringParameters?.sessionId ?? null;
 
-    if (!sessionId) {
-        throw new Error('Delivery carrier service callback url does not have a session id.');
-    }
-
-    if (!request) {
-        return RESPONSE.EMPTY;
+    if (!request || !sessionId) {
+        return RESPONSE.EMPTY();
     }
     try {
         const pool = initializePool();
@@ -49,7 +45,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
 
         const hasImportedItems = await orderHasImportedItems(orderShopifyVariantIds, client);
         if (!hasImportedItems) {
-            return RESPONSE.EMPTY;
+            return RESPONSE.EMPTY();
         }
         const shippingRates = await getShippingRates(sessionId, orderShopifyVariantDetails, buyerIdentityInput, client);
 
@@ -59,7 +55,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
         };
     } catch (error) {
         console.error((error as Error).message);
-        return RESPONSE.BACKUP;
+        return RESPONSE.BACKUP();
     } finally {
         if (client) {
             client.release();

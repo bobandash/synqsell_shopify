@@ -1,13 +1,15 @@
+// Note: responses ha to be unique every time, otherwise will eventually receive a 502 Bad Gateway
+// The server, working as a gateway got an invalid response.
 export const RESPONSE = {
-    BACKUP: {
+    BACKUP: () => ({
         statusCode: 404,
         body: JSON.stringify([]),
-    },
-    EMPTY: {
+    }),
+    EMPTY: () => ({
         statusCode: 200,
         body: JSON.stringify([]),
-    },
-    SAMPLE: {
+    }),
+    SAMPLE: () => ({
         // sample response payload in shopify's docs
         statusCode: 200,
         body: JSON.stringify({
@@ -39,7 +41,7 @@ export const RESPONSE = {
                 },
             ],
         }),
-    },
+    }),
 };
 
 export const SERVICE_CODE = {
