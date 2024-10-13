@@ -297,6 +297,26 @@ Resources:
       NatGatewayId: !Ref NATGateway
 
   # Start API Gateway for handling shipping rate calculation
+  APIGatewayCloudWatchRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - apigateway.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs
+
+  ApiGatewayAccount:
+    Type: AWS::ApiGateway::Account
+    Properties:
+      CloudWatchRoleArn: !GetAtt APIGatewayCloudWatchRole.Arn
+
   APIGateway:
     Type: AWS::ApiGateway::RestApi
     Properties:
@@ -315,14 +335,6 @@ Resources:
       ParentId: !Ref DeliveryCarrierServiceApiResource
       RestApiId: !Ref APIGateway
       PathPart: callback
-
-  APIGatewayDeployment:
-    Type: AWS::ApiGateway::Deployment
-    Properties:
-      RestApiId: !Ref APIGateway
-      StageName: dev
-    DependsOn:
-      - DeliveryCarrierServiceApiMethod
 
   # https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-api-integration-types.html
   DeliveryCarrierServiceApiMethod:
@@ -369,6 +381,17 @@ Resources:
         - ApiId: !Ref APIGateway
           HttpMethod: POST
           ResourcePath: !Join ["/", ["deliveryCarrierService", "callback"]]
+
+  # TODO: Research stages and set logs to automatically be recorded at API Gateway Level
+  APIGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      RestApiId: !Ref APIGateway
+      StageName: dev
+    DependsOn:
+      - DeliveryCarrierServiceApiMethod
+
+  # End of API Gateway Deployment
 
   # https://docs.aws.amazon.com/lambda/latest/dg/with-sqs.html
   # for queue to ensure retry mechanism for webhook delivery
