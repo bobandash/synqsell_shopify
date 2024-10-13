@@ -96,6 +96,10 @@ export const DRAFT_ORDER_CREATE_MUTATION = `#graphql
       draftOrder {
         id
       }
+      userErrors {
+        field
+        message
+      }
     }
   }
 `;
@@ -161,6 +165,24 @@ export const GET_SUBSEQUENT_ORDER_DETAILS_DATABASE = `#graphql
           }
         }
       }
+    }
+  }
+`;
+
+export const GET_FULFILLMENT_ORDER_DELIVERY_SERVICE_CODE = `#graphql 
+  query fulfillmentOrderDeliveryMethod($id: ID!){
+    fulfillmentOrder(id: $id){
+      deliveryMethod {
+        serviceCode
+      }
+    }
+  }
+`;
+
+export const GET_CARRIER_SERVICE_CALLBACK_URL = `#graphql
+  query carrierServiceCallbackUrl($id: ID!){
+    carrierService(id: $id){
+      callbackUrl
     }
   }
 `;

@@ -71,3 +71,13 @@ export type CustomerShippingDetails = Pick<
     | 'province'
     | 'zip'
 >;
+
+export type ShippingRateResponse = {
+    rates: {
+        service_name: string;
+        description: string;
+        service_code: string;
+        currency: string;
+        total_price: string;
+    }[];
+};

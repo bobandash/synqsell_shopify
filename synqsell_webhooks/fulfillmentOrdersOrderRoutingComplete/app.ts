@@ -1,9 +1,12 @@
 import { APIGatewayProxyResult } from 'aws-lambda';
 import { PoolClient } from 'pg';
 import { initializePool } from './db';
-import { ShopifyEvent } from './types';
+import { Session, ShopifyEvent } from './types';
 import { createSupplierOrders, isSynqsellFulfillmentLocation, splitFulfillmentOrderBySupplier } from './helper';
-import { RESPONSE } from './constants';
+import { RESPONSE, SERVICE_CODE, ServiceCodeProps } from './constants';
+import { fetchAndValidateGraphQLData } from './util';
+import { FulfillmentOrderDeliveryMethodQuery } from './types/admin.generated';
+import { GET_FULFILLMENT_ORDER_DELIVERY_SERVICE_CODE } from './graphql';
 
 async function getSession(shop: string, client: PoolClient) {
     const sessionQuery = `SELECT * FROM "Session" WHERE shop = $1 LIMIT 1`;
@@ -13,6 +16,24 @@ async function getSession(shop: string, client: PoolClient) {
     }
     const session = sessionData.rows[0];
     return session;
+}
+
+// The service code gives the delivery method the customer chose, please refer to deliveryCarrierService for full explanation
+// but for a summary, when customer reaches checkout and checks out by selecting a shipping service, the same service code in checkout will be in the fulfillment order
+async function getDeliveryMethodServiceCode(retailerSession: Session, shopifyFulfillmentOrderId: string) {
+    const res = await fetchAndValidateGraphQLData<FulfillmentOrderDeliveryMethodQuery>(
+        retailerSession.shop,
+        retailerSession.accessToken,
+        GET_FULFILLMENT_ORDER_DELIVERY_SERVICE_CODE,
+        {
+            id: shopifyFulfillmentOrderId,
+        },
+    );
+
+    const serviceCode = res.fulfillmentOrder?.deliveryMethod?.serviceCode ?? SERVICE_CODE.STANDARD;
+    console.log(shopifyFulfillmentOrderId);
+    console.log(serviceCode);
+    return serviceCode as ServiceCodeProps;
 }
 
 // Fulfillment orders are routed by location
@@ -29,13 +50,21 @@ export const lambdaHandler = async (event: ShopifyEvent): Promise<APIGatewayProx
         if (!isSynqsellOrder) {
             return RESPONSE.NOT_SYNQSELL_ORDER;
         }
+        const serviceCode = await getDeliveryMethodServiceCode(retailerSession, shopifyFulfillmentOrderId);
         const fulfillmentOrdersBySupplier = await splitFulfillmentOrderBySupplier(
             shopifyFulfillmentOrderId,
             retailerSession.shop,
             retailerSession.accessToken,
             client,
         );
-        await createSupplierOrders(fulfillmentOrdersBySupplier, shopifyFulfillmentOrderId, retailerSession, client);
+
+        await createSupplierOrders(
+            fulfillmentOrdersBySupplier,
+            shopifyFulfillmentOrderId,
+            serviceCode,
+            retailerSession,
+            client,
+        );
         return RESPONSE.SUCCESS;
     } catch (err) {
         console.error(err);

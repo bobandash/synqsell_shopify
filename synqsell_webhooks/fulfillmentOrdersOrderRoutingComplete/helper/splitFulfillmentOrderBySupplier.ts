@@ -105,9 +105,6 @@ async function splitFulfillmentOrderOnShopify(
     originalFulfillmentOrderId: string,
 ): Promise<FulfillmentOrdersBySupplier[]> {
     const supplierIds = Array.from(orderLinesBySupplier.keys());
-    // splitting fulfillment order inside the loop rather than using Promise.all
-    // because shopify's API only returns id of fulfillment order and no ability to refetch line items
-    // it's simpler to get the data in the correct format in the map itself
     const newFulfillmentOrders = await Promise.all(
         supplierIds.map(async (supplierId, index) => {
             const orderLine = orderLinesBySupplier.get(supplierId);
