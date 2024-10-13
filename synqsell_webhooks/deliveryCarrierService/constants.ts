@@ -1,13 +1,3 @@
-export const EmptyResponse = {
-    statusCode: 200,
-    body: JSON.stringify([]),
-};
-
-export const BackupResponse = {
-    statusCode: 404,
-    body: JSON.stringify([]),
-};
-
 export const RESPONSE = {
     BACKUP: {
         statusCode: 404,

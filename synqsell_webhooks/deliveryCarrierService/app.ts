@@ -11,7 +11,7 @@ import { getShippingRates, orderHasImportedItems } from './helper';
 export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     let client: null | PoolClient = null;
     const request: ShippingRateRequest | null = event.body ? JSON.parse(event.body) : null;
-    const sessionId = event.queryStringParameters?.sessionId ?? '';
+    const sessionId = event.queryStringParameters?.sessionId ?? null;
 
     if (!sessionId) {
         throw new Error('Delivery carrier service callback url does not have a session id.');
