@@ -15,6 +15,7 @@ async function invokeLambda(functionName: string, payload: any) {
         console.log(`Successfully invoked ${functionName}`);
     } catch (error) {
         console.error(error);
+        console.error(payload);
         console.error(`Error invoking ${functionName}.`);
     }
 }
@@ -39,12 +40,13 @@ export const lambdaHandler = async (event: Event) => {
                     return invokeLambda('fulfillments_update', shopifyEvent);
                 case 'app/uninstalled':
                     break;
-                case 'customers/data_request':
-                    break;
-                case 'customers/redact':
-                    break;
                 case 'shop/redact':
                     break;
+                // we do not store any customers' data, so we can return a 200 request for these
+                case 'customers/data_request':
+                    return invokeLambda('customers_data_request', shopifyEvent);
+                case 'customers/redact':
+                    return invokeLambda('customers_redact', shopifyEvent);
                 default:
                     console.error(`Webhook topic ${webhookTopic} is not handled.`);
                     return Promise.resolve();

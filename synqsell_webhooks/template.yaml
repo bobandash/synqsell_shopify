@@ -638,6 +638,47 @@ Resources:
         EntryPoints:
           - app.ts
 
+  # mandatory GDPR compliance webhooks
+  CustomersDataRequestFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: customers_data_request
+      CodeUri: customersDataRequest/
+      Handler: app.lambdaHandler
+      MemorySize: 1028
+      Timeout: 30
+      Runtime: nodejs20.x
+      Architectures:
+        - x86_64
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: false
+        EntryPoints:
+          - app.ts
+
+  CustomersRedactFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: customers_redact
+      CodeUri: customersRedact/
+      Handler: app.lambdaHandler
+      MemorySize: 1028
+      Timeout: 30
+      Runtime: nodejs20.x
+      Architectures:
+        - x86_64
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: false
+        EntryPoints:
+          - app.ts
+
 Outputs:
   s3Bucket:
     Description: S3 bucket name for storing all the merchants' logos
