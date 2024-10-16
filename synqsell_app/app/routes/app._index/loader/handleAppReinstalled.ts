@@ -15,11 +15,82 @@ import {
   queryExternalStoreAdminAPI,
 } from '~/services/shopify/util';
 
-type ImportedProductDetail = {
+// for changing all retailers that imported a supplier's product
+type SupplierImportedProductDetail = {
   retailerShopifyProductId: string;
   supplierShopifyProductId: string;
   retailerId: string;
 };
+
+// for changing a retailer's individual imported product
+type RetailerImportedProductDetail = {
+  supplierId: string;
+  supplierShopifyProductId: string;
+  retailerShopifyProductId: string;
+};
+
+// ==============================================================================================================
+// START: HELPER FUNCTIONS TO REACTIVATING PRODUCTS
+// ==============================================================================================================
+async function addSupplierShopifyProductStatus(
+  importedProductDetails:
+    | SupplierImportedProductDetail[]
+    | RetailerImportedProductDetail[],
+  supplierSession: Session,
+) {
+  const supplierProductStatusInfoPromises = importedProductDetails.map(
+    ({ supplierShopifyProductId }) =>
+      getProductStatusInfo(supplierShopifyProductId, supplierSession),
+  );
+  const supplierShopifyProductStatusInfo = await Promise.all(
+    supplierProductStatusInfoPromises,
+  );
+
+  const supplierShopifyProductIdToStatusMap = createMapIdToRestObj(
+    supplierShopifyProductStatusInfo,
+    'id',
+  );
+  const allImportedProductDetailsWithStatus = importedProductDetails.map(
+    ({ supplierShopifyProductId, ...rest }) => {
+      const supplierProductStatus = supplierShopifyProductIdToStatusMap.get(
+        supplierShopifyProductId,
+      )?.status;
+
+      // this typically should not run, only for ts safety
+      if (!supplierProductStatus) {
+        throw new Error(
+          `No status is found for supplierShopifyProductId ${supplierShopifyProductId}.`,
+        );
+      }
+      return {
+        supplierShopifyProductId,
+        supplierProductStatus,
+        ...rest,
+      };
+    },
+  );
+  return allImportedProductDetailsWithStatus;
+}
+
+async function updateRetailerProductStatus(
+  retailerId: string,
+  retailerShopifyProductId: string,
+  supplierProductStatus: string,
+) {
+  const retailerSession = await getSession(retailerId);
+  await mutateExternalStoreAdminAPI(
+    retailerSession.shop,
+    retailerSession.accessToken,
+    UPDATE_PRODUCT_STATUS_MUTATION,
+    {
+      input: {
+        id: retailerShopifyProductId,
+        status: supplierProductStatus,
+      },
+    },
+    'Could not update retailer shopify product status.',
+  );
+}
 
 // ==============================================================================================================
 // START: FUNCTIONS TO REACTIVATE ALL RETAILERS' IMPORTED PRODUCTS IF SUPPLIER
@@ -72,100 +143,31 @@ async function fetchImportedProductDetails(supplierId: string) {
   return importedProductDetails;
 }
 
-async function addShopifyProductStatus(
-  importedProductDetails: ImportedProductDetail[],
+async function handleReinstateAllRetailerProductsForSupplier(
   supplierSession: Session,
 ) {
-  const supplierProductStatusInfoPromises = importedProductDetails.map(
-    ({ supplierShopifyProductId }) =>
-      getProductStatusInfo(supplierShopifyProductId, supplierSession),
+  const importedProductDetails = await fetchImportedProductDetails(
+    supplierSession.id,
   );
-  const supplierShopifyProductStatusInfo = await Promise.all(
-    supplierProductStatusInfoPromises,
-  );
-
-  const supplierShopifyProductIdToStatusMap = createMapIdToRestObj(
-    supplierShopifyProductStatusInfo,
-    'id',
-  );
-  const allImportedProductDetailsWithStatus = importedProductDetails.map(
-    ({ supplierShopifyProductId, ...rest }) => {
-      const supplierProductStatus = supplierShopifyProductIdToStatusMap.get(
-        supplierShopifyProductId,
-      )?.status;
-
-      // this typically should not run, only for ts safety
-      if (!supplierProductStatus) {
-        throw new Error(
-          `No status is found for supplierShopifyProductId ${supplierShopifyProductId}.`,
-        );
-      }
-      return {
-        supplierShopifyProductId,
-        supplierProductStatus,
-        ...rest,
-      };
-    },
-  );
-  return allImportedProductDetailsWithStatus;
-}
-
-async function getAllImportedProductDetails(supplierSession: Session) {
-  try {
-    const importedProductDetails = await fetchImportedProductDetails(
-      supplierSession.id,
-    );
-    const allImportedProductDetails = await addShopifyProductStatus(
+  const importedProductDetailsWithStatus =
+    await addSupplierShopifyProductStatus(
       importedProductDetails,
       supplierSession,
     );
-    return allImportedProductDetails;
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to get all imported product details',
-      getAllImportedProductDetails,
-      {
-        sessionId: supplierSession.id,
-      },
-    );
-  }
-}
-
-async function updateRetailerProductStatus(
-  retailerId: string,
-  retailerShopifyProductId: string,
-  supplierProductStatus: string,
-) {
-  const retailerSession = await getSession(retailerId);
-  await mutateExternalStoreAdminAPI(
-    retailerSession.shop,
-    retailerSession.accessToken,
-    UPDATE_PRODUCT_STATUS_MUTATION,
-    {
-      input: {
-        id: retailerShopifyProductId,
-        status: supplierProductStatus,
-      },
-    },
-    'Could not update retailer shopify product status.',
-  );
-}
-
-async function handleReinstateAllRetailerProducts(supplierSession: Session) {
-  const importedProductDetails =
-    await getAllImportedProductDetails(supplierSession);
-  const updateRetailerProductStatusPromises = importedProductDetails.map(
-    (detail) => {
-      const { retailerId, retailerShopifyProductId, supplierProductStatus } =
-        detail;
-      return updateRetailerProductStatus(
-        retailerId,
-        retailerShopifyProductId,
-        supplierProductStatus,
-      );
-    },
-  );
+  const updateRetailerProductStatusPromises =
+    importedProductDetailsWithStatus.map((detail) => {
+      // this is just for ts safety for retailerId
+      if ('retailerId' in detail) {
+        const { retailerId, retailerShopifyProductId, supplierProductStatus } =
+          detail;
+        return updateRetailerProductStatus(
+          retailerId,
+          retailerShopifyProductId,
+          supplierProductStatus,
+        );
+      }
+      return Promise.resolve();
+    });
   await Promise.all(updateRetailerProductStatusPromises);
 }
 
@@ -174,19 +176,42 @@ async function handleReinstateAllRetailerProducts(supplierSession: Session) {
 // ==============================================================================================================
 async function fetchAllRetailerImportedProducts(retailerSession: Session) {
   try {
-    const importedProducts = await db.importedProduct.findMany({
+    const importedProductDetails = await db.importedProduct.findMany({
       where: {
         retailerId: retailerSession.id,
       },
       select: {
         shopifyProductId: true,
+        prismaProduct: {
+          select: {
+            shopifyProductId: true,
+            priceList: {
+              select: {
+                supplierId: true,
+              },
+            },
+          },
+        },
       },
     });
+
+    const importedProductDetailsFmt = importedProductDetails.map(
+      (importedProduct) => {
+        return {
+          supplierId: importedProduct.prismaProduct.priceList.supplierId,
+          supplierShopifyProductId:
+            importedProduct.prismaProduct.shopifyProductId,
+          retailerShopifyProductId: importedProduct.shopifyProductId,
+        };
+      },
+    );
+
+    return importedProductDetailsFmt;
   } catch (error) {
     throw errorHandler(
       error,
       'Failed to get all retailer imported products',
-      getAllImportedProductDetails,
+      fetchAllRetailerImportedProducts,
       {
         sessionId: retailerSession.id,
       },
@@ -194,7 +219,68 @@ async function fetchAllRetailerImportedProducts(retailerSession: Session) {
   }
 }
 
-async function handleReinstateImportedProducts(retailerSession: Session) {}
+function groupBySupplier(
+  retailerImportedProductDetails: RetailerImportedProductDetail[],
+) {
+  const supplierToProductDetails = new Map<
+    string,
+    RetailerImportedProductDetail[]
+  >();
+  retailerImportedProductDetails.forEach((detail) => {
+    const supplierId = detail.supplierId;
+    const prev = supplierToProductDetails.get(supplierId);
+    if (!prev) {
+      supplierToProductDetails.set(supplierId, [detail]);
+    } else {
+      supplierToProductDetails.set(supplierId, [...prev, detail]);
+    }
+  });
+  return supplierToProductDetails;
+}
+
+async function handleReinstateImportedProductsForRetailer(
+  retailerSession: Session,
+) {
+  try {
+    const retailerImportedProductDetails =
+      await fetchAllRetailerImportedProducts(retailerSession);
+    const importedProductDetailsBySupplier = groupBySupplier(
+      retailerImportedProductDetails,
+    );
+    const supplierIds = Array.from(importedProductDetailsBySupplier.keys());
+    await Promise.all(
+      supplierIds.map(async (supplierId) => {
+        const supplierSession = await getSession(supplierId);
+        const productDetails =
+          importedProductDetailsBySupplier.get(supplierId) ?? [];
+        const importedProductDetailWithStatus =
+          await addSupplierShopifyProductStatus(
+            productDetails,
+            supplierSession,
+          );
+
+        const updateStatusPromises = importedProductDetailWithStatus.map(
+          (detail) =>
+            updateRetailerProductStatus(
+              retailerSession.id,
+              detail.retailerShopifyProductId,
+              detail.supplierProductStatus,
+            ),
+        );
+        await Promise.all(updateStatusPromises);
+      }),
+    );
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to reinstate all imported products for the retailer.',
+      handleReinstateImportedProductsForRetailer,
+      {
+        retailerId: retailerSession.id,
+      },
+    );
+  }
+}
 
 // Shopify's app/uninstalled webhook runs immediately after uninstallation
 // however, there are mandatory webhooks that the app has to subscribe to
@@ -211,12 +297,21 @@ export async function handleAppReinstalled(sessionId: string) {
     ]);
 
     if (isRetailer) {
-      await handleReinstateImportedProducts(session);
+      await handleReinstateImportedProductsForRetailer(session);
     }
     if (isSupplier) {
-      await handleReinstateAllRetailerProducts(session);
+      await handleReinstateAllRetailerProductsForSupplier(session);
     }
     // handle this last
     await updateStoreStatus(sessionId, true);
-  } catch (error) {}
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to reinstate the imported products for retailer/supplier.',
+      handleAppReinstalled,
+      {
+        sessionId,
+      },
+    );
+  }
 }
