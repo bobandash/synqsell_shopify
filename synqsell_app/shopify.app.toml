@@ -25,8 +25,8 @@ redirect_urls = [
 [webhooks]
 api_version = "2024-07"
 
-  [[webhooks.subscriptions]]
-  topics = [
+[[webhooks.subscriptions]]
+topics = [
   "app/uninstalled",
   "fulfillment_orders/cancelled",
   "fulfillment_orders/order_routing_complete",
@@ -34,9 +34,13 @@ api_version = "2024-07"
   "fulfillments/update",
   "orders/cancelled",
   "products/delete",
-  "products/update"
+  "products/update",
 ]
-  uri = "arn:aws:events:us-east-2::event-source/aws.partner/shopify.com/153436192769/aws"
+compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"]
+uri = "arn:aws:events:us-east-2::event-source/aws.partner/shopify.com/153436192769/aws"
+
+
+
 
 [pos]
 embedded = false
