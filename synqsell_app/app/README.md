@@ -8,7 +8,6 @@ And, my priority / what I've been focusing on the past few days, is figuring out
 
 FUNCTION NAME (ANY IMPORTANT PARAMS THAT ARE NOT PII): ERROR MESSAGE
 TIMESTAMP AND LEVEL ARE GIVEN
-What's the point in logging.info?
 
 ## COMMON COMMANDS
 

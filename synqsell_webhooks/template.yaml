@@ -638,6 +638,26 @@ Resources:
         EntryPoints:
           - app.ts
 
+  AppUninstalledFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: app_uninstalled
+      CodeUri: appUninstalled/
+      Handler: app.lambdaHandler
+      MemorySize: 1028
+      Timeout: 30
+      Runtime: nodejs20.x
+      Architectures:
+        - x86_64
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: false
+        EntryPoints:
+          - app.ts
+
   # mandatory GDPR compliance webhooks
   CustomersDataRequestFunction:
     Type: AWS::Serverless::Function
