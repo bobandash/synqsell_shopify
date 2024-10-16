@@ -15,7 +15,7 @@ import type {
   ProductVariantsBulkCreateMutation,
   VariantDeliveryProfilesQuery,
 } from '~/types/admin.generated';
-import { fetchAndValidateGraphQLData, mutateGraphQLAdminData } from '../util';
+import { queryExternalStoreAdminAPI, mutateGraphQLAdminData } from '../util';
 import { v4 as uuid } from 'uuid';
 
 type VariantWithInventoryAndOptions = Prisma.VariantGetPayload<{
@@ -94,7 +94,7 @@ export async function getVariantCreationInputWithAccessToken(
     const queryStr = getQueryStr(shopifyVariantIds);
     const numVariants = shopifyVariantIds.length;
     const variantShopifyData =
-      await fetchAndValidateGraphQLData<VariantCreationInformationQuery>(
+      await queryExternalStoreAdminAPI<VariantCreationInformationQuery>(
         supplierSession.shop,
         supplierSession.accessToken,
         VARIANT_CREATION_DETAILS_BULK_QUERY,
@@ -174,7 +174,7 @@ export async function getVariantDeliveryProfilesIdsWithAccessToken(
     const queryStr = getQueryStr(shopifyVariantIds);
     const numVariants = shopifyVariantIds.length;
     const deliveryProfilesQuery =
-      await fetchAndValidateGraphQLData<VariantDeliveryProfilesQuery>(
+      await queryExternalStoreAdminAPI<VariantDeliveryProfilesQuery>(
         supplierSession.shop,
         supplierSession.accessToken,
         GET_VARIANT_DELIVERY_PROFILES,

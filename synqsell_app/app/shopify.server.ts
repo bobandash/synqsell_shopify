@@ -2,7 +2,6 @@ import '@shopify/shopify-app-remix/adapters/node';
 import {
   ApiVersion,
   AppDistribution,
-  DeliveryMethod,
   shopifyApp,
 } from '@shopify/shopify-app-remix/server';
 import { PrismaSessionStorage } from '@shopify/shopify-app-session-storage-prisma';
@@ -21,13 +20,6 @@ const shopify = shopifyApp({
   restResources,
   future: {
     unstable_newEmbeddedAuthStrategy: true,
-  },
-  // This should not be called w/ EventBridge; results in duplicate webhook registration
-  webhooks: {
-    BULK_OPERATIONS_FINISH: {
-      deliveryMethod: DeliveryMethod.Http,
-      callbackUrl: '/webhooks',
-    },
   },
   hooks: {
     afterAuth: async ({ session }) => {

@@ -11,7 +11,7 @@ import {
 } from './graphql';
 import type { Prisma } from '@prisma/client';
 import {
-  fetchAndValidateGraphQLData,
+  queryExternalStoreAdminAPI,
   mutateGraphQLAdminData,
   queryGraphQLAdminData,
 } from '../util';
@@ -157,7 +157,7 @@ export async function getBasicProductDetailsWithAccessToken(
       query: queryStr,
       first: take,
     };
-    const data = await fetchAndValidateGraphQLData<ProductBasicInfoQuery>(
+    const data = await queryExternalStoreAdminAPI<ProductBasicInfoQuery>(
       shop,
       accessToken,
       PRODUCT_BASIC_INFO_QUERY,
@@ -183,7 +183,7 @@ export async function getProductAndMediaCreationInputWithAccessToken(
 ) {
   try {
     const productCreationInfoMinusMediaData: ProductCreationInformationQuery =
-      await fetchAndValidateGraphQLData(
+      await queryExternalStoreAdminAPI(
         shop,
         accessToken,
         PRODUCT_CREATION_DETAILS_WITHOUT_MEDIA_QUERY,
@@ -200,7 +200,7 @@ export async function getProductAndMediaCreationInputWithAccessToken(
     const mediaCount =
       productCreationInfoMinusMediaData.product?.mediaCount?.count ?? 0;
     if (mediaCount > 0) {
-      const mediaData = await fetchAndValidateGraphQLData<ProductMediaQuery>(
+      const mediaData = await queryExternalStoreAdminAPI<ProductMediaQuery>(
         shop,
         accessToken,
         PRODUCT_GET_MEDIA,
