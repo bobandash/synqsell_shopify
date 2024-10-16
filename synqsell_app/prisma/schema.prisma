@@ -24,6 +24,7 @@ model Session {
   collaborator                 Boolean?                @default(false)
   emailVerified                Boolean?                @default(false)
   storefrontAccessToken        String?
+  isAppUninstalled             Boolean                 @default(false)
   carrierService               CarrierService?
   checklistStatuses            ChecklistStatus[]
   fulfillmentService           FulfillmentService?

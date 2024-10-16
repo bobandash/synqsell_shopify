@@ -146,3 +146,7 @@ export type ProductUrlQuery = {
     edges: Array<{ node: Pick<AdminTypes.Product, 'id' | 'onlineStoreUrl'> }>;
   };
 };
+
+export type ProductStatusQuery = {
+  product?: AdminTypes.Maybe<Pick<AdminTypes.Product, 'id' | 'status'>>;
+};

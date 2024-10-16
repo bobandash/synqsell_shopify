@@ -2,3 +2,4 @@
 export { getOrCreateStorefrontAccessToken } from './storefrontAccessToken';
 export { getOrCreateCarrierService } from './carrierService';
 export { getOrCreateProfile } from './userProfile';
+export { handleAppReinstalled } from './handleAppReinstalled';

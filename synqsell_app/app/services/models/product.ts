@@ -178,3 +178,29 @@ export async function getAllProductDetails(
     );
   }
 }
+
+export async function updateStoreStatus(
+  sessionId: string,
+  isInstalled: boolean,
+) {
+  try {
+    await db.session.update({
+      where: {
+        id: sessionId,
+      },
+      data: {
+        isAppUninstalled: false,
+      },
+    });
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to update store status.',
+      updateStoreStatus,
+      {
+        sessionId,
+        isInstalled,
+      },
+    );
+  }
+}

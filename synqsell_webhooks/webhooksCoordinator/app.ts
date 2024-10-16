@@ -37,6 +37,14 @@ export const lambdaHandler = async (event: Event) => {
                     return invokeLambda('orders_cancelled', shopifyEvent);
                 case 'fulfillments/update':
                     return invokeLambda('fulfillments_update', shopifyEvent);
+                case 'app/uninstalled':
+                    break;
+                case 'customers/data_request':
+                    break;
+                case 'customers/redact':
+                    break;
+                case 'shop/redact':
+                    break;
                 default:
                     console.error(`Webhook topic ${webhookTopic} is not handled.`);
                     return Promise.resolve();

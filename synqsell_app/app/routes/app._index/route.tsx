@@ -21,16 +21,21 @@ import { PaddedBox } from '~/components';
 import { getOrCreateStorefrontAccessToken } from './loader/storefrontAccessToken';
 import { getOrCreateCarrierService, getOrCreateProfile } from './loader';
 import { getOrCreateUserPreferences } from '~/services/models/userPreferences';
+import { getSession } from '~/services/models/session';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
     const {
-      session,
+      session: { id: sessionId },
       admin: { graphql },
     } = await authenticate.admin(request);
-    const { id: sessionId } = session;
-
     // for initializing the application with required data to run the app
+    const session = await getSession(sessionId);
+
+    if (session.isAppUninstalled) {
+      await handleAppReinstalled();
+    }
+
     await Promise.all([
       getOrCreateCarrierService(sessionId, graphql),
       getOrCreateStorefrontAccessToken(sessionId, graphql),
