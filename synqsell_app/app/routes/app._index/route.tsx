@@ -19,7 +19,11 @@ import { ChecklistTables } from './asyncComponents';
 import { TableSkeleton } from './components/Skeleton';
 import { PaddedBox } from '~/components';
 import { getOrCreateStorefrontAccessToken } from './loader/storefrontAccessToken';
-import { getOrCreateCarrierService, getOrCreateProfile } from './loader';
+import {
+  getOrCreateCarrierService,
+  getOrCreateProfile,
+  handleAppReinstalled,
+} from './loader';
 import { getOrCreateUserPreferences } from '~/services/models/userPreferences';
 import { getSession } from '~/services/models/session';
 
@@ -33,7 +37,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const session = await getSession(sessionId);
 
     if (session.isAppUninstalled) {
-      await handleAppReinstalled();
+      await handleAppReinstalled(sessionId);
     }
 
     await Promise.all([
