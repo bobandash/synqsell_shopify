@@ -1,15 +1,10 @@
 import { nodesFromEdges } from '@shopify/admin-graphql-api-utilities';
 import { type GraphQL } from '~/types';
 import getQueryStr from '../util/getQueryStr';
-import type {
-  ProductCreateMutation,
-  ProductBasicInfoQuery,
-  ProductCreationInformationQuery,
-  ProductMediaQuery,
-} from '~/types/admin.generated';
 import { errorHandler } from '~/services/util';
 import {
   CREATE_PRODUCT_MUTATION,
+  GET_PRODUCT_URL,
   PRODUCT_BASIC_INFO_QUERY,
   PRODUCT_CREATION_DETAILS_WITHOUT_MEDIA_QUERY,
   PRODUCT_GET_MEDIA,
@@ -21,8 +16,13 @@ import {
   queryGraphQLAdminData,
 } from '../util';
 import type { CreateMediaInput, ProductInput } from '~/types/admin.types';
-
-// the reality is
+import type {
+  ProductBasicInfoQuery,
+  ProductCreateMutation,
+  ProductCreationInformationQuery,
+  ProductMediaQuery,
+  ProductUrlQuery,
+} from './types';
 
 export type ProductWithVariantImagePriceList = Prisma.ProductGetPayload<{
   include: {
@@ -69,26 +69,12 @@ export async function getIdMappedToStoreUrl(
   try {
     const numProducts = productIds.length;
     const queryStr = getQueryStr(productIds);
-    const response = await graphql(
-      `
-        query ProductUrlsQuery($first: Int, $query: String) {
-          products(first: $first, query: $query) {
-            edges {
-              node {
-                id
-                onlineStoreUrl
-              }
-            }
-          }
-        }
-      `,
-      {
-        variables: {
-          first: numProducts,
-          query: queryStr,
-        },
+    const response = await graphql(GET_PRODUCT_URL, {
+      variables: {
+        first: numProducts,
+        query: queryStr,
       },
-    );
+    });
     const { data } = await response.json();
     if (!data) {
       return {};
@@ -96,7 +82,7 @@ export async function getIdMappedToStoreUrl(
 
     const {
       products: { edges },
-    } = data;
+    } = data as ProductUrlQuery;
     const nodes = nodesFromEdges(edges);
     const idToStoreUrl = nodes.reduce((acc, node) => {
       const { id, onlineStoreUrl } = node;

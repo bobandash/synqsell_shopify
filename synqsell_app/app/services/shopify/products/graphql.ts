@@ -1,5 +1,5 @@
 // renders basic info that user can view
-export const PRODUCT_BASIC_INFO_QUERY = `#graphql 
+export const PRODUCT_BASIC_INFO_QUERY = `#graphql
   query ProductBasicInfo($query: String, $first: Int){
     products(query: $query, first: $first) {
       edges {
@@ -79,7 +79,7 @@ export const PRODUCT_CREATION_DETAILS_WITHOUT_MEDIA_QUERY = `#graphql
   }
 `;
 
-export const PRODUCT_GET_MEDIA = `#graphql 
+export const PRODUCT_GET_MEDIA = `#graphql
   query ProductMedia($id: ID!, $first: Int!) {
     product(id: $id) {
       media(first: $first) {
@@ -112,7 +112,7 @@ export const PRODUCT_GET_MEDIA = `#graphql
   }
 `;
 
-export const CREATE_PRODUCT_MUTATION = `#graphql 
+export const CREATE_PRODUCT_MUTATION = `#graphql
   mutation ProductCreate($input: ProductInput!, $media: [CreateMediaInput!]) {
     productCreate(input: $input, media: $media) {
       product {
@@ -121,6 +121,43 @@ export const CREATE_PRODUCT_MUTATION = `#graphql
       userErrors {
         message
         field
+      }
+    }
+  }
+`;
+
+export const GET_PRODUCT_STATUS = `#graphql 
+  query ProductStatus(id: ID!){
+    product(id: $id){
+      id
+      statuses
+    }
+  }
+`;
+
+export const GET_PRODUCT_URL = `#graphql
+  query ProductUrl($first: Int, $query: String) {
+    products(first: $first, query: $query) {
+      edges {
+        node {
+          id
+          onlineStoreUrl
+        }
+      }
+    }
+  }
+`;
+
+export const UPDATE_PRODUCT_STATUS_MUTATION = `#graphql
+  mutation UpdateProductStatus($input: ProductInput!) {
+    productUpdate(input: $input) {
+      product {
+        id
+        status
+      }
+      userErrors {
+        field
+        message
       }
     }
   }
