@@ -49,14 +49,14 @@ model FulfillmentService {
   sessionId                   String  @unique
   shopifyFulfillmentServiceId String
   shopifyLocationId           String
-  session                     Session @relation(fields: [sessionId], references: [id])
+  session                     Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 }
 
 model UserPreference {
   id             String   @id @default(uuid())
   tableIdsHidden String[]
   sessionId      String   @unique
-  session        Session  @relation(fields: [sessionId], references: [id])
+  session        Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 }
 
 model ChecklistTable {
@@ -85,7 +85,7 @@ model ChecklistStatus {
   isCompleted           Boolean
   sessionId             String
   checklistItem         ChecklistItem          @relation(fields: [checklistItemId], references: [id])
-  session               Session                @relation(fields: [sessionId], references: [id])
+  session               Session                @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   supplierAccessRequest SupplierAccessRequest?
 }
 
@@ -101,7 +101,7 @@ model SupplierAccessRequest {
   id                      String          @id @default(uuid())
   num                     Int             @default(autoincrement())
   checklistStatus         ChecklistStatus @relation(fields: [checklistStatusId], references: [id])
-  session                 Session         @relation(fields: [sessionId], references: [id])
+  session                 Session         @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 }
 
 model Role {
@@ -110,7 +110,7 @@ model Role {
   sessionId          String
   createdAt          DateTime @default(now())
   isVisibleInNetwork Boolean  @default(true)
-  session            Session  @relation(fields: [sessionId], references: [id])
+  session            Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 }
 
 model UserProfile {
@@ -125,7 +125,7 @@ model UserProfile {
   website         String
   currencyCode    String
   socialMediaLink SocialMediaLink?
-  session         Session          @relation(fields: [sessionId], references: [id])
+  session         Session          @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 }
 
 model SocialMediaLink {
@@ -136,7 +136,7 @@ model SocialMediaLink {
   youtube       String?
   tiktok        String?
   userProfileId String      @unique
-  userProfile   UserProfile @relation(fields: [userProfileId], references: [id])
+  userProfile   UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
 }
 
 model PriceList {
@@ -148,7 +148,7 @@ model PriceList {
   name                     String
   requiresApprovalToImport Boolean?
   margin                   Int?
-  session                  Session              @relation(fields: [supplierId], references: [id])
+  session                  Session              @relation(fields: [supplierId], references: [id], onDelete: Cascade)
   products                 Product[]
   partnershipRequests      PartnershipRequest[] @relation("PartnershipRequestToPriceList")
   partnerships             Partnership[]        @relation("PartnershipToPriceList")
@@ -163,8 +163,8 @@ model PartnershipRequest {
   status      String
   type        String
   createdAt   DateTime    @default(now())
-  recipient   Session     @relation("RecipientPartnershipRequest", fields: [recipientId], references: [id])
-  sender      Session     @relation("SenderPartnershipRequest", fields: [senderId], references: [id])
+  recipient   Session     @relation("RecipientPartnershipRequest", fields: [recipientId], references: [id], onDelete: Cascade)
+  sender      Session     @relation("SenderPartnershipRequest", fields: [senderId], references: [id], onDelete: Cascade)
   priceLists  PriceList[] @relation("PartnershipRequestToPriceList")
 }
 
@@ -174,8 +174,8 @@ model Partnership {
   supplierId String
   createdAt  DateTime    @default(now())
   message    String
-  retailer   Session     @relation("RetailerPartnership", fields: [retailerId], references: [id])
-  supplier   Session     @relation("SupplierPartnership", fields: [supplierId], references: [id])
+  retailer   Session     @relation("RetailerPartnership", fields: [retailerId], references: [id], onDelete: Cascade)
+  supplier   Session     @relation("SupplierPartnership", fields: [supplierId], references: [id], onDelete: Cascade)
   priceLists PriceList[] @relation("PartnershipToPriceList")
 }
 
@@ -216,7 +216,7 @@ model ImportedProduct {
   prismaProductId  String
   shopifyProductId String
   prismaProduct    Product           @relation(fields: [prismaProductId], references: [id], onDelete: Cascade)
-  session          Session           @relation(fields: [retailerId], references: [id])
+  session          Session           @relation(fields: [retailerId], references: [id], onDelete: Cascade)
   importedVariants ImportedVariant[]
 }
 
@@ -243,7 +243,7 @@ model CarrierService {
   id                      String  @id @default(uuid())
   retailerId              String  @unique
   shopifyCarrierServiceId String
-  retailer                Session @relation(fields: [retailerId], references: [id])
+  retailer                Session @relation(fields: [retailerId], references: [id], onDelete: Cascade)
 }
 
 model Order {
@@ -251,35 +251,35 @@ model Order {
   currency                          String
   shopifyRetailerFulfillmentOrderId String
   shopifySupplierOrderId            String
-  retailerId                        String
-  supplierId                        String
+  retailerId                        String?
+  supplierId                        String?
   shippingCost                      Decimal         @default(0) @db.Decimal(10, 2)
-  paymentStatus                     String // CAN BE INCOMPLETE, PARTIALLY_PAID, PAID, CANCELLED
+  paymentStatus                     String
   createdAt                         DateTime        @default(now())
   updatedAt                         DateTime        @updatedAt
-  retailer                          Session         @relation("RetailerOrder", fields: [retailerId], references: [id])
-  supplier                          Session         @relation("SupplierOrder", fields: [supplierId], references: [id])
+  retailer                          Session?        @relation("RetailerOrder", fields: [retailerId], references: [id], onDelete: SetNull)
+  supplier                          Session?        @relation("SupplierOrder", fields: [supplierId], references: [id], onDelete: SetNull)
   payments                          Payment[]
   orderLineItems                    OrderLineItem[]
   fulfillments                      Fulfillment[]
 }
 
 model OrderLineItem {
-  id                             String    @id @default(uuid())
+  id                             String     @id @default(uuid())
   retailerShopifyVariantId       String
   supplierShopifyVariantId       String
-  retailPricePerUnit             Decimal   @db.Decimal(10, 2)
-  amountPayablePerUnit           Decimal   @db.Decimal(10, 2) // retrieve the supplier agreed upon profit
+  retailPricePerUnit             Decimal    @db.Decimal(10, 2)
+  amountPayablePerUnit           Decimal    @db.Decimal(10, 2) // retrieve the supplier agreed upon profit
   shopifyRetailerOrderLineItemId String
   shopifySupplierOrderLineItemId String
   quantity                       Int
-  quantityFulfilled              Int       @default(0)
-  quantityPaid                   Int       @default(0)
-  quantityCancelled              Int       @default(0)
+  quantityFulfilled              Int        @default(0)
+  quantityPaid                   Int        @default(0)
+  quantityCancelled              Int        @default(0)
   orderId                        String
-  priceListId                    String
-  order                          Order     @relation(fields: [orderId], references: [id])
-  priceList                      PriceList @relation(fields: [priceListId], references: [id])
+  priceListId                    String?
+  order                          Order      @relation(fields: [orderId], references: [id])
+  priceList                      PriceList? @relation(fields: [priceListId], references: [id], onDelete: SetNull)
 }
 
 model Fulfillment {
@@ -309,7 +309,7 @@ model StripeConnectAccount {
   id              String   @id @default(uuid())
   stripeAccountId String   @unique
   supplierId      String   @unique
-  session         Session  @relation(fields: [supplierId], references: [id])
+  session         Session  @relation(fields: [supplierId], references: [id], onDelete: Cascade)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
@@ -318,7 +318,7 @@ model StripeCustomerAccount {
   id               String   @id @default(uuid())
   stripeCustomerId String   @unique
   retailerId       String   @unique
-  session          Session  @relation(fields: [retailerId], references: [id])
+  session          Session  @relation(fields: [retailerId], references: [id], onDelete: Cascade)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 }
