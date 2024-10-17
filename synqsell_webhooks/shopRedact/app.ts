@@ -28,7 +28,10 @@ export const lambdaHandler = async (event: ShopifyEvent): Promise<APIGatewayProx
         const pool = initializePool();
         client = await pool.connect();
         const session = await getSession(shop, client);
-        await Promise.all([deleteDataFromShopify(session, client), deleteAllDataFromDb(session.id, client)]);
+
+        // TODO: Add impl to remove Stripe Connect / Stripe Payments
+        await deleteDataFromShopify(session, client);
+        await deleteAllDataFromDb(session.id, client);
         return {
             statusCode: 200,
             body: JSON.stringify({
