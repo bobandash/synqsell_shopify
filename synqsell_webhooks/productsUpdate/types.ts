@@ -1,3 +1,5 @@
+import { ProductStatus } from './types/admin.types';
+
 export type EditedVariant = {
     shopifyVariantId: string;
     hasUpdatedInventory: boolean;
@@ -47,7 +49,7 @@ export type ShopifyEvent = {
             title: string;
             updated_at: string;
             vendor: string;
-            status: string;
+            status: ProductStatus;
             published_scope: string;
             tags: string;
             variants: {

@@ -4,9 +4,10 @@ import { initializePool } from './db';
 import { composeGid } from '@shopify/admin-graphql-api-utilities';
 import { broadcastSupplierProductModifications, revertRetailerProductModifications } from './helper';
 import { ShopifyEvent } from './types';
-// Command to debug deleteProducts locally
-// sam local invoke DeleteProductsLambda --event ./deleteProducts/app_event.json
 
+// ==============================================================================================================
+// START: HELPER FUNCTIONS TO REACTIVATING PRODUCTS
+// ==============================================================================================================
 async function isRetailerProduct(shopifyProductId: string, client: PoolClient) {
     const productQuery = `SELECT FROM "ImportedProduct" WHERE "shopifyProductId" = $1 LIMIT 1`;
     const res = await client.query(productQuery, [shopifyProductId]);
@@ -50,16 +51,16 @@ export const lambdaHandler = async (event: ShopifyEvent): Promise<APIGatewayProx
         // even though it consumes GraphQL resources, we are going to broadcast the price changes
         const newProductStatus = payload.status;
         const editedVariants = payload.variants.map((variant) => ({
-                shopifyVariantId: composeGid('ProductVariant', variant.id),
-                hasUpdatedInventory: variant.inventory_quantity !== variant.old_inventory_quantity,
-                newInventory: variant.inventory_quantity,
-                price: variant.price,
+            shopifyVariantId: composeGid('ProductVariant', variant.id),
+            hasUpdatedInventory: variant.inventory_quantity !== variant.old_inventory_quantity,
+            newInventory: variant.inventory_quantity,
+            price: variant.price,
         }));
 
         if (isSupplierProductResult) {
             await broadcastSupplierProductModifications(editedVariants, newProductStatus, shopifyProductId, client);
         } else if (isRetailerProductResult) {
-            await revertRetailerProductModifications(editedVariants, newProductStatus, shopifyProductId, client);
+            await revertRetailerProductModifications(editedVariants, shopifyProductId, newProductStatus, client);
         }
 
         return {
