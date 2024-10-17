@@ -18,6 +18,15 @@ export const PRODUCT_VARIANT_INFO = `#graphql
   }
 `;
 
+export const GET_PRODUCT_STATUS = `#graphql 
+  query ProductStatus($id: ID!){
+    product(id: $id){
+      id
+      status
+    }
+  }
+`;
+
 export const UPDATE_PRODUCT_MUTATION = `#graphql
   mutation UpdateProduct($input: ProductInput!) {
     productUpdate(input: $input) {

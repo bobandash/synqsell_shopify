@@ -3,11 +3,12 @@ import { EditedVariant, Session } from '../types';
 import { createMapToRestObj, fetchAndValidateGraphQLData, mutateAndValidateGraphQLData } from '../util';
 import {
     ADJUST_INVENTORY_MUTATION,
+    GET_PRODUCT_STATUS,
     PRODUCT_VARIANT_BULK_UPDATE_PRICE,
     PRODUCT_VARIANT_INFO,
     UPDATE_PRODUCT_MUTATION,
 } from '../graphql';
-import { ProductVariantInfoQuery, UpdateProductMutation } from '../types/admin.generated';
+import { ProductStatusQuery, ProductVariantInfoQuery, UpdateProductMutation } from '../types/admin.generated';
 import { ProductStatus } from '../types/admin.types';
 
 type RetailerAndSupplierVariantId = {
@@ -309,8 +310,6 @@ async function mutateRetailerVariantsToMatchSupplier(
     }
 }
 
-// end functions to revert product variant modifications on shopify
-
 async function revertProductVariants(
     retailerShopifyProductId: string,
     retailerEditedVariants: EditedVariant[],
@@ -351,8 +350,95 @@ async function revertProductVariants(
     }
 }
 // end functions to revert product variants to supplier variant
+
+// start functions to revert product status to supplier product status
+async function getSupplierShopifyProductId(retailerShopifyProductId: string, client: PoolClient) {
+    try {
+        const query = `
+            SELECT 
+                "Product"."shopifyProductId" 
+            FROM "ImportedProduct"
+            INNER JOIN "Product" ON "Product"."id" = "ImportedProduct"."prismaProductId"
+            WHERE "ImportedProduct"."shopifyProductId" = $1
+        `;
+        const res = await client.query(query, [retailerShopifyProductId]);
+        if (res.rows.length === 0) {
+            throw new Error(
+                `No supplier shopify product id exists for retailerShopifyProductId ${retailerShopifyProductId}.`,
+            );
+        }
+        return res.rows[0] as string;
+    } catch (error) {
+        console.error(error);
+        throw new Error(
+            `Failed to get supplier shopify product id from retailerShopifyProductId ${retailerShopifyProductId}.`,
+        );
+    }
+}
+
+async function getSupplierProductStatus(supplierShopifyProductId: string, supplierSession: Session) {
+    const res = await fetchAndValidateGraphQLData<ProductStatusQuery>(
+        supplierSession.shop,
+        supplierSession.accessToken,
+        GET_PRODUCT_STATUS,
+        {
+            id: supplierShopifyProductId,
+        },
+    );
+
+    const productStatus = res.product?.status;
+    if (!productStatus) {
+        throw new Error(`Product ${supplierShopifyProductId} does not have a product status.`);
+    }
+    return productStatus;
+}
+
+async function mutateRetailerProductStatusShopify(
+    retailerShopifyProductId: string,
+    supplierProductStatus: ProductStatus,
+    retailerSession: Session,
+) {
+    await mutateAndValidateGraphQLData<UpdateProductMutation>(
+        retailerSession.shop,
+        retailerSession.accessToken,
+        UPDATE_PRODUCT_MUTATION,
+        {
+            input: {
+                id: retailerShopifyProductId,
+                status: supplierProductStatus,
+            },
+        },
+        `Failed to update ${retailerShopifyProductId} to product status ${supplierProductStatus}.`,
+    );
+}
+
+async function revertProductStatus(
+    retailerShopifyProductId: string,
+    retailerProductStatus: ProductStatus,
+    retailerSession: Session,
+    supplierSession: Session,
+    client: PoolClient,
+) {
+    try {
+        const supplierShopifyProductId = await getSupplierShopifyProductId(retailerShopifyProductId, client);
+        const supplierProductStatus = await getSupplierProductStatus(supplierShopifyProductId, supplierSession);
+        if (supplierProductStatus === retailerProductStatus) {
+            return;
+        }
+        await mutateRetailerProductStatusShopify(retailerShopifyProductId, supplierProductStatus, retailerSession);
+    } catch (error) {
+        console.error(error);
+        throw new Error(
+            `Failed to revert product status for retailerShopifyProductId ${retailerShopifyProductId} and retailerSessionId ${retailerSession.id}.`,
+        );
+    }
+}
+
+// end functions to revert product status to supplier product status
+
 async function revertRetailerProductToSupplierProduct(
-    retailerShopifyId: string,
+    retailerShopifyProductId: string,
+    retailerProductStatus: ProductStatus,
     editedVariants: EditedVariant[],
     retailerSession: Session,
     supplierSession: Session,
@@ -362,7 +448,8 @@ async function revertRetailerProductToSupplierProduct(
     // product variants - which related to inventory and price
     // product status - which is the status of the product (active, archived, or draft)
     await Promise.all([
-        revertProductVariants(retailerShopifyId, editedVariants, retailerSession, supplierSession, client),
+        revertProductVariants(retailerShopifyProductId, editedVariants, retailerSession, supplierSession, client),
+        revertProductStatus(retailerShopifyProductId, retailerProductStatus, retailerSession, supplierSession, client),
     ]);
 }
 
@@ -374,7 +461,7 @@ async function revertRetailerProductToSupplierProduct(
 async function revertRetailerProductModifications(
     retailerShopifyProductId: string,
     retailerEditedVariants: EditedVariant[],
-    newProductStatus: ProductStatus,
+    retailerProductStatus: ProductStatus,
     client: PoolClient,
 ) {
     try {
@@ -384,13 +471,14 @@ async function revertRetailerProductModifications(
         ]);
 
         // case: supplier uninstalled the application but product is in the retailer's shop, and retailer changed the product status
-        if (supplierSession.isAppUninstalled && newProductStatus !== ProductStatus.Archived) {
+        if (supplierSession.isAppUninstalled && retailerProductStatus !== ProductStatus.Archived) {
             await changeRetailerProductStatusArchived(retailerSession, retailerShopifyProductId);
             return;
         }
 
         await revertRetailerProductToSupplierProduct(
             retailerShopifyProductId,
+            retailerProductStatus,
             retailerEditedVariants,
             retailerSession,
             supplierSession,

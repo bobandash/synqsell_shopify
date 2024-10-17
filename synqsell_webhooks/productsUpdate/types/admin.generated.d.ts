@@ -18,6 +18,13 @@ export type ProductVariantInfoQueryVariables = AdminTypes.Exact<{
 
 export type ProductVariantInfoQuery = { productVariant?: AdminTypes.Maybe<Pick<AdminTypes.ProductVariant, 'id' | 'price' | 'inventoryQuantity'>> };
 
+export type ProductStatusQueryVariables = AdminTypes.Exact<{
+  id: AdminTypes.Scalars['ID']['input'];
+}>;
+
+
+export type ProductStatusQuery = { product?: AdminTypes.Maybe<Pick<AdminTypes.Product, 'id' | 'status'>> };
+
 export type UpdateProductMutationVariables = AdminTypes.Exact<{
   input: AdminTypes.ProductInput;
 }>;
@@ -37,6 +44,7 @@ export type InventorySetQuantitiesMutation = { inventorySetQuantities?: AdminTyp
 
 interface GeneratedQueryTypes {
   "#graphql\n  query ProductVariantInfo($id: ID!) {\n    productVariant(id: $id) {\n      id\n      price\n      inventoryQuantity\n    }\n  }\n": {return: ProductVariantInfoQuery, variables: ProductVariantInfoQueryVariables},
+  "#graphql \n  query ProductStatus($id: ID!){\n    product(id: $id){\n      id\n      status\n    }\n  }\n": {return: ProductStatusQuery, variables: ProductStatusQueryVariables},
 }
 
 interface GeneratedMutationTypes {
