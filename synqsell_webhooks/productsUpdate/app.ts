@@ -3,7 +3,7 @@ import { PoolClient } from 'pg';
 import { initializePool } from './db';
 import { composeGid } from '@shopify/admin-graphql-api-utilities';
 import { broadcastSupplierProductModifications, revertRetailerProductModifications } from './helper';
-import { ShopifyEvent } from './types';
+import { ProductStatus, ShopifyEvent } from './types';
 
 // ==============================================================================================================
 // START: HELPER FUNCTIONS TO REACTIVATING PRODUCTS
@@ -49,7 +49,7 @@ export const lambdaHandler = async (event: ShopifyEvent): Promise<APIGatewayProx
 
         // there is no old price, so we cannot check if the variant price has been updated
         // even though it consumes GraphQL resources, we are going to broadcast the price changes
-        const newProductStatus = payload.status;
+        const newProductStatus = payload.status.toUpperCase() as ProductStatus;
         const editedVariants = payload.variants.map((variant) => ({
             shopifyVariantId: composeGid('ProductVariant', variant.id),
             hasUpdatedInventory: variant.inventory_quantity !== variant.old_inventory_quantity,

@@ -49,7 +49,7 @@ export type ShopifyEvent = {
             title: string;
             updated_at: string;
             vendor: string;
-            status: ProductStatus;
+            status: string;
             published_scope: string;
             tags: string;
             variants: {
