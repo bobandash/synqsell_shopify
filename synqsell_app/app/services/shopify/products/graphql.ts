@@ -130,7 +130,7 @@ export const GET_PRODUCT_STATUS = `#graphql
   query ProductStatus($id: ID!){
     product(id: $id){
       id
-      statuses
+      status
     }
   }
 `;
