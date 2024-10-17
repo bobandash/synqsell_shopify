@@ -1,3 +1,5 @@
+import { ROLES } from './constants';
+
 export type ShopifyEvent = {
     version: string;
     id: string;
@@ -94,12 +96,6 @@ export type Session = {
     emailVerified?: boolean;
     storefrontAccessToken?: string;
     isAppUninstalled: boolean;
-};
-
-export const ROLES = {
-    RETAILER: 'retailer',
-    SUPPLIER: 'supplier',
-    ADMIN: 'admin',
 };
 
 export type RolesOptionsProps = (typeof ROLES)[keyof typeof ROLES];
