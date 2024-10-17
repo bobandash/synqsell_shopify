@@ -302,7 +302,7 @@ export async function handleAppReinstalled(sessionId: string) {
     if (isSupplier) {
       await handleReinstateAllRetailerProductsForSupplier(session);
     }
-    // handle this last
+    // handle this last in db to denote operation was successful
     await updateStoreStatus(sessionId, true);
   } catch (error) {
     throw errorHandler(

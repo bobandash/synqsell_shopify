@@ -1,3 +1,13 @@
-export const PAYMENT_STATUS = {
+
+export const ORDER_PAYMENT_STATUS = {
     INITIATED: 'INITIATED',
-};
+    INCOMPLETE: 'INCOMPLETE',
+    PARTIALLY_PAID: 'PARTIALLY_PAID',
+    PAID: 'PAID',
+    CANCELLED: 'CANCELLED',
+} as const;
+
+export const ROLES = {
+    RETAILER: 'RETAILER',
+    SUPPLIER: 'SUPPLIER',
+} as const;

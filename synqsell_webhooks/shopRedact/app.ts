@@ -2,7 +2,7 @@ import { APIGatewayProxyResult } from 'aws-lambda';
 import { PoolClient } from 'pg';
 import { initializePool } from './db';
 import { Session, ShopifyEvent } from './types';
-import { deleteDataFromDb, deleteDataFromShopify } from './helper';
+import { deleteAllDataFromDb, deleteDataFromShopify } from './helper';
 
 // this webhook will run 48 hours after the store uninstalls the application
 // meant to delete all the data from the database and retailer imported product data
@@ -30,19 +30,19 @@ export const lambdaHandler = async (event: ShopifyEvent): Promise<APIGatewayProx
         const pool = initializePool();
         client = await pool.connect();
         const session = await getSession(shop, client);
-        await Promise.all([deleteDataFromShopify(session), deleteDataFromDb(session)]);
-
+        await Promise.all([deleteDataFromShopify(session, client), deleteAllDataFromDb(session.id, client)]);
         return {
             statusCode: 200,
             body: JSON.stringify({
-                message: 'Successfully did procedure.',
+                message: `Successfully deleted all data related to ${shop}.`,
             }),
         };
     } catch (error) {
+        console.error(error);
         return {
             statusCode: 500,
             body: JSON.stringify({
-                message: 'Could not delete products.',
+                message: `Could not permanently delete all data related to ${shop}.`,
                 error: (error as Error).message,
             }),
         };

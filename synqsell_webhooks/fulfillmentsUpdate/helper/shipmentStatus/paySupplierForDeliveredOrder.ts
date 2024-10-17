@@ -5,7 +5,7 @@ import { Payload, Session } from '../../types';
 import { getStripe } from '../../stripe';
 import createMapIdToRestObj from '../../util/createMapToRestObj';
 import { uuid } from 'uuidv4';
-import { PAYMENT_STATUS } from '../../constants';
+import { ORDER_PAYMENT_STATUS } from '../../constants';
 
 type SupplierOrderLineItem = {
     shopifySupplierOrderLineItemId: string;
@@ -352,7 +352,7 @@ async function createPaymentInDatabase(
             uuid(),
             dbOrderId,
             stripeEventId,
-            PAYMENT_STATUS.INITIATED,
+            ORDER_PAYMENT_STATUS.INITIATED,
             orderPaid,
             shippingPaid,
             totalPaid,

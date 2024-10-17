@@ -35,7 +35,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     } = await authenticate.admin(request);
     // for initializing the application with required data to run the app
     const session = await getSession(sessionId);
-
     if (session.isAppUninstalled) {
       await handleAppReinstalled(sessionId);
     }

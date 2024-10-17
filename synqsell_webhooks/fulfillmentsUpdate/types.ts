@@ -1,3 +1,5 @@
+import { ORDER_PAYMENT_STATUS, ROLES } from "./constants";
+
 export type ShopifyEvent = {
     version: string;
     id: string;
@@ -122,17 +124,6 @@ export type Session = {
     emailVerified?: boolean;
 };
 
-export const ORDER_PAYMENT_STATUS = {
-    INCOMPLETE: 'INCOMPLETE',
-    PARTIALLY_PAID: 'PARTIALLY_PAID',
-    PAID: 'PAID',
-    CANCELLED: 'CANCELLED',
-} as const;
-
-export const ROLES = {
-    RETAILER: 'RETAILER',
-    SUPPLIER: 'SUPPLIER',
-} as const;
 
 export type FulfillmentDetail = {
     id: string;

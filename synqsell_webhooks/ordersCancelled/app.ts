@@ -6,13 +6,18 @@ import { refundRetailerOrder } from './helper';
 import { ORDER_PAYMENT_STATUS } from './constants';
 
 async function getSession(shop: string, client: PoolClient) {
-    const sessionQuery = `SELECT * FROM "Session" WHERE shop = $1 LIMIT 1`;
-    const sessionData = await client.query(sessionQuery, [shop]);
-    if (sessionData.rows.length === 0) {
-        throw new Error('Shop data is invalid.');
+    try {
+        const query = `SELECT * FROM "Session" WHERE shop = $1 LIMIT 1`;
+        const sessionData = await client.query(query, [shop]);
+        if (sessionData.rows.length === 0) {
+            throw new Error('Shop data is invalid.');
+        }
+        const session = sessionData.rows[0];
+        return session as Session;
+    } catch (error) {
+        console.error(error);
+        throw new Error(`Failed to retrieve session from shop ${shop}.`);
     }
-    const session = sessionData.rows[0];
-    return session as Session;
 }
 
 // TODO: I have to store the retailer's order id and handle the retailer cancelling the order as well

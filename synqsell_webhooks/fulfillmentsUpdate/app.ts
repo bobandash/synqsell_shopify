@@ -1,9 +1,10 @@
 import { APIGatewayProxyResult } from 'aws-lambda';
 import { PoolClient } from 'pg';
 import { initializePool } from './db';
-import { ROLES, RolesProps, ShopifyEvent } from './types';
+import {  RolesProps, ShopifyEvent } from './types';
 import { handleFulfillmentUpdate, handleShipmentStatusUpdate } from './helper';
 import { composeGid } from '@shopify/admin-graphql-api-utilities';
+import { ROLES } from './constants';
 
 // This function listens to when the fulfillment ever updates
 // fulfillment includes: fulfillment / tracking number being cancelled and shipment status changing

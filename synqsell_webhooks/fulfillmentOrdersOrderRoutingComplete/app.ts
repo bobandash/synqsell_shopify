@@ -9,13 +9,18 @@ import { FulfillmentOrderDeliveryMethodQuery } from './types/admin.generated';
 import { GET_FULFILLMENT_ORDER_DELIVERY_SERVICE_CODE } from './graphql';
 
 async function getSession(shop: string, client: PoolClient) {
-    const sessionQuery = `SELECT * FROM "Session" WHERE shop = $1 LIMIT 1`;
-    const sessionData = await client.query(sessionQuery, [shop]);
-    if (sessionData.rows.length === 0) {
-        throw new Error('Shop data is invalid.');
+    try {
+        const query = `SELECT * FROM "Session" WHERE shop = $1 LIMIT 1`;
+        const sessionData = await client.query(query, [shop]);
+        if (sessionData.rows.length === 0) {
+            throw new Error('Shop data is invalid.');
+        }
+        const session = sessionData.rows[0];
+        return session as Session;
+    } catch (error) {
+        console.error(error);
+        throw new Error(`Failed to retrieve session from shop ${shop}.`);
     }
-    const session = sessionData.rows[0];
-    return session;
 }
 
 // The service code gives the delivery method the customer chose, please refer to deliveryCarrierService for full explanation

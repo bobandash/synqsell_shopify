@@ -70,12 +70,13 @@ Status: Final stages. Preparing for submission on Shopify's App Store.
 10/13/2024
 Here are a list of features that are still needed before the application can be submitted for review
 
-- Subscribe to Shopify's Privacy Webhook Topics
+- (DONE) Subscribe to Shopify's Privacy Webhook Topics
 - Use Stripe's webhook topics to ensure that the retailer has a valid payment method set up at all times
 - Create all relevant assets and bullet points for the Shopify app store
 - Add sales generated section for price list index table
 - Handle the app/uninstalled webhook for suppliers and retailers
 - Add ALB and EC2 to deploy web/application server
+- Decide the retry strategy to adopt when interacting with Shopify's external API (thinking about retry mechanism w/ exponential backoff, but seeing if there are other approaches before implement)
 - One final check to verify all API endpoints, webhooks, and application code work as intended
 
 Here are the nice to have features:
@@ -84,6 +85,7 @@ Here are the nice to have features:
 - Currency conversion for retailers and suppliers in different countries
 - Handle refunds for when a supplier or retailer refunds an order
 - If a supplier changes tracking details after 7 days, it should not affect the retailer's price list
+- Refactor the Lambda functions to use layers for shared functions (DRY principle)
 - Talk to users: need to see whether or not suppliers would want methods of increasing sales that the retailers can use (e.g. injecting Shopify liquid to theme to do a countdown for product launches)
 
 <!-- TODO: INSERT SCREENSHOT OF PENDING APPROVAL STATUS ONCE SUBMITTED -->

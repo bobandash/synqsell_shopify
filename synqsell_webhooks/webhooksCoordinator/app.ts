@@ -41,7 +41,7 @@ export const lambdaHandler = async (event: Event) => {
                 case 'app/uninstalled':
                     return invokeLambda('app_uninstalled', shopifyEvent);
                 case 'shop/redact':
-                    break;
+                    return invokeLambda('shop_redact', shopifyEvent);
                 // we do not store any customers' data, so we can return a 200 request for these
                 case 'customers/data_request':
                     return invokeLambda('customers_data_request', shopifyEvent);
