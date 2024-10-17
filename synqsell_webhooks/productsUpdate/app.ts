@@ -41,26 +41,25 @@ export const lambdaHandler = async (event: ShopifyEvent): Promise<APIGatewayProx
             return {
                 statusCode: 200,
                 body: JSON.stringify({
-                    message: 'Do not need to handle logic for products not in Synqsell.',
+                    message: 'We do not need to handle logic for products not in Synqsell.',
                 }),
             };
         }
 
         // there is no old price, so we cannot check if the variant price has been updated
         // even though it consumes GraphQL resources, we are going to broadcast the price changes
-        const editedVariants = payload.variants.map((variant) => {
-            return {
+        const newProductStatus = payload.status;
+        const editedVariants = payload.variants.map((variant) => ({
                 shopifyVariantId: composeGid('ProductVariant', variant.id),
                 hasUpdatedInventory: variant.inventory_quantity !== variant.old_inventory_quantity,
                 newInventory: variant.inventory_quantity,
                 price: variant.price,
-            };
-        });
+        }));
 
         if (isSupplierProductResult) {
-            await broadcastSupplierProductModifications(editedVariants, shopifyProductId, client);
+            await broadcastSupplierProductModifications(editedVariants, newProductStatus, shopifyProductId, client);
         } else if (isRetailerProductResult) {
-            await revertRetailerProductModifications(editedVariants, shopifyProductId, client);
+            await revertRetailerProductModifications(editedVariants, newProductStatus, shopifyProductId, client);
         }
 
         return {

@@ -18,6 +18,20 @@ export const PRODUCT_VARIANT_INFO = `#graphql
   }
 `;
 
+export const UPDATE_PRODUCT_MUTATION = `#graphql
+  mutation UpdateProduct($input: ProductInput!) {
+    productUpdate(input: $input) {
+      product {
+        id
+      }
+      userErrors {
+        field
+        message
+      }
+    }
+  }
+`;
+
 export const ADJUST_INVENTORY_MUTATION = `#graphql 
   mutation inventorySetQuantities($input: InventorySetQuantitiesInput!) {
     inventorySetQuantities(input: $input) {

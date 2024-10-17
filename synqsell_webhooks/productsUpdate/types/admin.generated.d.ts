@@ -18,6 +18,13 @@ export type ProductVariantInfoQueryVariables = AdminTypes.Exact<{
 
 export type ProductVariantInfoQuery = { productVariant?: AdminTypes.Maybe<Pick<AdminTypes.ProductVariant, 'id' | 'price' | 'inventoryQuantity'>> };
 
+export type UpdateProductMutationVariables = AdminTypes.Exact<{
+  input: AdminTypes.ProductInput;
+}>;
+
+
+export type UpdateProductMutation = { productUpdate?: AdminTypes.Maybe<{ product?: AdminTypes.Maybe<Pick<AdminTypes.Product, 'id'>>, userErrors: Array<Pick<AdminTypes.UserError, 'field' | 'message'>> }> };
+
 export type InventorySetQuantitiesMutationVariables = AdminTypes.Exact<{
   input: AdminTypes.InventorySetQuantitiesInput;
 }>;
@@ -34,6 +41,7 @@ interface GeneratedQueryTypes {
 
 interface GeneratedMutationTypes {
   "#graphql\n  mutation productVariantsBulkUpdate($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {\n    productVariantsBulkUpdate(productId: $productId, variants: $variants) {\n      product {\n        id\n      }\n    }\n  }\n": {return: ProductVariantsBulkUpdateMutation, variables: ProductVariantsBulkUpdateMutationVariables},
+  "#graphql\n  mutation UpdateProduct($input: ProductInput!) {\n    productUpdate(input: $input) {\n      product {\n        id\n      }\n      userErrors {\n        field\n        message\n      }\n    }\n  }\n": {return: UpdateProductMutation, variables: UpdateProductMutationVariables},
   "#graphql \n  mutation inventorySetQuantities($input: InventorySetQuantitiesInput!) {\n    inventorySetQuantities(input: $input) {\n      inventoryAdjustmentGroup {\n        reason\n        referenceDocumentUri\n        changes {\n          name\n          delta\n          quantityAfterChange\n        }\n      }\n      userErrors {\n        code\n        field\n        message\n      }\n    }\n  }\n": {return: InventorySetQuantitiesMutation, variables: InventorySetQuantitiesMutationVariables},
 }
 declare module '@shopify/admin-api-client' {
