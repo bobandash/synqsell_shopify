@@ -124,6 +124,14 @@ async function getPrismaUnformattedRetailerInfo({
         id: {
           not: sessionId,
         },
+        isAppUninstalled: {
+          not: true,
+        },
+        stripeCustomerAccount: {
+          stripeCustomerId: {
+            not: undefined,
+          },
+        },
         roles: {
           some: {
             name: ROLES.RETAILER,

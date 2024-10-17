@@ -114,8 +114,6 @@ async function getPrismaUnformattedSupplierInfo({
   cursor,
 }: GetPrismaUnformattedSupplierInfo) {
   try {
-    // the only suppliers that should show up are suppliers with a general price list and at least one product in the price list
-    // NOTE: this takes one more than usual in order to check if has more
     const data = await db.session.findMany({
       take: isReverseDirection ? -1 * take : take + 1,
       ...(cursor && { cursor: { id: cursor } }),
@@ -123,6 +121,14 @@ async function getPrismaUnformattedSupplierInfo({
       where: {
         id: {
           not: sessionId,
+        },
+        stripeConnectAccount: {
+          stripeAccountId: {
+            not: undefined,
+          },
+        },
+        isAppUninstalled: {
+          not: true,
         },
         roles: {
           some: {

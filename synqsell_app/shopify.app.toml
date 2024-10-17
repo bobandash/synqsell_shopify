@@ -3,7 +3,7 @@
 client_id = "2c3db0b06834a9b20de60ef4b15c8228"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://methodology-peace-guides-harbor.trycloudflare.com"
+application_url = "https://kirk-third-evaluating-duo.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read_assigned_fulfillment_orders,read_customers,read_inventory,read_lo
 
 [auth]
 redirect_urls = [
-  "https://methodology-peace-guides-harbor.trycloudflare.com/auth/callback",
-  "https://methodology-peace-guides-harbor.trycloudflare.com/auth/shopify/callback",
-  "https://methodology-peace-guides-harbor.trycloudflare.com/api/auth/callback"
+  "https://kirk-third-evaluating-duo.trycloudflare.com/auth/callback",
+  "https://kirk-third-evaluating-duo.trycloudflare.com/auth/shopify/callback",
+  "https://kirk-third-evaluating-duo.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]

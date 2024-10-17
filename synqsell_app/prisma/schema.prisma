@@ -8,40 +8,40 @@ datasource db {
 }
 
 model Session {
-  id                           String                  @id
+  id                           String                 @id
   shop                         String
   state                        String
-  isOnline                     Boolean                 @default(false)
+  isOnline                     Boolean                @default(false)
   scope                        String?
-  expires                      DateTime?               @db.Timestamp(6)
+  expires                      DateTime?              @db.Timestamp(6)
   accessToken                  String
   userId                       BigInt?
   firstName                    String?
   lastName                     String?
   email                        String?
-  accountOwner                 Boolean                 @default(false)
+  accountOwner                 Boolean                @default(false)
   locale                       String?
-  collaborator                 Boolean?                @default(false)
-  emailVerified                Boolean?                @default(false)
+  collaborator                 Boolean?               @default(false)
+  emailVerified                Boolean?               @default(false)
   storefrontAccessToken        String?
-  isAppUninstalled             Boolean                 @default(false)
+  isAppUninstalled             Boolean                @default(false)
   carrierService               CarrierService?
   checklistStatuses            ChecklistStatus[]
   fulfillmentService           FulfillmentService?
   importedProducts             ImportedProduct[]
-  retailerPartnerships         Partnership[]           @relation("RetailerPartnership")
-  supplierPartnerships         Partnership[]           @relation("SupplierPartnership")
-  recipientPartnershipRequests PartnershipRequest[]    @relation("RecipientPartnershipRequest")
-  senderPartnershipRequests    PartnershipRequest[]    @relation("SenderPartnershipRequest")
+  retailerPartnerships         Partnership[]          @relation("RetailerPartnership")
+  supplierPartnerships         Partnership[]          @relation("SupplierPartnership")
+  recipientPartnershipRequests PartnershipRequest[]   @relation("RecipientPartnershipRequest")
+  senderPartnershipRequests    PartnershipRequest[]   @relation("SenderPartnershipRequest")
   priceLists                   PriceList[]
   roles                        Role[]
   supplierAccessRequest        SupplierAccessRequest?
   userPreference               UserPreference?
   userProfile                  UserProfile?
-  retailerOrders               Order[]                 @relation("RetailerOrder")
-  supplierOrders               Order[]                 @relation("SupplierOrder")
-  stripeAccount                StripeConnectAccount?
-  StripeCustomerAccount        StripeCustomerAccount[]
+  retailerOrders               Order[]                @relation("RetailerOrder")
+  supplierOrders               Order[]                @relation("SupplierOrder")
+  stripeConnectAccount         StripeConnectAccount?
+  stripeCustomerAccount        StripeCustomerAccount?
 }
 
 model FulfillmentService {
