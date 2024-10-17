@@ -58,7 +58,7 @@ export const lambdaHandler = async (event: ShopifyEvent): Promise<APIGatewayProx
         }));
 
         if (isSupplierProductResult) {
-            await broadcastSupplierProductModifications(editedVariants, newProductStatus, shopifyProductId, client);
+            await broadcastSupplierProductModifications(editedVariants, shopifyProductId, newProductStatus, client);
         } else if (isRetailerProductResult) {
             await revertRetailerProductModifications(shopifyProductId, editedVariants, newProductStatus, client);
         }
