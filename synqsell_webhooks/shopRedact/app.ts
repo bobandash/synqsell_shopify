@@ -4,9 +4,6 @@ import { initializePool } from './db';
 import { Session, ShopifyEvent } from './types';
 import { deleteAllDataFromDb, deleteDataFromShopify } from './helper';
 
-// this webhook will run 48 hours after the store uninstalls the application
-// meant to delete all the data from the database and retailer imported product data
-
 async function getSession(shop: string, client: PoolClient) {
     try {
         const query = `SELECT * FROM "Session" WHERE shop = $1 LIMIT 1`;
@@ -22,9 +19,10 @@ async function getSession(shop: string, client: PoolClient) {
     }
 }
 
+// this webhook will run 48 hours after the store uninstalls the application
+// meant to delete all the data from the database and retailer imported product data
 export const lambdaHandler = async (event: ShopifyEvent): Promise<APIGatewayProxyResult> => {
     let client: null | PoolClient = null;
-
     const shop = event.detail.metadata['X-Shopify-Shop-Domain'];
     try {
         const pool = initializePool();
