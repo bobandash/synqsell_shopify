@@ -1,11 +1,12 @@
 import { PoolClient } from 'pg';
 import { EditedVariant, PriceListDetails } from '../types';
 import { createMapToRestObj, mutateAndValidateGraphQLData } from '../util';
-import { ADJUST_INVENTORY_MUTATION, PRODUCT_VARIANT_BULK_UPDATE_PRICE } from '../graphql';
-import { InventorySetQuantitiesMutation } from '../types/admin.generated';
+import { ADJUST_INVENTORY_MUTATION, PRODUCT_VARIANT_BULK_UPDATE_PRICE, UPDATE_PRODUCT_MUTATION } from '../graphql';
+import { InventorySetQuantitiesMutation, UpdateProductMutation } from '../types/admin.generated';
 import { getPricingDetails } from './util';
+import { ProductStatus } from '../types/admin.types';
 
-type QueryData = {
+type ImportedRetailerData = {
     retailerShopifyProductId: string;
     retailerAccessToken: string;
     retailerShop: string;
@@ -30,6 +31,10 @@ type GroupedQueryDataWithUpdateFields = Map<
     }
 >;
 
+// TODO: I should refactor this in future, but it's not urgent
+// ==============================================================================================================
+// START: HELPER FUNCTIONS TO BROADCAST CHANGES TO PRODUCT STATUS, PRODUCT VARIANT PRICE + INVENTORY TO RETAILERS
+// ==============================================================================================================
 // START: Functions related to updating prices in the database
 async function updateVariantPricesDatabase(
     editedVariants: EditedVariant[],
@@ -207,31 +212,91 @@ async function updateRetailerInventoryOnShopify(data: GroupedQueryDataWithUpdate
     await Promise.all(updateInventoryPromises);
 }
 
+// functions for updating retailer product status on Shopify
+async function updateRetailerProductStatusOnShopify(
+    data: GroupedQueryDataWithUpdateFields,
+    supplierProductStatus: ProductStatus,
+) {
+    const retailerShopifyProductIds = Array.from(data.keys());
+    await Promise.all(
+        retailerShopifyProductIds.map((retailerShopifyProductId) => {
+            const retailerData = data.get(retailerShopifyProductId);
+            if (!retailerData) {
+                return Promise.resolve(); // this is for ts
+            }
+            const { retailerAccessToken, retailerShop } = retailerData;
+            return mutateAndValidateGraphQLData<UpdateProductMutation>(
+                retailerShop,
+                retailerAccessToken,
+                UPDATE_PRODUCT_MUTATION,
+                {
+                    input: {
+                        id: retailerShopifyProductId,
+                        status: supplierProductStatus,
+                    },
+                },
+                `Could not update the product status for retailerShopifyProductId ${retailerShopifyProductId}.`,
+            );
+        }),
+    );
+}
+
 async function updateRetailerDataOnShopify(
     data: GroupedQueryDataWithUpdateFields,
     supplierShopifyProductId: string,
+    supplierProductStatus: ProductStatus,
     client: PoolClient,
 ) {
     await Promise.all([
         updateRetailerPriceOnShopify(data, supplierShopifyProductId, client),
         updateRetailerInventoryOnShopify(data),
+        updateRetailerProductStatusOnShopify(data, supplierProductStatus),
     ]);
 }
 
-function getRetailerProductData(
-    queryData: QueryData[],
-    editedVariantMap: Map<string, Omit<EditedVariant, 'shopifyVariantId'>>,
+async function getImportedRetailerData(supplierShopifyProductId: string, client: PoolClient) {
+    try {
+        const query = `
+            SELECT 
+                "ImportedProduct"."shopifyProductId" as "retailerShopifyProductId",
+                "Session"."accessToken" as "retailerAccessToken",
+                "Session"."shop" as "retailerShop",
+                "ImportedVariant"."shopifyVariantId" as "retailerShopifyVariantId",
+                "Variant"."shopifyVariantId" as "supplierShopifyVariantId",
+                "FulfillmentService"."shopifyLocationId" as "retailerShopifyLocationId",
+                "ImportedInventoryItem"."shopifyInventoryItemId" as "retailerShopifyInventoryItemId"
+            FROM "Product"
+            INNER JOIN "Variant" ON "Variant"."productId" = "Product"."id"
+            INNER JOIN "ImportedVariant" ON "ImportedVariant"."prismaVariantId" = "Variant"."id"
+            INNER JOIN "ImportedProduct" ON "ImportedProduct"."id" = "ImportedVariant"."importedProductId"
+            INNER JOIN "ImportedInventoryItem" ON "ImportedVariant"."id" = "ImportedInventoryItem"."importedVariantId"
+            INNER JOIN "Session" ON "ImportedProduct"."retailerId" = "Session"."id"
+            INNER JOIN "FulfillmentService" ON "FulfillmentService"."sessionId" = "Session"."id"
+            WHERE "Product"."shopifyProductId" = $1   
+        `;
+        const res = await client.query(query, [supplierShopifyProductId]);
+        const data: ImportedRetailerData[] = res.rows;
+        return data;
+    } catch (error) {
+        console.error(error);
+        throw new Error("failed to get imported retailer data for suppliers' edited variants.");
+    }
+}
+
+function getFormattedRetailerImportedData(
+    importedRetailerData: ImportedRetailerData[],
+    supplierEditedVariants: EditedVariant[],
 ) {
+    const supplierEditedVariantsMap = createMapToRestObj(supplierEditedVariants, 'shopifyVariantId');
     const retailerProductData: GroupedQueryDataWithUpdateFields = new Map();
-    queryData.forEach((row) => {
+    importedRetailerData.forEach((row) => {
         const prevValue = retailerProductData.get(row.retailerShopifyProductId);
-        const supplierVariantDetails = editedVariantMap.get(row.supplierShopifyVariantId);
+        const supplierVariantDetails = supplierEditedVariantsMap.get(row.supplierShopifyVariantId);
         const newRetailPrice = supplierVariantDetails?.price;
         const newInventory = supplierVariantDetails?.newInventory;
         if (newRetailPrice === undefined || newInventory === undefined) {
             throw new Error('Retail price or inventory is not defined.');
         }
-
         const prevVariants = prevValue?.variants ?? [];
         const newVariants = [
             ...prevVariants,
@@ -239,7 +304,7 @@ function getRetailerProductData(
                 retailerShopifyVariantId: row.retailerShopifyVariantId,
                 retailerShopifyInventoryItemId: row.retailerShopifyInventoryItemId,
                 retailPrice: newRetailPrice,
-                inventory: editedVariantMap.get(row.supplierShopifyVariantId)?.newInventory ?? 0,
+                inventory: supplierEditedVariantsMap.get(row.supplierShopifyVariantId)?.newInventory ?? 0,
             },
         ];
         retailerProductData.set(row.retailerShopifyProductId, {
@@ -253,41 +318,30 @@ function getRetailerProductData(
     return retailerProductData;
 }
 
-// if the supplier changes the inventory or retail price, it should be updated for all the retailers that imported the product
-// key is supplier shopify variant id, values inside map are the remaining fields
+// ==============================================================================================================
+// END: HELPER FUNCTIONS TO BROADCAST CHANGES TO PRODUCT STATUS, PRODUCT VARIANT PRICE + INVENTORY TO RETAILERS
+// ==============================================================================================================
+
 async function broadcastSupplierProductModifications(
-    editedVariants: EditedVariant[],
+    supplierEditedVariants: EditedVariant[],
     supplierShopifyProductId: string,
+    supplierProductStatus: ProductStatus,
     client: PoolClient,
 ) {
-    const editedVariantMap = createMapToRestObj(editedVariants, 'shopifyVariantId');
-    const importedVariantDataQuery = `
-        SELECT 
-            "ImportedProduct"."shopifyProductId" as "retailerShopifyProductId",
-            "Session"."accessToken" as "retailerAccessToken",
-            "Session"."shop" as "retailerShop",
-            "ImportedVariant"."shopifyVariantId" as "retailerShopifyVariantId",
-            "Variant"."shopifyVariantId" as "supplierShopifyVariantId",
-            "FulfillmentService"."shopifyLocationId" as "retailerShopifyLocationId",
-            "ImportedInventoryItem"."shopifyInventoryItemId" as "retailerShopifyInventoryItemId"
-        FROM "Product"
-        INNER JOIN "Variant" ON "Variant"."productId" = "Product"."id"
-        INNER JOIN "ImportedVariant" ON "ImportedVariant"."prismaVariantId" = "Variant"."id"
-        INNER JOIN "ImportedProduct" ON "ImportedProduct"."id" = "ImportedVariant"."importedProductId"
-        INNER JOIN "ImportedInventoryItem" ON "ImportedVariant"."id" = "ImportedInventoryItem"."importedVariantId"
-        INNER JOIN "Session" ON "ImportedProduct"."retailerId" = "Session"."id"
-        INNER JOIN "FulfillmentService" ON "FulfillmentService"."sessionId" = "Session"."id"
-        WHERE "Product"."shopifyProductId" = $1   
-    `;
-    const res = await client.query(importedVariantDataQuery, [supplierShopifyProductId]);
-    if (res.rows.length === 0) {
-        return;
-    }
-    const data: QueryData[] = res.rows;
-    const retailerProductData = getRetailerProductData(data, editedVariantMap);
+    const importedRetailerData = await getImportedRetailerData(supplierShopifyProductId, client);
+    const formattedImportedRetailerData = getFormattedRetailerImportedData(
+        importedRetailerData,
+        supplierEditedVariants,
+    );
+
     await Promise.all([
-        updateRetailerDataOnShopify(retailerProductData, supplierShopifyProductId, client),
-        updateVariantPricesDatabase(editedVariants, supplierShopifyProductId, client),
+        updateRetailerDataOnShopify(
+            formattedImportedRetailerData,
+            supplierShopifyProductId,
+            supplierProductStatus,
+            client,
+        ),
+        updateVariantPricesDatabase(supplierEditedVariants, supplierShopifyProductId, client),
     ]);
 }
 
