@@ -1,4 +1,4 @@
-import { ProductStatus } from './types/admin.types';
+import { PRODUCT_STATUS } from './constants';
 
 export type EditedVariant = {
     shopifyVariantId: string;
@@ -104,3 +104,5 @@ export type Session = {
     emailVerified?: boolean;
     isAppUninstalled: boolean;
 };
+
+type ProductStatus = (typeof PRODUCT_STATUS)[keyof typeof PRODUCT_STATUS];

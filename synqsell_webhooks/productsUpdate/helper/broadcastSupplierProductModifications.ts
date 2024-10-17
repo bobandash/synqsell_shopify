@@ -1,10 +1,9 @@
 import { PoolClient } from 'pg';
-import { EditedVariant, PriceListDetails } from '../types';
+import { EditedVariant, PriceListDetails, ProductStatus } from '../types';
 import { createMapToRestObj, mutateAndValidateGraphQLData } from '../util';
 import { ADJUST_INVENTORY_MUTATION, PRODUCT_VARIANT_BULK_UPDATE_PRICE, UPDATE_PRODUCT_MUTATION } from '../graphql';
 import { InventorySetQuantitiesMutation, UpdateProductMutation } from '../types/admin.generated';
 import { getPricingDetails } from './util';
-import { ProductStatus } from '../types/admin.types';
 
 type ImportedRetailerData = {
     retailerShopifyProductId: string;

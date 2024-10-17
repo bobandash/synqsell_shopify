@@ -1,5 +1,5 @@
 import { PoolClient } from 'pg';
-import { EditedVariant, Session } from '../types';
+import { EditedVariant, ProductStatus, Session } from '../types';
 import { createMapToRestObj, fetchAndValidateGraphQLData, mutateAndValidateGraphQLData } from '../util';
 import {
     ADJUST_INVENTORY_MUTATION,
@@ -9,7 +9,7 @@ import {
     UPDATE_PRODUCT_MUTATION,
 } from '../graphql';
 import { ProductStatusQuery, ProductVariantInfoQuery, UpdateProductMutation } from '../types/admin.generated';
-import { ProductStatus } from '../types/admin.types';
+import { PRODUCT_STATUS } from '../constants';
 
 type RetailerAndSupplierVariantId = {
     retailerShopifyVariantId: string;
@@ -91,7 +91,7 @@ async function changeRetailerProductStatusArchived(retailerSession: Session, ret
             {
                 input: {
                     id: retailerShopifyProductId,
-                    status: ProductStatus.Archived,
+                    status: PRODUCT_STATUS.ARCHIVED,
                 },
             },
             `Failed to update product status to archived for sessionId ${retailerSession.id} and retailerShopifyProductId ${retailerShopifyProductId}.`,
@@ -471,7 +471,7 @@ async function revertRetailerProductModifications(
         ]);
 
         // case: supplier uninstalled the application but product is in the retailer's shop, and retailer changed the product status
-        if (supplierSession.isAppUninstalled && retailerProductStatus !== ProductStatus.Archived) {
+        if (supplierSession.isAppUninstalled && retailerProductStatus !== PRODUCT_STATUS.ARCHIVED) {
             await changeRetailerProductStatusArchived(retailerSession, retailerShopifyProductId);
             return;
         }
