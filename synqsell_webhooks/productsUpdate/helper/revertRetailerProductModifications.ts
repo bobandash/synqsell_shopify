@@ -367,7 +367,7 @@ async function getSupplierShopifyProductId(retailerShopifyProductId: string, cli
                 `No supplier shopify product id exists for retailerShopifyProductId ${retailerShopifyProductId}.`,
             );
         }
-        return res.rows[0] as string;
+        return res.rows[0].shopifyProductId as string;
     } catch (error) {
         console.error(error);
         throw new Error(
@@ -377,20 +377,27 @@ async function getSupplierShopifyProductId(retailerShopifyProductId: string, cli
 }
 
 async function getSupplierProductStatus(supplierShopifyProductId: string, supplierSession: Session) {
-    const res = await fetchAndValidateGraphQLData<ProductStatusQuery>(
-        supplierSession.shop,
-        supplierSession.accessToken,
-        GET_PRODUCT_STATUS,
-        {
-            id: supplierShopifyProductId,
-        },
-    );
+    try {
+        const res = await fetchAndValidateGraphQLData<ProductStatusQuery>(
+            supplierSession.shop,
+            supplierSession.accessToken,
+            GET_PRODUCT_STATUS,
+            {
+                id: supplierShopifyProductId,
+            },
+        );
 
-    const productStatus = res.product?.status;
-    if (!productStatus) {
-        throw new Error(`Product ${supplierShopifyProductId} does not have a product status.`);
+        const productStatus = res.product?.status;
+        if (!productStatus) {
+            throw new Error(`Product ${supplierShopifyProductId} does not have a product status.`);
+        }
+        return productStatus;
+    } catch (error) {
+        console.error(error);
+        throw new Error(
+            `Failed to get supplier product status from supplierShopifyProductId ${supplierShopifyProductId}`,
+        );
     }
-    return productStatus;
 }
 
 async function mutateRetailerProductStatusShopify(
@@ -486,7 +493,7 @@ async function revertRetailerProductModifications(
         );
     } catch (error) {
         console.error(error);
-        throw new Error("Failed to rever retailer product modifications to supplier's product details on Shopify.");
+        throw new Error("Failed to revert retailer product modifications to supplier's product details on Shopify.");
     }
 }
 
