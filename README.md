@@ -159,17 +159,18 @@ For AWS:
    ```sh
    cd synqsell_webhooks
    ```
-2. Build the template.yaml file
+2. Navigate to the template.yaml file and you may need to change the BucketName property for the AWS::S3::Bucket resource (bucket names must be unique, and I am currently using synqsell-image-hosting for the dev environment)
+3. Build the template.yaml file
    ```sh
    sam build
    ```
-3. Deploy your cloud resources onto your AWS account with parameters relevant to the resources you created in the prerequisites step
+4. Deploy your cloud resources onto your AWS account with parameters relevant to the resources you created in the prerequisites step
    ```sh
    sam deploy --parameter-overrides BastionHostKeyName=<ParameterValue1> StripeSecretsManagerARN=<ParameterValue2> EventBusArn=<ParameterValue3> MyCidrIP=<ParameterValue4>
    ```
    - `<BastionHostKeyName>`, `<StripeSecretsManagerARN>`, `<EventBusArn>` - Generated in Prerequisites
    - `<MyCidrIP>` - Your [public IP address](https://www.whatismyip.com/) with /32 appended at the end of your public IP
-4. Important values will be outputted in the terminal after the changeset is deployed. Please record these values, which are important in setting up the local application
+5. Important values will be outputted in the terminal after the changeset is deployed. Please record these values, which are important in setting up the local application
 
 For the Shopify Application:
 
