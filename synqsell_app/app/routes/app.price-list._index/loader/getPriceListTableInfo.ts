@@ -2,7 +2,6 @@ import { errorHandler } from '~/services/util';
 import type { PriceListTableInfoProps } from '../types';
 import db from '~/db.server';
 
-// TODO: Add sales generates
 async function getPriceListTableInfo(
   sessionId: string,
 ): Promise<PriceListTableInfoProps[]> {
@@ -21,16 +20,28 @@ async function getPriceListTableInfo(
             partnerships: true,
           },
         },
+        orderLineItems: {
+          select: {
+            retailPricePerUnit: true,
+            quantity: true,
+          },
+        },
       },
     });
 
     const priceListInfoFormatted = priceListsInfo.map(
-      ({ _count, ...priceListInfo }) => {
+      ({ _count, orderLineItems, ...priceListInfo }) => {
+        const sales = orderLineItems.reduce((acc, lineItem) => {
+          const itemSales =
+            Number(lineItem.retailPricePerUnit) * lineItem.quantity;
+          return acc + itemSales;
+        }, 0);
+
         return {
           ...priceListInfo,
           numProducts: _count.products,
           numRetailers: _count.partnerships,
-          sales: 0,
+          sales,
         };
       },
     );
