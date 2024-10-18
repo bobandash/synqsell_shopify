@@ -71,9 +71,9 @@ Status: Final stages. Preparing for submission on Shopify's App Store.
 Here are a list of features that are still needed before the application can be submitted for review
 
 - (DONE) Subscribe to Shopify's Privacy Webhook Topics
+- (DONE) Add sales generated section for price list index table
 - Use Stripe's webhook topics to ensure that the retailer has a valid payment method set up at all times
 - Create all relevant assets and bullet points for the Shopify app store
-- (DONE) Add sales generated section for price list index table
 - Handle the app/uninstalled webhook for suppliers and retailers
 - Add ALB and EC2 to deploy web/application server
 - Decide the retry strategy to adopt when interacting with Shopify's external API (thinking about retry mechanism w/ exponential backoff, but seeing if there are other approaches before implement)
@@ -81,6 +81,7 @@ Here are a list of features that are still needed before the application can be 
 
 Here are the nice to have features:
 
+- (Has to be done immediately after deployment): There's no webhook Stripe calls that makes sure the payment method is not expired / is still valid, I need to set up a Cron job once a month that checks each payment method and emails the users if they need to update their payment method
 - Add skeleton loading pages to all other pages in the application (the homepage has a skeleton loading page)
 - Currency conversion for retailers and suppliers in different countries
 - Handle refunds for when a supplier or retailer refunds an order
