@@ -1,12 +1,17 @@
 import { stripe } from '~/routes/singletons';
 import { errorHandler } from '../util';
+import { getProfile } from '../models/userProfile';
 // functions related to regular stripe, to get the payment method for destination charges
 // this is for the retailer
 
-// TODO: add fields to add relevant details
-export async function createCustomer() {
+export async function createCustomer(sessionId: string) {
   try {
-    const customer = await stripe.customers.create();
+    const profile = await getProfile(sessionId);
+    const customer = await stripe.customers.create({
+      email: profile.email,
+      name: profile.name,
+      description: profile.website,
+    });
     return customer;
   } catch (error) {
     throw errorHandler(
@@ -50,23 +55,7 @@ export async function createSetupIntent(customerId: string) {
     throw errorHandler(
       error,
       'An error occurred when calling the Stripe API to create a setup intent.',
-      getClientSecret,
-    );
-  }
-}
-
-export async function hasPaymentMethod(customerId: string) {
-  try {
-    const paymentMethods = await stripe.paymentMethods.list({
-      customer: customerId,
-      type: 'card',
-    });
-    return paymentMethods.data.length > 0;
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'An error occurred when calling the Stripe API to create a setup intent.',
-      hasPaymentMethod,
+      createSetupIntent,
     );
   }
 }

@@ -128,9 +128,7 @@ async function getPrismaUnformattedRetailerInfo({
           not: true,
         },
         stripeCustomerAccount: {
-          stripeCustomerId: {
-            not: undefined,
-          },
+          hasPaymentMethod: true,
         },
         roles: {
           some: {

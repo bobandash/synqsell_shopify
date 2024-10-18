@@ -318,6 +318,7 @@ model StripeCustomerAccount {
   id               String   @id @default(uuid())
   stripeCustomerId String   @unique
   retailerId       String   @unique
+  hasPaymentMethod Boolean  @default(false)
   session          Session  @relation(fields: [retailerId], references: [id], onDelete: Cascade)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt

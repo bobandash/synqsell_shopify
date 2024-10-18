@@ -3,7 +3,7 @@
 client_id = "2c3db0b06834a9b20de60ef4b15c8228"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://worse-southwest-leone-barn.trycloudflare.com"
+application_url = "https://calculated-rome-root-steal.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read_assigned_fulfillment_orders,read_customers,read_inventory,read_lo
 
 [auth]
 redirect_urls = [
-  "https://worse-southwest-leone-barn.trycloudflare.com/auth/callback",
-  "https://worse-southwest-leone-barn.trycloudflare.com/auth/shopify/callback",
-  "https://worse-southwest-leone-barn.trycloudflare.com/api/auth/callback"
+  "https://calculated-rome-root-steal.trycloudflare.com/auth/callback",
+  "https://calculated-rome-root-steal.trycloudflare.com/auth/shopify/callback",
+  "https://calculated-rome-root-steal.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]

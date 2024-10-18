@@ -5,18 +5,23 @@ import {
   getChecklistStatus,
   markCheckListStatus,
 } from '~/services/models/checklistStatus';
+import { changePaymentMethodStatus } from '~/services/models/stripeCustomerAccount';
 import { createJSONMessage } from '~/util';
-async function finishStripePaymentsOnboarding(sessionId: string) {
+async function finishStripeCustomerOnboarding(sessionId: string) {
   const checklistItemId = (
     await getChecklistItem(CHECKLIST_ITEM_KEYS.RETAILER_ADD_PAYMENT_METHOD)
   ).id;
   const checklistStatus = await getChecklistStatus(sessionId, checklistItemId);
-  await markCheckListStatus(checklistStatus.id, true);
+
+  await Promise.all([
+    markCheckListStatus(checklistStatus.id, true),
+    changePaymentMethodStatus(sessionId, true),
+  ]);
 
   return createJSONMessage(
-    'Completed checklist item for retailer payments setup.',
+    'Finished adding payment method for stripe customer.',
     StatusCodes.OK,
   );
 }
 
-export default finishStripePaymentsOnboarding;
+export default finishStripeCustomerOnboarding;

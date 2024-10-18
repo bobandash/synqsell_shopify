@@ -23,9 +23,9 @@ import {
 } from '~/util';
 import { FETCHER_KEYS, INTENTS } from './constants';
 import {
-  beginStripePaymentsOnboarding,
+  beginStripeCustomerOnboarding,
   finishStripeConnectOnboarding,
-  finishStripePaymentsOnboarding,
+  finishStripeCustomerOnboarding,
   type BeginStripeOnboardingData,
 } from './actions';
 import { StatusCodes } from 'http-status-codes';
@@ -33,7 +33,6 @@ import { authenticate } from '~/shopify.server';
 import { useRoleContext } from '~/context/RoleProvider';
 import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
-import { getProfile } from '~/services/models/userProfile';
 import { hasRole } from '~/services/models/roles';
 import { ROLES } from '~/constants';
 import { handleStripeCustomerAccount } from './loader';
@@ -52,7 +51,7 @@ type LoaderData = {
   stripePublishableKey: string;
   hasStripeConnectAccount: boolean;
   clientSecret: string | null;
-  hasCustomerPaymentMethod: boolean;
+  hasPaymentMethod: boolean;
 };
 
 type BeginStripeOnboardingFormData = {
@@ -69,29 +68,24 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const searchParams = url.searchParams;
     const appBaseUrl = `https://${shop}/admin/apps/synqsell/`;
     const accountId = searchParams.get('accountId');
-    const [profile, isRetailer, isSupplier] = await Promise.all([
-      getProfile(sessionId),
+    const [isRetailer, isSupplier] = await Promise.all([
       hasRole(sessionId, ROLES.RETAILER),
       hasRole(sessionId, ROLES.SUPPLIER),
     ]);
-    const userCurrency = profile.currencyCode;
 
-    const [
-      { clientSecret, hasCustomerPaymentMethod },
-      { hasStripeConnectAccount },
-    ] = await Promise.all([
-      handleStripeCustomerAccount(isRetailer, sessionId),
-      handleStripeConnectAccount(isSupplier, sessionId, accountId),
-    ]);
+    const [{ clientSecret, hasPaymentMethod }, { hasStripeConnectAccount }] =
+      await Promise.all([
+        handleStripeCustomerAccount(isRetailer, sessionId),
+        handleStripeConnectAccount(isSupplier, sessionId, accountId),
+      ]);
 
     const stripePublishableKey = getStripePublishableKey();
     return json({
-      userCurrency,
       clientSecret,
-      appBaseUrl, // base url w/out any paths
+      appBaseUrl,
       stripePublishableKey,
       hasStripeConnectAccount,
-      hasCustomerPaymentMethod,
+      hasPaymentMethod,
     });
   } catch (error) {
     throw getJSONError(error, '/app/settings/payment');
@@ -108,11 +102,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     const formDataObject = convertFormDataToObject(formData);
     switch (intent) {
-      case INTENTS.CREATE_STRIPE_PAYMENTS_ACCOUNT:
+      case INTENTS.CREATE_STRIPE_CUSTOMER_ACCOUNT:
         const data = formDataObject as BeginStripeOnboardingFormData;
-        return await beginStripePaymentsOnboarding(data.appBaseUrl);
-      case INTENTS.FINISH_STRIPE_PAYMENTS_ONBOARDING:
-        return await finishStripePaymentsOnboarding(sessionId);
+        return await beginStripeCustomerOnboarding(data.appBaseUrl);
+      case INTENTS.FINISH_STRIPE_CUSTOMER_ONBOARDING:
+        return await finishStripeCustomerOnboarding(sessionId);
       case INTENTS.FINISH_STRIPE_CONNECT_ONBOARDING:
         return await finishStripeConnectOnboarding(sessionId);
     }
@@ -130,7 +124,7 @@ const PaymentSettings = () => {
     hasStripeConnectAccount,
     stripePublishableKey,
     clientSecret,
-    hasCustomerPaymentMethod,
+    hasPaymentMethod,
   } = useLoaderData<typeof loader>() as LoaderData;
   const [stripeOnboardingUrl, setStripeOnboardingUrl] = useState<string>('');
   const [retailerPaymentBanner, setRetailerPaymentBanner] =
@@ -146,7 +140,7 @@ const PaymentSettings = () => {
   const handleFinishConnectOnboarding = useCallback(() => {
     finishOnboardingFetcher.submit(
       {
-        intent: INTENTS.FINISH_STRIPE_PAYMENTS_ONBOARDING,
+        intent: INTENTS.FINISH_STRIPE_CUSTOMER_ONBOARDING,
       },
       { method: 'POST' },
     );
@@ -198,46 +192,45 @@ const PaymentSettings = () => {
   const navigateUserSettings = useCallback(() => {
     navigate('/app/settings/user');
   }, [navigate]);
-  const stripePromise = useMemo(() => {
-    return loadStripe(stripePublishableKey);
-  }, [stripePublishableKey]);
+  const stripePromise = useMemo(
+    () => loadStripe(stripePublishableKey),
+    [stripePublishableKey],
+  );
 
   // form fetcher for handling stripe connect onboarding
-  const beginStripePaymentsOnboardingFetcher = useFetcher({
+  const beginStripeCustomerOnboardingFetcher = useFetcher({
     key: FETCHER_KEYS.CREATE_STRIPE_PAYMENTS_ACCOUNT,
   });
 
   const handleBeginPaymentsOnboarding = useCallback(() => {
-    beginStripePaymentsOnboardingFetcher.submit(
+    beginStripeCustomerOnboardingFetcher.submit(
       {
-        intent: INTENTS.CREATE_STRIPE_PAYMENTS_ACCOUNT,
+        intent: INTENTS.CREATE_STRIPE_CUSTOMER_ACCOUNT,
         appBaseUrl: appBaseUrl,
       },
       { method: 'POST' },
     );
-  }, [beginStripePaymentsOnboardingFetcher, appBaseUrl]);
+  }, [beginStripeCustomerOnboardingFetcher, appBaseUrl]);
 
   useEffect(() => {
     if (
-      beginStripePaymentsOnboardingFetcher.state == 'idle' &&
-      beginStripePaymentsOnboardingFetcher.data
+      beginStripeCustomerOnboardingFetcher.state == 'idle' &&
+      beginStripeCustomerOnboardingFetcher.data
     ) {
-      const data = beginStripePaymentsOnboardingFetcher.data;
+      const data = beginStripeCustomerOnboardingFetcher.data;
       if (data) {
         const { onboardingUrl } = data as BeginStripeOnboardingData;
         setStripeOnboardingUrl(onboardingUrl);
       }
     }
-    beginStripePaymentsOnboardingFetcher.data = undefined;
-  }, [beginStripePaymentsOnboardingFetcher]);
+    beginStripeCustomerOnboardingFetcher.data = undefined;
+  }, [beginStripeCustomerOnboardingFetcher]);
 
   useEffect(() => {
     if (stripeOnboardingUrl) {
       open(stripeOnboardingUrl, '_top');
     }
   }, [stripeOnboardingUrl]);
-
-  // handle stripe payments onboarding feedback
 
   return (
     <Page
@@ -287,7 +280,7 @@ const PaymentSettings = () => {
                 <PaymentForm
                   appBaseUrl={appBaseUrl}
                   setRetailerPaymentBanner={setRetailerPaymentBanner}
-                  hasCustomerPaymentMethod={hasCustomerPaymentMethod}
+                  hasCustomerPaymentMethod={hasPaymentMethod}
                 />
               </Elements>
             </Card>
@@ -305,10 +298,10 @@ const PaymentSettings = () => {
                   variant={'primary'}
                   onClick={handleBeginPaymentsOnboarding}
                   disabled={
-                    beginStripePaymentsOnboardingFetcher.state === 'submitting'
+                    beginStripeCustomerOnboardingFetcher.state === 'submitting'
                   }
                 >
-                  {beginStripePaymentsOnboardingFetcher.state === 'submitting'
+                  {beginStripeCustomerOnboardingFetcher.state === 'submitting'
                     ? 'Creating a connected account'
                     : 'Start Onboarding Process'}
                 </Button>

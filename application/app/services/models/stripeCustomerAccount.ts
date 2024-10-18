@@ -58,3 +58,26 @@ export async function getStripeCustomerAccount(retailerId: string) {
     );
   }
 }
+
+export async function changePaymentMethodStatus(
+  retailerId: string,
+  hasPaymentMethod: boolean,
+) {
+  try {
+    await db.stripeCustomerAccount.update({
+      where: {
+        retailerId,
+      },
+      data: {
+        hasPaymentMethod,
+      },
+    });
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to change payment method status.',
+      changePaymentMethodStatus,
+      { retailerId },
+    );
+  }
+}

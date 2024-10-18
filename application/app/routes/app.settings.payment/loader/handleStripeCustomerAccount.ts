@@ -6,34 +6,34 @@ import {
 import {
   createCustomer,
   getClientSecret,
-  hasPaymentMethod,
 } from '~/services/stripe/stripeCustomer';
 
 async function handleStripeCustomerAccount(
   isRetailer: boolean,
   sessionId: string,
 ) {
-  let customerId = null;
+  let stripeCustomerId = null;
   let clientSecret = null;
-  let hasCustomerPaymentMethod = false;
+  let hasPaymentMethod = false;
   if (!isRetailer) {
-    return { clientSecret, hasCustomerPaymentMethod };
+    return { clientSecret, hasPaymentMethod };
   }
 
-  const hasStripeCustomerAccountInDb =
+  const hasStripeCustomerAccount =
     await userHasStripeCustomerAccount(sessionId);
 
-  if (!hasStripeCustomerAccountInDb) {
-    const customer = await createCustomer();
-    customerId = customer.id;
+  if (!hasStripeCustomerAccount) {
+    const customer = await createCustomer(sessionId);
     await addInitialStripeCustomerAccountDb(sessionId, customer.id);
+    stripeCustomerId = customer.id;
   } else {
-    customerId = (await getStripeCustomerAccount(sessionId)).stripeCustomerId;
-    hasCustomerPaymentMethod = await hasPaymentMethod(customerId);
+    const stripeCustomerAccount = await getStripeCustomerAccount(sessionId);
+    hasPaymentMethod = stripeCustomerAccount.hasPaymentMethod;
+    stripeCustomerId = stripeCustomerAccount.stripeCustomerId;
   }
 
-  clientSecret = await getClientSecret(customerId);
-  return { clientSecret, hasCustomerPaymentMethod };
+  clientSecret = await getClientSecret(stripeCustomerId);
+  return { clientSecret, hasPaymentMethod };
 }
 
 export default handleStripeCustomerAccount;
