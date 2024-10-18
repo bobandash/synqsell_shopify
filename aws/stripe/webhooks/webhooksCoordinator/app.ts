@@ -128,5 +128,9 @@ export const lambdaHandler = async (event: Event) => {
                 message: 'Failed to coordinate Stripe webhook with handling logic.',
             }),
         };
+    } finally {
+        if (client) {
+            client.release();
+        }
     }
 };
