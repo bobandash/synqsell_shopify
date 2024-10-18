@@ -107,10 +107,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       case INTENTS.CREATE_STRIPE_CUSTOMER_ACCOUNT:
         const data = formDataObject as BeginStripeOnboardingFormData;
         return await beginStripeConnectOnboarding(data.appBaseUrl);
-      case INTENTS.FINISH_STRIPE_CUSTOMER_ONBOARDING:
-        return await finishStripeCustomerOnboarding(sessionId);
       case INTENTS.FINISH_STRIPE_CONNECT_ONBOARDING:
         return await finishStripeConnectOnboarding(sessionId);
+      case INTENTS.FINISH_STRIPE_CUSTOMER_ONBOARDING:
+        return await finishStripeCustomerOnboarding(sessionId);
     }
     return createJSONMessage('Not Implemented', StatusCodes.NOT_IMPLEMENTED);
   } catch (error) {
