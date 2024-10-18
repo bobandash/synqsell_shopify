@@ -35,6 +35,8 @@ Here are a list of common commands used for development.
   ```
   - `<FunctionName>` - this is found in your CloudFormation template
 
+## SAM Template README
+
 Below is the README.md when initializing SAM. I will delete in the future, but for now, it may contain some information I need, so I'm keeping it for now
 
 sam logs -n ProductsUpdateFunction --stack-name Synqsell -t

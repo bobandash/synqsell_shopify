@@ -73,7 +73,7 @@ Here are a list of features that are still needed before the application can be 
 - (DONE) Subscribe to Shopify's Privacy Webhook Topics
 - Use Stripe's webhook topics to ensure that the retailer has a valid payment method set up at all times
 - Create all relevant assets and bullet points for the Shopify app store
-- Add sales generated section for price list index table
+- (DONE) Add sales generated section for price list index table
 - Handle the app/uninstalled webhook for suppliers and retailers
 - Add ALB and EC2 to deploy web/application server
 - Decide the retry strategy to adopt when interacting with Shopify's external API (thinking about retry mechanism w/ exponential backoff, but seeing if there are other approaches before implement)
@@ -155,9 +155,9 @@ To get a local copy up and running follow these steps:
 
 For AWS:
 
-1. Change the working directory to synqsell_webhooks
+1. Change the working directory to aws
    ```sh
-   cd synqsell_webhooks
+   cd aws
    ```
 2. Navigate to the template.yaml file and you may need to change the BucketName property for the AWS::S3::Bucket resource (bucket names must be unique, and I am currently using synqsell-image-hosting for the dev environment)
 3. Build the template.yaml file
@@ -182,9 +182,9 @@ For the Shopify Application:
    - `<BASTION_KEY.PEM>` - The file path of the private key file you generated and downloaded in Prerequisites
    - `<DB_ENDPOINT_ADDRESS>`, `<BASTION_HOST_IP>` - Found in the CloudFormation/SAM outputs after deployment.
 3. Open another terminal instance in your IDE
-4. Change the working directory to synqsell_app
+4. Change the working directory to the application
    ```sh
-   cd synqsell_app
+   cd application
    ```
 5. Obtain your database password (the "password" field from this output)
    ```sh

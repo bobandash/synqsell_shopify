@@ -353,7 +353,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: delivery_carrier_service
-      CodeUri: deliveryCarrierService/
+      CodeUri: shopify/api/deliveryCarrierService/
       Handler: app.lambdaHandler
       MemorySize: 1028
       Timeout: 30
@@ -485,7 +485,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: webhooks_coordinator
-      CodeUri: webhooksCoordinator/
+      CodeUri: shopify/webhooks/webhooksCoordinator/
       Handler: app.lambdaHandler
       MemorySize: 1028
       Timeout: 30
@@ -514,7 +514,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: products_delete
-      CodeUri: deleteProducts/
+      CodeUri: shopify/webhooks/deleteProducts/
       Handler: app.lambdaHandler
       MemorySize: 1028
       Timeout: 30
@@ -534,7 +534,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: products_update
-      CodeUri: productsUpdate/
+      CodeUri: shopify/webhooks/productsUpdate/
       Handler: app.lambdaHandler
       MemorySize: 1028
       Timeout: 30
@@ -554,7 +554,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: order_routing_complete
-      CodeUri: fulfillmentOrdersOrderRoutingComplete/
+      CodeUri: shopify/webhooks/fulfillmentOrdersOrderRoutingComplete/
       Handler: app.lambdaHandler
       MemorySize: 1028
       Timeout: 30
@@ -575,7 +575,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: fulfillments_create
-      CodeUri: fulfillmentsCreate/
+      CodeUri: shopify/webhooks/fulfillmentsCreate/
       Handler: app.lambdaHandler
       MemorySize: 1028
       Timeout: 30
@@ -595,7 +595,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: orders_cancelled
-      CodeUri: ordersCancelled/
+      CodeUri: shopify/webhooks/ordersCancelled/
       Handler: app.lambdaHandler
       MemorySize: 1028
       Timeout: 30
@@ -615,7 +615,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: fulfillments_update
-      CodeUri: fulfillmentsUpdate/
+      CodeUri: shopify/webhooks/fulfillmentsUpdate/
       Handler: app.lambdaHandler
       MemorySize: 1028
       Timeout: 30
@@ -642,7 +642,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: app_uninstalled
-      CodeUri: appUninstalled/
+      CodeUri: shopify/webhooks/appUninstalled/
       Handler: app.lambdaHandler
       MemorySize: 1028
       Timeout: 30
@@ -662,7 +662,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: shop_redact
-      CodeUri: shopRedact/
+      CodeUri: shopify/webhooks/shopRedact/
       Handler: app.lambdaHandler
       MemorySize: 1028
       Timeout: 30
@@ -683,7 +683,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: customers_data_request
-      CodeUri: customersDataRequest/
+      CodeUri: shopify/webhooks/customersDataRequest/
       Handler: app.lambdaHandler
       MemorySize: 1028
       Timeout: 30
@@ -703,7 +703,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: customers_redact
-      CodeUri: customersRedact/
+      CodeUri: shopify/webhooks/customersRedact/
       Handler: app.lambdaHandler
       MemorySize: 1028
       Timeout: 30
