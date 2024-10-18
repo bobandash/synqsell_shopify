@@ -1,6 +1,6 @@
 export {
-  beginStripeCustomerOnboarding,
+  beginStripeConnectOnboarding,
   type BeginStripeOnboardingData,
-} from './beginStripeCustomerOnboarding';
+} from './beginStripeConnectOnboarding';
 export { default as finishStripeCustomerOnboarding } from './finishStripeCustomerOnboarding';
 export { default as finishStripeConnectOnboarding } from './finishStripeConnectOnboarding';

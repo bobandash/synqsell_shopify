@@ -23,7 +23,7 @@ import {
 } from '~/util';
 import { FETCHER_KEYS, INTENTS } from './constants';
 import {
-  beginStripeCustomerOnboarding,
+  beginStripeConnectOnboarding,
   finishStripeConnectOnboarding,
   finishStripeCustomerOnboarding,
   type BeginStripeOnboardingData,
@@ -35,10 +35,12 @@ import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import { hasRole } from '~/services/models/roles';
 import { ROLES } from '~/constants';
-import { handleStripeCustomerAccount } from './loader';
+import {
+  handleStripeConnectAccount,
+  handleStripeCustomerAccount,
+} from './loader';
 import type { BannerState } from './types';
 import { PaddedBox } from '~/components';
-import handleStripeConnectAccount from './loader/handleStripeConnectAccount';
 import {
   PaymentForm,
   SuccessfulIntegration,
@@ -104,7 +106,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     switch (intent) {
       case INTENTS.CREATE_STRIPE_CUSTOMER_ACCOUNT:
         const data = formDataObject as BeginStripeOnboardingFormData;
-        return await beginStripeCustomerOnboarding(data.appBaseUrl);
+        return await beginStripeConnectOnboarding(data.appBaseUrl);
       case INTENTS.FINISH_STRIPE_CUSTOMER_ONBOARDING:
         return await finishStripeCustomerOnboarding(sessionId);
       case INTENTS.FINISH_STRIPE_CONNECT_ONBOARDING:
@@ -161,7 +163,6 @@ const PaymentSettings = () => {
         });
         handleFinishConnectOnboarding();
       } else {
-        // calls the return url but either onboarding was not complete / missing some details
         setSupplierPaymentBanner({
           tone: 'warning',
           text: 'Failed to completely onboard your supplier stripe connect account. Please try onboarding again.',
