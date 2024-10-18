@@ -444,14 +444,23 @@ Resources:
         IntegrationHttpMethod: POST
         Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${StripeWebhookCoordinatorFunction.Arn}/invocations
 
-  # TODO: Research stages and set logs to automatically be recorded at API Gateway Level
-  APIGatewayDeployment:
+  # https://medium.com/@lancers/deployment-in-amazon-api-gateway-128c522c762e
+  # There should be other ways to handle this issue, but deployments are deployed snapshots so unless you delete / recreate the resource, it will not redeploy...
+  # For now, follow the solution in the medium article above, but either switch to v2 with AutoDeploy property or decide how to do it later
+  APIGatewayStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      DeploymentId: !Ref APIGatewayDeployment20241018
+      RestApiId: !Ref APIGateway
+      StageName: dev
+
+  APIGatewayDeployment20241018:
     Type: AWS::ApiGateway::Deployment
     Properties:
       RestApiId: !Ref APIGateway
-      StageName: dev
     DependsOn:
       - DeliveryCarrierServiceApiMethod
+      - StripeApiMethod
 
   # End of API Gateway Deployment
 
@@ -801,4 +810,9 @@ Outputs:
     Description: The public callback endpoint for calculating shipping rates on Shopify
     Value: !Sub
       - https://${ApiID}.execute-api.${AWS::Region}.amazonaws.com/dev/deliveryCarrierService/callback
+      - ApiID: !Ref APIGateway
+  stripeWebhookUrl:
+    Description: The public endpoint for coordinating all stripe webhooks
+    Value: !Sub
+      - https://${ApiID}.execute-api.${AWS::Region}.amazonaws.com/dev/stripe/webhooks
       - ApiID: !Ref APIGateway

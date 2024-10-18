@@ -17,6 +17,7 @@
         "@aws-sdk/client-secrets-manager": "^3.675.0",
         "aws-sdk": "^2.1691.0",
         "esbuild": "^0.14.14",
+        "pg": "^8.13.0",
         "stripe": "^17.2.1"
     },
     "devDependencies": {

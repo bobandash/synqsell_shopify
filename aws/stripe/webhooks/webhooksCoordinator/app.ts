@@ -2,6 +2,8 @@ import { Lambda } from 'aws-sdk';
 import { Event, StripeEvent, StripeSecrets } from './types';
 import Stripe from 'stripe';
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
+import { PoolClient } from 'pg';
+import { initializePool } from './db';
 
 const lambda = new Lambda();
 const client = new SecretsManagerClient();
@@ -40,21 +42,62 @@ async function invokeLambda(functionName: string, payload: any) {
     }
 }
 
+async function hasProcessedWebhookBefore(id: string, client: PoolClient) {
+    try {
+        const query = `
+            SELECT * FROM "StripeWebhook"
+            WHERE id = $1
+        `;
+        const res = await client.query(query, [id]);
+        return res.rows.length > 0;
+    } catch (error) {
+        console.error(error);
+        throw new Error(`Failed to check if webhook ${id} has been processed before.`);
+    }
+}
+
+async function addWebhookToProcessed(id: string, client: PoolClient) {
+    try {
+        const query = `
+            INSERT INTO "StripeWebhook" (id) 
+            VALUES ($1)
+        `;
+        const res = await client.query(query, [id]);
+        return res.rows.length > 0;
+    } catch (error) {
+        console.error(error);
+        throw new Error(`Failed to check if webhook ${id} has been processed before.`);
+    }
+}
+
 // serves as coordinator from sqs to this function to invoke other lambda functions
 export const lambdaHandler = async (event: Event) => {
     const stripeSignature = event.headers['Stripe-Signature'];
     const requestBody = event.body;
+    let client: null | PoolClient = null;
+
     try {
         // resolve webhook signature verification
         const stripeSecrets = await getStripeSecrets();
         const stripe = new Stripe(stripeSecrets.STRIPE_SECRET_API_KEY);
         stripe.webhooks.constructEvent(requestBody, stripeSignature, stripeSecrets.WEBHOOK_SIGNING_SECRET);
 
+        const pool = initializePool();
+        client = await pool.connect();
         const payload: StripeEvent = JSON.parse(requestBody);
-        const { type: webhookTopic } = payload;
+        const { type: webhookTopic, id: webhookId } = payload;
 
-        // TODO: we should not process the same webhook topic twice
+        const hasProcessedBefore = await hasProcessedWebhookBefore(webhookId, client);
+        if (hasProcessedBefore) {
+            return {
+                statusCode: 200,
+                body: JSON.stringify({
+                    message: `The webhook ${webhookId} with topic ${webhookTopic} has already been processed before.`,
+                }),
+            };
+        }
 
+        await addWebhookToProcessed(webhookId, client);
         switch (webhookTopic) {
             case 'account.application.deauthorized':
                 await invokeLambda('stripe_connect_account_application_deauthorized', payload);
