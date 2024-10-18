@@ -171,6 +171,7 @@ For AWS:
    - `<BastionHostKeyName>`, `<StripeSecretsManagerARN>`, `<EventBusArn>` - Generated in Prerequisites
    - `<MyCidrIP>` - Your [public IP address](https://www.whatismyip.com/) with /32 appended at the end of your public IP
 5. Important values will be outputted in the terminal after the changeset is deployed. Please record these values, which are important in setting up the local application
+6. Navigate to AWS API Gateway and activate the deployment for dev.
 
 For the Shopify Application:
 
