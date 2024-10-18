@@ -323,3 +323,7 @@ model StripeCustomerAccount {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 }
+
+model StripeWebhook {
+  id String @id @unique
+}
