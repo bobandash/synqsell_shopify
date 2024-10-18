@@ -40,6 +40,29 @@ export async function getSession(sessionId: string): Promise<Session> {
   }
 }
 
+export async function isAppUninstalled(sessionId: string) {
+  try {
+    const res = await db.session.findFirstOrThrow({
+      where: {
+        id: sessionId,
+      },
+      select: {
+        isAppUninstalled: true,
+      },
+    });
+    return res.isAppUninstalled;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to check if app is uninstalled.',
+      isAppUninstalled,
+      {
+        sessionId,
+      },
+    );
+  }
+}
+
 export async function hasStorefrontAccessToken(sessionId: string) {
   try {
     const session = await db.session.findFirstOrThrow({
@@ -106,6 +129,60 @@ export async function addStorefrontAccessToken(
       error,
       'Failed to add storefront access token to database.',
       addStorefrontAccessToken,
+      {
+        sessionId,
+      },
+    );
+  }
+}
+
+export async function hasStripeConnectAccount(sessionId: string) {
+  try {
+    const res = await db.session.findFirstOrThrow({
+      where: {
+        id: sessionId,
+      },
+      select: {
+        stripeConnectAccount: true,
+      },
+    });
+
+    if (res.stripeConnectAccount) {
+      return true;
+    }
+    return false;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to check if stripe connect account exists.',
+      hasStripeConnectAccount,
+      {
+        sessionId,
+      },
+    );
+  }
+}
+
+export async function hasStripePaymentsAccount(sessionId: string) {
+  try {
+    const res = await db.session.findFirstOrThrow({
+      where: {
+        id: sessionId,
+      },
+      select: {
+        stripeCustomerAccount: true,
+      },
+    });
+
+    if (res.stripeCustomerAccount) {
+      return true;
+    }
+    return false;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to check if stripe payments account exists.',
+      hasStripePaymentsAccount,
       {
         sessionId,
       },

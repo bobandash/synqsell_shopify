@@ -172,3 +172,25 @@ export async function getRetailerIds(priceListId: string) {
     );
   }
 }
+
+export async function getSupplierId(priceListId: string) {
+  try {
+    const res = await db.priceList.findFirstOrThrow({
+      where: {
+        id: priceListId,
+      },
+      select: {
+        supplierId: true,
+      },
+    });
+    const { supplierId } = res;
+    return supplierId;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to get supplier id in price list',
+      getSupplierId,
+      { priceListId },
+    );
+  }
+}
