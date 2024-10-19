@@ -2,7 +2,17 @@ import type { GraphQL } from '~/types';
 import type { ShopAddress } from '~/types/admin.types';
 import { errorHandler } from '../../util';
 import { GET_PROFILE_DEFAULTS } from './graphql';
-import getUserError from '../util/getUserError';
+import { queryGraphQLAdminData } from '../util';
+import type { ProfileDefaultsQuery } from '~/types/admin.generated';
+
+export type ProfileDefaults = {
+  name: string;
+  email: string;
+  biography: string;
+  website: string;
+  address: string;
+  currencyCode: string;
+};
 
 // helper function for getProfileDefaultsShopify
 function getBillingAddressStringFmt(
@@ -22,39 +32,31 @@ function getBillingAddressStringFmt(
 }
 
 // retrieves the default profile details from shopify
-export async function getProfileDefaults(sessionId: string, graphql: GraphQL) {
+export async function getProfileDefaults(
+  sessionId: string,
+  graphql: GraphQL,
+): Promise<ProfileDefaults> {
   try {
-    const response = await graphql(GET_PROFILE_DEFAULTS);
-    const json = await response.json();
-    const { data } = json;
-    if (!data) {
-      throw getUserError({
-        defaultMessage: 'Could not fetch profile default values.',
-        parentFunc: getProfileDefaults,
-        data: {
-          sessionId,
-        },
-      });
-    }
-    const { shop } = data;
     const {
-      name,
-      contactEmail: email,
-      description,
-      url,
-      billingAddress,
-      currencyCode,
-    } = shop;
-
+      shop: {
+        name,
+        contactEmail: email,
+        description: biography,
+        url: website,
+        billingAddress,
+        currencyCode,
+      },
+    } = await queryGraphQLAdminData<ProfileDefaultsQuery>(
+      graphql,
+      GET_PROFILE_DEFAULTS,
+      {},
+    );
     const address = getBillingAddressStringFmt(billingAddress);
-    // enforce the string type on url, graphql by default type-checks if it's a valid url
-    const website = url as string;
-    const biography = description || '';
 
     return {
       name,
       email,
-      biography,
+      biography: biography ?? '',
       website,
       address,
       currencyCode,

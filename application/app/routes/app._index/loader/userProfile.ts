@@ -1,22 +1,56 @@
 import type { GraphQL } from '~/types';
+import { getProfile, hasProfile } from '~/services/models/userProfile';
 import {
-  createProfile,
-  getProfile,
-  hasProfile,
-} from '~/services/models/userProfile';
-import { getProfileDefaults } from '~/services/shopify/profile';
+  getProfileDefaults,
+  type ProfileDefaults,
+} from '~/services/shopify/profile';
 import { errorHandler } from '~/services/util';
+import db from '~/db.server';
+
+export async function createProfile(
+  sessionId: string,
+  profileDefaults: ProfileDefaults,
+) {
+  try {
+    // creates new profile
+    await db.$transaction(async (tx) => {
+      const newProfile = await tx.userProfile.create({
+        data: {
+          sessionId,
+          ...profileDefaults,
+        },
+      });
+      await tx.socialMediaLink.create({
+        data: { userProfileId: newProfile.id },
+      });
+    });
+
+    const newProfileWithSocialMedia = await getProfile(sessionId);
+    return newProfileWithSocialMedia;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to create profile in database.',
+      createProfile,
+      {
+        sessionId,
+        profileDefaults,
+      },
+    );
+  }
+}
 
 export async function getOrCreateProfile(sessionId: string, graphql: GraphQL) {
   try {
-    const existingProfile = await hasProfile(sessionId);
-    if (existingProfile) {
-      const profile = await getProfile(sessionId);
-      return profile;
+    const profileExists = await hasProfile(sessionId);
+    let profile = null;
+    if (profileExists) {
+      profile = await getProfile(sessionId);
+    } else {
+      const profileDefaults = await getProfileDefaults(sessionId, graphql);
+      profile = await createProfile(sessionId, profileDefaults);
     }
-    const profileDefaults = await getProfileDefaults(sessionId, graphql);
-    const newProfile = await createProfile(sessionId, profileDefaults);
-    return newProfile;
+    return profile;
   } catch (error) {
     throw errorHandler(
       error,

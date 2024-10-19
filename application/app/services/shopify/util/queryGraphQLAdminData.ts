@@ -10,7 +10,6 @@ async function queryGraphQLAdminData<T>(
   if (!data) {
     throw new Error('No data returned from GraphQL query');
   }
-
   return data as T;
 }
 

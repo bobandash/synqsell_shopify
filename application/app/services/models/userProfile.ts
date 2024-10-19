@@ -3,14 +3,6 @@ import { ROLES } from '~/constants';
 import db from '~/db.server';
 import { errorHandler } from '../util';
 
-type ProfileDefaultsProps = {
-  name: string;
-  email: string;
-  biography: string;
-  website: string;
-  address: string;
-};
-
 export type ProfileProps = {
   id: string;
   name: string;
@@ -71,48 +63,6 @@ export async function getProfile(sessionId: string) {
     throw errorHandler(error, 'Failed to retrieve profile.', getProfile, {
       sessionId,
     });
-  }
-}
-
-export async function createProfile(
-  sessionId: string,
-  profileDefaults: ProfileDefaultsProps,
-) {
-  try {
-    // creates profile with social media links or rollback
-    const profileWithSocialMediaLinks = await db.$transaction(async (tx) => {
-      const newProfile = await tx.userProfile.create({
-        data: {
-          sessionId,
-          ...profileDefaults,
-        },
-      });
-      await tx.socialMediaLink.create({
-        data: { userProfileId: newProfile.id },
-      });
-
-      const newProfileWithSocialMediaLinks =
-        await tx.userProfile.findFirstOrThrow({
-          where: {
-            id: newProfile.id,
-          },
-          include: {
-            socialMediaLink: true,
-          },
-        });
-      return newProfileWithSocialMediaLinks;
-    });
-    return profileWithSocialMediaLinks;
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to create profile in database.',
-      createProfile,
-      {
-        sessionId,
-        profileDefaults,
-      },
-    );
   }
 }
 

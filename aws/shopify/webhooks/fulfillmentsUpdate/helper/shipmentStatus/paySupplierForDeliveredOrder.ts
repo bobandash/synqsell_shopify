@@ -277,7 +277,7 @@ async function getStripePaymentMethod(customerId: string) {
         }
         return paymentMethods.data[0].id;
     } catch (error) {
-        console.error('error');
+        console.error(error);
         throw new Error(`Failed to get stripe payment method from customer id ${customerId}`);
     }
 }
