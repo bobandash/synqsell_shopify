@@ -70,9 +70,9 @@ Status: Final stages. Preparing for submission on Shopify's App Store.
 10/13/2024
 Here are a list of features that are still needed before the application can be submitted for review
 
-- (DONE) Subscribe to Shopify's Privacy Webhook Topics
-- (DONE) Add sales generated section for price list index table
-- Use Stripe's webhook topics to ensure that the retailer has a valid payment method set up at all times
+- (DONE) - Subscribe to Shopify's Privacy Webhook Topics
+- (DONE) - Add sales generated section for price list index table
+- (DONE) - Use Stripe's webhook topics to ensure that the database is synced properly to stripe statuses
 - Create all relevant assets and bullet points for the Shopify app store
 - Handle the app/uninstalled webhook for suppliers and retailers
 - Add ALB and EC2 to deploy web/application server

@@ -100,10 +100,10 @@ export const lambdaHandler = async (event: Event) => {
         await addWebhookToProcessed(webhookId, client);
         switch (webhookTopic) {
             case 'account.application.deauthorized':
-                await invokeLambda('stripe_connect_account_application_deauthorized', payload);
+                invokeLambda('stripe_connect_account_application_deauthorized', payload);
                 break;
             case 'payment_method.detached':
-                await invokeLambda('stripe_payment_method_detached', payload);
+                invokeLambda('stripe_payment_method_detached', payload);
                 break;
             default:
                 return {

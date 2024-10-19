@@ -822,6 +822,26 @@ Resources:
         EntryPoints:
           - app.ts
 
+  StripePaymentMethodDetached:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: stripe_payment_method_detached
+      CodeUri: stripe/webhooks/paymentMethodDetached/
+      Handler: app.lambdaHandler
+      MemorySize: 1028
+      Timeout: 30
+      Runtime: nodejs20.x
+      Architectures:
+        - x86_64
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: false
+        EntryPoints:
+          - app.ts
+
 Outputs:
   s3Bucket:
     Description: S3 bucket name for storing all the merchants' logos
