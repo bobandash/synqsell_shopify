@@ -12,7 +12,6 @@ import { SocialIcon } from 'react-social-icons';
 import { useCallback, type FC } from 'react';
 import { ImageIcon } from '~/assets';
 import { v4 as uuidv4 } from 'uuid';
-
 import styles from '../../styles.module.css';
 import { useAppBridge } from '@shopify/app-bridge-react';
 import { MODALS } from '../../constants';

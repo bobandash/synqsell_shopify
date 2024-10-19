@@ -104,7 +104,6 @@ export async function toggleChecklistVisibility(
 ): Promise<UserPreferenceData> {
   try {
     const currentUserPreference = await getUserPreferences(sessionId);
-    // Update user preferences, toggle visibility if doesn't exist
     const { tableIdsHidden, id: userPreferenceId } = currentUserPreference;
     const newTableIdsHidden = tableIdsHidden.filter((id) => id !== tableId);
     if (!tableIdsHidden.includes(tableId)) {

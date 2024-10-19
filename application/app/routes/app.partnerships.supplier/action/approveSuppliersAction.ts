@@ -1,6 +1,5 @@
-import { array, object, string } from 'yup';
+import { object, string } from 'yup';
 import { INTENTS, type IntentsProps } from '../constants';
-import { isValidPartnershipRequest } from '~/services/models/partnershipRequest';
 import { approvePartnershipRequestBulk } from '~/services/transactions';
 import { PARTNERSHIP_REQUEST_TYPE } from '~/constants';
 import { StatusCodes } from 'http-status-codes';
