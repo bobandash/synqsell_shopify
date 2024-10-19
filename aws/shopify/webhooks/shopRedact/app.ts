@@ -2,7 +2,7 @@ import { APIGatewayProxyResult } from 'aws-lambda';
 import { PoolClient } from 'pg';
 import { initializePool } from './db';
 import { Session, ShopifyEvent } from './types';
-import { deleteAllDataFromDb, deleteDataFromShopify } from './helper';
+import { deleteAllDataFromDb, deleteDataFromShopify, deleteStripeIntegrations } from './helper';
 
 async function getSession(shop: string, client: PoolClient) {
     try {
@@ -29,8 +29,9 @@ export const lambdaHandler = async (event: ShopifyEvent): Promise<APIGatewayProx
         client = await pool.connect();
         const session = await getSession(shop, client);
 
-        // TODO: Add impl to remove Stripe Connect / Stripe Payments
-        await deleteDataFromShopify(session, client);
+        await Promise.all([deleteStripeIntegrations(session.id, client), deleteDataFromShopify(session, client)]);
+
+        // note: deleting the db has to be last because all the external apis fetch data from the database
         await deleteAllDataFromDb(session.id, client);
         return {
             statusCode: 200,

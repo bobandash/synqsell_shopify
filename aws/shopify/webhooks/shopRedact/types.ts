@@ -43,3 +43,9 @@ export type Session = {
     storefrontAccessToken?: string;
     isAppUninstalled: boolean;
 };
+
+export type StripeSecrets = {
+    STRIPE_SECRET_API_KEY: string;
+    REACT_APP_STRIPE_PUBLISHABLE_KEY: string;
+    WEBHOOK_SIGNING_SECRET: string;
+};
