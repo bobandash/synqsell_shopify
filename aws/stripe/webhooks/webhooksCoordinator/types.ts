@@ -55,28 +55,6 @@ export type Event = {
     isBase64Encoded: boolean;
 };
 
-export type StripeEvent = {
-    id: string;
-    object: string;
-    account: string;
-    api_version: string;
-    created: number;
-    data: {
-        object: {
-            id: string;
-            object: string;
-            name: string;
-        };
-    };
-    livemode: boolean;
-    pending_webhooks: number;
-    request: {
-        id: null;
-        idempotency_key: null;
-    };
-    type: string;
-};
-
 export type StripeSecrets = {
     STRIPE_SECRET_API_KEY: string;
     REACT_APP_STRIPE_PUBLISHABLE_KEY: string;

@@ -1,5 +1,5 @@
 import { Lambda } from 'aws-sdk';
-import { Event, StripeEvent, StripeSecrets } from './types';
+import { Event, StripeSecrets } from './types';
 import Stripe from 'stripe';
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
 import { PoolClient } from 'pg';
