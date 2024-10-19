@@ -1,13 +1,14 @@
 import { APIGatewayProxyResult } from 'aws-lambda';
 import { PoolClient } from 'pg';
 import { initializePool } from './db';
-import { ShopifyEvent } from './types';
 
-export const lambdaHandler = async (event: ShopifyEvent): Promise<APIGatewayProxyResult> => {
-    let client: null | PoolClient = null;
+export const lambdaHandler = async (event: any): Promise<APIGatewayProxyResult> => {
+    // let client: null | PoolClient = null;
     try {
-        const pool = initializePool();
-        client = await pool.connect();
+        // const pool = initializePool();
+        // client = await pool.connect();
+        console.log(event);
+
         return {
             statusCode: 200,
             body: JSON.stringify({
@@ -23,8 +24,8 @@ export const lambdaHandler = async (event: ShopifyEvent): Promise<APIGatewayProx
             }),
         };
     } finally {
-        if (client) {
-            client.release();
-        }
+        // if (client) {
+        //     client.release();
+        // }
     }
 };

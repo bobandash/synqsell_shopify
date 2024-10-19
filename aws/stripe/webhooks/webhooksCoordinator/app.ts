@@ -72,20 +72,20 @@ async function addWebhookToProcessed(id: string, client: PoolClient) {
 
 // serves as coordinator from sqs to this function to invoke other lambda functions
 export const lambdaHandler = async (event: Event) => {
-    const stripeSignature = event.headers['Stripe-Signature'];
-    const requestBody = event.body;
     let client: null | PoolClient = null;
+    const stripeSignature = event.headers['Stripe-Signature'];
+    const body = event.body;
 
     try {
+        const payload = JSON.parse(body);
+        const { id: webhookId, type: webhookTopic } = payload;
         // resolve webhook signature verification
         const stripeSecrets = await getStripeSecrets();
         const stripe = new Stripe(stripeSecrets.STRIPE_SECRET_API_KEY);
-        stripe.webhooks.constructEvent(requestBody, stripeSignature, stripeSecrets.WEBHOOK_SIGNING_SECRET);
+        stripe.webhooks.constructEvent(body, stripeSignature, stripeSecrets.WEBHOOK_SIGNING_SECRET);
 
         const pool = initializePool();
         client = await pool.connect();
-        const payload: StripeEvent = JSON.parse(requestBody);
-        const { type: webhookTopic, id: webhookId } = payload;
 
         const hasProcessedBefore = await hasProcessedWebhookBefore(webhookId, client);
         if (hasProcessedBefore) {
@@ -117,7 +117,7 @@ export const lambdaHandler = async (event: Event) => {
         return {
             statusCode: 200,
             body: JSON.stringify({
-                message: `Successfully invoked webhook topic ${webhookTopic}.`,
+                message: `Successfully invoked webhook topic.`,
             }),
         };
     } catch (error) {

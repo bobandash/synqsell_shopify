@@ -3,34 +3,23 @@ export type Event = {
     path: string;
     httpMethod: string;
     headers: {
-        Accept: string;
-        'Accept-Encoding': string;
-        'Cache-Control': string;
-        'CloudFront-Forwarded-Proto': string;
-        'CloudFront-Is-Desktop-Viewer': string;
-        'CloudFront-Is-Mobile-Viewer': string;
-        'CloudFront-Is-SmartTV-Viewer': string;
-        'CloudFront-Is-Tablet-Viewer': string;
-        'CloudFront-Viewer-ASN': string;
-        'CloudFront-Viewer-Country': string;
-        'Content-Type': string;
-        Host: string;
-        'Stripe-Signature': string;
-        'User-Agent': string;
-        Via: string;
-        'X-Amz-Cf-Id': string;
-        'X-Amzn-Trace-Id': string;
-        'X-Forwarded-For': string;
-        'X-Forwarded-Port': string;
-        'X-Forwarded-Proto': string;
+        [key: string]: string;
     };
     multiValueHeaders: {
         [key: string]: string[];
     };
-    queryStringParameters: null;
-    multiValueQueryStringParameters: null;
-    pathParameters: null;
-    stageVariables: null;
+    queryStringParameters: null | {
+        [key: string]: string;
+    };
+    multiValueQueryStringParameters: null | {
+        [key: string]: string[];
+    };
+    pathParameters: null | {
+        [key: string]: string;
+    };
+    stageVariables: null | {
+        [key: string]: string;
+    };
     requestContext: {
         resourceId: string;
         resourcePath: string;
@@ -45,18 +34,18 @@ export type Event = {
         requestTimeEpoch: number;
         requestId: string;
         identity: {
-            cognitoIdentityPoolId: null;
-            accountId: null;
-            cognitoIdentityId: null;
-            caller: null;
+            cognitoIdentityPoolId: null | string;
+            accountId: null | string;
+            cognitoIdentityId: null | string;
+            caller: null | string;
             sourceIp: string;
-            principalOrgId: null;
-            accessKey: null;
-            cognitoAuthenticationType: null;
-            cognitoAuthenticationProvider: null;
-            userArn: null;
+            principalOrgId: null | string;
+            accessKey: null | string;
+            cognitoAuthenticationType: null | string;
+            cognitoAuthenticationProvider: null | string;
+            userArn: null | string;
             userAgent: string;
-            user: null;
+            user: null | string;
         };
         domainName: string;
         deploymentId: string;

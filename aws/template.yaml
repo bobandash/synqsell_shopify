@@ -411,6 +411,17 @@ Resources:
       Runtime: nodejs20.x
       Architectures:
         - x86_64
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - "secretsmanager:GetSecretValue"
+              Resource: !Ref StripeSecretsManagerARN
+            - Effect: Allow
+              Action:
+                - "lambda:InvokeFunction"
+              Resource: "*"
     Metadata:
       BuildMethod: esbuild
       BuildProperties:

@@ -63,6 +63,10 @@ export async function createAccountLink(accountId: string, appBaseUrl: string) {
       error,
       'An error occurred when calling the Stripe API to create an account link.',
       createAccountLink,
+      {
+        accountId,
+        appBaseUrl,
+      },
     );
   }
 }
