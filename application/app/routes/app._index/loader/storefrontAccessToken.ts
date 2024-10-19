@@ -1,9 +1,9 @@
 import type { GraphQL } from '~/types';
 import { errorHandler } from '~/services/util';
 import {
-  addStorefrontAccessToken as addStorefrontAccessTokenDb,
-  getStorefrontAccessToken as getStorefrontAccessTokenDb,
-  hasStorefrontAccessToken as hasStorefrontAccessTokenDb,
+  addStorefrontAccessToken,
+  getStorefrontAccessToken,
+  hasStorefrontAccessToken,
 } from '~/services/models/session';
 import { createStorefrontAccessToken as createStorefrontAccessTokenShopify } from '~/services/shopify/storefrontAccessToken';
 
@@ -12,20 +12,20 @@ export async function getOrCreateStorefrontAccessToken(
   graphql: GraphQL,
 ) {
   try {
-    const storefrontAccessTokenExistsDb =
-      await hasStorefrontAccessTokenDb(sessionId);
+    let storefrontAccessToken = null;
+    const storefrontAccessTokenExists =
+      await hasStorefrontAccessToken(sessionId);
 
-    if (storefrontAccessTokenExistsDb) {
-      const storefrontAccessToken = await getStorefrontAccessTokenDb(sessionId);
-      return storefrontAccessToken;
+    if (storefrontAccessTokenExists) {
+      storefrontAccessToken = await getStorefrontAccessToken(sessionId);
+    } else {
+      storefrontAccessToken = await createStorefrontAccessTokenShopify(
+        sessionId,
+        graphql,
+      );
+      await addStorefrontAccessToken(sessionId, storefrontAccessToken);
     }
-    const shopifyNewStorefrontAccessToken =
-      await createStorefrontAccessTokenShopify(sessionId, graphql);
-    await addStorefrontAccessTokenDb(
-      sessionId,
-      shopifyNewStorefrontAccessToken,
-    );
-    return shopifyNewStorefrontAccessToken;
+    return storefrontAccessToken;
   } catch (error) {
     throw errorHandler(
       error,
