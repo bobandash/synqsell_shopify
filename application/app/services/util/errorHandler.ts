@@ -55,7 +55,6 @@ function isPrismaError(
   );
 }
 
-// TODO: need to figure out which errors that I don't have to throw generic, and which errors I have to throw generic error messages
 function convertPrismaToCreateHttpError(error: unknown) {
   if (error instanceof PrismaClientKnownRequestError) {
     switch (error.code) {

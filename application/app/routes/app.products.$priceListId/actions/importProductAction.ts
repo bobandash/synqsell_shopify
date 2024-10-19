@@ -18,12 +18,12 @@ import { getSession, type Session } from '~/services/models/session';
 import { getPriceList } from '~/services/models/priceList';
 import { userGetFulfillmentService } from '~/services/models/fulfillmentService';
 import { getProfile } from '~/services/models/userProfile';
-import {
-  createVariants,
-  getVariantCreationInputWithAccessToken,
-} from '~/services/shopify/variants';
-import type { ProductVariantsBulkCreateMutation } from '~/types/admin.generated';
-import { errorHandler } from '~/services/util';
+import { createVariants } from '~/services/shopify/variants';
+import type {
+  ProductVariantsBulkCreateMutation,
+  VariantCreationInformationQuery,
+} from '~/types/admin.generated';
+import { createMapIdToRestObj, errorHandler } from '~/services/util';
 import db from '~/db.server';
 import type { Prisma } from '@prisma/client';
 import {
@@ -38,6 +38,10 @@ import {
   hasPartnershipRequest,
 } from '~/services/models/partnershipRequest';
 import { PARTNERSHIP_REQUEST_TYPE } from '~/constants';
+import getQueryStr from '~/services/shopify/util/getQueryStr';
+import { queryExternalStoreAdminAPI } from '~/services/shopify/util';
+import { VARIANT_CREATION_DETAILS_BULK_QUERY } from '~/services/shopify/variants/graphql';
+import { v4 as uuid } from 'uuid';
 
 export type ImportProductFormData = InferType<typeof formDataObjectSchema>;
 
@@ -58,7 +62,6 @@ export async function addImportedProductToDatabaseTx(
   retailerId: string,
 ) {
   try {
-    // TODO: add yup validation
     const productVariantsBulkCreate = importedProduct.productVariantsBulkCreate;
     const shopifyImportedProduct = productVariantsBulkCreate?.product;
     const shopifyImportedVariants = productVariantsBulkCreate?.productVariants;
@@ -170,6 +173,103 @@ async function createShopifyProduct(
   return newProduct;
 }
 
+// helper functions for creating shopify variants on retailer's store
+async function getSupplierShopifyVariantDetails(
+  supplierShopifyVariantIds: string[],
+  supplierSession: Session,
+) {
+  const queryStr = getQueryStr(supplierShopifyVariantIds);
+  const numVariants = supplierShopifyVariantIds.length;
+  const variantShopifyData =
+    await queryExternalStoreAdminAPI<VariantCreationInformationQuery>(
+      supplierSession.shop,
+      supplierSession.accessToken,
+      VARIANT_CREATION_DETAILS_BULK_QUERY,
+      {
+        query: queryStr,
+        first: numVariants,
+      },
+    );
+  return variantShopifyData;
+}
+
+// TODO: handle variants that have multiple images
+async function getRetailerVariantCreationINput(
+  supplierVariants: AllProductDetails['variants'],
+  supplierSession: Session,
+  supplierName: string,
+  shopifyLocationId: string,
+) {
+  try {
+    const shopifyVariantIds = supplierVariants.map(
+      ({ shopifyVariantId }) => shopifyVariantId,
+    );
+    const supplierShopifyVariantDetails =
+      await getSupplierShopifyVariantDetails(
+        shopifyVariantIds,
+        supplierSession,
+      );
+
+    const shopifyVariantIdToPrismaData = createMapIdToRestObj(
+      supplierVariants,
+      'shopifyVariantId',
+    );
+    // sometimes the query field doesn't match the mutation field,
+    // so there are some fields that have to be mapped manually
+    const variantsBulkInput =
+      supplierShopifyVariantDetails.productVariants.edges.map(
+        ({ node: variant }) => {
+          const prismaData = shopifyVariantIdToPrismaData.get(variant.id);
+          if (!prismaData) {
+            throw new Error(
+              'Variant exists in shopify but not in prisma database.',
+            );
+          }
+          const {
+            inventoryItem,
+            inventoryQuantity,
+            selectedOptions,
+            id,
+            ...rest
+          } = variant;
+          // for some reason, sku is a required field for variants even though documentation says otherwise
+          const sku = inventoryItem.sku
+            ? `Synqsell ${supplierName} ${inventoryItem.sku}`
+            : `Synqsell ${supplierName} ${uuid()}`;
+
+          return {
+            ...rest,
+            inventoryItem: {
+              ...inventoryItem,
+              cost: prismaData.supplierProfit,
+              sku: sku,
+            },
+            inventoryQuantities: [
+              {
+                availableQuantity: inventoryQuantity ?? 0,
+                locationId: shopifyLocationId,
+              },
+            ],
+            optionValues: selectedOptions.map((option) => ({
+              name: option.value,
+              optionName: option.name,
+            })),
+            price: prismaData.retailPrice,
+          };
+        },
+      );
+
+    return variantsBulkInput;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to get relevant variant information from variant ids.',
+      getRetailerVariantCreationINput,
+      { supplierVariants },
+    );
+  }
+}
+
 async function createShopifyVariants(
   variants: AllProductDetails['variants'],
   supplierSession: Session,
@@ -178,17 +278,16 @@ async function createShopifyVariants(
   retailerNewShopifyProductId: string,
   graphql: GraphQL,
 ) {
-  const shopifyVariantCreationInput =
-    await getVariantCreationInputWithAccessToken(
-      variants,
-      supplierSession,
-      supplierName,
-      shopifyLocationId,
-    );
+  const retailerVariantCreationInput = await getRetailerVariantCreationINput(
+    variants,
+    supplierSession,
+    supplierName,
+    shopifyLocationId,
+  );
 
   const variantsPayload = await createVariants(
     retailerNewShopifyProductId,
-    shopifyVariantCreationInput,
+    retailerVariantCreationInput,
     graphql,
   );
 

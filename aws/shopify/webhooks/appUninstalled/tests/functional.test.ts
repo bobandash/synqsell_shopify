@@ -1,5 +1,5 @@
 import { lambdaHandler } from '../app';
-import { pool, clearAllTables } from '../../integration-setup';
+import { pool, clearAllTables } from '../../../integrationSetup';
 import { initializePool } from '../db';
 import { Pool } from 'pg';
 import '@types/jest';

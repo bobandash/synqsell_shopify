@@ -6,7 +6,6 @@ import {
   SkeletonDisplayText,
 } from '@shopify/polaris';
 
-// TODO: research on skeleton loading after finishing MVP
 const TableSkeleton = () => {
   return (
     <BlockStack gap={'200'}>
@@ -16,7 +15,6 @@ const TableSkeleton = () => {
           <SkeletonBodyText lines={1} />
           <SkeletonBodyText lines={1} />
           <Divider />
-
           <Card background="bg-surface-secondary">
             <SkeletonBodyText lines={3} />
           </Card>

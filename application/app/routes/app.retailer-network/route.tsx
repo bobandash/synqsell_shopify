@@ -102,7 +102,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 };
 
-// TODO: Figure out how to either clear the fields on shopify modal hide
 const SupplierNetwork = () => {
   const { retailerPaginatedInfo, priceLists } = useLoaderData<
     typeof loader

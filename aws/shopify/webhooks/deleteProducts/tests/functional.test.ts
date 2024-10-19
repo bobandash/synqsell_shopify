@@ -1,8 +1,8 @@
 import { lambdaHandler } from '../app';
-import { pool, clearAllTables } from '../../integration-setup';
+import { pool, clearAllTables } from '../../../integrationSetup';
 import { initializePool } from '../db';
 import { Pool } from 'pg';
-import { DEFAULT_ITEMS, priceListWithProductAndImportedProductMutation } from '../../commonDataMutation';
+import { DEFAULT_ITEMS, priceListWithProductAndImportedProductMutation } from '../../../integrationInitialData';
 import * as utils from '../util';
 import { DELETE_PRODUCT_MUTATION } from '../graphql';
 import { composeGid } from '@shopify/admin-graphql-api-utilities';

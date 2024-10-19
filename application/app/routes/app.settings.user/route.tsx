@@ -102,7 +102,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     throw getJSONError(error, 'settings');
   }
 };
-
+// TODO: Refactor social social media model to be more flexible so you don't have to destructure props in future
 export const action = async ({ request }: ActionFunctionArgs) => {
   try {
     const { session } = await authenticate.admin(request);
@@ -117,7 +117,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const logo = formDataObject.logo ?? null;
     const logoUrl = logo ? await uploadFile(logo) : null;
 
-    // TODO: Refactor model to be more flexible so you don't have to destructure props in future
     const { name, email, biography, desiredProducts } = dataBesidesLogo;
     const {
       facebookLink,

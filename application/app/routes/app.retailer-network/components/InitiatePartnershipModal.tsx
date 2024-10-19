@@ -14,7 +14,6 @@ type Props = {
   handleSelectPriceListIds: (priceListIds: string[]) => void;
 };
 
-// TODO: shopify's useForm doesn't currently support validation for select multiple, so you have to handle the error that the supplier did not select a price list manually
 const PriceListRequestModal: FC<Props> = ({
   selectedRetailerId,
   priceLists,

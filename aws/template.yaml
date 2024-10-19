@@ -300,7 +300,6 @@ Resources:
   # Start API Gateway
   # https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-api-integration-types.html
   # https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-control-access-using-iam-policies-to-invoke-api.html
-  # TODO: Check if there are any globals we can set for API Gateway to make it less verbose
   APIGatewayCloudWatchRole:
     Type: AWS::IAM::Role
     Properties:

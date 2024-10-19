@@ -280,7 +280,6 @@ function getProductMediaCreationInputFields(mediaData: ProductMediaQuery) {
       mediaContentType,
       originalSource: '',
     };
-    // TODO: figure out better way to conditional render this
     if (
       'image' in node &&
       typeof node.image === 'object' &&

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-loss-of-precision */
 import { composeGid } from '@shopify/admin-graphql-api-utilities';
-import { DEFAULT_ITEMS } from '../../../commonDataMutation';
+import { DEFAULT_ITEMS } from '../../../../integrationInitialData';
 
 export const notSynqsellProductUpdateEvent = {
     version: '0',

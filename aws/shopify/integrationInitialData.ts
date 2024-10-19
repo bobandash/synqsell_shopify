@@ -1,4 +1,3 @@
-// TODO: rename the file later
 import { v4 as uuidv4 } from "uuid";
 import { composeGid } from "@shopify/admin-graphql-api-utilities";
 // returns 2 sessions

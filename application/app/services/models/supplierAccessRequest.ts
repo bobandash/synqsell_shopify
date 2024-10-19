@@ -79,6 +79,8 @@ export async function getSupplierAccessRequest(sessionId: string) {
   }
 }
 
+// TODO: to get more than 60 days of orders, it requires asking Shopify for permission (> 14 days) and Shopify can reject request
+// if app scales, then decide whether or not to request orders as a app permission scope
 async function createSupplierAccessRequest(
   sessionId: string,
   checklistStatusId: string,
@@ -89,7 +91,7 @@ async function createSupplierAccessRequest(
         status: ACCESS_REQUEST_STATUS.PENDING,
         sessionId,
         checklistStatusId,
-        hasMetSalesThreshold: true, // !!! TODO: create a graphql query to check if user met sales threshold
+        hasMetSalesThreshold: true,
       },
     });
 

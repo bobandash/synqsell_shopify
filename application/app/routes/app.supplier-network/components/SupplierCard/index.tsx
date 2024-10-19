@@ -35,7 +35,6 @@ const SupplierCard: FC<Props> = ({ supplier, setSelectedSupplierId }) => {
   const navigate = useNavigate();
   const shopify = useAppBridge();
 
-  // TODO: change social media links to one to many relationship, otherwise, just handle like this for now
   const allSocialMediaLinks = [
     facebook,
     twitter,

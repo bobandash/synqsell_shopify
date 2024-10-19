@@ -401,7 +401,6 @@ const CreateEditPriceList = () => {
       variants: product.variants.map(({ id }) => ({ id })),
     }));
 
-    // !!! TODO: FIGURE OUT QUERIES AND REMOVE GIFT CARDS AND PRODUCTS THAT HAVE BEEN IMPORTED IN THE PAST
     const productsSelected = await shopify.resourcePicker({
       type: 'product',
       multiple: true,

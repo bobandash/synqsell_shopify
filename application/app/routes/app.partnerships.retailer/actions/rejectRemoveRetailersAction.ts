@@ -1,16 +1,14 @@
-import { array, object, string } from 'yup';
+import { object, string } from 'yup';
 import { INTENTS, type IntentsProps } from '../constants';
-import {
-  deletePartnershipRequestsTx,
-  isValidPartnershipRequest,
-} from '~/services/models/partnershipRequest';
-import {
-  deletePartnershipsTx,
-  hasPartnership,
-} from '~/services/models/partnership';
+import { deletePartnershipRequestsTx } from '~/services/models/partnershipRequest';
+import { deletePartnershipsTx } from '~/services/models/partnership';
 import db from '~/db.server';
 import { StatusCodes } from 'http-status-codes';
 import { createJSONMessage } from '~/util';
+import {
+  partnershipIdListSchema,
+  partnershipRequestIdListSchema,
+} from '~/schemas/models';
 
 export type RejectRemoveRetailersActionProps = {
   intent: IntentsProps;
@@ -18,39 +16,10 @@ export type RejectRemoveRetailersActionProps = {
   partnershipIds: string[];
 };
 
-// TODO: simplify these yup schemas
 const rejectRemoveRetailersActionSchema = object({
   intent: string().required().oneOf([INTENTS.REJECT_REMOVE_RETAILERS]),
-  partnershipRequestIds: array()
-    .of(string().required())
-    .required()
-    .test(
-      'is-valid-partnership-request-ids',
-      'Partnership request ids have to be valid',
-      async (partnershipRequestIds) => {
-        const isValidArr = await Promise.all(
-          partnershipRequestIds.map((id) => isValidPartnershipRequest(id)),
-        );
-        const isAllIdsValid =
-          isValidArr.filter((valid) => valid === false).length === 0;
-        return isAllIdsValid;
-      },
-    ),
-  partnershipIds: array()
-    .of(string().required())
-    .required()
-    .test(
-      'is-valid-partnership-ids',
-      'Partnership ids have to be valid',
-      async (partnershipIds) => {
-        const isValidArr = await Promise.all(
-          partnershipIds.map((id) => hasPartnership(id)),
-        );
-        const isAllIdsValid =
-          isValidArr.filter((valid) => valid === false).length === 0;
-        return isAllIdsValid;
-      },
-    ),
+  partnershipRequestIds: partnershipRequestIdListSchema,
+  partnershipIds: partnershipIdListSchema,
 });
 
 export async function rejectRemoveRetailersAction(

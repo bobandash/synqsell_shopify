@@ -1,9 +1,9 @@
 import { lambdaHandler } from '../app';
-import { pool, clearAllTables } from '../../integration-setup';
+import { pool, clearAllTables } from '../../../integrationSetup';
 import { initializePool } from '../db';
 import { Pool } from 'pg';
 import { getRetailerProductUpdateEvent, notSynqsellProductUpdateEvent } from './constants';
-import { DEFAULT_ITEMS, priceListWithProductAndImportedProductMutation } from '../../commonDataMutation';
+import { DEFAULT_ITEMS, priceListWithProductAndImportedProductMutation } from '../../../integrationInitialData';
 import * as utils from '../util';
 import * as helperFunctions from '../helper';
 // TODO: Not important right not, but verify that wholesale price list functions properly

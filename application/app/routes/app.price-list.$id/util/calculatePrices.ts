@@ -1,17 +1,17 @@
 import { round } from '~/routes/util';
-interface CalculateRetailerPaymentProps {
+type CalculateRetailerPaymentProps = {
   isWholesalePriceList: boolean;
   price: string | null;
   margin: string;
   wholesalePrice: string | number | null;
   hasError: boolean;
-}
+};
 
-interface ProfitCalculationForMarginPricing {
+type ProfitCalculationForMarginPricing = {
   isWholesalePriceList: boolean;
   price: string | null;
   retailerPayment: string;
-}
+};
 
 function calculateRetailerPaymentGivenMargin(
   price: string | number | null,
@@ -24,7 +24,7 @@ function calculateRetailerPaymentGivenMargin(
   return round(Number(price) * (Number(margin) / 100), 2).toFixed(2);
 }
 
-function calculatePriceDifference(
+export function calculatePriceDifference(
   priceOne: string | number | null,
   priceTwo: string | number | null,
 ) {
@@ -37,8 +37,7 @@ function calculatePriceDifference(
   return round(Number(priceOne) - Number(priceTwo), 2).toFixed(2);
 }
 
-// TODO: refactor these helper functions after MVP; it's really verbose
-function calculateRetailerPayment({
+export function calculateRetailerPayment({
   isWholesalePriceList,
   price,
   margin,
@@ -55,7 +54,7 @@ function calculateRetailerPayment({
   return calculatePriceDifference(price, wholesalePrice);
 }
 
-function calculateSupplierProfitForMarginPricing({
+export function calculateSupplierProfitForMarginPricing({
   isWholesalePriceList,
   price,
   retailerPayment,
@@ -65,9 +64,3 @@ function calculateSupplierProfitForMarginPricing({
   }
   return calculatePriceDifference(price, retailerPayment);
 }
-
-export {
-  calculateRetailerPayment,
-  calculateSupplierProfitForMarginPricing,
-  calculatePriceDifference,
-};

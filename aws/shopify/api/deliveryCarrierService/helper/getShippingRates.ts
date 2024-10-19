@@ -312,7 +312,6 @@ function getInternationalShippingRates(allShippingRates: SupplierShippingRate[])
     return totalShippingRates;
 }
 
-// TODO: In order to refactor this function, this feature requires talking to users
 // I don't know how other merchants set up their delivery profiles
 // By default, shopify has "Economy" and "Standard" set up for every merchant for domestic shipping (names cannot be changed)
 // while for international shipping, you can either use Calculated Carrier Cost or set a shipping rate manually

@@ -30,7 +30,6 @@ type GroupedQueryDataWithUpdateFields = Map<
     }
 >;
 
-// TODO: I should refactor this in future, but it's not urgent
 // ==============================================================================================================
 // START: HELPER FUNCTIONS TO BROADCAST CHANGES TO PRODUCT STATUS, PRODUCT VARIANT PRICE + INVENTORY TO RETAILERS
 // ==============================================================================================================

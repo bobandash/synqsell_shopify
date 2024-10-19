@@ -119,7 +119,6 @@ async function updateFulfillmentInDatabase(
 
 // if the retailer cancels the fulfillment of the order, then by default, it reads the supplier fulfillment and re-fulfills the order
 // the supplier should be the single source of truth for fulfillments because the retailer doesn't handle this
-// TODO: however, for refunds, we shouldn't handle until we receive more data on how people handle this issue
 // because it doesn't make sense that if supplier ships the order, customer has a problem, retailer refunds customer and supplier is not paid
 // and supplier doesn't know of this, then that's a big issue, so do not handle refunds for now; just cancellation and fulfillment
 async function resyncRetailerFulfillment(

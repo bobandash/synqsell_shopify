@@ -159,7 +159,7 @@ async function getProductStatus(
 // returns the data of the variants to add, remove, and update
 // the problem with variants is that when a product is deleted, it should cascade delete the variants as well
 // so that's why you have to use the transaction instead and call this when products are already deleted
-// TODO: This has to be refactored after the MVP... not production level code
+// TODO:  Refactor this function to multiple smaller functions
 async function getVariantStatusTx(
   tx: Prisma.TransactionClient,
   priceListId: string,

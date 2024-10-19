@@ -1,8 +1,6 @@
 import db from '../../db.server';
 import { errorHandler } from '../util';
-import { hasChecklistTable } from './checklistTable';
 import createHttpError from 'http-errors';
-import logger from '~/logger';
 
 export type UserPreferenceData = {
   id: string;
@@ -100,44 +98,11 @@ export async function getOrCreateUserPreferences(sessionId: string) {
   }
 }
 
-// TODO: refactor to use yup
-export async function validateToggleChecklistVisibility(
-  sessionId: string,
-  tableId: string,
-) {
-  try {
-    const checklistTableExists = await hasChecklistTable(tableId);
-    const userPreferenceExists = await hasUserPreferences(sessionId);
-    if (!checklistTableExists || !userPreferenceExists) {
-      const errors = [];
-      if (!checklistTableExists) {
-        errors.push('Table id is invalid.');
-      }
-      if (!userPreferenceExists) {
-        errors.push('This shop does not have user preferences.');
-      }
-      const message = errors.join(' ');
-      logger.error(message, { sessionId, tableId });
-      throw new createHttpError.BadRequest(message);
-    }
-  } catch (error) {
-    throw errorHandler(
-      error,
-      `Could not validate toggling checklist table visibility.`,
-      validateToggleChecklistVisibility,
-      {
-        sessionId,
-      },
-    );
-  }
-}
-
 export async function toggleChecklistVisibility(
   sessionId: string,
   tableId: string,
 ): Promise<UserPreferenceData> {
   try {
-    await validateToggleChecklistVisibility(sessionId, tableId);
     const currentUserPreference = await getUserPreferences(sessionId);
     // Update user preferences, toggle visibility if doesn't exist
     const { tableIdsHidden, id: userPreferenceId } = currentUserPreference;
