@@ -4,7 +4,7 @@ import getSessionFromShop from '../util/getSessionFromShop';
 import { Payload, Session } from '../../types';
 import { getStripe } from '../../stripe';
 import createMapIdToRestObj from '../../util/createMapToRestObj';
-import { uuid } from 'uuidv4';
+import { v4 as uuidv4 } from 'uuid';
 import { ORDER_PAYMENT_STATUS } from '../../constants';
 
 type SupplierOrderLineItem = {
@@ -48,10 +48,10 @@ type OrderLineItemDetail = {
 async function getDbOrderDetails(shopifySupplierOrderId: string, client: PoolClient) {
     try {
         const query = `
-        SELECT * FROM "Order"
-        WHERE "shopifySupplierOrderId" = $1
-        LIMIT 1
-      `;
+            SELECT * FROM "Order"
+            WHERE "shopifySupplierOrderId" = $1
+            LIMIT 1
+        `;
         const res = await client.query(query, [shopifySupplierOrderId]);
         if (res.rows.length === 0) {
             throw new Error(`No order exists for shopifySupplierOrderId ${shopifySupplierOrderId}.`);
@@ -349,7 +349,7 @@ async function createPaymentInDatabase(
         `;
         const totalPaid = orderPaid + shippingPaid;
         await client.query(insertionQuery, [
-            uuid(),
+            uuidv4(),
             dbOrderId,
             stripeEventId,
             ORDER_PAYMENT_STATUS.INITIATED,
