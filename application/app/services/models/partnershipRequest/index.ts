@@ -194,7 +194,6 @@ async function getPartnershipRequestMultiplePriceLists(
   }
 }
 
-// TODO: switch hasPartnershipRequest and isValidPartnershipRequest to stay consistent with other models
 async function hasPartnershipRequest(
   priceListId: string,
   senderId: string,
@@ -243,7 +242,7 @@ async function isValidPartnershipRequest(id: string) {
     throw errorHandler(
       error,
       'Failed to check if partnership request id is valid.',
-      hasPartnershipRequest,
+      isValidPartnershipRequest,
       { id },
     );
   }
