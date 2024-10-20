@@ -191,8 +191,13 @@ async function getSupplierShippingRate(
 
     parsedDataArr.forEach((dataItem) => {
         // case: initial streamed data response
-        if (dataItem.data?.cartCreate?.userErrors?.length > 0) {
-            throw new Error(dataItem.data.userErrors.join(' '));
+        // !!! TODO: Fix the bug below, this is a severe edge case that breaks the flow of the app but requires a lot of research for a potential solution
+        // there's only two ways two main ways to implement shipping: create a mock cart and get the shipping rate or import shipping profiles
+        // aps like printify use shipping profiles but the disadvantage is that bloats the user's store and there's max 100 shipping profiles
+        // mock cart has the disadvantage that the item has to have at least one stock... meaning if a customer orders an item and the stock is 0, the order will not be created on the supplier's store...         
+        const userErrors = dataItem?.data?.cartCreate?.userErrors;
+        if (userErrors) {
+            throw new Error(userErrors);
         }
         // case: subsequent data streams
         else if (dataItem.incremental?.[0]?.data?.deliveryGroups?.edges) {
