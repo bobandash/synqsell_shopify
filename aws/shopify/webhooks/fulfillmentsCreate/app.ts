@@ -7,26 +7,32 @@ import { createRetailerFulfillment } from './helper';
 
 async function getSupplierSession(shop: string, client: PoolClient) {
     try {
-        const sessionQuery = `SELECT * FROM "Session" WHERE shop = $1 LIMIT 1`;
-        const sessionData = await client.query(sessionQuery, [shop]);
+        const query = `SELECT * FROM "Session" WHERE shop = $1 LIMIT 1`;
+        const sessionData = await client.query(query, [shop]);
         if (sessionData.rows.length === 0) {
             throw new Error('Shop data is invalid.');
         }
         const session = sessionData.rows[0];
         return session as Session;
-    } catch {
+    } catch (error){
+        console.error(error);
         throw new Error(`Failed to retrieve session from shop ${shop}.`);
     }
 }
 
-async function isSynqsellOrder(shopifyOrderId: string, supplierSession: Session, client: PoolClient) {
-    const orderQuery = `
-        SELECT "id" FROM "Order"
-        WHERE "supplierId" = $1 AND "shopifySupplierOrderId" = $2
-        LIMIT 1
-    `;
-    const orderData = await client.query(orderQuery, [supplierSession.id, shopifyOrderId]);
-    return orderData.rows.length > 0;
+async function isSynqsellOrder(shopifyOrderId: string, supplierId: string, client: PoolClient) {
+    try {
+        const query = `
+            SELECT "id" FROM "Order"
+            WHERE "supplierId" = $1 AND "shopifySupplierOrderId" = $2
+        `;
+        const orderData = await client.query(query, [supplierId, shopifyOrderId]);
+        return orderData.rows.length > 0;
+    } catch(error) {
+        console.error(error);
+        throw new Error(`Failed to check if order id ${shopifyOrderId} is a synqsell order.`)
+    }
+
 }
 
 export const lambdaHandler = async (event: ShopifyEvent): Promise<APIGatewayProxyResult> => {
@@ -40,7 +46,7 @@ export const lambdaHandler = async (event: ShopifyEvent): Promise<APIGatewayProx
         const shopifyOrderId = composeGid('Order', orderId);
         const supplierSession = await getSupplierSession(shop, client);
         const shopifyFulfillmentId = composeGid('Fulfillment', fulfillmentId);
-        const isRelevantOrder = await isSynqsellOrder(shopifyOrderId, supplierSession, client);
+        const isRelevantOrder = await isSynqsellOrder(shopifyOrderId, supplierSession.id, client);
         if (!isRelevantOrder) {
             return {
                 statusCode: 200,
