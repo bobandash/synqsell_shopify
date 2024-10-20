@@ -129,101 +129,107 @@ async function getSupplierShippingRate(
     buyerIdentityInput: BuyerIdentityInput,
     client: PoolClient,
 ) {
-    const supplierSession = await getSession(supplierSessionId, client);
-    const storefrontAccessToken = supplierSession.storefrontAccessToken;
-    if (!storefrontAccessToken) {
-        throw new Error('Storefront access token does not exist for supplier session id ' + supplierSessionId);
-    }
+    try {
+        const supplierSession = await getSession(supplierSessionId, client);
+        const storefrontAccessToken = supplierSession.storefrontAccessToken;
+        if (!storefrontAccessToken) {
+            throw new Error('Storefront access token does not exist for supplier session id ' + supplierSessionId);
+        }
 
-    const cartCreateInput = {
-        lines: shopifyVariantIdsAndQty.map((lineItem) => ({
-            merchandiseId: lineItem.shopifyVariantId,
-            quantity: lineItem.quantity,
-        })),
-        ...buyerIdentityInput,
-    };
+        const cartCreateInput = {
+            lines: shopifyVariantIdsAndQty.map((lineItem) => ({
+                merchandiseId: lineItem.shopifyVariantId,
+                quantity: lineItem.quantity,
+            })),
+            ...buyerIdentityInput,
+        };
 
-    // calculated carrier shipping rates are when the customer reach the checkout screen, and Shopify calculates the exact cost of USPS or any shipping carrier service to charge the customer
-    // the CART_CREATE_MUTATION retrieves the calculated shipping rates and static shipping rates
-    // however, the only way to get calculated carrier shipping rates from Shopify is by using multipart responses, where data is streamed into chunks
-    // https://github.com/graphql/graphql-over-http/blob/c1acb54053679f08939c9cdcee00b72d77c42211/rfcs/IncrementalDelivery.md
-    // I tried using meros to decode it, but even though the "Content-Type: multipart/mixed; boundary=graphql", calling meros does not split it into parts
-    // TODO: Figure out how to use meros to decode response instead of doing it manually
+        // calculated carrier shipping rates are when the customer reach the checkout screen, and Shopify calculates the exact cost of USPS or any shipping carrier service to charge the customer
+        // the CART_CREATE_MUTATION retrieves the calculated shipping rates and static shipping rates
+        // however, the only way to get calculated carrier shipping rates from Shopify is by using multipart responses, where data is streamed into chunks
+        // https://github.com/graphql/graphql-over-http/blob/c1acb54053679f08939c9cdcee00b72d77c42211/rfcs/IncrementalDelivery.md
+        // I tried using meros to decode it, but even though the "Content-Type: multipart/mixed; boundary=graphql", calling meros does not split it into parts
+        // TODO: Figure out how to use meros to decode response instead of doing it manually
 
-    const url = `https://${supplierSession.shop}/api/2024-07/graphql.json`;
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-Shopify-Storefront-Access-Token': storefrontAccessToken,
-        },
-        body: JSON.stringify({
-            query: CART_CREATE_MUTATION,
-            variables: {
-                input: cartCreateInput,
+        const url = `https://${supplierSession.shop}/api/2024-07/graphql.json`;
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Shopify-Storefront-Access-Token': storefrontAccessToken,
             },
-        }),
-    });
+            body: JSON.stringify({
+                query: CART_CREATE_MUTATION,
+                variables: {
+                    input: cartCreateInput,
+                },
+            }),
+        });
 
-    let result = '';
-    if (!response.body) {
-        throw new Error('Creating a cart does not have a response body.');
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        result += decoder.decode(value, { stream: true });
-    }
-
-    const parts = result.split('--graphql');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const parsedDataArr: any[] = [];
-    const supplierShippingRate: SupplierShippingRate[] = [];
-    parts.forEach((part) => {
-        const parsedData = getParsedData(part);
-        if (parsedData) {
-            parsedDataArr.push(parsedData);
+        let result = '';
+        if (!response.body) {
+            throw new Error('Creating a cart does not have a response body.');
         }
-    });
 
-    parsedDataArr.forEach((dataItem) => {
-        // case: initial streamed data response
-        // !!! TODO: Fix the bug below, this is a severe edge case that breaks the flow of the app but requires a lot of research for a potential solution
-        // there's only two ways two main ways to implement shipping: create a mock cart and get the shipping rate or import shipping profiles
-        // aps like printify use shipping profiles but the disadvantage is that bloats the user's store and there's max 100 shipping profiles
-        // mock cart has the disadvantage that the item has to have at least one stock... meaning if a customer orders an item and the stock is 0, the order will not be created on the supplier's store...         
-        const userErrors = dataItem?.data?.cartCreate?.userErrors;
-        if (userErrors) {
-            throw new Error(userErrors);
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            result += decoder.decode(value, { stream: true });
         }
-        // case: subsequent data streams
-        else if (dataItem.incremental?.[0]?.data?.deliveryGroups?.edges) {
-            dataItem.incremental.forEach((incremental: SubsequentCartCreateIncremental) => {
-                const deliveryGroups = incremental.data.deliveryGroups.edges;
-                deliveryGroups.forEach(({ node }) => {
-                    const deliveryOptions = node.deliveryOptions;
-                    deliveryOptions.forEach((option) => {
-                        const {
-                            title,
-                            estimatedCost: { amount, currencyCode },
-                            description,
-                        } = option;
-                        supplierShippingRate.push({
-                            title: title ?? '',
-                            amount: amount,
-                            currencyCode: currencyCode,
-                            description: description ?? '',
+
+        const parts = result.split('--graphql');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const parsedDataArr: any[] = [];
+        const supplierShippingRate: SupplierShippingRate[] = [];
+        parts.forEach((part) => {
+            const parsedData = getParsedData(part);
+            if (parsedData) {
+                parsedDataArr.push(parsedData);
+            }
+        });
+
+        parsedDataArr.forEach((dataItem) => {
+            // case: initial streamed data response
+            // context: there's only two ways two main ways to implement shipping: create a mock cart and get the shipping rate or import shipping profiles
+            // aps like printify use shipping profiles but the disadvantage is that bloats the user's store and there's max 100 shipping profiles
+            // mock cart has the disadvantage that the item has to have at least one stock, but it shouldn't matter because the supplier's order is not created until after the delivery carrier service api is called
+            const userErrors = dataItem?.data?.cartCreate?.userErrors;
+            if (userErrors && userErrors.length > 0) {
+                console.log(dataItem);
+                console.log(userErrors);
+
+                throw new Error(userErrors);
+            } else if (dataItem.incremental?.[0]?.data?.deliveryGroups?.edges) {
+                dataItem.incremental.forEach((incremental: SubsequentCartCreateIncremental) => {
+                    const deliveryGroups = incremental.data.deliveryGroups.edges;
+                    console.log(deliveryGroups);
+                    deliveryGroups.forEach(({ node }) => {
+                        const deliveryOptions = node.deliveryOptions;
+                        deliveryOptions.forEach((option) => {
+                            const {
+                                title,
+                                estimatedCost: { amount, currencyCode },
+                                description,
+                            } = option;
+                            supplierShippingRate.push({
+                                title: title ?? '',
+                                amount: amount,
+                                currencyCode: currencyCode,
+                                description: description ?? '',
+                            });
                         });
                     });
                 });
-            });
-        }
-    });
+            }
+        });
 
-    return supplierShippingRate;
+        return supplierShippingRate;
+    } catch (error) {
+        console.error(error);
+        throw new Error('Failed to get supplier shipping rate.');
+    }
 }
 
 // helper functions for calculateTotalShippingRates

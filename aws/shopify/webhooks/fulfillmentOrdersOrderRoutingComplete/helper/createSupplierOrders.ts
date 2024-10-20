@@ -127,7 +127,6 @@ async function getAllShippingRates(
             })),
         },
     };
-
     // TODO: implement retry logic
     const response = await fetch(carrierServiceCallbackUrl, {
         method: 'POST',

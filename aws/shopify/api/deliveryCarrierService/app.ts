@@ -54,7 +54,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
             body: JSON.stringify(shippingRates),
         };
     } catch (error) {
-        console.error((error as Error).message);
+        console.error(error);
         return RESPONSE.BACKUP();
     } finally {
         if (client) {
