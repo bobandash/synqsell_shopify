@@ -1,10 +1,6 @@
 import db from '~/db.server';
 import { errorHandler } from '~/services/util';
-import {
-  addProductsTx,
-  deleteProductsTx,
-  getMapShopifyProductIdToPrismaIdTx,
-} from '~/services/models/product';
+import { addProductsTx, deleteProductsTx } from '~/services/models/product';
 import type { Prisma } from '@prisma/client';
 import {
   addVariantsTx,
@@ -24,6 +20,8 @@ import {
 import { updatePartnershipsInPriceListTx } from './util';
 import { StatusCodes } from 'http-status-codes';
 import { createJSONMessage } from '~/util';
+
+// TODO: Refactor this entire file, the code is verbose
 
 export async function updatePriceListSettings(
   sessionId: string,
@@ -156,10 +154,34 @@ async function getProductStatus(
   }
 }
 
+export async function getMapShopifyProductIdToPrismaIdTx(
+  tx: Prisma.TransactionClient,
+  productIds: string[],
+  priceListId: string,
+) {
+  const idAndProductIds = await tx.product.findMany({
+    where: {
+      shopifyProductId: {
+        in: productIds,
+      },
+      priceListId,
+    },
+    select: {
+      id: true,
+      shopifyProductId: true,
+    },
+  });
+
+  const shopifyProductIdToPrismaId = new Map<string, string>();
+  idAndProductIds.forEach(({ id, shopifyProductId }) => {
+    shopifyProductIdToPrismaId.set(shopifyProductId, id);
+  });
+  return shopifyProductIdToPrismaId;
+}
+
 // returns the data of the variants to add, remove, and update
 // the problem with variants is that when a product is deleted, it should cascade delete the variants as well
 // so that's why you have to use the transaction instead and call this when products are already deleted
-// TODO:  Refactor this function to multiple smaller functions
 async function getVariantStatusTx(
   tx: Prisma.TransactionClient,
   priceListId: string,

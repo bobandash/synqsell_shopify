@@ -79,7 +79,7 @@ Here are a list of features that are still needed before the application can be 
 - Decide the retry strategy to adopt when interacting with Shopify's external API (thinking about retry mechanism w/ exponential backoff, but seeing if there are other approaches before implement)
 - One final check to verify all API endpoints, webhooks, and application code work as intended
 
-Here are the nice to have features:
+Here are the nice to have features / should be done after deployment:
 
 - (Has to be done immediately after deployment): There's no webhook Stripe calls that makes sure the payment method is not expired / is still valid, I need to set up a Cron job once a month that checks each payment method and emails the users if they need to update their payment method
 - Add skeleton loading pages to all other pages in the application (the homepage has a skeleton loading page)
@@ -89,6 +89,7 @@ Here are the nice to have features:
 - Refactor the Lambda functions to use layers for shared functions (DRY principle)
 - Talk to users: need to see whether or not suppliers would want methods of increasing sales that the retailers can use (e.g. injecting Shopify liquid to theme to do a countdown for product launches)
 - Refactor basic model queries and mutations (most of it was written when I initially started the project, so a lot needs to be refactored)
+- Change error handling strategy (I don't believe that printing out the function name in the log files is worth it to be honest; it has so much room for error)
 
 <!-- TODO: INSERT SCREENSHOT OF PENDING APPROVAL STATUS ONCE SUBMITTED -->
 

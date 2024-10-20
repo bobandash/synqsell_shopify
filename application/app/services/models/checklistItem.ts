@@ -44,7 +44,7 @@ export async function checklistItemIdMatchesKey(
     throw errorHandler(
       error,
       'Failed to check if check list item matches targeted checklist item key.',
-      hasChecklistItem,
+      checklistItemIdMatchesKey,
       {
         key,
       },
@@ -64,7 +64,7 @@ export async function getChecklistItem(key: ChecklistItemKeysOptionsProps) {
     throw errorHandler(
       error,
       'Failed to retrieve checklist item',
-      hasChecklistItem,
+      getChecklistItem,
       {
         key,
       },

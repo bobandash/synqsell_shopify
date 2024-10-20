@@ -4,14 +4,14 @@ import { getChecklistItem } from './checklistItem';
 import { errorHandler } from '../util';
 import type { ChecklistItemKeysOptionsProps } from '~/constants';
 
-type ChecklistStatusProps = {
+export type ChecklistStatusProps = {
   id: string;
   sessionId: string;
   isCompleted: boolean;
   checklistItemId: string;
 };
 
-async function isValidChecklistStatusId(checklistStatusId: string) {
+export async function isValidChecklistStatusId(checklistStatusId: string) {
   try {
     const checklistStatus = await db.checklistStatus.findFirst({
       where: {
@@ -32,7 +32,10 @@ async function isValidChecklistStatusId(checklistStatusId: string) {
   }
 }
 
-async function hasChecklistStatus(sessionId: string, checklistItemId: string) {
+export async function hasChecklistStatus(
+  sessionId: string,
+  checklistItemId: string,
+) {
   try {
     const checklistStatus = await db.checklistStatus.findFirst({
       where: {
@@ -54,7 +57,10 @@ async function hasChecklistStatus(sessionId: string, checklistItemId: string) {
   }
 }
 
-async function getChecklistStatus(sessionId: string, checklistItemId: string) {
+export async function getChecklistStatus(
+  sessionId: string,
+  checklistItemId: string,
+) {
   try {
     const checklistStatus = await db.checklistStatus.findFirstOrThrow({
       where: {
@@ -73,7 +79,7 @@ async function getChecklistStatus(sessionId: string, checklistItemId: string) {
   }
 }
 
-async function isChecklistStatusCompleted(
+export async function isChecklistStatusCompleted(
   sessionId: string,
   checklistItemId: string,
 ) {
@@ -96,7 +102,7 @@ async function isChecklistStatusCompleted(
   }
 }
 
-async function markCheckListStatus(
+export async function markCheckListStatus(
   id: string,
   isCompleted: boolean,
 ): Promise<ChecklistStatusProps> {
@@ -114,13 +120,13 @@ async function markCheckListStatus(
     throw errorHandler(
       error,
       'Failed to mark checklist status as completed.',
-      isChecklistStatusCompleted,
+      markCheckListStatus,
       { id, isCompleted },
     );
   }
 }
 
-async function updateChecklistStatusTx(
+export async function updateChecklistStatusTx(
   tx: Prisma.TransactionClient,
   sessionId: string,
   checklistItemKey: ChecklistItemKeysOptionsProps,
@@ -151,7 +157,7 @@ async function updateChecklistStatusTx(
   }
 }
 
-async function getChecklistStatusBatch(
+export async function getChecklistStatusBatch(
   sessionIds: string[],
   checklistItemId: string,
 ) {
@@ -176,7 +182,7 @@ async function getChecklistStatusBatch(
 }
 
 // updates checklist status for numerous users
-async function updateChecklistStatusBatchTx(
+export async function updateChecklistStatusBatchTx(
   tx: Prisma.TransactionClient,
   sessionIds: string[],
   checklistItemKey: ChecklistItemKeysOptionsProps,
@@ -209,15 +215,3 @@ async function updateChecklistStatusBatchTx(
     );
   }
 }
-
-export type { ChecklistStatusProps };
-export {
-  isValidChecklistStatusId,
-  hasChecklistStatus,
-  getChecklistStatus,
-  isChecklistStatusCompleted,
-  markCheckListStatus,
-  updateChecklistStatusTx,
-  getChecklistStatusBatch,
-  updateChecklistStatusBatchTx,
-};

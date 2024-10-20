@@ -78,7 +78,7 @@ export async function hasStorefrontAccessToken(sessionId: string) {
     throw errorHandler(
       error,
       'Failed to see if storefront access token exists.',
-      getSession,
+      hasStorefrontAccessToken,
       {
         sessionId,
       },
@@ -102,8 +102,8 @@ export async function getStorefrontAccessToken(sessionId: string) {
   } catch (error) {
     throw errorHandler(
       error,
-      'Failed to see if storefront access token exists.',
-      getSession,
+      'Failed to retrieve storefront access token.',
+      getStorefrontAccessToken,
       {
         sessionId,
       },

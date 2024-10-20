@@ -125,32 +125,6 @@ export async function getProductWithVariantsFromPriceList(
   }
 }
 
-// helper function to map shopify's product id field to created product's is field in prisma
-export async function getMapShopifyProductIdToPrismaIdTx(
-  tx: Prisma.TransactionClient,
-  productIds: string[],
-  priceListId: string,
-) {
-  const idAndProductIds = await tx.product.findMany({
-    where: {
-      shopifyProductId: {
-        in: productIds,
-      },
-      priceListId,
-    },
-    select: {
-      id: true,
-      shopifyProductId: true,
-    },
-  });
-
-  const shopifyProductIdToPrismaId = new Map<string, string>();
-  idAndProductIds.forEach(({ id, shopifyProductId }) => {
-    shopifyProductIdToPrismaId.set(shopifyProductId, id);
-  });
-  return shopifyProductIdToPrismaId;
-}
-
 export async function getAllProductDetails(
   productId: string,
 ): Promise<AllProductDetails> {

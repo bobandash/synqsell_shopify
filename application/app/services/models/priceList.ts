@@ -31,12 +31,9 @@ export async function getPriceList(priceListId: string) {
     });
     return priceList;
   } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to retrieve price list.',
-      hasGeneralPriceList,
-      { priceListId },
-    );
+    throw errorHandler(error, 'Failed to retrieve price list.', getPriceList, {
+      priceListId,
+    });
   }
 }
 
