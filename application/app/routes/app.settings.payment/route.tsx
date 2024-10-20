@@ -154,7 +154,7 @@ const PaymentSettings = () => {
       if (hasStripeConnectAccount) {
         setSupplierPaymentBanner({
           tone: 'success',
-          text: 'Success! Your supplier stripe connect account has been saved',
+          text: 'Success! Your supplier stripe connect account has been saved. Please refresh the page to get the supplier network as a tab.',
         });
         setSearchParams((prev) => {
           const newParams = new URLSearchParams(prev);

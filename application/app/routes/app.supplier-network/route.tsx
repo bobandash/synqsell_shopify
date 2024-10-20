@@ -62,7 +62,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
     if (!isRetailer || !hasStripePaymentMethod) {
       throw createJSONMessage(
-        'Unauthorized. User is not authorized to view supplier network.',
+        'Unauthorized. User is not a retailer or does not have a payment method',
         StatusCodes.UNAUTHORIZED,
       );
     }

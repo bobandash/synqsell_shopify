@@ -70,7 +70,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
     if (!isSupplier || !hasStripeConnectAccount) {
       throw createJSONMessage(
-        'Unauthorized. User is not supplier.',
+        'Unauthorized. User is not supplier or does not have a payment method.',
         StatusCodes.UNAUTHORIZED,
       );
     }
