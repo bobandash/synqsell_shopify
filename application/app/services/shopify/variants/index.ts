@@ -1,7 +1,6 @@
 import type { GraphQL } from '~/types';
 import getQueryStr from '../util/getQueryStr';
 import { errorHandler } from '~/services/util';
-import getUserError from '../util/getUserError';
 import type { Prisma } from '@prisma/client';
 import {
   GET_VARIANT_DELIVERY_PROFILES,
@@ -13,7 +12,11 @@ import type {
   ProductVariantsBulkCreateMutation,
   VariantDeliveryProfilesQuery,
 } from '~/types/admin.generated';
-import { queryExternalStoreAdminAPI, mutateGraphQLAdminData } from '../util';
+import {
+  queryExternalStoreAdminAPI,
+  mutateInternalStoreAdminAPI,
+  queryInternalStoreAdminAPI,
+} from '../util';
 
 type Session = Prisma.SessionGetPayload<{}>;
 
@@ -43,23 +46,14 @@ export async function getBasicVariantDetails(
 ): Promise<BasicVariantDetails[]> {
   try {
     const queryStr = getQueryStr(shopifyVariantIds);
-    const response = await graphql(GET_VARIANTS_BASIC_INFO, {
-      variables: {
+    const data = await queryInternalStoreAdminAPI<VariantBasicInfoQuery>(
+      graphql,
+      GET_VARIANTS_BASIC_INFO,
+      {
         query: queryStr,
         first: take,
       },
-    });
-    const { data } = await response.json();
-    if (!data) {
-      throw getUserError({
-        defaultMessage: 'Could not fetch variant details.',
-        parentFunc: getBasicVariantDetails,
-        data: {
-          shopifyVariantIds,
-          take,
-        },
-      });
-    }
+    );
     const flattenedData = flattenBasicVariantDetails(data);
     return flattenedData;
   } catch (error) {
@@ -110,7 +104,7 @@ export async function createVariants(
 ) {
   try {
     const data =
-      await mutateGraphQLAdminData<ProductVariantsBulkCreateMutation>(
+      await mutateInternalStoreAdminAPI<ProductVariantsBulkCreateMutation>(
         graphql,
         VARIANTS_BULK_CREATION_MUTATION,
         {

@@ -20,7 +20,6 @@ export async function getOrCreateStorefrontAccessToken(
       storefrontAccessToken = await getStorefrontAccessToken(sessionId);
     } else {
       storefrontAccessToken = await createStorefrontAccessTokenShopify(
-        sessionId,
         graphql,
       );
       await addStorefrontAccessToken(sessionId, storefrontAccessToken);

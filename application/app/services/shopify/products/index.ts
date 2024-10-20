@@ -12,10 +12,10 @@ import {
 import type { Prisma } from '@prisma/client';
 import {
   queryExternalStoreAdminAPI,
-  mutateGraphQLAdminData,
-  queryGraphQLAdminData,
+  mutateInternalStoreAdminAPI,
+  queryInternalStoreAdminAPI,
 } from '../util';
-import type { CreateMediaInput, ProductInput } from '~/types/admin.types';
+import { type CreateMediaInput, type ProductInput } from '~/types/admin.types';
 import type {
   ProductBasicInfoQuery,
   ProductCreateMutation,
@@ -66,23 +66,22 @@ export async function getIdMappedToStoreUrl(
   sessionId: string,
   productIds: string[],
 ) {
+  if (productIds.length === 0) {
+    return {};
+  }
+
   try {
     const numProducts = productIds.length;
     const queryStr = getQueryStr(productIds);
-    const response = await graphql(GET_PRODUCT_URL, {
-      variables: {
+    const data = await queryInternalStoreAdminAPI<ProductUrlQuery>(
+      graphql,
+      GET_PRODUCT_URL,
+      {
         first: numProducts,
         query: queryStr,
       },
-    });
-    const { data } = await response.json();
-    if (!data) {
-      return {};
-    }
-
-    const {
-      products: { edges },
-    } = data as ProductUrlQuery;
+    );
+    const edges = data.products.edges;
     const nodes = nodesFromEdges(edges);
     const idToStoreUrl = nodes.reduce((acc, node) => {
       const { id, onlineStoreUrl } = node;
@@ -128,7 +127,7 @@ export async function getBasicProductDetails(
 ): Promise<BasicProductDetails[]> {
   try {
     const queryStr = getQueryStr(shopifyProductIds);
-    const data = await queryGraphQLAdminData<ProductBasicInfoQuery>(
+    const data = await queryInternalStoreAdminAPI<ProductBasicInfoQuery>(
       graphql,
       PRODUCT_BASIC_INFO_QUERY,
       { query: queryStr, first: take },
@@ -303,7 +302,7 @@ export async function createProduct(
   graphql: GraphQL,
 ) {
   try {
-    const data = await mutateGraphQLAdminData<ProductCreateMutation>(
+    const data = await mutateInternalStoreAdminAPI<ProductCreateMutation>(
       graphql,
       CREATE_PRODUCT_MUTATION,
       {

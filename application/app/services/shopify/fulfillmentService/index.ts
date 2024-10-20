@@ -6,26 +6,34 @@ import {
 } from './graphql';
 import { errorHandler } from '~/services/util';
 import { FULFILLMENT_SERVICE } from '~/constants';
-import getUserError from '../util/getUserError';
+import {
+  mutateInternalStoreAdminAPI,
+  queryInternalStoreAdminAPI,
+} from '../util';
+import type {
+  AllFulfillmentServicesQuery,
+  FulfillmentServiceCreateMutation,
+  FulfillmentServiceDeleteMutation,
+} from '~/types/admin.generated';
 
 export async function getFulfillmentService(
   sessionId: string,
   graphql: GraphQL,
 ) {
   try {
-    const response = await graphql(GET_ALL_FULFILLMENT_SERVICES);
-    const { data } = await response.json();
-    if (!data) {
-      return null;
-    }
+    const data = await queryInternalStoreAdminAPI<AllFulfillmentServicesQuery>(
+      graphql,
+      GET_ALL_FULFILLMENT_SERVICES,
+      {},
+    );
     const fulfillmentServices = data.shop.fulfillmentServices;
-    const fulfillmentServicesFiltered = fulfillmentServices.filter(
+    const applicationFulfillmentService = fulfillmentServices.filter(
       (service) => service.serviceName === FULFILLMENT_SERVICE.name,
     );
-    if (fulfillmentServicesFiltered.length === 0) {
+    if (applicationFulfillmentService.length === 0) {
       return null;
     }
-    return fulfillmentServicesFiltered[0];
+    return applicationFulfillmentService[0];
   } catch (error) {
     throw errorHandler(
       error,
@@ -38,28 +46,14 @@ export async function getFulfillmentService(
 
 export async function deleteFulfillmentService(id: string, graphql: GraphQL) {
   try {
-    const response = await graphql(DELETE_FULFILLMENT_SERVICE, {
-      variables: {
-        id: id,
-      },
-    });
-    const { data } = await response.json();
-    const fulfillmentServiceDelete = data?.fulfillmentServiceDelete;
-    if (
-      !fulfillmentServiceDelete ||
-      !fulfillmentServiceDelete.deletedId ||
-      fulfillmentServiceDelete.userErrors.length > 0
-    ) {
-      throw getUserError({
-        defaultMessage:
-          'Data is missing from deleting fulfillment service in Shopify.',
-        userErrors: fulfillmentServiceDelete?.userErrors,
-        parentFunc: deleteFulfillmentService,
-        data: { id },
-      });
-    }
-
-    return fulfillmentServiceDelete.deletedId;
+    const data =
+      await mutateInternalStoreAdminAPI<FulfillmentServiceDeleteMutation>(
+        graphql,
+        DELETE_FULFILLMENT_SERVICE,
+        { id },
+        'Failed to delete fulfillment service in Shopify.',
+      );
+    return data.fulfillmentServiceDelete?.deletedId ?? '';
   } catch (error) {
     throw errorHandler(
       error,
@@ -75,32 +69,24 @@ export async function createFulfillmentService(
   graphql: GraphQL,
 ) {
   try {
-    const response = await graphql(CREATE_FULFILLMENT_SERVICE, {
-      variables: {
-        name: FULFILLMENT_SERVICE.name,
-        callbackUrl: FULFILLMENT_SERVICE.callbackUrl,
-        trackingSupport: true,
-      },
-    });
+    const data =
+      await mutateInternalStoreAdminAPI<FulfillmentServiceCreateMutation>(
+        graphql,
+        CREATE_FULFILLMENT_SERVICE,
+        {
+          name: FULFILLMENT_SERVICE.name,
+          callbackUrl: FULFILLMENT_SERVICE.callbackUrl,
+          trackingSupport: true,
+        },
+        'Failed to create fulfillment service in Shopify.',
+      );
 
-    const { data } = await response.json();
-    const fulfillmentServiceCreate = data?.fulfillmentServiceCreate;
-
-    if (
-      !fulfillmentServiceCreate ||
-      !fulfillmentServiceCreate.fulfillmentService ||
-      fulfillmentServiceCreate.userErrors.length > 0
-    ) {
-      throw getUserError({
-        defaultMessage:
-          'Data is missing from creating a fulfillment service in Shopify.',
-        userErrors: fulfillmentServiceCreate?.userErrors,
-        parentFunc: createFulfillmentService,
-        data: { sessionId },
-      });
+    const fulfillmentService =
+      data.fulfillmentServiceCreate?.fulfillmentService;
+    if (!fulfillmentService) {
+      throw new Error('Failed to create fulfillment service on Shopify.');
     }
-
-    return fulfillmentServiceCreate.fulfillmentService;
+    return fulfillmentService;
   } catch (error) {
     throw errorHandler(
       error,

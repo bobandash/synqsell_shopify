@@ -1,4 +1,5 @@
 // the functions below are designed to make GraphQL Admin API calls to external stores
+// TODO: add retry mechanism
 async function queryExternalStoreAdminAPI<T>(
   shop: string,
   accessToken: string,

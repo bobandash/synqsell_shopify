@@ -2,7 +2,7 @@ import type { GraphQL } from '~/types';
 import type { ShopAddress } from '~/types/admin.types';
 import { errorHandler } from '../../util';
 import { GET_PROFILE_DEFAULTS } from './graphql';
-import { queryGraphQLAdminData } from '../util';
+import { queryInternalStoreAdminAPI } from '../util';
 import type { ProfileDefaultsQuery } from '~/types/admin.generated';
 
 export type ProfileDefaults = {
@@ -46,7 +46,7 @@ export async function getProfileDefaults(
         billingAddress,
         currencyCode,
       },
-    } = await queryGraphQLAdminData<ProfileDefaultsQuery>(
+    } = await queryInternalStoreAdminAPI<ProfileDefaultsQuery>(
       graphql,
       GET_PROFILE_DEFAULTS,
       {},

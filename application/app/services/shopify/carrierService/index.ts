@@ -6,7 +6,15 @@ import {
   GET_INITIAL_CARRIER_SERVICES,
   GET_SUBSEQUENT_CARRIER_SERVICES,
 } from './graphql';
-import { getUserError } from '../util';
+import {
+  mutateInternalStoreAdminAPI,
+  queryInternalStoreAdminAPI,
+} from '../util';
+import type {
+  CarrierServiceCreateMutation,
+  InitialCarrierServicesQuery,
+  SubsequentCarrierServicesQuery,
+} from '~/types/admin.generated';
 
 // https://shopify.dev/docs/api/admin-graphql/2024-01/objects/DeliveryCarrierService
 // By creating a carrier service, when the customer goes to the checkout screen, we can put custom shipping rates
@@ -29,11 +37,9 @@ async function getAllCarrierServices(graphql: GraphQL) {
       ? GET_INITIAL_CARRIER_SERVICES
       : GET_SUBSEQUENT_CARRIER_SERVICES;
     const variables = isInitialFetch ? {} : { variables: { after: endCursor } };
-    const response = await graphql(query, variables);
-    const { data } = await response.json();
-    if (!data) {
-      throw new Error('Failed to get carrier service from shopify.');
-    }
+    const data = await queryInternalStoreAdminAPI<
+      InitialCarrierServicesQuery | SubsequentCarrierServicesQuery
+    >(graphql, query, variables);
     const edgesData = Object.values(data)[0];
     edgesData.edges.forEach(({ node }) => {
       carrierServices.push({
@@ -81,40 +87,30 @@ export async function createCarrierService(
       ? `${process.env.CARRIER_SERVICE_CALLBACK_URL}?sessionId=${sessionId}`
       : '';
 
-    console.log(callbackUrl);
-
     if (!callbackUrl) {
       throw new Error('Carrier service callback url is not defined.');
     }
-    const response = await graphql(CREATE_CARRIER_SERVICE, {
-      variables: {
-        input: {
-          active: true,
-          callbackUrl,
-          name: CARRIER_SERVICE_NAME,
-          supportsServiceDiscovery: false,
-        },
-      },
-    });
 
-    const { data } = await response.json();
-    const carrierServiceCreate = data?.carrierServiceCreate;
-    if (
-      !carrierServiceCreate ||
-      !carrierServiceCreate.carrierService ||
-      carrierServiceCreate.userErrors.length > 0
-    ) {
-      throw getUserError({
-        defaultMessage:
-          'Data is missing from creating the carrier service in Shpoify.',
-        userErrors: carrierServiceCreate?.userErrors,
-        parentFunc: createCarrierService,
-        data: { sessionId },
-      });
-    }
+    const variables = {
+      input: {
+        active: true,
+        callbackUrl,
+        name: CARRIER_SERVICE_NAME,
+        supportsServiceDiscovery: false,
+      },
+    };
+
+    const data =
+      await mutateInternalStoreAdminAPI<CarrierServiceCreateMutation>(
+        graphql,
+        CREATE_CARRIER_SERVICE,
+        variables,
+        'Failed to create carrier service.',
+      );
+    const carrierServiceCreate = data.carrierServiceCreate;
     return {
-      id: carrierServiceCreate.carrierService.id,
-      name: carrierServiceCreate.carrierService.name,
+      id: carrierServiceCreate?.carrierService?.id ?? '',
+      name: carrierServiceCreate?.carrierService?.name ?? '',
     };
   } catch (error) {
     throw errorHandler(
