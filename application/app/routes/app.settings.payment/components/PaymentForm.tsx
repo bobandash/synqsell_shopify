@@ -1,4 +1,11 @@
-import { BlockStack, Button, Form, InlineStack } from '@shopify/polaris';
+import {
+  BlockStack,
+  Button,
+  Card,
+  Form,
+  InlineStack,
+  Text,
+} from '@shopify/polaris';
 import {
   PaymentElement,
   useElements,
@@ -29,6 +36,8 @@ const PaymentForm: FC<Props> = ({
   const shopify = useAppBridge();
   const [error, setError] = useState('');
   const [searchParams, setSearchParams] = useSearchParams();
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [addedPaymentMethod, setAddedPaymentMethod] = useState<boolean>(false);
 
   const finishOnboardingFetcher = useFetcher({
     key: FETCHER_KEYS.FINISH_STRIPE_ONBOARDING,
@@ -53,6 +62,7 @@ const PaymentForm: FC<Props> = ({
           setupIntentClientSecret,
         );
         const setupIntent = result.setupIntent;
+
         if (setupIntent?.status !== 'processing') {
           clearInterval(processingInterval);
         }
@@ -62,15 +72,19 @@ const PaymentForm: FC<Props> = ({
               text: 'Success! Your retailer payment method has been saved.',
               tone: 'success',
             });
+            setIsProcessing(false);
+            setAddedPaymentMethod(true);
             handleFinishPaymentsOnboarding();
             break;
           case 'processing':
+            setIsProcessing(true);
             setRetailerPaymentBanner({
               text: "Processing payment details. We'll update you when processing is complete.",
               tone: 'info',
             });
             break;
           case 'requires_payment_method':
+            setIsProcessing(false);
             setRetailerPaymentBanner({
               text: 'Failed to process payment details. Please try another payment method.',
               tone: 'warning',
@@ -128,7 +142,15 @@ const PaymentForm: FC<Props> = ({
     }
   }, [error, shopify]);
 
-  if (hasCustomerPaymentMethod) {
+  if (isProcessing) {
+    return (
+      <Card>
+        <Text as="p">Loading..</Text>
+      </Card>
+    );
+  }
+
+  if (addedPaymentMethod || hasCustomerPaymentMethod) {
     return (
       <SuccessfulIntegration text="Payment method was successfully added." />
     );
