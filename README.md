@@ -70,23 +70,26 @@ Status: Final stages. Preparing for submission on Shopify's App Store.
 10/13/2024
 Here are a list of features that are still needed before the application can be submitted for review
 
-- (DONE) Subscribe to Shopify's Privacy Webhook Topics
-- Use Stripe's webhook topics to ensure that the retailer has a valid payment method set up at all times
+- (DONE) - Subscribe to Shopify's Privacy Webhook Topics
+- (DONE) - Add sales generated section for price list index table
+- (DONE) - Use Stripe's webhook topics to ensure that the database is synced properly to stripe statuses
+- (DONE) Handle the app/uninstalled webhook for suppliers and retailers
 - Create all relevant assets and bullet points for the Shopify app store
-- Add sales generated section for price list index table
-- Handle the app/uninstalled webhook for suppliers and retailers
 - Add ALB and EC2 to deploy web/application server
 - Decide the retry strategy to adopt when interacting with Shopify's external API (thinking about retry mechanism w/ exponential backoff, but seeing if there are other approaches before implement)
 - One final check to verify all API endpoints, webhooks, and application code work as intended
 
-Here are the nice to have features:
+Here are the nice to have features / should be done after deployment:
 
+- (Has to be done immediately after deployment): There's no webhook Stripe calls that makes sure the payment method is not expired / is still valid, I need to set up a Cron job once a month that checks each payment method and emails the users if they need to update their payment method
 - Add skeleton loading pages to all other pages in the application (the homepage has a skeleton loading page)
 - Currency conversion for retailers and suppliers in different countries
 - Handle refunds for when a supplier or retailer refunds an order
 - If a supplier changes tracking details after 7 days, it should not affect the retailer's price list
 - Refactor the Lambda functions to use layers for shared functions (DRY principle)
 - Talk to users: need to see whether or not suppliers would want methods of increasing sales that the retailers can use (e.g. injecting Shopify liquid to theme to do a countdown for product launches)
+- Refactor basic model queries and mutations (most of it was written when I initially started the project, so a lot needs to be refactored)
+- Change error handling strategy (I don't believe that printing out the function name in the log files is worth it to be honest; it has so much room for error)
 
 <!-- TODO: INSERT SCREENSHOT OF PENDING APPROVAL STATUS ONCE SUBMITTED -->
 
@@ -155,9 +158,9 @@ To get a local copy up and running follow these steps:
 
 For AWS:
 
-1. Change the working directory to synqsell_webhooks
+1. Change the working directory to aws
    ```sh
-   cd synqsell_webhooks
+   cd aws
    ```
 2. Navigate to the template.yaml file and you may need to change the BucketName property for the AWS::S3::Bucket resource (bucket names must be unique, and I am currently using synqsell-image-hosting for the dev environment)
 3. Build the template.yaml file
@@ -183,9 +186,9 @@ For the Shopify Application:
    - `<BASTION_KEY.PEM>` - The file path of the private key file you generated and downloaded in Prerequisites
    - `<DB_ENDPOINT_ADDRESS>`, `<BASTION_HOST_IP>` - Found in the CloudFormation/SAM outputs after deployment.
 3. Open another terminal instance in your IDE
-4. Change the working directory to synqsell_app
+4. Change the working directory to the application
    ```sh
-   cd synqsell_app
+   cd application
    ```
 5. Obtain your database password (the "password" field from this output)
    ```sh
