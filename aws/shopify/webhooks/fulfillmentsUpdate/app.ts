@@ -28,7 +28,6 @@ async function isProcessableFulfillment(shopifyFulfillmentId: string, role: Role
 
 export const lambdaHandler = async (event: ShopifyEvent): Promise<APIGatewayProxyResult> => {
     let client: null | PoolClient = null;
-    console.log(event);
     try {
         const pool = initializePool();
         client = await pool.connect();
