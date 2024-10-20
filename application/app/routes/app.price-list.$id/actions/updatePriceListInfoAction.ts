@@ -313,7 +313,7 @@ async function updateAllPriceListInformationAction(
       },
       {
         maxWait: 20000, // TODO: Find a better way to handle this logic
-        timeout: 60000,
+        timeout: 100000,
       },
     );
 

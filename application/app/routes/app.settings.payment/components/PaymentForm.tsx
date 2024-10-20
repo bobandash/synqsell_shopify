@@ -69,7 +69,7 @@ const PaymentForm: FC<Props> = ({
         switch (setupIntent?.status) {
           case 'succeeded':
             setRetailerPaymentBanner({
-              text: 'Success! Your retailer payment method has been saved.',
+              text: 'Success! Your retailer payment method has been saved. Please refresh the page.',
               tone: 'success',
             });
             setIsProcessing(false);

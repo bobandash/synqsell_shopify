@@ -100,9 +100,7 @@ const SupplierCard: FC<Props> = ({ supplier, setSelectedSupplierId }) => {
           <Text variant="headingMd" as="h3">
             About Us:
           </Text>
-          <Text variant="bodyMd" as="p">
-            {biography}
-          </Text>
+          <p className={`${sharedStyles.biography}`}>{biography}</p>
         </BlockStack>
         <InlineStack align="end">
           <InlineStack gap={'200'}>

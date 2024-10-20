@@ -12,12 +12,13 @@ import { SocialIcon } from 'react-social-icons';
 import { useCallback, type FC } from 'react';
 import { ImageIcon } from '~/assets';
 import { v4 as uuidv4 } from 'uuid';
-import styles from '../../styles.module.css';
 import { useAppBridge } from '@shopify/app-bridge-react';
 import { MODALS } from '../../constants';
 import type { Retailer } from '../../loader/getRetailerPaginatedInfo';
 import PartnershipButton from './PartnershipBtn';
 
+import styles from '../../styles.module.css';
+import sharedStyles from '~/shared.module.css';
 type Props = {
   retailer: Retailer;
   setSelectedRetailerId: React.Dispatch<React.SetStateAction<string>>;
@@ -97,9 +98,7 @@ const SupplierCard: FC<Props> = ({ retailer, setSelectedRetailerId }) => {
           <Text variant="headingMd" as="h3">
             About Us:
           </Text>
-          <Text variant="bodyMd" as="p">
-            {biography}
-          </Text>
+          <p className={`${sharedStyles.biography}`}>{biography}</p>
         </BlockStack>
         <InlineStack align="end">
           <InlineStack gap={'200'}>

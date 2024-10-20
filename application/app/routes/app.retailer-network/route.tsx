@@ -194,6 +194,7 @@ const SupplierNetwork = () => {
           sm: 1,
           md: 2,
         }}
+        gap={'200'}
       >
         {retailers.map((retailer) => (
           <RetailerCard
