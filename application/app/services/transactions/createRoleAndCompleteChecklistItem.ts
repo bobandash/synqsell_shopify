@@ -1,7 +1,6 @@
 import db from '~/db.server';
 import { object, string } from 'yup';
 import { ROLES } from '~/constants';
-import { isValidChecklistStatusId } from '../models/checklistStatus';
 import { errorHandler } from '../util';
 import { checklistStatusIdSchema, sessionIdSchema } from '~/schemas/models';
 
