@@ -41,8 +41,47 @@ type OrderLineItemDetail = {
 };
 
 // ==============================================================================================================
-// START: CALCULATE AMOUNT TO PAY SUPPLIER LOGIC
+// START: HELPER FUNCTIONS FOR INITIAL DATA
 // ==============================================================================================================
+
+async function getRetailerSessionFromFulfillmentId(dbFulfillmentId: string, client: PoolClient) {
+    try {
+        const query = `
+          SELECT "Session".* FROM "Fulfillment"
+          INNER JOIN "Order" ON "Order"."id" = "Fulfillment"."orderId"
+          INNER JOIN "Session" ON "Session"."id" = "Order"."retailerId"
+          WHERE "Fulfillment"."id" = $1
+          LIMIT 1
+        `;
+        const res = await client.query(query, [dbFulfillmentId]);
+        if (res.rows.length === 0) {
+            throw new Error(`No retailer session exists for dbFulfillmentId ${dbFulfillmentId}.`);
+        }
+        return res.rows[0] as Session;
+    } catch (error) {
+        console.error(error);
+        throw new Error(`Failed to get retailer session from ${dbFulfillmentId} dbFulfillmentId.`);
+    }
+}
+
+async function getOrderCurrencyStripeFmt(shopifySupplierOrderId: string, client: PoolClient) {
+    try {
+        const query = `
+            SELECT "currency" FROM "Order"
+            WHERE "shopifySupplierOrderId" = $1
+        `;
+        const res = await client.query(query, [shopifySupplierOrderId]);
+        if (res.rows.length === 0) {
+            throw new Error(`Order with shopifySupplierOrderId ${shopifySupplierOrderId} does not exist.`);
+        }
+        // stripe requires the currency in letter case 2-3 char format
+        const currency: string = res.rows[0].currency;
+        return currency.toLowerCase();
+    } catch (error) {
+        console.error(error);
+        throw new Error(`Failed to get order currency from shopifySupplierOrderId ${shopifySupplierOrderId}`);
+    }
+}
 
 async function getDbOrderDetails(shopifySupplierOrderId: string, client: PoolClient) {
     try {
@@ -61,6 +100,25 @@ async function getDbOrderDetails(shopifySupplierOrderId: string, client: PoolCli
         throw new Error(`Failed to get database order details from ${shopifySupplierOrderId}.`);
     }
 }
+
+async function hasStripePayment(dbFulfillmentId: string, client: PoolClient) {
+    try {
+        const query = `
+          SELECT * FROM "Payment"
+          WHERE "fulfillmentId" = $1
+          LIMIT 1
+        `;
+        const res = await client.query(query, [dbFulfillmentId]);
+        return res.rows.length > 0;
+    } catch (error) {
+        console.error(error);
+        throw new Error(`Failed to check if fulfillment id ${dbFulfillmentId} has stripe payment.`);
+    }
+}
+
+// ==============================================================================================================
+// START: CALCULATE AMOUNT TO PAY SUPPLIER LOGIC
+// ==============================================================================================================
 
 async function getOrderTotalQuantity(dbOrderId: string, client: PoolClient) {
     try {
@@ -212,21 +270,6 @@ async function getPayableAmounts(
 // ==============================================================================================================
 // START: PAY SUPPLIER USING STRIPE PAYMENTS/CONNECT LOGIC
 // ==============================================================================================================
-async function hasStripePayment(dbFulfillmentId: string, client: PoolClient) {
-    try {
-        const query = `
-          SELECT * FROM "Payment"
-          WHERE "fulfillmentId" = $1
-          LIMIT 1
-        `;
-        const res = await client.query(query, [dbFulfillmentId]);
-        return res.rows.length > 0;
-    } catch (error) {
-        console.error(error);
-        throw new Error(`Failed to check if fulfillment id ${dbFulfillmentId} has stripe payment.`);
-    }
-}
-
 async function getStripeAccountId(supplierId: string, client: PoolClient) {
     try {
         const query = `
@@ -281,18 +324,24 @@ async function getStripePaymentMethod(customerId: string) {
     }
 }
 
-async function paySupplierStripe(supplierId: string, retailerId: string, payableAmount: number, client: PoolClient) {
+async function paySupplierStripe(
+    supplierId: string,
+    retailerId: string,
+    payableAmount: number,
+    currency: string,
+    client: PoolClient,
+) {
     try {
-        const [supplierStripeAccountId, retailerStripeCustomerId] = await Promise.all([
+        // https://docs.stripe.com/api/payment_intents/create
+        const [supplierStripeAccountId, retailerStripeCustomerId, stripe] = await Promise.all([
             getStripeAccountId(supplierId, client),
             getStripeCustomerId(retailerId, client),
+            getStripe(),
         ]);
-        const stripe = await getStripe();
         const paymentMethod = await getStripePaymentMethod(retailerStripeCustomerId);
-        // https://docs.stripe.com/api/payment_intents/create
         const event = await stripe.paymentIntents.create({
             amount: payableAmount,
-            currency: 'usd', // TODO: change currency
+            currency,
             off_session: true,
             confirm: true,
             customer: retailerStripeCustomerId,
@@ -303,7 +352,7 @@ async function paySupplierStripe(supplierId: string, retailerId: string, payable
         });
         return event.id;
     } catch (error) {
-        console.log(error);
+        console.error(error);
         throw new Error(`Failed to pay supplier ${supplierId} from retailer ${retailerId}'s stripe account.`);
     }
 }
@@ -315,7 +364,7 @@ async function paySupplierStripe(supplierId: string, retailerId: string, payable
 // ==============================================================================================================
 // START: STORE PAYMENT IN DATABASE LOGIC
 // ==============================================================================================================
-async function createPaymentInDatabase(
+async function recordPaymentInDatabase(
     stripeEventId: string,
     orderPaid: number,
     shippingPaid: number,
@@ -366,70 +415,58 @@ async function createPaymentInDatabase(
 // ==============================================================================================================
 // END: STORE PAYMENT IN DATABASE LOGIC
 // ==============================================================================================================
-
-// ==============================================================================================================
-// START: HELPER FUNCTIONS TO GET DB HELPER FIELDS
-// ==============================================================================================================
-async function getRetailerSessionFromFulfillmentId(dbFulfillmentId: string, client: PoolClient) {
-    try {
-        const query = `
-          SELECT "Session".* FROM "Fulfillment"
-          INNER JOIN "Order" ON "Order"."id" = "Fulfillment"."orderId"
-          INNER JOIN "Session" ON "Session"."id" = "Order"."retailerId"
-          WHERE "Fulfillment"."id" = $1
-          LIMIT 1
-        `;
-        const res = await client.query(query, [dbFulfillmentId]);
-        if (res.rows.length === 0) {
-            throw new Error(`No retailer session exists for dbFulfillmentId ${dbFulfillmentId}.`);
-        }
-        return res.rows[0] as Session;
-    } catch (error) {
-        console.error(error);
-        throw new Error(`Failed to get retailer session from ${dbFulfillmentId} dbFulfillmentId.`);
-    }
-}
-
-// ==============================================================================================================
-// END: HELPER FUNCTIONS TO GET DB HELPER FIELDS
-// ==============================================================================================================
-
 async function paySupplierForDeliveredOrder(
     supplierShop: string,
     shopifySupplierOrderId: string,
-    supplierShopifyFulfillmentId: string, // TODO: Not urgent: change db to match single format, either shopify or supplier as prefix
+    supplierShopifyFulfillmentId: string,
     supplierPayload: Payload,
     client: PoolClient,
 ) {
-    const [dbFulfillmentId, supplierSession] = await Promise.all([
-        getDbFulfillmentIdFromSupplier(supplierShopifyFulfillmentId, client),
-        getSessionFromShop(supplierShop, client),
-    ]);
-    const orderDetails = await getDbOrderDetails(shopifySupplierOrderId, client);
-
-    const retailerSession = await getRetailerSessionFromFulfillmentId(dbFulfillmentId, client);
-    const orderLineItems: SupplierOrderLineItem[] = supplierPayload.line_items.map((lineItem) => {
-        return {
+    try {
+        const [dbFulfillmentId, supplierSession, orderDetails, currency] = await Promise.all([
+            getDbFulfillmentIdFromSupplier(supplierShopifyFulfillmentId, client),
+            getSessionFromShop(supplierShop, client),
+            getDbOrderDetails(shopifySupplierOrderId, client),
+            getOrderCurrencyStripeFmt(shopifySupplierOrderId, client),
+        ]);
+        const orderLineItems: SupplierOrderLineItem[] = supplierPayload.line_items.map((lineItem) => ({
             shopifySupplierOrderLineItemId: lineItem.admin_graphql_api_id,
             quantityFulfilled: lineItem.quantity,
-        };
-    });
-    const fulfillmentHasBeenPaid = await hasStripePayment(dbFulfillmentId, client);
-    if (fulfillmentHasBeenPaid) {
-        console.log(`Fulfillment ${supplierShopifyFulfillmentId} has already been paid`);
-        return;
+        }));
+        const retailerSession = await getRetailerSessionFromFulfillmentId(dbFulfillmentId, client);
+        const fulfillmentHasBeenPaid = await hasStripePayment(dbFulfillmentId, client);
+        if (fulfillmentHasBeenPaid) {
+            console.error(`Fulfillment ${supplierShopifyFulfillmentId} has already been paid`);
+            return;
+        }
+
+        const { shippingPayableAmount, orderPayableAmount } = await getPayableAmounts(
+            orderDetails,
+            orderLineItems,
+            client,
+        );
+        const totalPayableAmount = shippingPayableAmount + orderPayableAmount;
+        const stripeEventId = await paySupplierStripe(
+            supplierSession.id,
+            retailerSession.id,
+            totalPayableAmount,
+            currency,
+            client,
+        );
+        await recordPaymentInDatabase(
+            stripeEventId,
+            orderPayableAmount,
+            shippingPayableAmount,
+            dbFulfillmentId,
+            orderDetails.id,
+            client,
+        );
+    } catch (error) {
+        console.error(error);
+        throw new Error(
+            `Failed to pay supplier for delivered order ${shopifySupplierOrderId} and fulfillment id ${supplierShopifyFulfillmentId}.`,
+        );
     }
-    const { shippingPayableAmount, orderPayableAmount } = await getPayableAmounts(orderDetails, orderLineItems, client);
-    const totalPayableAmount = shippingPayableAmount + orderPayableAmount;
-    const stripeEventId = await paySupplierStripe(supplierSession.id, retailerSession.id, totalPayableAmount, client);
-    await createPaymentInDatabase(
-        stripeEventId,
-        orderPayableAmount,
-        shippingPayableAmount,
-        dbFulfillmentId,
-        orderDetails.id,
-        client,
-    );
 }
 
 export default paySupplierForDeliveredOrder;
