@@ -17,12 +17,20 @@ export type FulfillmentCreateV2MutationVariables = AdminTypes.Exact<{
 
 export type FulfillmentCreateV2Mutation = { fulfillmentCreateV2?: AdminTypes.Maybe<{ fulfillment?: AdminTypes.Maybe<Pick<AdminTypes.Fulfillment, 'id' | 'status'>>, userErrors: Array<Pick<AdminTypes.UserError, 'field' | 'message'>> }> };
 
+export type FulfillmentOrderOpenMutationVariables = AdminTypes.Exact<{
+  id: AdminTypes.Scalars['ID']['input'];
+}>;
+
+
+export type FulfillmentOrderOpenMutation = { fulfillmentOrderOpen?: AdminTypes.Maybe<{ fulfillmentOrder?: AdminTypes.Maybe<Pick<AdminTypes.FulfillmentOrder, 'id'>>, userErrors: Array<Pick<AdminTypes.UserError, 'field' | 'message'>> }> };
+
 interface GeneratedQueryTypes {
 }
 
 interface GeneratedMutationTypes {
   "#graphql\n  mutation fulfillmentCancel($id: ID!) {\n    fulfillmentCancel(id: $id) {\n      fulfillment {\n        id\n        status\n      }\n      userErrors {\n        field\n        message\n      }\n    }\n  }\n": {return: FulfillmentCancelMutation, variables: FulfillmentCancelMutationVariables},
   "#graphql\n  mutation fulfillmentCreateV2($fulfillment: FulfillmentV2Input!) {\n    fulfillmentCreateV2(fulfillment: $fulfillment) {\n      fulfillment {\n        id\n        status\n      }\n      userErrors {\n        field\n        message\n      }\n    }\n  }\n": {return: FulfillmentCreateV2Mutation, variables: FulfillmentCreateV2MutationVariables},
+  "#graphql\n  mutation fulfillmentOrderOpen($id: ID!) {\n    fulfillmentOrderOpen(id: $id) {\n      fulfillmentOrder {\n        id\n      }\n      userErrors {\n        field\n        message\n      }\n    }\n  }\n": {return: FulfillmentOrderOpenMutation, variables: FulfillmentOrderOpenMutationVariables},
 }
 declare module '@shopify/admin-api-client' {
   type InputMaybe<T> = AdminTypes.InputMaybe<T>;

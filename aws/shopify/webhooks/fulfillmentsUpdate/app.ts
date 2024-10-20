@@ -1,10 +1,10 @@
 import { APIGatewayProxyResult } from 'aws-lambda';
 import { PoolClient } from 'pg';
 import { initializePool } from './db';
-import {  RolesProps, ShopifyEvent } from './types';
-import { handleFulfillmentUpdate, handleShipmentStatusUpdate } from './helper';
+import { RolesProps, ShopifyEvent } from './types';
+import { cancelRetailerFulfillment, paySupplierForDeliveredOrder, resyncRetailerFulfillment } from './helper';
 import { composeGid } from '@shopify/admin-graphql-api-utilities';
-import { ROLES } from './constants';
+import { RESPONSE, ROLES } from './constants';
 
 // This function listens to when the fulfillment ever updates
 // fulfillment includes: fulfillment / tracking number being cancelled and shipment status changing
@@ -45,52 +45,36 @@ export const lambdaHandler = async (event: ShopifyEvent): Promise<APIGatewayProx
             isProcessableFulfillment(shopifyFulfillmentId, ROLES.RETAILER, client),
             isProcessableFulfillment(shopifyFulfillmentId, ROLES.SUPPLIER, client),
         ]);
+
         if (!isRetailerFulfillment && !isSupplierFulfillment) {
-            return {
-                statusCode: 200,
-                body: JSON.stringify({
-                    message: 'Fulfillment update is not related to Synqsell fulfillment.',
-                }),
-            };
+            return RESPONSE.NOT_RELATED;
         }
 
-        // coordinator functions to handle all the possible cases
-        await handleFulfillmentUpdate({
-            shop,
-            shopifyFulfillmentId,
-            fulfillmentStatus,
-            payload,
-            isRetailerFulfillment,
-            isSupplierFulfillment,
-            client,
-        });
+        // will not extract the function in smaller functions because there are so many parameters from the payload
+        // for handling fulfillment status updates
+        switch (fulfillmentStatus) {
+            case 'cancelled':
+                if (isRetailerFulfillment) {
+                    await resyncRetailerFulfillment(shopifyFulfillmentId, shop, payload, client);
+                } else if (isSupplierFulfillment) {
+                    await cancelRetailerFulfillment(shopifyFulfillmentId, client);
+                }
+                break;
+        }
 
-        await handleShipmentStatusUpdate({
-            shipmentStatus,
-            shop,
-            shopifyFulfillmentId,
-            payload,
-            shopifyOrderId,
-            isRetailerFulfillment,
-            isSupplierFulfillment,
-            client,
-        });
+        // for handling shipment status updates
+        switch (shipmentStatus) {
+            case 'delivered':
+                if (isSupplierFulfillment) {
+                    await paySupplierForDeliveredOrder(shop, shopifyOrderId, shopifyFulfillmentId, payload, client);
+                }
+                break;
+        }
 
-        return {
-            statusCode: 200,
-            body: JSON.stringify({
-                message: 'Successfully handled fulfillments update procedure.',
-            }),
-        };
+        return RESPONSE.SUCCESS;
     } catch (error) {
         console.error(error);
-        return {
-            statusCode: 500,
-            body: JSON.stringify({
-                message: 'Could not delete products.',
-                error: (error as Error).message,
-            }),
-        };
+        return RESPONSE.ERROR;
     } finally {
         if (client) {
             client.release();

@@ -1,11 +1,10 @@
 import { PoolClient } from 'pg';
-import { getDbFulfillmentIdFromSupplier } from '../util';
-import getSessionFromShop from '../util/getSessionFromShop';
-import { Payload, Session } from '../../types';
-import { getStripe } from '../../stripe';
-import createMapIdToRestObj from '../../util/createMapToRestObj';
+import { getDbFulfillmentIdFromSupplier, getSessionFromShop } from './util';
+import { Payload, Session } from '../types';
+import { getStripe } from '../stripe';
 import { v4 as uuidv4 } from 'uuid';
-import { ORDER_PAYMENT_STATUS } from '../../constants';
+import { ORDER_PAYMENT_STATUS } from '../constants';
+import { createMapToRestObj } from '../util';
 
 type SupplierOrderLineItem = {
     shopifySupplierOrderLineItemId: string;
@@ -146,7 +145,7 @@ async function getOrderPayableAmount(
 ) {
     try {
         const entireOrderLineItemDetails = await getOrderLineItemDetails(dbOrderId, client);
-        const entireOrderLineItemLookup = createMapIdToRestObj(
+        const entireOrderLineItemLookup = createMapToRestObj(
             entireOrderLineItemDetails,
             'shopifySupplierOrderLineItemId',
         ); // this is a map of shopifySupplierOrderLineItemId = key to rest of order line item details

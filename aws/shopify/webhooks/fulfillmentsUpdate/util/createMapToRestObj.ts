@@ -1,4 +1,4 @@
-function createMapIdToRestObj<T extends { [key: string]: any }, K extends keyof T>(
+function createMapToRestObj<T extends { [key: string]: any }, K extends keyof T>(
     data: T[],
     idKey: K,
 ): Map<string, Omit<T, K>> {
@@ -15,4 +15,4 @@ function createMapIdToRestObj<T extends { [key: string]: any }, K extends keyof 
     return map;
 }
 
-export default createMapIdToRestObj;
+export default createMapToRestObj;

@@ -1,9 +1,9 @@
 import { PoolClient } from 'pg';
-import { PayloadLineItem, PayloadTrackingInfo, Session, ShopifyEvent } from '../../types';
-import { mutateAndValidateGraphQLData } from '../../util';
-import { FulfillmentCreateV2Mutation } from '../../types/admin.generated';
-import { CREATE_FULFILLMENT_FULFILLMENT_ORDER_MUTATION } from '../../graphql';
-import getSessionFromShop from '../util/getSessionFromShop';
+import { PayloadLineItem, PayloadTrackingInfo, Session, ShopifyEvent } from '../types';
+import { mutateAndValidateGraphQLData } from '../util';
+import { FulfillmentCreateV2Mutation } from '../types/admin.generated';
+import { CREATE_FULFILLMENT_FULFILLMENT_ORDER_MUTATION } from '../graphql';
+import getSessionFromShop from './util/getSessionFromShop';
 
 // ==============================================================================================================
 // START: RESYNC FULFILLMENT FOR RETAILER STORE LOGIC

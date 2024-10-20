@@ -1,10 +1,10 @@
 // case: supplier mistakenly bought incorrect tracking label, have to refund and update for the customer
 import { PoolClient } from 'pg';
-import { FulfillmentDetail, Session } from '../../types';
-import { mutateAndValidateGraphQLData } from '../../util';
-import { FulfillmentCancelMutation } from '../../types/admin.generated';
-import { CANCEL_FULFILLMENT_MUTATION } from '../../graphql';
-import { getDbFulfillmentIdFromSupplier } from '../util';
+import { FulfillmentDetail, Session } from '../types';
+import { mutateAndValidateGraphQLData } from '../util';
+import { FulfillmentCancelMutation, FulfillmentOrderOpenMutation } from '../types/admin.generated';
+import { CANCEL_FULFILLMENT_MUTATION, OPEN_FULFILLMENT_ORDER_MUTATION } from '../graphql';
+import { getDbFulfillmentIdFromSupplier } from './util';
 
 // ==============================================================================================================
 // START: CANCEL FULFILLMENT ON RETAILER STORE LOGIC
@@ -37,6 +37,15 @@ async function removeRetailerFulfillmentShopify(retailerSession: Session, retail
             id: retailerShopifyFulfillmentId,
         },
         `Could not cancel fulfillment for ${retailerShopifyFulfillmentId}`,
+    );
+    await mutateAndValidateGraphQLData<FulfillmentOrderOpenMutation>(
+        retailerSession.shop,
+        retailerSession.accessToken,
+        OPEN_FULFILLMENT_ORDER_MUTATION,
+        {
+            id: retailerShopifyFulfillmentId,
+        },
+        `Could not open fulfillment for ${retailerShopifyFulfillmentId}`,
     );
 }
 

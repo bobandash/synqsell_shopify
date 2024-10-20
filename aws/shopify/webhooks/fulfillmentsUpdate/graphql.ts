@@ -27,3 +27,17 @@ export const CREATE_FULFILLMENT_FULFILLMENT_ORDER_MUTATION = `#graphql
     }
   }
 `;
+
+export const OPEN_FULFILLMENT_ORDER_MUTATION = `#graphql
+  mutation fulfillmentOrderOpen($id: ID!) {
+    fulfillmentOrderOpen(id: $id) {
+      fulfillmentOrder {
+        id
+      }
+      userErrors {
+        field
+        message
+      }
+    }
+  }
+`;
