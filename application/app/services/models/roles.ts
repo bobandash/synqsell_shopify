@@ -3,7 +3,6 @@ import db from '../../db.server';
 import { ROLES } from '~/constants';
 import { convertObjectValuesToArr } from '~/util';
 import { errorHandler } from '../util';
-import { object, string } from 'yup';
 
 interface SharedRoleProps {
   id: string;
@@ -109,27 +108,8 @@ export async function getRoleBatch(sessionIds: string[], role: string) {
   }
 }
 
-const addRoleSchema = object({
-  role: string()
-    .oneOf(Array.from(Object.values(ROLES)))
-    .required(),
-  sessionId: string().required(),
-}).test(
-  'role-validation',
-  'Users cannot have two of the same role',
-  async (value) => {
-    const { role, sessionId } = value;
-    const roleExists = await hasRole(sessionId, role);
-    if (roleExists) {
-      return false;
-    }
-    return true;
-  },
-);
-
 export async function addRole(sessionId: string, role: string) {
   try {
-    await addRoleSchema.validate({ sessionId, role });
     const newRole = await db.role.create({
       data: {
         sessionId,

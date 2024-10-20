@@ -3,6 +3,7 @@ import {
   ACCESS_REQUEST_STATUS,
   CHECKLIST_ITEM_KEYS,
   ROLES,
+  type RolesOptionsProps,
   type AccessRequestStatusOptionsProps,
 } from '~/constants';
 import db from '~/db.server';
@@ -15,12 +16,6 @@ import { createJSONMessage } from '~/util';
 export type SupplierAccessRequestInfo = {
   supplierAccessRequestId: string;
   sessionId: string;
-};
-
-type NewRoleProps = {
-  name: string;
-  sessionId: string;
-  isVisibleInNetwork: boolean;
 };
 
 async function updateSupplierAccessRequestBatchTx(
@@ -54,11 +49,16 @@ async function updateSupplierAccessRequestBatchTx(
 }
 
 // helper functions to approve / reject supplier access
-async function createSupplierRolesBatchTx(
+async function createSupplierRolesTx(
   tx: Prisma.TransactionClient,
-  newRoleData: NewRoleProps[],
+  sessionIds: string[],
 ) {
   try {
+    const newRoleData = sessionIds.map((sessionId) => ({
+      name: ROLES.SUPPLIER,
+      sessionId,
+      isVisibleInNetwork: true,
+    }));
     const newRoles = await tx.role.createMany({
       data: newRoleData,
     });
@@ -67,8 +67,8 @@ async function createSupplierRolesBatchTx(
     throw errorHandler(
       error,
       'Failed to create supplier roles in bulk.',
-      createSupplierRolesBatchTx,
-      { newRoleData },
+      createSupplierRolesTx,
+      { sessionIds },
     );
   }
 }
@@ -99,6 +99,20 @@ async function deleteSupplierRolesBatchTx(
   }
 }
 
+async function getSessionIdsWithoutRole(
+  sessionIds: string[],
+  role: RolesOptionsProps,
+) {
+  const sessionsWithRoleData = await getRoleBatch(sessionIds, role);
+  const sessionIdsWithRoleSet = new Set(
+    sessionsWithRoleData.map((role) => role.id),
+  );
+  const sessionIdsWithoutSupplierRole = sessionIds.filter(
+    (id) => !sessionIdsWithRoleSet.has(id),
+  );
+  return sessionIdsWithoutSupplierRole;
+}
+
 // updates the status of the StatusAccessRequest and creates supplier roles for these suppliers
 export async function approveSuppliers(
   supplierAccessRequestInfo: SupplierAccessRequestInfo[],
@@ -110,24 +124,10 @@ export async function approveSuppliers(
     const sessionIds = supplierAccessRequestInfo.map((info) => info.sessionId);
 
     // Do not want to add another supplier roles to users who already have a supplier role
-    const existingSupplierRoleInSessionIds = await getRoleBatch(
+    const sessionIdsWithoutSupplierRole = await getSessionIdsWithoutRole(
       sessionIds,
       ROLES.SUPPLIER,
     );
-    const sessionIdsWithSupplierRole = new Set(
-      existingSupplierRoleInSessionIds.map((role) => role.id),
-    );
-    const sessionIdsWithoutSupplierRole = sessionIds.filter(
-      (id) => !sessionIdsWithSupplierRole.has(id),
-    );
-
-    const newRoleData = sessionIdsWithoutSupplierRole.map((sessionId) => {
-      return {
-        name: ROLES.SUPPLIER,
-        sessionId,
-        isVisibleInNetwork: true,
-      };
-    });
 
     await db.$transaction(async (tx) => {
       await Promise.all([
@@ -136,7 +136,7 @@ export async function approveSuppliers(
           supplierAccessRequestIds,
           ACCESS_REQUEST_STATUS.APPROVED,
         ),
-        createSupplierRolesBatchTx(tx, newRoleData),
+        createSupplierRolesTx(tx, sessionIdsWithoutSupplierRole),
         updateChecklistStatusBatchTx(
           tx,
           sessionIds,

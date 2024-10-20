@@ -3,26 +3,14 @@ import { object, string } from 'yup';
 import { ROLES } from '~/constants';
 import { isValidChecklistStatusId } from '../models/checklistStatus';
 import { errorHandler } from '../util';
+import { checklistStatusIdSchema, sessionIdSchema } from '~/schemas/models';
 
 const roleSchema = object({
   role: string()
     .oneOf(Array.from(Object.values(ROLES)))
     .required(),
-  checklistStatusId: string()
-    .required()
-    .test(
-      'checklist-status-id-validation',
-      'Checklist status must be in database.',
-      async (checklistStatusId) => {
-        const checklistStatusExists =
-          await isValidChecklistStatusId(checklistStatusId);
-        if (!checklistStatusExists) {
-          return false;
-        }
-        return true;
-      },
-    ),
-  sessionId: string().required(),
+  checklistStatusId: checklistStatusIdSchema,
+  sessionId: sessionIdSchema,
 });
 
 async function createRoleAndCompleteChecklistItem(

@@ -156,7 +156,7 @@ export async function getOrCreateFulfillmentService(
     throw errorHandler(
       error,
       'Failed to retrieve or create fulfillment service.',
-      deleteFulfillmentService,
+      getOrCreateFulfillmentService,
       { sessionId, shopifyFulfillmentService },
     );
   }

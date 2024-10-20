@@ -1,5 +1,6 @@
 import type { GraphQL } from '~/types';
 
+// TODO: add retry mechanism
 async function mutateInternalStoreAdminAPI<T>(
   graphql: GraphQL,
   mutation: string,

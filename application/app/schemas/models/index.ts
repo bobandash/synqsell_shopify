@@ -5,6 +5,7 @@ import { isValidPartnershipRequest } from '~/services/models/partnershipRequest'
 import { hasPartnership } from '~/services/models/partnership';
 import { hasProduct } from '~/services/models/product';
 import { hasFulfillmentService } from '~/services/models/fulfillmentService';
+import { isValidChecklistStatusId } from '~/services/models/checklistStatus';
 
 // for individual id
 export const sessionIdSchema = createIdSchema('session', hasSession);
@@ -15,6 +16,10 @@ export const fulfillmentServiceIdSchema = createIdSchema(
   hasFulfillmentService,
 );
 
+export const checklistStatusIdSchema = createIdSchema(
+  'checkliist-status-id',
+  isValidChecklistStatusId,
+);
 // for list of ids
 export const partnershipRequestIdListSchema = createIdListSchema(
   'partnership-request',

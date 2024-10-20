@@ -1,7 +1,6 @@
 import { array, object, string } from 'yup';
 import { createJSONMessage } from '~/util';
 import { INTENTS } from '../constants';
-import { hasSession } from '~/services/models/session';
 import { isValidPriceList } from '~/services/models/priceList';
 import {
   CHECKLIST_ITEM_KEYS,
@@ -12,6 +11,7 @@ import { StatusCodes } from 'http-status-codes';
 import db from '~/db.server';
 import { updateChecklistStatusTx } from '~/services/models/checklistStatus';
 import { createOrUpdatePartnershipRequestTx } from '~/services/models/partnershipRequest';
+import { sessionIdSchema } from '~/schemas/models';
 
 type InitiatePartnershipActionProps = {
   intent: string;
@@ -23,24 +23,8 @@ type InitiatePartnershipActionProps = {
 
 const initiatePartnershipActionSchema = object({
   intent: string().required().oneOf([INTENTS.INITIATE_PARTNERSHIP]),
-  retailerId: string()
-    .required()
-    .test(
-      'is-valid-retailer-id',
-      'Retailer id must be valid',
-      async (retailerId) => {
-        return await hasSession(retailerId);
-      },
-    ),
-  supplierId: string()
-    .required()
-    .test(
-      'is-valid-supplier-id',
-      'Supplier id must be valid',
-      async (supplierId) => {
-        return await hasSession(supplierId);
-      },
-    ),
+  retailerId: sessionIdSchema,
+  supplierId: sessionIdSchema,
   message: string().required(),
   priceListIds: array()
     .of(string().required())

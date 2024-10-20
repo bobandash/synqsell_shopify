@@ -2,7 +2,7 @@ import {
   type PartnershipRequestStatusProps,
   type PartnershipRequestTypeProps,
 } from '~/constants';
-import { errorHandler } from '../../util';
+import { errorHandler } from '../util';
 import db from '~/db.server';
 import type { Prisma } from '@prisma/client';
 
@@ -19,7 +19,41 @@ type CreatePartnershipRequestTxProps = CreatePartnershipRequestProps & {
   tx: Prisma.TransactionClient;
 };
 
-async function createOrUpdatePartnershipRequest(
+export async function hasPartnershipRequestMultiplePriceLists(
+  priceListIds: string[],
+  senderId: string,
+  type: PartnershipRequestTypeProps,
+) {
+  try {
+    const partnershipRequest = await db.partnershipRequest.findFirst({
+      where: {
+        senderId,
+        type,
+        priceLists: {
+          some: {
+            id: {
+              in: priceListIds,
+            },
+          },
+        },
+      },
+    });
+
+    if (partnershipRequest) {
+      return true;
+    }
+    return false;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to check if partnership request exists.',
+      hasPartnershipRequestMultiplePriceLists,
+      { priceListIds, senderId },
+    );
+  }
+}
+
+export async function createOrUpdatePartnershipRequest(
   props: CreatePartnershipRequestProps,
 ) {
   try {
@@ -74,7 +108,7 @@ async function createOrUpdatePartnershipRequest(
   }
 }
 
-async function createOrUpdatePartnershipRequestTx(
+export async function createOrUpdatePartnershipRequestTx(
   props: CreatePartnershipRequestTxProps,
 ) {
   try {
@@ -129,41 +163,7 @@ async function createOrUpdatePartnershipRequestTx(
   }
 }
 
-async function hasPartnershipRequestMultiplePriceLists(
-  priceListIds: string[],
-  senderId: string,
-  type: PartnershipRequestTypeProps,
-) {
-  try {
-    const partnershipRequest = await db.partnershipRequest.findFirst({
-      where: {
-        senderId,
-        type,
-        priceLists: {
-          some: {
-            id: {
-              in: priceListIds,
-            },
-          },
-        },
-      },
-    });
-
-    if (partnershipRequest) {
-      return true;
-    }
-    return false;
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to check if partnership request exists.',
-      hasPartnershipRequestMultiplePriceLists,
-      { priceListIds, senderId },
-    );
-  }
-}
-
-async function getPartnershipRequestMultiplePriceLists(
+export async function getPartnershipRequestMultiplePriceLists(
   priceListIds: string[],
   senderId: string,
   type: PartnershipRequestTypeProps,
@@ -194,7 +194,7 @@ async function getPartnershipRequestMultiplePriceLists(
   }
 }
 
-async function hasPartnershipRequest(
+export async function hasPartnershipRequest(
   priceListId: string,
   senderId: string,
   type: PartnershipRequestTypeProps,
@@ -226,7 +226,7 @@ async function hasPartnershipRequest(
   }
 }
 
-async function isValidPartnershipRequest(id: string) {
+export async function isValidPartnershipRequest(id: string) {
   try {
     const partnershipRequest = await db.partnershipRequest.findFirst({
       where: {
@@ -248,7 +248,7 @@ async function isValidPartnershipRequest(id: string) {
   }
 }
 
-async function getPartnershipRequest(
+export async function getPartnershipRequest(
   priceListId: string,
   senderId: string,
   type: PartnershipRequestTypeProps,
@@ -277,7 +277,7 @@ async function getPartnershipRequest(
   }
 }
 
-async function getAllPartnershipRequests(
+export async function getAllPartnershipRequests(
   recipientId: string,
   type: PartnershipRequestTypeProps,
 ) {
@@ -306,13 +306,13 @@ async function getAllPartnershipRequests(
     throw errorHandler(
       error,
       'Failed to get all partnership requests for recipient.',
-      getPartnershipRequest,
+      getAllPartnershipRequests,
       { recipientId, type },
     );
   }
 }
 
-async function deletePartnershipRequestTx(
+export async function deletePartnershipRequestTx(
   tx: Prisma.TransactionClient,
   partnershipRequestId: string,
 ) {
@@ -333,7 +333,7 @@ async function deletePartnershipRequestTx(
   }
 }
 
-async function deletePartnershipRequestsTx(
+export async function deletePartnershipRequestsTx(
   tx: Prisma.TransactionClient,
   partnershipRequestIds: string[],
 ) {
@@ -350,21 +350,8 @@ async function deletePartnershipRequestsTx(
     throw errorHandler(
       error,
       'Failed to delete partnership requests in transaction',
-      getPartnershipRequest,
+      deletePartnershipRequestsTx,
       { partnershipRequestIds },
     );
   }
 }
-
-export {
-  createOrUpdatePartnershipRequest,
-  createOrUpdatePartnershipRequestTx,
-  hasPartnershipRequestMultiplePriceLists,
-  getPartnershipRequestMultiplePriceLists,
-  hasPartnershipRequest,
-  isValidPartnershipRequest,
-  getPartnershipRequest,
-  getAllPartnershipRequests,
-  deletePartnershipRequestTx,
-  deletePartnershipRequestsTx,
-};

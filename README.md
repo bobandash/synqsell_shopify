@@ -73,8 +73,8 @@ Here are a list of features that are still needed before the application can be 
 - (DONE) - Subscribe to Shopify's Privacy Webhook Topics
 - (DONE) - Add sales generated section for price list index table
 - (DONE) - Use Stripe's webhook topics to ensure that the database is synced properly to stripe statuses
+- (DONE) Handle the app/uninstalled webhook for suppliers and retailers
 - Create all relevant assets and bullet points for the Shopify app store
-- Handle the app/uninstalled webhook for suppliers and retailers
 - Add ALB and EC2 to deploy web/application server
 - Decide the retry strategy to adopt when interacting with Shopify's external API (thinking about retry mechanism w/ exponential backoff, but seeing if there are other approaches before implement)
 - One final check to verify all API endpoints, webhooks, and application code work as intended
@@ -88,6 +88,7 @@ Here are the nice to have features:
 - If a supplier changes tracking details after 7 days, it should not affect the retailer's price list
 - Refactor the Lambda functions to use layers for shared functions (DRY principle)
 - Talk to users: need to see whether or not suppliers would want methods of increasing sales that the retailers can use (e.g. injecting Shopify liquid to theme to do a countdown for product launches)
+- Refactor basic model queries and mutations (most of it was written when I initially started the project, so a lot needs to be refactored)
 
 <!-- TODO: INSERT SCREENSHOT OF PENDING APPROVAL STATUS ONCE SUBMITTED -->
 

@@ -21,6 +21,7 @@ export async function getOrCreateCarrierService(
     ]);
 
     // if there's data out of sync between Shopify and SynqSell's db for any reason
+    // we have to check it like this because a carrier service can only have a single unique name
     if (shopifyCarrierService && !dbCarrierServiceExists) {
       await dbCreateCarrierService(sessionId, shopifyCarrierService.id);
       return shopifyCarrierService;
