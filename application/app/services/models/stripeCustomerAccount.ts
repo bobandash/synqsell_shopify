@@ -59,6 +59,26 @@ export async function getStripeCustomerAccount(retailerId: string) {
   }
 }
 
+export async function userHasStripePaymentMethod(retailerId: string) {
+  try {
+    const hasStripeCustomerAccount =
+      await userHasStripeCustomerAccount(retailerId);
+
+    if (!hasStripeCustomerAccount) {
+      return false;
+    }
+    const stripeCustomerAccount = await getStripeCustomerAccount(retailerId);
+    return stripeCustomerAccount.hasPaymentMethod;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to check if user has a stripe payment method.',
+      userHasStripePaymentMethod,
+      { retailerId },
+    );
+  }
+}
+
 export async function changePaymentMethodStatus(
   retailerId: string,
   hasPaymentMethod: boolean,

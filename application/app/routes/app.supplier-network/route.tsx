@@ -39,12 +39,16 @@ import { useCallback, useEffect, useState } from 'react';
 import { INTENTS, MODALS } from './constants';
 import { requestAccessAction } from './actions';
 import type { RequestAccessFormData } from './actions/requestAccessAction';
+import { userHasStripePaymentMethod } from '~/services/models/stripeCustomerAccount';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
     const { session } = await authenticate.admin(request);
     const { id: sessionId } = session;
-    const isRetailer = await hasRole(sessionId, ROLES.RETAILER);
+    const [isRetailer, hasStripePaymentMethod] = await Promise.all([
+      hasRole(sessionId, ROLES.RETAILER),
+      userHasStripePaymentMethod(sessionId),
+    ]);
     const { searchParams } = new URL(request.url);
     const next = searchParams.get('next');
     const prev = searchParams.get('prev');
@@ -56,9 +60,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       cursor = prev;
     }
 
-    if (!isRetailer) {
+    if (!isRetailer || !hasStripePaymentMethod) {
       throw createJSONMessage(
-        'Unauthorized. User is not retailer.',
+        'Unauthorized. User is not authorized to view supplier network.',
         StatusCodes.UNAUTHORIZED,
       );
     }

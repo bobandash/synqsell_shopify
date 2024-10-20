@@ -31,6 +31,8 @@ import { PaddedBox } from '~/components';
 import sharedStyles from '~/shared.module.css';
 import { getReasonPhrase } from 'http-status-codes';
 import { WarningIcon } from '~/assets';
+import { userHasStripeConnectAccount } from '~/services/models/stripeConnectAccount';
+import { userHasStripePaymentMethod } from '~/services/models/stripeCustomerAccount';
 
 export const links = () => [{ rel: 'stylesheet', href: polarisStyles }];
 
@@ -38,9 +40,20 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
     const { session } = await authenticate.admin(request);
     const { id: sessionId } = session;
-    const roles = await getRoles(sessionId);
+    const [roles, hasStripeConnectAccount, hasStripePaymentMethod] =
+      await Promise.all([
+        getRoles(sessionId),
+        userHasStripeConnectAccount(sessionId),
+        userHasStripePaymentMethod(sessionId),
+      ]);
     const roleNames = roles.map((role) => role.name);
-    return json({ apiKey: process.env.SHOPIFY_API_KEY || '', roleNames });
+
+    return json({
+      apiKey: process.env.SHOPIFY_API_KEY || '',
+      roleNames,
+      hasStripeConnectAccount,
+      hasStripePaymentMethod,
+    });
   } catch (error) {
     logger.error(error);
     throw getJSONError(error, 'app root');
@@ -48,7 +61,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export default function App() {
-  const { apiKey, roleNames: dbRoles } = useLoaderData<typeof loader>();
+  const {
+    apiKey,
+    roleNames: dbRoles,
+    hasStripeConnectAccount,
+    hasStripePaymentMethod,
+  } = useLoaderData<typeof loader>();
   const [roles, setRoles] = useState(new Set(dbRoles));
   useEffect(() => {
     setRoles(new Set(dbRoles));
@@ -66,10 +84,10 @@ export default function App() {
             Home
           </Link>
           {isAdmin && <Link to="/app/admin">Admin</Link>}
-          {isRetailer && (
+          {isRetailer && hasStripePaymentMethod && (
             <Link to="/app/supplier-network">Supplier Network</Link>
           )}
-          {isSupplier && (
+          {isSupplier && hasStripeConnectAccount && (
             <Link to="/app/retailer-network">Retailer Network</Link>
           )}
           {isSupplier && <Link to="/app/price-list">Price Lists</Link>}

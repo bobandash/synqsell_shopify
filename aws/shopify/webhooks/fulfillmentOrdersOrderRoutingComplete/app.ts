@@ -36,8 +36,6 @@ async function getDeliveryMethodServiceCode(retailerSession: Session, shopifyFul
     );
 
     const serviceCode = res.fulfillmentOrder?.deliveryMethod?.serviceCode ?? SERVICE_CODE.STANDARD;
-    console.log(shopifyFulfillmentOrderId);
-    console.log(serviceCode);
     return serviceCode as ServiceCodeProps;
 }
 

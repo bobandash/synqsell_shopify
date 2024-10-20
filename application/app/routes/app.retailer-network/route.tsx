@@ -38,6 +38,7 @@ import type {
 import { InitiatePartnershipModal, RetailerCard } from './components';
 import { getAllPriceLists } from '~/services/models/priceList';
 import { initiatePartnershipAction } from './actions';
+import { userHasStripeConnectAccount } from '~/services/models/stripeConnectAccount';
 
 type InitiatePartnershipData = {
   intent: string;
@@ -50,7 +51,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
     const { session } = await authenticate.admin(request);
     const { id: sessionId } = session;
-    const isSupplier = await hasRole(sessionId, ROLES.SUPPLIER);
+
+    const [isSupplier, hasStripeConnectAccount] = await Promise.all([
+      hasRole(sessionId, ROLES.RETAILER),
+      userHasStripeConnectAccount(sessionId),
+    ]);
+
     const { searchParams } = new URL(request.url);
     const next = searchParams.get('next');
     const prev = searchParams.get('prev');
@@ -62,7 +68,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       cursor = prev;
     }
 
-    if (!isSupplier) {
+    if (!isSupplier || !hasStripeConnectAccount) {
       throw createJSONMessage(
         'Unauthorized. User is not supplier.',
         StatusCodes.UNAUTHORIZED,
