@@ -9,27 +9,37 @@ import { ProductStatus, ShopifyEvent } from './types';
 // START: HELPER FUNCTIONS TO REACTIVATING PRODUCTS
 // ==============================================================================================================
 async function isRetailerProduct(shopifyProductId: string, client: PoolClient) {
-    const productQuery = `SELECT FROM "ImportedProduct" WHERE "shopifyProductId" = $1 LIMIT 1`;
-    const res = await client.query(productQuery, [shopifyProductId]);
-    if (res.rows.length > 0) {
-        return true;
+    try {
+        const productQuery = `SELECT FROM "ImportedProduct" WHERE "shopifyProductId" = $1 LIMIT 1`;
+        const res = await client.query(productQuery, [shopifyProductId]);
+        if (res.rows.length > 0) {
+            return true;
+        }
+        return false;
+    } catch (error) {
+        console.error(error);
+        throw new Error(`Failed to check if product ${shopifyProductId} is a retailer product.`);
     }
-    return false;
 }
 
 async function isSupplierProduct(shopifyProductId: string, client: PoolClient) {
-    const productQuery = `SELECT FROM "Product" WHERE "shopifyProductId" = $1 LIMIT 1`;
-    const res = await client.query(productQuery, [shopifyProductId]);
-    if (res.rows.length > 0) {
-        return true;
+    try {
+        const productQuery = `SELECT FROM "Product" WHERE "shopifyProductId" = $1 LIMIT 1`;
+        const res = await client.query(productQuery, [shopifyProductId]);
+        if (res.rows.length > 0) {
+            return true;
+        }
+        return false;
+    } catch (error) {
+        console.error(error);
+        throw new Error(`Failed to check if product ${shopifyProductId} is a supplier product.`);
     }
-    return false;
 }
 
 export const lambdaHandler = async (event: ShopifyEvent): Promise<APIGatewayProxyResult> => {
     let client: null | PoolClient = null;
     try {
-        const pool = initializePool();
+        const pool = await initializePool();
         client = await pool.connect();
         const payload = event.detail.payload;
         const shopifyProductId = payload.admin_graphql_api_id;

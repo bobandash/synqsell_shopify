@@ -21,7 +21,7 @@ export const lambdaHandler = async (event: Event): Promise<APIGatewayProxyResult
     const accountId = event.account;
 
     try {
-        const pool = initializePool();
+        const pool = await initializePool();
         client = await pool.connect();
         await removeStripeAccountFromDatabase(accountId, client);
         return {

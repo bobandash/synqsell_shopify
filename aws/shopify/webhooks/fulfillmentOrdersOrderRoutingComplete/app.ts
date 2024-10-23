@@ -44,7 +44,7 @@ async function getDeliveryMethodServiceCode(retailerSession: Session, shopifyFul
 export const lambdaHandler = async (event: ShopifyEvent): Promise<APIGatewayProxyResult> => {
     let client: null | PoolClient = null;
     try {
-        const pool = initializePool();
+        const pool = await initializePool();
         client = await pool.connect();
         const shop = event.detail.metadata['X-Shopify-Shop-Domain'];
         const shopifyFulfillmentOrderId = event.detail.payload.fulfillment_order.id;

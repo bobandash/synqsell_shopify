@@ -1,10 +1,10 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import type { PoolClient } from 'pg';
 import { composeGid } from '@shopify/admin-graphql-api-utilities';
-import initializePool from './db';
 import { RESPONSE } from './constants';
 import { BuyerIdentityInput, ShippingRateRequest } from './types';
 import { getShippingRates, orderHasImportedItems } from './helper';
+import { initializePool } from './db';
 
 // https://shopify.dev/docs/api/admin-graphql/2024-07/objects/DeliveryCarrierService
 
@@ -14,10 +14,10 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
     const sessionId = event.queryStringParameters?.sessionId ?? null;
 
     if (!request || !sessionId) {
-        return RESPONSE.EMPTY();
+        return RESPONSE.EMPTY;
     }
     try {
-        const pool = initializePool();
+        const pool = await initializePool();
         client = await pool.connect();
         const orderShopifyVariantDetails = request.rate.items.map(({ variant_id, quantity }) => ({
             id: composeGid('ProductVariant', variant_id),
@@ -45,7 +45,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
 
         const hasImportedItems = await orderHasImportedItems(orderShopifyVariantIds, client);
         if (!hasImportedItems) {
-            return RESPONSE.EMPTY();
+            return RESPONSE.EMPTY;
         }
         const shippingRates = await getShippingRates(sessionId, orderShopifyVariantDetails, buyerIdentityInput, client);
 
@@ -55,7 +55,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
         };
     } catch (error) {
         console.error(error);
-        return RESPONSE.BACKUP();
+        return RESPONSE.BACKUP;
     } finally {
         if (client) {
             client.release();

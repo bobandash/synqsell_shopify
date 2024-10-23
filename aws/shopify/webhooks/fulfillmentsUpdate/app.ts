@@ -29,7 +29,7 @@ async function isProcessableFulfillment(shopifyFulfillmentId: string, role: Role
 export const lambdaHandler = async (event: ShopifyEvent): Promise<APIGatewayProxyResult> => {
     let client: null | PoolClient = null;
     try {
-        const pool = initializePool();
+        const pool = await initializePool();
         client = await pool.connect();
         const payload = event.detail.payload;
         const shop = event.detail.metadata['X-Shopify-Shop-Domain'];

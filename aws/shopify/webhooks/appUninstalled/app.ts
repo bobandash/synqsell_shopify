@@ -2,9 +2,8 @@ import { APIGatewayProxyResult } from 'aws-lambda';
 import { PoolClient } from 'pg';
 import { initializePool } from './db';
 import { RolesOptionsProps, Session, ShopifyEvent } from './types';
-import { markRetailerProductsArchived, updateAppUninstalledStatus } from './helper';
+import { markRetailerProductsArchived, updateAppUninstalledStatus, deleteRetailerImportedProductsDb } from './helper';
 import { ROLES } from './constants';
-import deleteRetailerImportedProductsDb from './helper/deleteRetailerImportedProductsDb';
 
 async function getSession(shop: string, client: PoolClient) {
     try {
@@ -52,7 +51,7 @@ export const lambdaHandler = async (event: ShopifyEvent): Promise<APIGatewayProx
     const shop = event.detail['metadata']['X-Shopify-Shop-Domain'];
     let client: null | PoolClient = null;
     try {
-        const pool = initializePool();
+        const pool = await initializePool();
         client = await pool.connect();
 
         const session = await getSession(shop, client);

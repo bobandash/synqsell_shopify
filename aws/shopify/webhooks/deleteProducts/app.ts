@@ -13,21 +13,31 @@ type RetailerProductDetailRow = {
 };
 
 async function isRetailerProduct(shopifyDeletedProductId: string, client: PoolClient) {
-    const productQuery = `SELECT FROM "ImportedProduct" WHERE "shopifyProductId" = $1 LIMIT 1`;
-    const res = await client.query(productQuery, [shopifyDeletedProductId]);
-    if (res.rows.length > 0) {
-        return true;
+    try {
+        const productQuery = `SELECT FROM "ImportedProduct" WHERE "shopifyProductId" = $1 LIMIT 1`;
+        const res = await client.query(productQuery, [shopifyDeletedProductId]);
+        if (res.rows.length > 0) {
+            return true;
+        }
+        return false;
+    } catch (error) {
+        console.error(error);
+        throw new Error(`Failed to check if productId ${shopifyDeletedProductId} is a retailer product.`);
     }
-    return false;
 }
 
 async function isSupplierProduct(shopifyDeletedProductId: string, client: PoolClient) {
-    const productQuery = `SELECT FROM "Product" WHERE "shopifyProductId" = $1 LIMIT 1`;
-    const res = await client.query(productQuery, [shopifyDeletedProductId]);
-    if (res.rows.length > 0) {
-        return true;
+    try {
+        const productQuery = `SELECT FROM "Product" WHERE "shopifyProductId" = $1 LIMIT 1`;
+        const res = await client.query(productQuery, [shopifyDeletedProductId]);
+        if (res.rows.length > 0) {
+            return true;
+        }
+        return false;
+    } catch (error) {
+        console.error(error);
+        throw new Error(`Failed to check if productId ${shopifyDeletedProductId} is a supplier product.`);
     }
-    return false;
 }
 
 async function handleDeletedSupplierProduct(shopifyDeletedProductId: string, client: PoolClient) {
@@ -81,7 +91,7 @@ async function handleDeletedRetailerProduct(shopifyDeletedProductId: string, cli
 export const lambdaHandler = async (event: ShopifyEvent): Promise<APIGatewayProxyResult> => {
     let client: null | PoolClient = null;
     try {
-        const pool = initializePool();
+        const pool = await initializePool();
         const {
             detail: { payload },
         } = event;

@@ -1,12 +1,9 @@
-import { Lambda } from 'aws-sdk';
 import { Event, StripeSecrets } from './types';
 import Stripe from 'stripe';
-import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
+import { GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
 import { PoolClient } from 'pg';
 import { initializePool } from './db';
-
-const lambda = new Lambda();
-const client = new SecretsManagerClient();
+import { client, lambda } from './singletons';
 
 async function getStripeSecrets() {
     try {
@@ -84,7 +81,7 @@ export const lambdaHandler = async (event: Event) => {
         const stripe = new Stripe(stripeSecrets.STRIPE_SECRET_API_KEY);
         stripe.webhooks.constructEvent(body, stripeSignature, stripeSecrets.WEBHOOK_SIGNING_SECRET);
 
-        const pool = initializePool();
+        const pool = await initializePool();
         client = await pool.connect();
 
         const hasProcessedBefore = await hasProcessedWebhookBefore(webhookId, client);

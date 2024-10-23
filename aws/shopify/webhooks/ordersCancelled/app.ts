@@ -46,7 +46,7 @@ export const lambdaHandler = async (event: ShopifyEvent): Promise<APIGatewayProx
     let client: null | PoolClient = null;
 
     try {
-        const pool = initializePool();
+        const pool = await initializePool();
         client = await pool.connect();
         const shop = event.detail.metadata['X-Shopify-Shop-Domain'];
         const payload = event.detail.payload;

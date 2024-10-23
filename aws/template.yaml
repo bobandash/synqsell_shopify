@@ -5,47 +5,23 @@ Transform:
 Description: >
   SAM Template For all infrastructure for SynqSell
 
-# TODO: Refactor: change the hardcoded values like stage name, or api gateway routes
-# TODO: add lambda layers for shared functions
-# TODO: After confirm prod traction, add db password rotation
+# Helpful Links
+# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/pseudo-parameter-reference.html
 
-# INITIAL SET UP: NEED TO PROVIDE A KEY-PAIR TO ACCESS BASTION HOST, can only be created manually because pem is only accessible in the beginning
+# TODO: Create a CD pipeline to automatically build and push the docker image onto ECR, and pull/run the docker image from ECR to EC2
+# TODO: Add lambda layers for shared functions
+# TODO: Add db password rotation for added security
+# TODO: Read about common file structure organizations of CloudFormation / Terraform to figure out how to organize this IaC into multiple files
+
 Parameters:
-  ShopifySourceName:
+  Environment:
     Type: String
-    Description: The source name for Shopify Events
-    Default: "shopify"
-
-  RDSDatabaseName:
-    Type: String
-    Description: The name of the database
-    Default: "postgres"
-
-  RDSDatabaseUsername:
-    Type: String
-    Description: The username of the master user
-    Default: "postgres"
-
-  # Parameter values that have to be overridden depending on the AWS account and user IP
-  BastionHostKeyName:
-    Type: String
-    Description: Key name for SSH into bastion host for database access
-    Default: synqsell-key-pair
-
-  EventBusArn:
-    Type: String
-    Description: "The ARN of the Shopify Event Bus"
-    Default: arn:aws:events:us-east-2:149536473043:event-bus/aws.partner/shopify.com/153436192769/aws
-
-  StripeSecretsManagerARN:
-    Type: String
-    Description: "The ARN of Stripe Secrets"
-    Default: arn:aws:secretsmanager:us-east-2:149536473043:secret:stripeTestKeys-iNuIql
-
-  MyCidrIP:
-    Type: String
-    Description: IP for rds access
-    Default: 123.123.123.123/32
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Description: The environment of the deployment
 
 Globals:
   Api:
@@ -58,12 +34,9 @@ Globals:
     Timeout: 3
     Environment:
       Variables:
-        DB_USER: !Ref RDSDatabaseUsername
-        DB_PASSWORD: !Sub "{{resolve:secretsmanager:${DatabaseRotationSecret}:SecretString:password}}"
-        DB_HOST: !GetAtt DatabaseRDS.Endpoint.Address
-        DB_PORT: !GetAtt DatabaseRDS.Endpoint.Port
-        DATABASE: !Ref RDSDatabaseName
-        STRIPE_SECRET_ARN: !Ref StripeSecretsManagerARN
+        DB_USER_CREDENTIALS_SECRET_ID: !Ref DatabaseUserCredentialSecret # secret-id can be either the arn or id, doesn't matter
+        DB_CONNECTION_SECRET_ID: !Ref DatabaseConnectionSecret
+        API_KEYS_SECRET_ID: !Sub ${Environment}/apiKeys
     LoggingConfig:
       LogFormat: JSON
     VpcConfig:
@@ -74,31 +47,7 @@ Globals:
         - !Ref PrivateSubnetTwo
 
 Resources:
-  ImageHostingS3:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: "synqsell-image-hosting"
-      PublicAccessBlockConfiguration:
-        BlockPublicAcls: false
-        BlockPublicPolicy: false
-        IgnorePublicAcls: false
-        RestrictPublicBuckets: false
-    Metadata:
-      Description: "Public S3 bucket for hosting publicly accessible images such logos for SynqSell"
-
-  ImageHostingS3BucketPolicy:
-    Type: AWS::S3::BucketPolicy
-    Properties:
-      Bucket: !Ref ImageHostingS3
-      PolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Sid: PublicReadGetObject
-            Effect: Allow
-            Principal: "*"
-            Action: s3:GetObject
-            Resource: !Sub arn:aws:s3:::${ImageHostingS3}/*
-
+  # VPC Configuration
   MyVPC:
     Type: AWS::EC2::VPC
     Properties:
@@ -148,34 +97,133 @@ Resources:
       MapPublicIpOnLaunch: false
       AvailabilityZone: !Select [1, !GetAZs ""]
 
-  # https://aws.amazon.com/blogs/security/how-to-securely-provide-database-credentials-to-lambda-functions-by-using-aws-secrets-manager/#:~:text=Dynamic%20references%20provide%20a%20compact%2C%20powerful%20way%20for,the%20resolved%20value%2C%20keeping%20the%20database%20password%20safe.
-  DatabaseRotationSecret:
-    Type: AWS::SecretsManager::Secret
+  # Resources for Application
+  ImageHostingS3:
+    Type: AWS::S3::Bucket
     Properties:
-      Description: RDS database credentials
-      GenerateSecretString:
-        SecretStringTemplate: '{"username": "${!Ref RDSDatabaseUsername}"}'
-        GenerateStringKey: "password"
-        PasswordLength: 16
-        ExcludeCharacters: '$'';|&<>()[]{}!?*%^~`,:#/\"@/\\ "'
+      BucketName: !Sub "{{resolve:secretsmanager:${Environment}/appConfig:SecretString:s3BucketName}}"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+    Metadata:
+      Description: "Public S3 bucket for hosting publicly accessible images such logos for SynqSell"
+
+  ImageHostingS3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ImageHostingS3
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: PublicReadGetObject
+            Effect: Allow
+            Principal: "*"
+            Action: s3:GetObject
+            Resource: !Sub arn:aws:s3:::${ImageHostingS3}/*
+
+  # Related to web/app browser
+  ECR:
+    Type: AWS::ECR::Repository
+    Properties:
+      EmptyOnDelete: True
+      RepositoryName: !Sub ${Environment}/synqsell
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      ImageTagMutability: IMMUTABLE
+
+  RemixAppInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: ECRAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: ecr:GetAuthorizationToken
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - ecr:BatchGetImage
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:BatchCheckLayerAvailability
+                Resource: !GetAtt ECR.Arn
+
+  # You must have a profile to attach a role to an EC2
+  RemixAppInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: remix-app-ec2-instance-profile
+      Path: /
+      Roles:
+        - !Ref RemixAppInstanceRole
+
+  RemixAppSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Remix Application on EC2
+      VpcId: !Ref MyVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp # HTTP
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp # HTTPS
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp # SSH
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Sub "{{resolve:secretsmanager:${Environment}/appConfig:SecretString:myCidrIP}}"
+
+  RemixAppInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: ami-037774efca2da0726
+      InstanceType: t2.micro
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          GroupSet:
+            - !Ref RemixAppSecurityGroup
+          SubnetId: !Ref PrivateSubnetOne
+      KeyName: !Sub "{{resolve:secretsmanager:${Environment}/appConfig:SecretString:webAppKeyPair}}"
+      IamInstanceProfile: !Ref RemixAppInstanceProfile
+
+  # https://aws.amazon.com/blogs/security/how-to-securely-provide-database-credentials-to-lambda-functions-by-using-aws-secrets-manager/#:~:text=Dynamic%20references%20provide%20a%20compact%2C%20powerful%20way%20for,the%20resolved%20value%2C%20keeping%20the%20database%20password%20safe.
+  DatabaseUserCredentialSecret:
+    Type: AWS::SecretsManager::Secret
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
-
-  DatabaseSubnets:
-    Type: AWS::RDS::DBSubnetGroup
     Properties:
-      DBSubnetGroupDescription: Subnet group for RDS instance
-      SubnetIds:
-        - !Ref PrivateSubnetOne
-        - !Ref PrivateSubnetTwo
+      Description: RDS Master User Credentials
+      GenerateSecretString:
+        SecretStringTemplate: !Sub
+          - '{"username": "${username}"}'
+          - username: !Sub "{{resolve:secretsmanager:${Environment}/appConfig:SecretString:dbUsername}}"
+        GenerateStringKey: "password"
+        PasswordLength: 16
+        ExcludeCharacters: "\"'`|;:,!@#$%^&*()<>[]{}/?~\\"
 
   DatabaseRDS:
     Type: AWS::RDS::DBInstance
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
     Properties:
-      DBName: !Ref RDSDatabaseName
+      DBName: !Sub "{{resolve:secretsmanager:${Environment}/appConfig:SecretString:dbName}}"
       Engine: "postgres"
-      MasterUsername: !Ref RDSDatabaseUsername
-      MasterUserPassword: !Sub "{{resolve:secretsmanager:${DatabaseRotationSecret}:SecretString:password}}"
+      MasterUsername: !Sub "{{resolve:secretsmanager:${DatabaseUserCredentialSecret}:SecretString:username}}"
+      MasterUserPassword: !Sub "{{resolve:secretsmanager:${DatabaseUserCredentialSecret}:SecretString:password}}"
       Port: "5432"
       DBInstanceClass: "db.t3.micro"
       AllocatedStorage: "20"
@@ -185,8 +233,36 @@ Resources:
       DBSubnetGroupName: !Ref DatabaseSubnets
       VPCSecurityGroups:
         - !GetAtt DatabaseSecurityGroup.GroupId
-    DeletionPolicy: Delete
-    UpdateReplacePolicy: Delete
+
+  DatabaseConnectionSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: RDS Connection information
+      SecretString: !Sub
+        - '{"database": "${database}", "host": "${host}", "port": "${port}"}'
+        - database: !Sub "{{resolve:secretsmanager:${Environment}/appConfig:SecretString:dbName}}"
+          host: !GetAtt DatabaseRDS.Endpoint.Address
+          port: !GetAtt DatabaseRDS.Endpoint.Port
+
+  DatabaseSubnets:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet group for RDS instance
+      SubnetIds:
+        - !Ref PrivateSubnetOne
+        - !Ref PrivateSubnetTwo
+
+  # Need a Bastion host in public subnet for local backend development
+  BastionHostSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Bastion host
+      VpcId: !Ref MyVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Sub "{{resolve:secretsmanager:${Environment}/appConfig:SecretString:myCidrIP}}"
 
   DatabaseSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -203,18 +279,6 @@ Resources:
           SourceSecurityGroupId: !Ref BastionHostSecurityGroup
       VpcId: !Ref MyVPC
 
-  # Need a Bastion host in public subnet
-  BastionHostSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Security group for bastion host (local db access)
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          CidrIp: !Ref MyCidrIP
-      VpcId: !Ref MyVPC
-
   BastionHost:
     Type: AWS::EC2::Instance
     Properties:
@@ -226,8 +290,9 @@ Resources:
           GroupSet:
             - !Ref BastionHostSecurityGroup
           SubnetId: !Ref PublicSubnetOne
-      KeyName: !Ref BastionHostKeyName
+      KeyName: !Sub "{{resolve:secretsmanager:${Environment}/appConfig:SecretString:bastionHostKeyPair}}"
 
+  # Start routing to give lambda functions access to internet via NAT Gateway
   LambdaSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -399,6 +464,67 @@ Resources:
       RestApiId: !Ref APIGateway
       PathPart: webhooks
 
+  # Policies for lambda functions
+  LambdaInvokePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "Policy for invoking Lambda functions"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - "lambda:InvokeFunction"
+            Resource: "*"
+
+  ApiKeyAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "Policy for accessing secrets"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - "secretsmanager:GetSecretValue"
+            Resource:
+              - !Sub
+                - "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${SecretId}-*"
+                - SecretId: !Sub ${Environment}/apiKeys
+              - !Ref DatabaseConnectionSecret
+              - !Ref DatabaseUserCredentialSecret
+
+  PrivateFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Ref ApiKeyAccessPolicy
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+
+  CoordinatorFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Ref LambdaInvokePolicy
+        - !Ref ApiKeyAccessPolicy
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+
   StripeWebhookCoordinatorFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -410,17 +536,7 @@ Resources:
       Runtime: nodejs20.x
       Architectures:
         - x86_64
-      Policies:
-        - Version: "2012-10-17"
-          Statement:
-            - Effect: Allow
-              Action:
-                - "secretsmanager:GetSecretValue"
-              Resource: !Ref StripeSecretsManagerARN
-            - Effect: Allow
-              Action:
-                - "lambda:InvokeFunction"
-              Resource: "*"
+      Role: !GetAtt CoordinatorFunctionRole.Arn
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -497,7 +613,10 @@ Resources:
           metadata:
             X-Shopify-Topic:
               - prefix: ""
-      EventBusName: !Ref EventBusArn
+      EventBusName: !Sub
+        - "arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus/${identifier}"
+        - identifier: !Sub "{{resolve:secretsmanager:${Environment}/appConfig:SecretString:shopifyEventBusIdentifier}}"
+
       Targets:
         - Arn: !GetAtt WebhookSQS.Arn
           Id: "WebhookSQSTarget"
@@ -582,7 +701,6 @@ Resources:
         Sourcemap: false
         EntryPoints:
           - app.ts
-
   SQSQueueTrigger:
     Type: AWS::Lambda::EventSourceMapping
     Properties:
@@ -602,6 +720,7 @@ Resources:
       Runtime: nodejs20.x
       Architectures:
         - x86_64
+      Role: !GetAtt PrivateFunctionRole.Arn
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -622,6 +741,7 @@ Resources:
       Runtime: nodejs20.x
       Architectures:
         - x86_64
+      Role: !GetAtt PrivateFunctionRole.Arn
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -642,6 +762,7 @@ Resources:
       Runtime: nodejs20.x
       Architectures:
         - x86_64
+      Role: !GetAtt PrivateFunctionRole.Arn
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -663,6 +784,7 @@ Resources:
       Runtime: nodejs20.x
       Architectures:
         - x86_64
+      Role: !GetAtt PrivateFunctionRole.Arn
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -683,6 +805,7 @@ Resources:
       Runtime: nodejs20.x
       Architectures:
         - x86_64
+      Role: !GetAtt PrivateFunctionRole.Arn
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -703,13 +826,7 @@ Resources:
       Runtime: nodejs20.x
       Architectures:
         - x86_64
-      Policies:
-        - Version: "2012-10-17"
-          Statement:
-            - Effect: Allow
-              Action:
-                - "secretsmanager:GetSecretValue"
-              Resource: !Ref StripeSecretsManagerARN
+      Role: !GetAtt PrivateFunctionRole.Arn
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -730,6 +847,7 @@ Resources:
       Runtime: nodejs20.x
       Architectures:
         - x86_64
+      Role: !GetAtt PrivateFunctionRole.Arn
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -750,6 +868,7 @@ Resources:
       Runtime: nodejs20.x
       Architectures:
         - x86_64
+      Role: !GetAtt PrivateFunctionRole.Arn
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -771,6 +890,7 @@ Resources:
       Runtime: nodejs20.x
       Architectures:
         - x86_64
+      Role: !GetAtt PrivateFunctionRole.Arn
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -791,6 +911,7 @@ Resources:
       Runtime: nodejs20.x
       Architectures:
         - x86_64
+      Role: !GetAtt PrivateFunctionRole.Arn
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -812,6 +933,7 @@ Resources:
       Runtime: nodejs20.x
       Architectures:
         - x86_64
+      Role: !GetAtt PrivateFunctionRole.Arn
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -832,6 +954,7 @@ Resources:
       Runtime: nodejs20.x
       Architectures:
         - x86_64
+      Role: !GetAtt PrivateFunctionRole.Arn
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -848,15 +971,15 @@ Outputs:
   awsRegion:
     Description: AWS Region of Deployed Resources
     Value: !Ref AWS::Region
-  dbEndpointAddress:
-    Description: The connection endpoint for the database
-    Value: !GetAtt DatabaseRDS.Endpoint.Address
+  dbUserSecretArn:
+    Description: Secrets Manager for Database Admin User Credentials
+    Value: !GetAtt DatabaseUserCredentialSecret.Id
+  dbConnectionSecretArn:
+    Description: Secrets Manager for Database Connection
+    Value: !GetAtt DatabaseConnectionSecret.Id
   bastionHostPublicIP:
     Description: Public IP of your bastion host
     Value: !GetAtt BastionHost.PublicIp
-  dbSecretsARN:
-    Description: The ARN of the Secrets Manager storing the database rotation secret
-    Value: !Ref DatabaseRotationSecret
   deliveryServiceCallbackUrl:
     Description: The public callback endpoint for calculating shipping rates on Shopify
     Value: !Sub

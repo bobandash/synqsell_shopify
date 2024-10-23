@@ -14,7 +14,7 @@ async function getSupplierSession(shop: string, client: PoolClient) {
         }
         const session = sessionData.rows[0];
         return session as Session;
-    } catch (error){
+    } catch (error) {
         console.error(error);
         throw new Error(`Failed to retrieve session from shop ${shop}.`);
     }
@@ -28,17 +28,16 @@ async function isSynqsellOrder(shopifyOrderId: string, supplierId: string, clien
         `;
         const orderData = await client.query(query, [supplierId, shopifyOrderId]);
         return orderData.rows.length > 0;
-    } catch(error) {
+    } catch (error) {
         console.error(error);
-        throw new Error(`Failed to check if order id ${shopifyOrderId} is a synqsell order.`)
+        throw new Error(`Failed to check if order id ${shopifyOrderId} is a synqsell order.`);
     }
-
 }
 
 export const lambdaHandler = async (event: ShopifyEvent): Promise<APIGatewayProxyResult> => {
     let client: null | PoolClient = null;
     try {
-        const pool = initializePool();
+        const pool = await initializePool();
         client = await pool.connect();
         const payload = event.detail.payload;
         const shop = event.detail.metadata['X-Shopify-Shop-Domain'];
