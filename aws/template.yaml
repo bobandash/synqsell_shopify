@@ -7,11 +7,18 @@ Description: >
 
 # Helpful Links
 # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/pseudo-parameter-reference.html
+# commands
+# sam build
+# sam validate
+# sam deploy --config-env default
+# sam deploy --config-env prod
 
-# TODO: Create a CD pipeline to automatically build and push the docker image onto ECR, and pull/run the docker image from ECR to EC2
 # TODO: Add lambda layers for shared functions
+# TODO: Create a CD pipeline to automatically build and push the docker image onto ECR, and pull/run the docker image from ECR to EC2
 # TODO: Add db password rotation for added security
 # TODO: Read about common file structure organizations of CloudFormation / Terraform to figure out how to organize this IaC into multiple files
+# Current impl is dev env is only local development (just use ngrok for viewing data streaming, etc.)
+# We do not need staging branch for now, we would need it when we have our first users
 
 Parameters:
   Environment:
@@ -19,9 +26,13 @@ Parameters:
     Default: dev
     AllowedValues:
       - dev
-      - staging
       - prod
     Description: The environment of the deployment
+
+Conditions:
+  isProd: !Equals
+    - !Ref Environment
+    - prod
 
 Globals:
   Api:
@@ -124,8 +135,92 @@ Resources:
             Resource: !Sub arn:aws:s3:::${ImageHostingS3}/*
 
   # Related to web/app browser
+  # Flow is Internet => ALB Listener => Target Group => EC2 Instances
+  # Note: we only need an ALB and EC2 for staging and prod
+  ALBSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Condition: isProd
+    Properties:
+      GroupDescription: "Security group for ALB"
+      VpcId: !Ref MyVPC
+      SecurityGroupIngress:
+        - CidrIp: "0.0.0.0/0"
+          FromPort: 80
+          IpProtocol: "tcp"
+          ToPort: 80
+        - CidrIp: "0.0.0.0/0"
+          FromPort: 443
+          IpProtocol: "tcp"
+          ToPort: 443
+
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Condition: isProd
+    Properties:
+      Name: !Sub "${Environment}-alb"
+      Scheme: "internet-facing"
+      Type: "application"
+      Subnets:
+        - !Ref PublicSubnetOne
+        - !Ref PublicSubnetTwo
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
+      IpAddressType: "ipv4"
+
+  ALBCertificate:
+    Type: AWS::CertificateManager::Certificate
+    Condition: isProd
+    Properties:
+      ValidationMethod: DNS
+      DomainName: !GetAtt ApplicationLoadBalancer.DNSName # TODO: THIS IS A BREAKING ERROR DNS Record Set is not available. Certificate is in FAILED status
+
+  # listener basically listens to requests and passes it securely to load balancer
+  HTTPListener:
+    Type: "AWS::ElasticLoadBalancingV2::Listener"
+    Condition: isProd
+    Properties:
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 80
+      Protocol: "HTTP"
+      DefaultActions:
+        - Order: 1
+          RedirectConfig:
+            Protocol: "HTTPS"
+            Port: "443"
+            Host: "#{host}"
+            Path: "/#{path}"
+            Query: "#{query}"
+            StatusCode: "HTTP_301"
+          Type: "redirect"
+
+  HTTPSListener:
+    Type: "AWS::ElasticLoadBalancingV2::Listener"
+    Condition: isProd
+    Properties:
+      Certificates:
+        - !Ref ALBCertificate
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 443
+      Protocol: "HTTPS"
+      SslPolicy: "ELBSecurityPolicy-2016-08"
+      DefaultActions:
+        - Order: 1
+          TargetGroupArn: !Ref TargetGroupOne
+          Type: "forward"
+
+  TargetGroupOne:
+    Type: "AWS::ElasticLoadBalancingV2::TargetGroup"
+    Condition: isProd
+    Properties:
+      Port: 80
+      Protocol: "HTTP"
+      VpcId: !Ref MyVPC
+      Targets:
+        - Id: !Ref RemixAppInstance
+
   ECR:
     Type: AWS::ECR::Repository
+    Condition: isProd
     Properties:
       EmptyOnDelete: True
       RepositoryName: !Sub ${Environment}/synqsell
@@ -135,6 +230,7 @@ Resources:
 
   RemixAppInstanceRole:
     Type: AWS::IAM::Role
+    Condition: isProd
     Properties:
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
@@ -161,14 +257,16 @@ Resources:
   # You must have a profile to attach a role to an EC2
   RemixAppInstanceProfile:
     Type: AWS::IAM::InstanceProfile
+    Condition: isProd
     Properties:
-      InstanceProfileName: remix-app-ec2-instance-profile
+      InstanceProfileName: !Sub ${Environment}-remix-app-ec2-instance-profile
       Path: /
       Roles:
         - !Ref RemixAppInstanceRole
 
   RemixAppSecurityGroup:
     Type: AWS::EC2::SecurityGroup
+    Condition: isProd
     Properties:
       GroupDescription: Security group for Remix Application on EC2
       VpcId: !Ref MyVPC
@@ -188,6 +286,7 @@ Resources:
 
   RemixAppInstance:
     Type: AWS::EC2::Instance
+    Condition: isProd
     Properties:
       ImageId: ami-037774efca2da0726
       InstanceType: t2.micro
@@ -388,7 +487,7 @@ Resources:
   APIGateway:
     Type: AWS::ApiGateway::RestApi
     Properties:
-      Name: APIGateway
+      Name: !Join ["_", [!Sub "${Environment}", APIGateway]]
 
   DeliveryCarrierServiceApiResource:
     Type: AWS::ApiGateway::Resource
@@ -431,7 +530,8 @@ Resources:
   DeliveryCarrierServiceFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: delivery_carrier_service
+      FunctionName:
+        !Join ["_", [!Sub "${Environment}", delivery_carrier_service]]
       CodeUri: shopify/api/deliveryCarrierService/
       Handler: app.lambdaHandler
       MemorySize: 1028
@@ -528,7 +628,8 @@ Resources:
   StripeWebhookCoordinatorFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: stripe_webhook_coordinator
+      FunctionName:
+        !Join ["_", [!Sub "${Environment}", stripe_webhook_coordinator]]
       CodeUri: stripe/webhooks/webhooksCoordinator/
       Handler: app.lambdaHandler
       MemorySize: 1028
@@ -595,7 +696,7 @@ Resources:
   WebhookSQS:
     Type: AWS::SQS::Queue
     Properties:
-      QueueName: "webhook_queue.fifo"
+      QueueName: !Join ["_", [!Sub "${Environment}", "webhook_queue.fifo"]]
       FifoQueue: true
       ContentBasedDeduplication: true
       RedrivePolicy:
@@ -605,7 +706,7 @@ Resources:
   ShopifyWebhookRule:
     Type: AWS::Events::Rule
     Properties:
-      Name: sqs_rule
+      Name: !Join ["_", [!Sub "${Environment}", shopify_sqs_rule]]
       EventPattern:
         detail-type:
           - "shopifyWebhook"
@@ -644,7 +745,8 @@ Resources:
   WebhookDLQ:
     Type: AWS::SQS::Queue
     Properties:
-      QueueName: "webhook_dead_letter_queue.fifo"
+      QueueName:
+        !Join ["_", [!Sub "${Environment}", "webhook_dead_letter_queue.fifo"]]
       FifoQueue: true
       ContentBasedDeduplication: true
 
@@ -684,7 +786,7 @@ Resources:
   CoordinatorFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: webhooks_coordinator
+      FunctionName: !Join ["_", [!Sub "${Environment}", webhooks_coordinator]]
       CodeUri: shopify/webhooks/webhooksCoordinator/
       Handler: app.lambdaHandler
       MemorySize: 1028
@@ -712,7 +814,7 @@ Resources:
   DeleteProductsFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: products_delete
+      FunctionName: !Join ["_", [!Sub "${Environment}", "products_delete"]]
       CodeUri: shopify/webhooks/deleteProducts/
       Handler: app.lambdaHandler
       MemorySize: 1028
@@ -733,7 +835,7 @@ Resources:
   ProductsUpdateFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: products_update
+      FunctionName: !Join ["_", [!Sub "${Environment}", "products_update"]]
       CodeUri: shopify/webhooks/productsUpdate/
       Handler: app.lambdaHandler
       MemorySize: 1028
@@ -754,7 +856,8 @@ Resources:
   FulfillmentOrderRoutingCompleteFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: order_routing_complete
+      FunctionName:
+        !Join ["_", [!Sub "${Environment}", "order_routing_complete"]]
       CodeUri: shopify/webhooks/fulfillmentOrdersOrderRoutingComplete/
       Handler: app.lambdaHandler
       MemorySize: 1028
@@ -776,7 +879,7 @@ Resources:
   FulfillmentsCreateFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: fulfillments_create
+      FunctionName: !Join ["_", [!Sub "${Environment}", "fulfillments_create"]]
       CodeUri: shopify/webhooks/fulfillmentsCreate/
       Handler: app.lambdaHandler
       MemorySize: 1028
@@ -797,7 +900,7 @@ Resources:
   OrdersCancelledFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: orders_cancelled
+      FunctionName: !Join ["_", [!Sub "${Environment}", "orders_cancelled"]]
       CodeUri: shopify/webhooks/ordersCancelled/
       Handler: app.lambdaHandler
       MemorySize: 1028
@@ -818,7 +921,7 @@ Resources:
   FulfillmentsUpdateFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: fulfillments_update
+      FunctionName: !Join ["_", [!Sub "${Environment}", "fulfillments_update"]]
       CodeUri: shopify/webhooks/fulfillmentsUpdate/
       Handler: app.lambdaHandler
       MemorySize: 1028
@@ -839,7 +942,7 @@ Resources:
   AppUninstalledFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: app_uninstalled
+      FunctionName: !Join ["_", [!Sub "${Environment}", "app_uninstalled"]]
       CodeUri: shopify/webhooks/appUninstalled/
       Handler: app.lambdaHandler
       MemorySize: 1028
@@ -860,7 +963,7 @@ Resources:
   ShopRedactFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: shop_redact
+      FunctionName: !Join ["_", [!Sub "${Environment}", "shop_redact"]]
       CodeUri: shopify/webhooks/shopRedact/
       Handler: app.lambdaHandler
       MemorySize: 1028
@@ -882,7 +985,8 @@ Resources:
   CustomersDataRequestFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: customers_data_request
+      FunctionName:
+        !Join ["_", [!Sub "${Environment}", "customers_data_request"]]
       CodeUri: shopify/webhooks/customersDataRequest/
       Handler: app.lambdaHandler
       MemorySize: 1028
@@ -903,7 +1007,7 @@ Resources:
   CustomersRedactFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: customers_redact
+      FunctionName: !Join ["_", [!Sub "${Environment}", "customers_redact"]]
       CodeUri: shopify/webhooks/customersRedact/
       Handler: app.lambdaHandler
       MemorySize: 1028
@@ -925,7 +1029,11 @@ Resources:
   StripeAccountApplicationDeauthorizedFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: stripe_connect_account_application_deauthorized
+      FunctionName:
+        !Join [
+          "_",
+          [!Sub "${Environment}", "stripe_account_application_deauthorized"],
+        ]
       CodeUri: stripe/webhooks/accountApplicationDeauthorized/
       Handler: app.lambdaHandler
       MemorySize: 1028
@@ -946,7 +1054,8 @@ Resources:
   StripePaymentMethodDetached:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: stripe_payment_method_detached
+      FunctionName:
+        !Join ["_", [!Sub "${Environment}", "stripe_payment_method_detached"]]
       CodeUri: stripe/webhooks/paymentMethodDetached/
       Handler: app.lambdaHandler
       MemorySize: 1028
@@ -990,3 +1099,7 @@ Outputs:
     Value: !Sub
       - https://${ApiID}.execute-api.${AWS::Region}.amazonaws.com/dev/stripe/webhooks
       - ApiID: !Ref APIGateway
+  albDNSName:
+    Condition: isProd
+    Description: The application url to set SynqSell
+    Value: !GetAtt ApplicationLoadBalancer.DNSName

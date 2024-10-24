@@ -14,11 +14,12 @@ parallel = true
 lint = true
 
 [default.deploy.parameters]
-capabilities = "CAPABILITY_IAM"
+capabilities = "CAPABILITY_IAM CAPABILITY_NAMED_IAM"
 confirm_changeset = true
 region = "us-east-2"
 s3_bucket = "synqsell-sam"
 image_repositories = []
+parameter_overrides = "Environment=dev"
 
 [default.package.parameters]
 resolve_s3 = true
@@ -31,3 +32,16 @@ warm_containers = "EAGER"
 
 [default.local_start_lambda.parameters]
 warm_containers = "EAGER"
+
+[prod]
+[prod.global.parameters]
+stack_name = "SynqSell-Prod"
+
+[prod.deploy.parameters]
+capabilities = "CAPABILITY_IAM CAPABILITY_NAMED_IAM"
+s3_bucket = "synqsell-sam-prod"
+parameter_overrides = "Environment=prod"
+
+[prod.sync]
+[prod.sync.parameters]
+watch = false

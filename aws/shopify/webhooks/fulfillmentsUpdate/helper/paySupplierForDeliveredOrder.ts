@@ -250,7 +250,6 @@ async function getPayableAmounts(
     client: PoolClient,
 ) {
     // NOTE: order lines represents the order line items inside the fulfilment
-
     const totalFulfillmentQty = supplierOrderLineItems.reduce(
         (acc, { quantityFulfilled }) => acc + quantityFulfilled,
         0,
