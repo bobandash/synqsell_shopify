@@ -39,7 +39,10 @@ stack_name = "SynqSell-Prod"
 
 [prod.deploy.parameters]
 capabilities = "CAPABILITY_IAM CAPABILITY_NAMED_IAM"
+confirm_changeset = true
+region = "us-east-2"
 s3_bucket = "synqsell-sam-prod"
+image_repositories = []
 parameter_overrides = "Environment=prod"
 
 [prod.sync]

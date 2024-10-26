@@ -167,12 +167,24 @@ Resources:
         - !Ref ALBSecurityGroup
       IpAddressType: "ipv4"
 
+  # DNSRecord:
+  #   Type: AWS::Route53::RecordSet
+  #   Condition: isProd
+  #   Properties:
+  #     HostedZoneId: !Sub "{{resolve:secretsmanager:${Environment}/appConfig:SecretString:appHostedZoneId}}"
+  #     Name: !Sub "{{resolve:secretsmanager:${Environment}/appConfig:SecretString:appDomainName}}."
+  #     Type: A
+  #     AliasTarget:
+  #       DNSName: !GetAtt ApplicationLoadBalancer.DNSName
+  #       HostedZoneId: !GetAtt ApplicationLoadBalancer.CanonicalHostedZoneID
+  #       EvaluateTargetHealth: true
+
   ALBCertificate:
     Type: AWS::CertificateManager::Certificate
     Condition: isProd
     Properties:
       ValidationMethod: DNS
-      DomainName: !GetAtt ApplicationLoadBalancer.DNSName # TODO: THIS IS A BREAKING ERROR DNS Record Set is not available. Certificate is in FAILED status
+      DomainName: !Sub "{{resolve:secretsmanager:${Environment}/appConfig:SecretString:appDomainName}}"
 
   # listener basically listens to requests and passes it securely to load balancer
   HTTPListener:
@@ -303,6 +315,7 @@ Resources:
   DatabaseUserCredentialSecret:
     Type: AWS::SecretsManager::Secret
     DeletionPolicy: Delete
+    Name: !Sub "${Environment}/databaseUserCredentials"
     UpdateReplacePolicy: Delete
     Properties:
       Description: RDS Master User Credentials
@@ -336,6 +349,7 @@ Resources:
   DatabaseConnectionSecret:
     Type: AWS::SecretsManager::Secret
     Properties:
+      Name: !Sub "${Environment}/databaseConnection"
       Description: RDS Connection information
       SecretString: !Sub
         - '{"database": "${database}", "host": "${host}", "port": "${port}"}'
@@ -351,7 +365,7 @@ Resources:
         - !Ref PrivateSubnetOne
         - !Ref PrivateSubnetTwo
 
-  # Need a Bastion host in public subnet for local backend development
+  # Need a Bastion host in public subnet for backend development, TODO: research if I can just use VPN for local development, and bastion host for prod, so I don't have an extra EC2 running
   BastionHostSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
