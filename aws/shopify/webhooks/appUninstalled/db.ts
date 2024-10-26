@@ -26,8 +26,8 @@ async function getDbUserCredentials() {
         if (!secretString) {
             throw new Error('There are no secrets when retrieving the database user credentials.');
         }
-        const stripeSecrets = JSON.parse(secretString);
-        return stripeSecrets as DbUserCredentials;
+        const dbUserCreds = JSON.parse(secretString);
+        return dbUserCreds as DbUserCredentials;
     } catch (error) {
         console.error(error);
         throw new Error('Failed to retrieve the database user credentials.');
@@ -45,8 +45,8 @@ async function getDbConnectionValues() {
         if (!secretString) {
             throw new Error('There are no secrets when retrieving the database connection values.');
         }
-        const stripeSecrets = JSON.parse(secretString);
-        return stripeSecrets as DbConnectionValues;
+        const dbConnectionValues = JSON.parse(secretString);
+        return dbConnectionValues as DbConnectionValues;
     } catch (error) {
         console.error(error);
         throw new Error('Failed to retrieve the database connection values.');
