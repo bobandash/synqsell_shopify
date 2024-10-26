@@ -1,9 +1,10 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+# shopify app deploy --config shopify.app.toml
 
 client_id = "2c3db0b06834a9b20de60ef4b15c8228"
 name = "SynqSell"
 handle = "synqsell"
-application_url = "https://correlation-river-simply-analysis.trycloudflare.com"
+application_url = "https://app.synqsell.com"
 embedded = true
 
 [build]
@@ -16,9 +17,9 @@ scopes = "read_assigned_fulfillment_orders,read_customers,read_inventory,read_lo
 
 [auth]
 redirect_urls = [
-  "https://correlation-river-simply-analysis.trycloudflare.com/auth/callback",
-  "https://correlation-river-simply-analysis.trycloudflare.com/auth/shopify/callback",
-  "https://correlation-river-simply-analysis.trycloudflare.com/api/auth/callback"
+  "https://app.synqsell.com/auth/callback",
+  "https://app.synqsell.com/auth/shopify/callback",
+  "https://app.synqsell.com/api/auth/callback"
 ]
 
 [webhooks]
