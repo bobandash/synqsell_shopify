@@ -200,7 +200,7 @@ For the Shopify Application:
    - `<AWS_ACCESS_KEY_ID>` and `<AWS_SECRET_ACCESS_KEY>` - Generated and stored in Prerequisites
    - `<STRIPE_SECRET_API_KEY>` and `<REACT_APP_STRIPE_PUBLISHABLE_KEY>` - Generated and stored in Prerequisites
    - `<ADMIN_SESSION_ID>` - Leave blank. You will have to look in the database after the first user has been created and get the session id
-   - Default Values - `<NODE_ENV>`: development, `<LOG_LEVEL`: info
+   - Default Values - `<NODE_ENV>`: development
    - Rest - If not specified explicitly, these values are found in the CloudFormation/SAM outputs after deployment.
 7. Run the following command to start the application.
    ```sh
