@@ -74,13 +74,14 @@ Here are a list of features that are still needed before the application can be 
 - (DONE) - Add sales generated section for price list index table
 - (DONE) - Use Stripe's webhook topics to ensure that the database is synced properly to stripe statuses
 - (DONE) Handle the app/uninstalled webhook for suppliers and retailers
-- Create all relevant assets and bullet points for the Shopify app store
-- Add ALB and EC2 to deploy web/application server
-- Decide the retry strategy to adopt when interacting with Shopify's external API (thinking about retry mechanism w/ exponential backoff, but seeing if there are other approaches before implement)
+- (DONE) Create all relevant assets and bullet points for the Shopify app store
+- (DONE) Add ALB and EC2 to deploy web/application server
+- Create a CD Pipeline for adding the new application code to the ecr
 - One final check to verify all API endpoints, webhooks, and application code work as intended
 
 Here are the nice to have features / should be done after deployment:
 
+- Decide the retry strategy to adopt when interacting with Shopify's external API (thinking about retry mechanism w/ exponential backoff, and caching for things like product pages, but seeing if there are other approaches before implement), don't have to worry too much about this until relative scale because we have 2k tokens, leaky bucket algo.
 - (Has to be done immediately after deployment): There's no webhook Stripe calls that makes sure the payment method is not expired / is still valid, I need to set up a Cron job once a month that checks each payment method and emails the users if they need to update their payment method
 - Add skeleton loading pages to all other pages in the application (the homepage has a skeleton loading page)
 - Currency conversion for retailers and suppliers in different countries
