@@ -1,4 +1,4 @@
-import { errorHandler } from '~/services/util';
+import { errorHandler } from '~/lib/utils/server';
 import type { PriceListTableInfoProps } from '../types';
 import db from '~/db.server';
 

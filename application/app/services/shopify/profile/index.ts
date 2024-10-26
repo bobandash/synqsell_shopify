@@ -1,8 +1,8 @@
 import type { GraphQL } from '~/types';
 import type { ShopAddress } from '~/types/admin.types';
-import { errorHandler } from '../../util';
+import { errorHandler } from '~/lib/utils/server';
 import { GET_PROFILE_DEFAULTS } from './graphql';
-import { queryInternalStoreAdminAPI } from '../util';
+import { queryInternalStoreAdminAPI } from '../utils';
 import type { ProfileDefaultsQuery } from '~/types/admin.generated';
 
 export type ProfileDefaults = {

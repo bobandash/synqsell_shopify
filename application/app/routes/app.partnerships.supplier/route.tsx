@@ -17,11 +17,8 @@ import {
 } from '@shopify/polaris';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRoleContext } from '~/context/RoleProvider';
-import {
-  convertFormDataToObject,
-  createJSONMessage,
-  getJSONError,
-} from '~/util';
+import { convertFormDataToObject } from '~/lib/utils';
+import { createJSONMessage, getJSONError } from '~/lib/utils/server';
 import { authenticate } from '~/shopify.server';
 import { StatusCodes } from 'http-status-codes';
 import type { ActionFunctionArgs, LoaderFunctionArgs } from '@remix-run/node';
@@ -55,7 +52,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         StatusCodes.NOT_IMPLEMENTED,
       );
     }
-
     const supplierPartnershipInfo = await getSupplierPartnershipInfo(sessionId);
     return json(supplierPartnershipInfo, StatusCodes.OK);
   } catch (error) {

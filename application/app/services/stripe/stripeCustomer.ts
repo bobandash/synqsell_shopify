@@ -1,5 +1,5 @@
-import { stripe } from '~/routes/singletons';
-import { errorHandler } from '../util';
+import { stripe } from '~/lib/singletons';
+import { errorHandler } from '~/lib/utils/server';
 import { getProfile } from '../models/userProfile';
 // functions related to regular stripe, to get the payment method for destination charges
 // this is for the retailer

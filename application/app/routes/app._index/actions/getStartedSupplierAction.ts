@@ -9,7 +9,7 @@ import { getChecklistStatus } from '~/services/models/checklistStatus';
 import { INTENTS } from '../constants';
 import { checklistItemIdMatchesKey } from '~/services/models/checklistItem';
 import { CHECKLIST_ITEM_KEYS } from '~/constants';
-import { createJSONMessage } from '~/util';
+import { createJSONMessage } from '~/lib/utils/server';
 
 export type GetStartedSupplierActionData = {
   supplierAccessRequest: {

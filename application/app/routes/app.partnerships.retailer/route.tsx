@@ -25,12 +25,8 @@ import { ROLES } from '~/constants';
 import { useRoleContext } from '~/context/RoleProvider';
 import { hasRole } from '~/services/models/roles';
 import { authenticate } from '~/shopify.server';
-import {
-  convertFormDataToObject,
-  createJSONMessage,
-  getJSONError,
-} from '~/util';
-import getSupplierPartnershipInfo from './loader/getSupplierPartnershipInfo';
+import { convertFormDataToObject } from '~/lib/utils';
+import { createJSONMessage, getJSONError } from '~/lib/utils/server';
 import { INTENTS, MODALS, RETAILER_ACCESS_REQUEST_STATUS } from './constants';
 import {
   approveRetailersAction,
@@ -51,6 +47,7 @@ import type { BulkActionsProps } from '@shopify/polaris/build/ts/src/components/
 import type { IndexTableHeading } from '@shopify/polaris/build/ts/src/components/IndexTable';
 import { ChangePermissionModal, MessageModal } from './components/Modals';
 import { getAllPriceLists } from '~/services/models/priceList';
+import { getSupplierPartnershipInfo } from './loader';
 
 type LoaderData = {
   partnershipInfo: RowData[];

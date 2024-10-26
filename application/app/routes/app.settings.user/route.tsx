@@ -28,11 +28,8 @@ import {
   type ProfileProps,
   getProfile,
 } from '~/services/models/userProfile';
-import {
-  convertFormDataToObject,
-  createJSONMessage,
-  getJSONError,
-} from '~/util';
+import { convertFormDataToObject } from '~/lib/utils';
+import { createJSONMessage, getJSONError } from '~/lib/utils/server';
 import {
   useActionData,
   useLoaderData,

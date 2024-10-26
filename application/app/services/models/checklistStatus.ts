@@ -1,7 +1,7 @@
 import db from '../../db.server';
 import { type Prisma } from '@prisma/client';
 import { getChecklistItem } from './checklistItem';
-import { errorHandler } from '../util';
+import { errorHandler } from '~/lib/utils/server';
 import type { ChecklistItemKeysOptionsProps } from '~/constants';
 
 export type ChecklistStatusProps = {

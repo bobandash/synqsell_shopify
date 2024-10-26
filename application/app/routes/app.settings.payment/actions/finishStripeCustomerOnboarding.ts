@@ -6,7 +6,8 @@ import {
   markCheckListStatus,
 } from '~/services/models/checklistStatus';
 import { changePaymentMethodStatus } from '~/services/models/stripeCustomerAccount';
-import { createJSONMessage } from '~/util';
+import { createJSONMessage } from '~/lib/utils/server';
+
 async function finishStripeCustomerOnboarding(sessionId: string) {
   const checklistItemId = (
     await getChecklistItem(CHECKLIST_ITEM_KEYS.RETAILER_ADD_PAYMENT_METHOD)

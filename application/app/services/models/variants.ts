@@ -1,5 +1,5 @@
 import type { Prisma } from '@prisma/client';
-import { errorHandler } from '../util';
+import { errorHandler } from '~/lib/utils/server';
 import db from '~/db.server';
 
 export type BasicVariantInfoWithoutVariantId = {

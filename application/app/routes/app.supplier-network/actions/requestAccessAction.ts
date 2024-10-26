@@ -15,7 +15,7 @@ import { StatusCodes } from 'http-status-codes';
 import db from '~/db.server';
 import { updateChecklistStatusTx } from '~/services/models/checklistStatus';
 import { sessionIdSchema } from '~/schemas/models';
-import { createJSONMessage } from '~/util';
+import { createJSONMessage } from '~/lib/utils/server';
 
 export type RequestAccessFormData = {
   intent: IntentsProps;

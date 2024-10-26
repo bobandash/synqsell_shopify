@@ -1,5 +1,5 @@
 import type { Prisma } from '@prisma/client';
-import { errorHandler } from '~/services/util';
+import { errorHandler } from '~/lib/utils/server';
 
 async function updatePartnershipsInPriceListTx(
   tx: Prisma.TransactionClient,

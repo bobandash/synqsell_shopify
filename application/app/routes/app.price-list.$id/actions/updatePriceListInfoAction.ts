@@ -1,5 +1,4 @@
 import db from '~/db.server';
-import { errorHandler } from '~/services/util';
 import { addProductsTx, deleteProductsTx } from '~/services/models/product';
 import type { Prisma } from '@prisma/client';
 import {
@@ -19,7 +18,7 @@ import {
 } from './util/schemas';
 import { updatePartnershipsInPriceListTx } from './util';
 import { StatusCodes } from 'http-status-codes';
-import { createJSONMessage } from '~/util';
+import { createJSONMessage, errorHandler } from '~/lib/utils/server';
 
 // TODO: Refactor this entire file, the code is verbose
 

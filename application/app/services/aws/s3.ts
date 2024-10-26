@@ -1,5 +1,5 @@
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { errorHandler } from '../util';
+import { errorHandler } from '~/lib/utils/server';
 import { v4 as uuidv4 } from 'uuid';
 
 function generateUniqueKey(fileName: string) {

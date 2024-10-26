@@ -1,5 +1,5 @@
 import { PRICE_LIST_PRICING_STRATEGY } from '~/constants';
-import { errorHandler } from '~/services/util';
+import { errorHandler } from '~/lib/utils/server';
 import { getPartnershipData } from './getPartnershipData';
 import type { ProductPropsWithPositions } from '../types';
 

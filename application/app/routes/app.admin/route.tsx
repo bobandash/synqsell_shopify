@@ -27,18 +27,14 @@ import {
   type GetSupplierAccessRequestJSONProps,
 } from '~/services/models/supplierAccessRequest';
 import { authenticate } from '~/shopify.server';
-import {
-  convertFormDataToObject,
-  createJSONMessage,
-  getJSONError,
-} from '~/util';
 import { type BulkActionsProps } from '@shopify/polaris/build/ts/src/components/BulkActions';
 import { useAppBridge } from '@shopify/app-bridge-react';
-import { convertToDate } from '../util';
 import {
   updateSupplierAccessAction,
   type SupplierAccessRequestInfo,
 } from './actions';
+import { createJSONMessage, getJSONError } from '~/lib/utils/server';
+import { convertFormDataToObject, convertToDate } from '~/lib/utils';
 
 type RowMarkupProps = {
   data: GetSupplierAccessRequestJSONProps;

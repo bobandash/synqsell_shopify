@@ -3,6 +3,7 @@ import {
   Button,
   Card,
   Form,
+  Icon,
   InlineStack,
   Text,
 } from '@shopify/polaris';
@@ -16,7 +17,7 @@ import { useAppBridge } from '@shopify/app-bridge-react';
 import { useFetcher, useSearchParams } from '@remix-run/react';
 import type { BannerState } from '../types';
 import { FETCHER_KEYS, INTENTS } from '../constants';
-import SuccessfulIntegration from './SuccessfulIntegration';
+import { CheckCircleIcon } from '@shopify/polaris-icons';
 
 type Props = {
   appBaseUrl: string;
@@ -152,7 +153,16 @@ const PaymentForm: FC<Props> = ({
 
   if (addedPaymentMethod || hasCustomerPaymentMethod) {
     return (
-      <SuccessfulIntegration text="Payment method was successfully added." />
+      <BlockStack gap="200">
+        <InlineStack gap="100">
+          <div>
+            <Icon source={CheckCircleIcon} tone="base" />
+          </div>
+          <Text variant="headingMd" as="h2" fontWeight="bold">
+            Payment method was successfully added.
+          </Text>
+        </InlineStack>
+      </BlockStack>
     );
   }
 

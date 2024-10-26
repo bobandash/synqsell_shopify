@@ -1,6 +1,6 @@
 import type { AllFulfillmentServicesQuery } from '~/types/admin.generated';
 import db from '../../db.server';
-import { errorHandler } from '../util';
+import { errorHandler } from '~/lib/utils/server';
 
 export type FulfillmentServiceShopifyProps = {
   id: string;

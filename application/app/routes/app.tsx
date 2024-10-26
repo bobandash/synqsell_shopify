@@ -16,7 +16,7 @@ import { getRoles } from '~/services/models/roles';
 import { ROLES } from '~/constants';
 import { useEffect, useState } from 'react';
 import { RoleProvider } from '~/context/RoleProvider';
-import { getJSONError } from '~/util';
+import { getJSONError } from '~/lib/utils/server';
 import logger from '~/logger';
 import {
   BlockStack,
@@ -28,11 +28,11 @@ import {
   Link as PolarisLink,
 } from '@shopify/polaris';
 import { PaddedBox } from '~/components';
-import sharedStyles from '~/shared.module.css';
 import { getReasonPhrase } from 'http-status-codes';
 import { WarningIcon } from '~/assets';
 import { userHasStripeConnectAccount } from '~/services/models/stripeConnectAccount';
 import { userHasStripePaymentMethod } from '~/services/models/stripeCustomerAccount';
+import sharedStyles from '~/shared.module.css';
 
 export const links = () => [{ rel: 'stylesheet', href: polarisStyles }];
 
@@ -56,7 +56,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     });
   } catch (error) {
     logger.error(error);
-    throw getJSONError(error, 'app root');
+    throw getJSONError(error, '/app');
   }
 };
 

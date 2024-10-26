@@ -1,7 +1,7 @@
 import db from '~/db.server';
 import { updateChecklistStatusTx } from '~/services/models/checklistStatus';
 import { CHECKLIST_ITEM_KEYS } from '~/constants';
-import { errorHandler } from '~/services/util';
+import { errorHandler } from '~/lib/utils/server';
 import { addProductsTx } from '~/services/models/product';
 import type { PriceListActionData } from '../types';
 import type { Prisma } from '@prisma/client';

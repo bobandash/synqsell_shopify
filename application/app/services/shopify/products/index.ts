@@ -1,7 +1,7 @@
 import { nodesFromEdges } from '@shopify/admin-graphql-api-utilities';
 import { type GraphQL } from '~/types';
-import getQueryStr from '../util/getQueryStr';
-import { errorHandler } from '~/services/util';
+import getQueryStr from '../utils/getQueryStr';
+import { errorHandler } from '~/lib/utils/server';
 import {
   CREATE_PRODUCT_MUTATION,
   GET_PRODUCT_URL,
@@ -14,7 +14,7 @@ import {
   queryExternalStoreAdminAPI,
   mutateInternalStoreAdminAPI,
   queryInternalStoreAdminAPI,
-} from '../util';
+} from '../utils';
 import { type CreateMediaInput, type ProductInput } from '~/types/admin.types';
 import type {
   ProductBasicInfoQuery,

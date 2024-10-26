@@ -5,7 +5,7 @@ import type { ChecklistItemKeysOptionsProps } from '~/constants';
 import { updateUserProfileTx } from '../models/userProfile';
 import { updateChecklistStatusTx } from '../models/checklistStatus';
 import type { Prisma } from '@prisma/client';
-import { errorHandler } from '../util';
+import { errorHandler } from '~/lib/utils/server';
 
 type ProfileDataProps = {
   name: string;

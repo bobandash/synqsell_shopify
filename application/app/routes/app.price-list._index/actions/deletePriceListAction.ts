@@ -1,7 +1,7 @@
 import { type FormDataObject } from '~/types';
 import { array, object, string, type InferType } from 'yup';
 import { deletePriceListBatch } from '~/services/models/priceList';
-import { createJSONMessage } from '~/util';
+import { createJSONMessage } from '~/lib/utils/server';
 import { INTENTS } from '../constants';
 import { StatusCodes } from 'http-status-codes';
 type deletePriceListData = InferType<typeof deletePriceListSchema>;

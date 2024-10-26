@@ -1,7 +1,7 @@
 import db from '~/db.server';
 
 import { ACCESS_REQUEST_STATUS } from '~/constants';
-import { errorHandler } from '../util';
+import { errorHandler } from '~/lib/utils/server';
 
 export type GetSupplierAccessRequestProps = {
   name: string;

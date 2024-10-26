@@ -4,11 +4,11 @@ import { deletePartnershipRequestsTx } from '~/services/models/partnershipReques
 import { deletePartnershipsTx } from '~/services/models/partnership';
 import db from '~/db.server';
 import { StatusCodes } from 'http-status-codes';
-import { createJSONMessage } from '~/util';
 import {
   partnershipIdListSchema,
   partnershipRequestIdListSchema,
 } from '~/schemas/models';
+import { createJSONMessage } from '~/lib/utils/server';
 
 export type RejectRemoveSuppliersActionProps = {
   intent: IntentsProps;

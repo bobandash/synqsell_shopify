@@ -3,7 +3,7 @@ import { INTENTS, type IntentsProps } from '../constants';
 import { approvePartnershipRequestBulk } from '~/services/transactions';
 import { PARTNERSHIP_REQUEST_TYPE } from '~/constants';
 import { StatusCodes } from 'http-status-codes';
-import { createJSONMessage } from '~/util';
+import { createJSONMessage } from '~/lib/utils/server';
 import { partnershipRequestIdListSchema } from '~/schemas/models';
 
 export type ApproveRetailersActionProps = {

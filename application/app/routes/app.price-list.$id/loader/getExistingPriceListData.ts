@@ -1,4 +1,3 @@
-import { errorHandler } from '~/services/util';
 import { getBasicProductDetails } from '~/services/shopify/products';
 import type { GraphQL } from '~/types';
 import { getPriceList } from '~/services/models/priceList';
@@ -6,7 +5,8 @@ import { getPartnershipData } from './getPartnershipData';
 import { priceListIdSchema } from '~/schemas/models';
 import { getProductWithVariantsFromPriceList } from '~/services/models/product';
 import { getBasicVariantDetails } from '~/services/shopify/variants';
-import { createMapIdToRestObj, round } from '~/routes/util';
+import { createMapIdToRestObj, round } from '~/lib/utils';
+import { errorHandler } from '~/lib/utils/server';
 import type { ProductPropsWithPositions } from '../types';
 import { getProductsFormattedWithPositions } from '../util';
 

@@ -3,7 +3,7 @@ import { StatusCodes } from 'http-status-codes';
 import logger from '~/logger';
 import { getIdMappedToStoreUrl } from '~/services/shopify/products';
 import { authenticate } from '~/shopify.server';
-import { getJSONError } from '~/util';
+import { getJSONError } from '~/lib/utils/server';
 
 // resource route for getting information for price list
 export const loader = async ({ request }: LoaderFunctionArgs) => {

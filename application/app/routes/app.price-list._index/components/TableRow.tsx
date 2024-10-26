@@ -1,7 +1,7 @@
 import type { FC } from 'react';
 import type { PriceListTableInfoProps } from '../types';
 import { useLocation, useNavigate } from '@remix-run/react';
-import { convertToTitleCase } from '~/routes/util';
+import { convertToTitleCase } from '~/lib/utils';
 import { Badge, IndexTable, Text } from '@shopify/polaris';
 import { PRICE_LIST_PRICING_STRATEGY } from '~/constants';
 

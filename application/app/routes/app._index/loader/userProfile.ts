@@ -4,8 +4,8 @@ import {
   getProfileDefaults,
   type ProfileDefaults,
 } from '~/services/shopify/profile';
-import { errorHandler } from '~/services/util';
 import db from '~/db.server';
+import { errorHandler } from '~/lib/utils/server';
 
 export async function createProfile(
   sessionId: string,

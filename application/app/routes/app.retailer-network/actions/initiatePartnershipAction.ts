@@ -1,5 +1,5 @@
 import { array, object, string } from 'yup';
-import { createJSONMessage } from '~/util';
+import { createJSONMessage } from '~/lib/utils/server';
 import { INTENTS } from '../constants';
 import { isValidPriceList } from '~/services/models/priceList';
 import {

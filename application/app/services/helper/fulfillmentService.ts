@@ -7,7 +7,7 @@ import {
   getOrCreateFulfillmentService as shopifyGetOrCreateFulfillmentService,
   getFulfillmentService as shopifyGetFulfillmentService,
 } from '../shopify/fulfillmentService';
-import { errorHandler } from '../util';
+import { errorHandler } from '~/lib/utils/server';
 
 // this is the coordinator for creating a fulfillment service on Shopify and for the prisma db
 export async function getOrCreateFulfillmentService(

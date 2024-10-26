@@ -1,5 +1,4 @@
 import { boolean, object, string } from 'yup';
-import { errorHandler } from '~/services/util';
 import type { Prisma } from '@prisma/client';
 import { priceListIdSchema, sessionIdSchema } from '~/schemas/models';
 import db from '~/db.server';
@@ -7,7 +6,8 @@ import { getProductStatus } from './util';
 import { getPriceList, getRetailerIds } from '~/services/models/priceList';
 import { getProfile } from '~/services/models/userProfile';
 import { getBasicProductDetailsWithAccessToken } from '~/services/shopify/products';
-import { createMapIdToRestObj, getCurrencySign } from '~/routes/util';
+import { createMapIdToRestObj, getCurrencySign } from '~/lib/utils';
+import { errorHandler } from '~/lib/utils/server';
 import type { ProductCard } from '../types';
 import type { CurrencyCode } from '~/types/admin.types';
 import { hasPartnershipRequest } from '~/services/models/partnershipRequest';

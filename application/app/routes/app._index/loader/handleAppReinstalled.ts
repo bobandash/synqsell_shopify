@@ -1,5 +1,4 @@
 import { updateStoreStatus } from '~/services/models/product';
-import { errorHandler } from '~/services/util';
 import db from '~/db.server';
 import { getSession, type Session } from '~/services/models/session';
 import { hasRole } from '~/services/models/roles';
@@ -9,11 +8,12 @@ import {
   UPDATE_PRODUCT_STATUS_MUTATION,
 } from '~/services/shopify/products/graphql';
 import type { ProductStatusQuery } from '~/services/shopify/products/types';
-import { createMapIdToRestObj } from '~/routes/util';
 import {
   mutateExternalStoreAdminAPI,
   queryExternalStoreAdminAPI,
-} from '~/services/shopify/util';
+} from '~/services/shopify/utils';
+import { createMapIdToRestObj } from '~/lib/utils';
+import { errorHandler } from '~/lib/utils/server';
 
 // for changing all retailers that imported a supplier's product
 type SupplierImportedProductDetail = {

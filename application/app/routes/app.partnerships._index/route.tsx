@@ -4,7 +4,7 @@ import { StatusCodes } from 'http-status-codes';
 import { ROLES } from '~/constants';
 import { hasRole } from '~/services/models/roles';
 import { authenticate } from '~/shopify.server';
-import { createJSONMessage, getJSONError } from '~/util';
+import { createJSONMessage, getJSONError } from '~/lib/utils/server';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {

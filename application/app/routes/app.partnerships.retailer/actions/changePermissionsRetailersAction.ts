@@ -6,10 +6,9 @@ import {
   priceListIdListSchema,
 } from '~/schemas/models';
 import type { Prisma } from '@prisma/client';
-import { errorHandler } from '~/services/util';
 import db from '~/db.server';
 import { StatusCodes } from 'http-status-codes';
-import { createJSONMessage } from '~/util';
+import { createJSONMessage, errorHandler } from '~/lib/utils/server';
 
 export type ChangePermissionsRetailersAction = {
   intent: IntentsProps;

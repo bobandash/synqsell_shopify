@@ -1,5 +1,5 @@
 import db from '../../db.server';
-import { errorHandler } from '../util';
+import { errorHandler } from '~/lib/utils/server';
 import { getUserPreferences } from './userPreferences';
 
 export async function hasChecklistTable(id: string): Promise<boolean> {

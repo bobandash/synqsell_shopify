@@ -4,7 +4,7 @@ import { StatusCodes } from 'http-status-codes';
 import { useEffect } from 'react';
 import createAccountLink from '~/services/stripe/stripeConnect';
 import { authenticate } from '~/shopify.server';
-import { createJSONMessage, getJSONError } from '~/util';
+import { createJSONMessage, getJSONError } from '~/lib/utils/server';
 
 type LoaderData = {
   onboardingUrl: string;

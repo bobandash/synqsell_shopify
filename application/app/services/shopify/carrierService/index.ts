@@ -1,5 +1,5 @@
 import { CARRIER_SERVICE_NAME } from '~/constants';
-import { errorHandler } from '~/services/util';
+import { errorHandler } from '~/lib/utils/server';
 import type { GraphQL } from '~/types';
 import {
   CREATE_CARRIER_SERVICE,
@@ -9,7 +9,7 @@ import {
 import {
   mutateInternalStoreAdminAPI,
   queryInternalStoreAdminAPI,
-} from '../util';
+} from '../utils';
 import type {
   CarrierServiceCreateMutation,
   InitialCarrierServicesQuery,

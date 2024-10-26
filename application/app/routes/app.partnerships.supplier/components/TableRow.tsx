@@ -1,7 +1,7 @@
 import { Button, IndexTable, Link } from '@shopify/polaris';
 import { useCallback, type FC } from 'react';
 import type { RowData } from '../types';
-import { convertToDate } from '~/routes/util';
+import { convertToDate } from '~/lib/utils';
 import StatusBadge from './StatusBadge';
 import { useAppBridge } from '@shopify/app-bridge-react';
 import { MODALS } from '../constants';

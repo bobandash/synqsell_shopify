@@ -1,5 +1,5 @@
 import db from '~/db.server';
-import { errorHandler } from '~/services/util';
+import { errorHandler } from '~/lib/utils/server';
 import type { Prisma } from '@prisma/client';
 
 export type PartnershipRowData = {

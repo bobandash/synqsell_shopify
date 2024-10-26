@@ -1,6 +1,6 @@
 import type { GraphQL } from '~/types';
 import { CREATE_STOREFRONT_ACCESS_TOKEN } from './graphql';
-import { mutateInternalStoreAdminAPI } from '../util';
+import { mutateInternalStoreAdminAPI } from '../utils';
 import type { StorefrontAccessTokenCreateMutation } from '~/types/admin.generated';
 
 export async function createStorefrontAccessToken(graphql: GraphQL) {

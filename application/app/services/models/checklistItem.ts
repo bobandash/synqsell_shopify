@@ -1,5 +1,5 @@
 import db from '~/db.server';
-import { errorHandler } from '../util';
+import { errorHandler } from '~/lib/utils/server';
 import { type ChecklistItemKeysOptionsProps } from '~/constants';
 
 export async function hasChecklistItem(key: ChecklistItemKeysOptionsProps) {

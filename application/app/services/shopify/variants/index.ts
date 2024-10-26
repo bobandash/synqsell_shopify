@@ -1,6 +1,6 @@
 import type { GraphQL } from '~/types';
-import getQueryStr from '../util/getQueryStr';
-import { errorHandler } from '~/services/util';
+import getQueryStr from '../utils/getQueryStr';
+import { errorHandler } from '~/lib/utils/server';
 import type { Prisma } from '@prisma/client';
 import {
   GET_VARIANT_DELIVERY_PROFILES,
@@ -16,7 +16,7 @@ import {
   queryExternalStoreAdminAPI,
   mutateInternalStoreAdminAPI,
   queryInternalStoreAdminAPI,
-} from '../util';
+} from '../utils';
 
 type Session = Prisma.SessionGetPayload<{}>;
 

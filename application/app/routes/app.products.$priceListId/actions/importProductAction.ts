@@ -4,7 +4,6 @@ import { productIdSchema, sessionIdSchema } from '~/schemas/models';
 import type { GraphQL } from '~/types';
 import { json } from '@remix-run/node';
 import { StatusCodes } from 'http-status-codes';
-import { getJSONError } from '~/util';
 import {
   getAllProductDetails,
   type AllProductDetails,
@@ -23,7 +22,6 @@ import type {
   ProductVariantsBulkCreateMutation,
   VariantCreationInformationQuery,
 } from '~/types/admin.generated';
-import { createMapIdToRestObj, errorHandler } from '~/services/util';
 import db from '~/db.server';
 import type { Prisma } from '@prisma/client';
 import {
@@ -38,10 +36,12 @@ import {
   hasPartnershipRequest,
 } from '~/services/models/partnershipRequest';
 import { PARTNERSHIP_REQUEST_TYPE } from '~/constants';
-import getQueryStr from '~/services/shopify/util/getQueryStr';
-import { queryExternalStoreAdminAPI } from '~/services/shopify/util';
+import getQueryStr from '~/services/shopify/utils/getQueryStr';
+import { queryExternalStoreAdminAPI } from '~/services/shopify/utils';
 import { VARIANT_CREATION_DETAILS_BULK_QUERY } from '~/services/shopify/variants/graphql';
 import { v4 as uuid } from 'uuid';
+import { createMapIdToRestObj } from '~/lib/utils';
+import { errorHandler, getJSONError } from '~/lib/utils/server';
 
 export type ImportProductFormData = InferType<typeof formDataObjectSchema>;
 

@@ -14,7 +14,7 @@ import {
   getStartedRetailerAction,
   getStartedSupplierAction,
 } from './actions';
-import { convertFormDataToObject, getJSONError } from '~/util';
+import { convertFormDataToObject } from '~/lib/utils';
 import { ChecklistTables } from './asyncComponents';
 import { TableSkeleton } from './components/Skeleton';
 import { PaddedBox } from '~/components';
@@ -26,6 +26,7 @@ import {
 } from './loader';
 import { getOrCreateUserPreferences } from '~/services/models/userPreferences';
 import { getSession } from '~/services/models/session';
+import { getJSONError } from '~/lib/utils/server';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {

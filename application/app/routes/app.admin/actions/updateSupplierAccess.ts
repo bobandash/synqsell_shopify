@@ -8,10 +8,9 @@ import {
 } from '~/constants';
 import db from '~/db.server';
 import { type Prisma } from '@prisma/client';
-import { errorHandler } from '~/services/util';
 import { getRoleBatch } from '~/services/models/roles';
 import { updateChecklistStatusBatchTx } from '~/services/models/checklistStatus';
-import { createJSONMessage } from '~/util';
+import { createJSONMessage, errorHandler } from '~/lib/utils/server';
 
 export type SupplierAccessRequestInfo = {
   supplierAccessRequestId: string;

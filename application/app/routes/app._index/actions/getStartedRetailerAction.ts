@@ -1,6 +1,5 @@
 import { json } from '@remix-run/node';
 import { object, string, type InferType } from 'yup';
-import { getJSONError } from '~/util';
 import type { FormDataObject, GraphQL } from '~/types';
 import { StatusCodes } from 'http-status-codes';
 import {
@@ -25,9 +24,9 @@ import {
   getOrCreateFulfillmentService,
   hasFulfillmentService,
 } from '~/services/helper/fulfillmentService';
-import { errorHandler } from '~/services/util';
 import { INTENTS } from '../constants';
 import { checklistItemIdMatchesKey } from '~/services/models/checklistItem';
+import { getJSONError, errorHandler } from '~/lib/utils/server';
 
 const getStartedRetailerSchema = object({
   intent: string().oneOf([INTENTS.RETAILER_GET_STARTED]),

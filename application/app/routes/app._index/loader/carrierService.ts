@@ -8,7 +8,7 @@ import {
   getCarrierService as shopifyGetCarrierService,
   createCarrierService as shopifyCreateCarrierService,
 } from '~/services/shopify/carrierService';
-import { errorHandler } from '~/services/util';
+import { errorHandler } from '~/lib/utils/server';
 
 export async function getOrCreateCarrierService(
   sessionId: string,

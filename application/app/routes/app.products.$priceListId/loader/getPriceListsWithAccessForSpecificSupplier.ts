@@ -9,7 +9,7 @@ import {
   getPriceList,
   hasGeneralPriceList,
 } from '~/services/models/priceList';
-import { errorHandler } from '~/services/util';
+import { errorHandler } from '~/lib/utils/server';
 import db from '~/db.server';
 
 const getPriceListsWithAccessSchema = object({

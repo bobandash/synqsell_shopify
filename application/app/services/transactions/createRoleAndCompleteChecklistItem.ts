@@ -1,7 +1,7 @@
 import db from '~/db.server';
 import { object, string } from 'yup';
 import { ROLES } from '~/constants';
-import { errorHandler } from '../util';
+import { errorHandler } from '~/lib/utils/server';
 import { checklistStatusIdSchema, sessionIdSchema } from '~/schemas/models';
 
 const roleSchema = object({

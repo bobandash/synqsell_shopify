@@ -2,7 +2,7 @@ import {
   type PartnershipRequestStatusProps,
   type PartnershipRequestTypeProps,
 } from '~/constants';
-import { errorHandler } from '../util';
+import { errorHandler } from '~/lib/utils/server';
 import db from '~/db.server';
 import type { Prisma } from '@prisma/client';
 

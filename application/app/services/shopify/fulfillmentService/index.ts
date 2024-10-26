@@ -4,12 +4,12 @@ import {
   DELETE_FULFILLMENT_SERVICE,
   GET_ALL_FULFILLMENT_SERVICES,
 } from './graphql';
-import { errorHandler } from '~/services/util';
+import { errorHandler } from '~/lib/utils/server';
 import { FULFILLMENT_SERVICE } from '~/constants';
 import {
   mutateInternalStoreAdminAPI,
   queryInternalStoreAdminAPI,
-} from '../util';
+} from '../utils';
 import type {
   AllFulfillmentServicesQuery,
   FulfillmentServiceCreateMutation,

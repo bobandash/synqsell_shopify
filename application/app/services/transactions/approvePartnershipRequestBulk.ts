@@ -1,4 +1,4 @@
-import { errorHandler } from '../util';
+import { errorHandler } from '~/lib/utils/server';
 import db from '../../db.server';
 import { deletePartnershipRequestsTx } from '../models/partnershipRequest';
 import {

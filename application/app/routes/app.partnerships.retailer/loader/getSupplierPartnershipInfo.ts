@@ -1,7 +1,7 @@
 import { PARTNERSHIP_REQUEST_TYPE, ROLES } from '~/constants';
 import { getAllPartnerships } from '~/services/models/partnership';
 import { getAllPartnershipRequests } from '~/services/models/partnershipRequest';
-import { errorHandler } from '~/services/util';
+import { errorHandler } from '~/lib/utils/server';
 import { RETAILER_ACCESS_REQUEST_STATUS } from '../constants';
 
 async function getSupplierPartnershipInfo(sessionId: string) {

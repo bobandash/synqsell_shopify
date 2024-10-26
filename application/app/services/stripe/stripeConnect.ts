@@ -1,5 +1,5 @@
-import { stripe } from '~/routes/singletons';
-import { errorHandler } from '../util';
+import { stripe } from '~/lib/singletons';
+import { errorHandler } from '~/lib/utils/server';
 
 // https://docs.stripe.com/connect/hosted-onboarding
 // functions related to stripe connect o build the marketplace
