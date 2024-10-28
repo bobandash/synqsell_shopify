@@ -1,5 +1,5 @@
-import developmentLogger from './developmentLogger';
-import productionLogger from './productionLogger';
+import developmentLogger from './developmentLogger.server';
+import productionLogger from './productionLogger.server';
 
 let logger = developmentLogger;
 
