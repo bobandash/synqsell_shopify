@@ -1,0 +1,138 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  API Gateway and API Resources (such as delivery carrier service and stripe webhooks)
+
+Parameters:
+  Environment:
+    Type: String
+  StripeWebhookCoordinatorFunctionArn:
+    Type: String
+  DeliveryCarrierServiceFunctionArn:
+    Type: String
+
+Resources:
+  APIGatewayCloudWatchRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - apigateway.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs
+
+  ApiGatewayAccount:
+    Type: AWS::ApiGateway::Account
+    Properties:
+      CloudWatchRoleArn: !GetAtt APIGatewayCloudWatchRole.Arn
+
+  ApiGateway:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Join ["_", [!Sub "${Environment}", ApiGateway]]
+
+  # for shopify delivery carrier service route
+  DeliveryCarrierServiceApiResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt ApiGateway.RootResourceId
+      RestApiId: !Ref ApiGateway
+      PathPart: deliveryCarrierService
+
+  DeliveryCarrierServiceCallback:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !Ref DeliveryCarrierServiceApiResource
+      RestApiId: !Ref ApiGateway
+      PathPart: callback
+
+  DeliveryCarrierServiceApiMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ResourceId: !Ref DeliveryCarrierServiceCallback
+      RestApiId: !Ref ApiGateway
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DeliveryCarrierServiceFunctionArn}/invocations
+
+  DeliveryCarrierServicePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref DeliveryCarrierServiceFunctionArn
+      Action: "lambda:InvokeFunction"
+      Principal: "apigateway.amazonaws.com"
+      SourceArn: !Sub
+        - arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiId}/*/${HttpMethod}/${ResourcePath}
+        - ApiId: !Ref ApiGateway
+          HttpMethod: POST
+          ResourcePath: !Join ["/", ["deliveryCarrierService", "callback"]]
+
+  # For stripe public endpoint
+  # Stripe EventBridge is in closed beta, the only way to handle right now is by creating a public endpoint
+  StripeServiceApiResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt ApiGateway.RootResourceId
+      RestApiId: !Ref ApiGateway
+      PathPart: stripe
+
+  StripeWebhooksApiResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !Ref StripeServiceApiResource
+      RestApiId: !Ref ApiGateway
+      PathPart: webhooks
+
+  StripeApiMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ResourceId: !Ref StripeWebhooksApiResource
+      RestApiId: !Ref ApiGateway
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${StripeWebhookCoordinatorFunctionArn}/invocations
+
+  StripeLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref StripeWebhookCoordinatorFunctionArn
+      Action: "lambda:InvokeFunction"
+      Principal: "apigateway.amazonaws.com"
+      SourceArn: !Sub
+        - arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiId}/*/${HttpMethod}/${ResourcePath}
+        - ApiId: !Ref ApiGateway
+          HttpMethod: POST
+          ResourcePath: !Join ["/", ["stripe", "webhooks"]]
+
+  # https://medium.com/@lancers/deployment-in-amazon-api-gateway-128c522c762e
+  # There should be other ways to handle this issue, but deployments are deployed snapshots so unless you delete / recreate the resource, it will not redeploy...
+  # For now, follow the solution in the medium article above, but either switch to v2 with AutoDeploy property or decide how to do it later
+  ApiGatewayStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      DeploymentId: !Ref ApiGatewayDeployment20241028
+      RestApiId: !Ref ApiGateway
+      StageName: !Ref Environment
+
+  ApiGatewayDeployment20241028:
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      RestApiId: !Ref ApiGateway
+    DependsOn:
+      - DeliveryCarrierServiceApiMethod
+      - StripeApiMethod
+
+Outputs:
+  ApiGatewayId:
+    Value: !Ref ApiGateway

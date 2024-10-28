@@ -8,13 +8,13 @@ To reference how to set up the project, please click <a href="https://github.com
 
 Here are a list of common commands used for development.
 
-- To build the template.yaml / cloudformation template
-  ```sh
-  sam build
-  ```
 - To validate the template.yaml after building to make sure there's no errors
   ```sh
   sam validate
+  ```
+- To build the template.yaml / cloudformation template
+  ```sh
+  sam build
   ```
 - To deploy the sam application
   ```sh

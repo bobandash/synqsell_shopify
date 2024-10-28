@@ -1,0 +1,99 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Security groups for Resources in VPC
+
+Parameters:
+  Environment:
+    Type: String
+  AppConfigSecret:
+    Type: String
+  VpcId:
+    Type: String
+
+Conditions:
+  isProd: !Equals
+    - !Ref Environment
+    - prod
+
+Resources:
+  ALBSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Condition: isProd
+    Properties:
+      GroupDescription: "Security group for ALB"
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - CidrIp: "0.0.0.0/0"
+          FromPort: 80
+          IpProtocol: "tcp"
+          ToPort: 80
+        - CidrIp: "0.0.0.0/0"
+          FromPort: 443
+          IpProtocol: "tcp"
+          ToPort: 443
+
+  RemixAppSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Condition: isProd
+    Properties:
+      GroupDescription: Security group for Remix Application on EC2
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp # HTTP
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp # HTTPS
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp # SSH
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Sub "{{resolve:secretsmanager:${AppConfigSecret}:SecretString:myCidrIP}}"
+
+  BastionHostSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Bastion host
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Sub "{{resolve:secretsmanager:${AppConfigSecret}:SecretString:myCidrIP}}"
+
+  LambdaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Lambda functions
+      VpcId: !Ref VpcId
+
+  DatabaseSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for database access
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref LambdaSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref BastionHostSecurityGroup
+      VpcId: !Ref VpcId
+
+Outputs:
+  ALBSecurityGroup:
+    Condition: isProd
+    Value: !Ref ALBSecurityGroup
+  RemixAppSecurityGroup:
+    Condition: isProd
+    Value: !Ref RemixAppSecurityGroup
+  BastionHostSecurityGroup:
+    Value: !Ref BastionHostSecurityGroup
+  DatabaseSecurityGroup:
+    Value: !Ref DatabaseSecurityGroup
+  LambdaSecurityGroup:
+    Value: !Ref LambdaSecurityGroup

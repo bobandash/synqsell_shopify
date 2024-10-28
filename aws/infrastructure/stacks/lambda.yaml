@@ -1,0 +1,538 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Contains Lambda functions (shopify webhooks, stripe webhooks)
+
+Parameters:
+  Environment:
+    Type: String
+  ApiKeySecret:
+    Type: String
+  AppConfigSecret:
+    Type: String
+  VpcId:
+    Type: String
+  PrivateSubnets:
+    Type: String
+  DatabaseUserCredentialSecret:
+    Type: String
+  DatabaseConnectionSecret:
+    Type: String
+  LambdaSecurityGroup:
+    Type: String
+
+Conditions:
+  isProd: !Equals
+    - !Ref Environment
+    - prod
+
+Globals:
+  Function:
+    Timeout: 3
+    Environment:
+      Variables:
+        DB_USER_CREDENTIALS_SECRET_ID: !Ref DatabaseUserCredentialSecret
+        DB_CONNECTION_SECRET_ID: !Ref DatabaseConnectionSecret
+        API_KEYS_SECRET_ID: !Ref ApiKeySecret
+    LoggingConfig:
+      LogFormat: JSON
+    VpcConfig:
+      SecurityGroupIds:
+        - !Ref LambdaSecurityGroup
+      SubnetIds: !If
+        - isProd
+        - !Split [",", !Ref PrivateSubnets]
+        - !Split [",", !Select [0, !Split [",", !Ref PrivateSubnets]]]
+
+Resources:
+  # IAM Roles for Lambda functions
+  LambdaInvokePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "Policy for invoking Lambda functions"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - "lambda:InvokeFunction"
+            Resource: "*"
+
+  ApiKeyAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "Policy for accessing secrets"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - "secretsmanager:GetSecretValue"
+            Resource:
+              - !Sub
+                - "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${SecretId}-*"
+                - SecretId: !Ref ApiKeySecret
+              - !Ref DatabaseConnectionSecret
+              - !Ref DatabaseUserCredentialSecret
+
+  PrivateFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Ref ApiKeyAccessPolicy
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+
+  StripeCoordinatorFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Ref LambdaInvokePolicy
+        - !Ref ApiKeyAccessPolicy
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+
+  ShopifyCoordinatorFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      Policies:
+        - PolicyName: SQSAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - sqs:GetQueueAttributes
+                Resource: !GetAtt WebhookSQS.Arn
+        - PolicyName: LambdaInvokePolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: "*"
+
+  # https://docs.aws.amazon.com/lambda/latest/dg/with-sqs.html
+  # Queue for shopify webhooks
+  WebhookSQS:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Join ["_", [!Sub "${Environment}", "webhook_queue.fifo"]]
+      FifoQueue: true
+      ContentBasedDeduplication: true
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt WebhookDLQ.Arn
+        maxReceiveCount: 3
+
+  ShopifyWebhookRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Join ["_", [!Sub "${Environment}", shopify_sqs_rule]]
+      EventPattern:
+        detail-type:
+          - "shopifyWebhook"
+        detail:
+          metadata:
+            X-Shopify-Topic:
+              - prefix: ""
+      EventBusName: !Sub
+        - "arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus/${identifier}"
+        - identifier: !Sub "{{resolve:secretsmanager:${AppConfigSecret}:SecretString:shopifyEventBusIdentifier}}"
+
+      Targets:
+        - Arn: !GetAtt WebhookSQS.Arn
+          Id: "WebhookSQSTarget"
+          SqsParameters:
+            MessageGroupId: "ShopifyWebhookMessages"
+
+  EventBridgeSQSPolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref WebhookSQS
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action:
+              - "SQS:SendMessage"
+            Resource: !GetAtt WebhookSQS.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !GetAtt ShopifyWebhookRule.Arn
+
+  WebhookDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName:
+        !Join ["_", [!Sub "${Environment}", "webhook_dead_letter_queue.fifo"]]
+      FifoQueue: true
+      ContentBasedDeduplication: true
+
+  SQSQueueTrigger:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      EventSourceArn: !GetAtt WebhookSQS.Arn
+      FunctionName: !Ref ShopifyCoordinatorFunction
+      Enabled: true
+
+  # Shopify Public Endpoints
+  DeliveryCarrierServiceFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        !Join ["_", [!Sub "${Environment}", delivery_carrier_service]]
+      CodeUri: ../../shopify/api/deliveryCarrierService/
+      Handler: app.lambdaHandler
+      MemorySize: 1028
+      Timeout: 30
+      Runtime: nodejs20.x
+      Architectures:
+        - x86_64
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: false
+        EntryPoints:
+          - app.ts
+
+  # Shopify webhooks
+  ShopifyCoordinatorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Join ["_", [!Sub "${Environment}", webhooks_coordinator]]
+      CodeUri: ../../shopify/webhooks/webhooksCoordinator/
+      Handler: app.lambdaHandler
+      MemorySize: 1028
+      Timeout: 30
+      Runtime: nodejs20.x
+      Role: !GetAtt ShopifyCoordinatorFunctionRole.Arn
+      Architectures:
+        - x86_64
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: false
+        EntryPoints:
+          - app.ts
+
+  DeleteProductsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Join ["_", [!Sub "${Environment}", "products_delete"]]
+      CodeUri: ../../shopify/webhooks/deleteProducts/
+      Handler: app.lambdaHandler
+      MemorySize: 1028
+      Timeout: 30
+      Runtime: nodejs20.x
+      Architectures:
+        - x86_64
+      Role: !GetAtt PrivateFunctionRole.Arn
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: false
+        EntryPoints:
+          - app.ts
+
+  ProductsUpdateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Join ["_", [!Sub "${Environment}", "products_update"]]
+      CodeUri: ../../shopify/webhooks/productsUpdate/
+      Handler: app.lambdaHandler
+      MemorySize: 1028
+      Timeout: 30
+      Runtime: nodejs20.x
+      Architectures:
+        - x86_64
+      Role: !GetAtt PrivateFunctionRole.Arn
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: false
+        EntryPoints:
+          - app.ts
+
+  FulfillmentOrderRoutingCompleteFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        !Join ["_", [!Sub "${Environment}", "order_routing_complete"]]
+      CodeUri: ../../shopify/webhooks/fulfillmentOrdersOrderRoutingComplete/
+      Handler: app.lambdaHandler
+      MemorySize: 1028
+      Timeout: 30
+      Runtime: nodejs20.x
+      Architectures:
+        - x86_64
+      Role: !GetAtt PrivateFunctionRole.Arn
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: false
+        EntryPoints:
+          - app.ts
+
+  FulfillmentsCreateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Join ["_", [!Sub "${Environment}", "fulfillments_create"]]
+      CodeUri: ../../shopify/webhooks/fulfillmentsCreate/
+      Handler: app.lambdaHandler
+      MemorySize: 1028
+      Timeout: 30
+      Runtime: nodejs20.x
+      Architectures:
+        - x86_64
+      Role: !GetAtt PrivateFunctionRole.Arn
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: false
+        EntryPoints:
+          - app.ts
+
+  OrdersCancelledFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Join ["_", [!Sub "${Environment}", "orders_cancelled"]]
+      CodeUri: ../../shopify/webhooks/ordersCancelled/
+      Handler: app.lambdaHandler
+      MemorySize: 1028
+      Timeout: 30
+      Runtime: nodejs20.x
+      Architectures:
+        - x86_64
+      Role: !GetAtt PrivateFunctionRole.Arn
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: false
+        EntryPoints:
+          - app.ts
+
+  FulfillmentsUpdateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Join ["_", [!Sub "${Environment}", "fulfillments_update"]]
+      CodeUri: ../../shopify/webhooks/fulfillmentsUpdate/
+      Handler: app.lambdaHandler
+      MemorySize: 1028
+      Timeout: 30
+      Runtime: nodejs20.x
+      Architectures:
+        - x86_64
+      Role: !GetAtt PrivateFunctionRole.Arn
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: false
+        EntryPoints:
+          - app.ts
+
+  AppUninstalledFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Join ["_", [!Sub "${Environment}", "app_uninstalled"]]
+      CodeUri: ../../shopify/webhooks/appUninstalled/
+      Handler: app.lambdaHandler
+      MemorySize: 1028
+      Timeout: 30
+      Runtime: nodejs20.x
+      Architectures:
+        - x86_64
+      Role: !GetAtt PrivateFunctionRole.Arn
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: false
+        EntryPoints:
+          - app.ts
+
+  ShopRedactFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Join ["_", [!Sub "${Environment}", "shop_redact"]]
+      CodeUri: ../../shopify/webhooks/shopRedact/
+      Handler: app.lambdaHandler
+      MemorySize: 1028
+      Timeout: 30
+      Runtime: nodejs20.x
+      Architectures:
+        - x86_64
+      Role: !GetAtt PrivateFunctionRole.Arn
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: false
+        EntryPoints:
+          - app.ts
+
+  # mandatory GDPR compliance webhooks
+  CustomersDataRequestFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        !Join ["_", [!Sub "${Environment}", "customers_data_request"]]
+      CodeUri: ../../shopify/webhooks/customersDataRequest/
+      Handler: app.lambdaHandler
+      MemorySize: 1028
+      Timeout: 30
+      Runtime: nodejs20.x
+      Architectures:
+        - x86_64
+      Role: !GetAtt PrivateFunctionRole.Arn
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: false
+        EntryPoints:
+          - app.ts
+
+  CustomersRedactFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Join ["_", [!Sub "${Environment}", "customers_redact"]]
+      CodeUri: ../../shopify/webhooks/customersRedact/
+      Handler: app.lambdaHandler
+      MemorySize: 1028
+      Timeout: 30
+      Runtime: nodejs20.x
+      Architectures:
+        - x86_64
+      Role: !GetAtt PrivateFunctionRole.Arn
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: false
+        EntryPoints:
+          - app.ts
+
+  # Stripe webhooks
+  StripeWebhookCoordinatorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        !Join ["_", [!Sub "${Environment}", stripe_webhook_coordinator]]
+      CodeUri: ../../stripe/webhooks/webhooksCoordinator/
+      Handler: app.lambdaHandler
+      MemorySize: 1028
+      Timeout: 30
+      Runtime: nodejs20.x
+      Architectures:
+        - x86_64
+      Role: !GetAtt StripeCoordinatorFunctionRole.Arn
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: false
+        EntryPoints:
+          - app.ts
+
+  StripeAccountApplicationDeauthorizedFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        !Join [
+          "_",
+          [!Sub "${Environment}", "stripe_account_application_deauthorized"],
+        ]
+      CodeUri: ../../stripe/webhooks/accountApplicationDeauthorized/
+      Handler: app.lambdaHandler
+      MemorySize: 1028
+      Timeout: 30
+      Runtime: nodejs20.x
+      Architectures:
+        - x86_64
+      Role: !GetAtt PrivateFunctionRole.Arn
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: false
+        EntryPoints:
+          - app.ts
+
+  StripePaymentMethodDetached:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        !Join ["_", [!Sub "${Environment}", "stripe_payment_method_detached"]]
+      CodeUri: ../../stripe/webhooks/paymentMethodDetached/
+      Handler: app.lambdaHandler
+      MemorySize: 1028
+      Timeout: 30
+      Runtime: nodejs20.x
+      Architectures:
+        - x86_64
+      Role: !GetAtt PrivateFunctionRole.Arn
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: false
+        EntryPoints:
+          - app.ts
+
+Outputs:
+  StripeWebhookCoordinatorFunctionArn:
+    Value: !GetAtt StripeWebhookCoordinatorFunction.Arn
+  DeliveryCarrierServiceFunctionArn:
+    Value: !GetAtt DeliveryCarrierServiceFunction.Arn

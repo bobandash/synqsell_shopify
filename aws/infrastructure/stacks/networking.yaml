@@ -1,0 +1,177 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Networking Stack w/ VPC, Public and Private Subnets, IGW, and NAT Gateway
+
+Parameters:
+  Environment:
+    Type: String
+
+Conditions:
+  isProd: !Equals
+    - !Ref Environment
+    - prod
+
+Resources:
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      InstanceTenancy: default
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+
+  PublicSubnetOne:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      MapPublicIpOnLaunch: True
+      CidrBlock: !Select [2, !Cidr [!GetAtt Vpc.CidrBlock, 3, 8]]
+      AvailabilityZone: !Select [0, !GetAZs ""]
+
+  PrivateSubnetOne:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: !Select [0, !Cidr [!GetAtt Vpc.CidrBlock, 3, 8]]
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: !Select [0, !GetAZs ""]
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+
+  GatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref Vpc
+      InternetGatewayId: !Ref InternetGateway
+
+  # For first NAT Gateway
+  NATGatewayOne:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NATGatewayOneEIP.AllocationId
+      SubnetId: !Ref PublicSubnetOne
+
+  NATGatewayOneEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  PublicRouteOne:
+    Type: AWS::EC2::Route
+    DependsOn: GatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PrivateRouteOne:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NATGatewayOne
+
+  PublicSubnetOneTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetOne
+      RouteTableId: !Ref PublicRouteTable
+
+  PrivateSubnetOneTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnetOne
+      RouteTableId: !Ref PrivateRouteTable
+
+  # for high availability
+  PrivateRouteTableTwo:
+    Type: AWS::EC2::RouteTable
+    Condition: isProd
+    Properties:
+      VpcId: !Ref Vpc
+
+  PrivateSubnetTwo:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: !Select [1, !Cidr [!GetAtt Vpc.CidrBlock, 3, 8]]
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: !Select [1, !GetAZs ""]
+
+  PublicSubnetTwo:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: !Select [3, !Cidr [!GetAtt Vpc.CidrBlock, 4, 8]]
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Select [1, !GetAZs ""]
+
+  PublicSubnetTwoTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: isProd
+    Properties:
+      SubnetId: !Ref PublicSubnetTwo
+      RouteTableId: !Ref PublicRouteTable
+
+  PrivateSubnetTwoTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: isProd
+    Properties:
+      SubnetId: !Ref PrivateSubnetTwo
+      RouteTableId: !Ref PrivateRouteTableTwo
+
+  NATGatewayTwoEIP:
+    Type: AWS::EC2::EIP
+    Condition: isProd
+    Properties:
+      Domain: vpc
+
+  NATGatewayTwo:
+    Type: AWS::EC2::NatGateway
+    Condition: isProd
+    Properties:
+      AllocationId: !GetAtt NATGatewayTwoEIP.AllocationId
+      SubnetId: !Ref PublicSubnetTwo
+
+  PrivateRouteTwo:
+    Type: AWS::EC2::Route
+    Condition: isProd
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableTwo
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NATGatewayTwo
+
+Outputs:
+  VpcId:
+    Value: !Ref Vpc
+
+  PrivateSubnets:
+    Value: !Join [",", [!Ref PrivateSubnetOne, !Ref PrivateSubnetTwo]]
+
+  PublicSubnets:
+    Value: !Join [",", [!Ref PublicSubnetOne, !Ref PublicSubnetTwo]]
+
+  PublicSubnetOne:
+    Value: !Ref PublicSubnetOne
+
+  PrivateSubnetOne:
+    Value: !Ref PrivateSubnetOne
+
+  PublicSubnetTwo:
+    Condition: isProd
+    Value: !Ref PublicSubnetTwo
+
+  PrivateSubnetTwo:
+    Condition: isProd
+    Value: !Ref PrivateSubnetTwo

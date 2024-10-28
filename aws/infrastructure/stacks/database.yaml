@@ -1,0 +1,95 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Database and Bastion Host to access database For application
+
+Parameters:
+  Environment:
+    Type: String
+  AppConfigSecret:
+    Type: String
+    Description: The secret manager name for the app configurations
+  PrivateSubnets:
+    Type: String
+  PublicSubnetOne:
+    Type: String
+  BastionHostSecurityGroup:
+    Type: String
+  DatabaseSecurityGroup:
+    Type: String
+
+# TODO: research if I can just use VPN for local development, and bastion host for prod, so I don't have an extra EC2 running
+# TODO: Add mapping for AMI
+
+Resources:
+  # https://aws.amazon.com/blogs/security/how-to-securely-provide-database-credentials-to-lambda-functions-by-using-aws-secrets-manager/#:~:text=Dynamic%20references%20provide%20a%20compact%2C%20powerful%20way%20for,the%20resolved%20value%2C%20keeping%20the%20database%20password%20safe.
+  BastionHost:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: ami-037774efca2da0726
+      InstanceType: t2.micro
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          GroupSet:
+            - !Ref BastionHostSecurityGroup
+          SubnetId: !Ref PublicSubnetOne
+      KeyName: !Sub "{{resolve:secretsmanager:${AppConfigSecret}:SecretString:bastionHostKeyPair}}"
+
+  # TODO: add rotation of db / create a lambda function and use AWS::SecretsManager::RotationSchedule resource
+  DatabaseUserCredentialSecret:
+    Type: AWS::SecretsManager::Secret
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      Name: !Sub "${Environment}/databaseUserCredentials"
+      Description: RDS Master User Credentials
+      GenerateSecretString:
+        SecretStringTemplate: !Sub
+          - '{"username": "${username}"}'
+          - username: !Sub "{{resolve:secretsmanager:${AppConfigSecret}:SecretString:dbUsername}}"
+        GenerateStringKey: "password"
+        PasswordLength: 16
+        ExcludeCharacters: "\"'`|;:,!@#$%^&*()<>[]{}/?~\\"
+
+  DatabaseSubnets:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet group for RDS instance
+      SubnetIds: !Split [",", !Ref PrivateSubnets]
+
+  # TODO: add RDS snapshot in prod and change the data and updateReplace policy
+  DatabaseRDS:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      DBName: !Sub "{{resolve:secretsmanager:${AppConfigSecret}:SecretString:dbName}}"
+      Engine: "postgres"
+      MasterUsername: !Sub "{{resolve:secretsmanager:${DatabaseUserCredentialSecret}:SecretString:username}}"
+      MasterUserPassword: !Sub "{{resolve:secretsmanager:${DatabaseUserCredentialSecret}:SecretString:password}}"
+      Port: "5432"
+      DBInstanceClass: "db.t3.micro"
+      AllocatedStorage: "20"
+      PubliclyAccessible: false
+      BackupRetentionPeriod: 7
+      MultiAZ: false
+      DBSubnetGroupName: !Ref DatabaseSubnets
+      VPCSecurityGroups:
+        - !Ref DatabaseSecurityGroup
+
+  DatabaseConnectionSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub "${Environment}/databaseConnection"
+      Description: RDS Connection information
+      SecretString: !Sub
+        - '{"database": "${database}", "host": "${host}", "port": "${port}"}'
+        - database: !Sub "{{resolve:secretsmanager:${AppConfigSecret}:SecretString:dbName}}"
+          host: !GetAtt DatabaseRDS.Endpoint.Address
+          port: !GetAtt DatabaseRDS.Endpoint.Port
+
+Outputs:
+  DatabaseUserCredentialSecret:
+    Value: !Ref DatabaseUserCredentialSecret
+  DatabaseConnectionSecret:
+    Value: !Ref DatabaseConnectionSecret

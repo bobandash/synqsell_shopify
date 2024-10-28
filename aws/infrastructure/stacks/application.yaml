@@ -1,0 +1,186 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Application-related resources (S3, ALB, Remix App, etc.)
+
+Parameters:
+  Environment:
+    Type: String
+  AppConfigSecret:
+    Type: String
+  VpcId:
+    Type: String
+  PrivateSubnetOne:
+    Type: String
+  PublicSubnets:
+    Type: String
+  ALBSecurityGroup:
+    Type: String
+  RemixAppSecurityGroup:
+    Type: String
+Conditions:
+  isProd: !Equals
+    - !Ref Environment
+    - prod
+
+Resources:
+  ImageHostingS3:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+    Metadata:
+      Description: "Public S3 bucket for hosting publicly accessible images such logos for SynqSell"
+
+  ImageHostingS3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ImageHostingS3
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: PublicReadGetObject
+            Effect: Allow
+            Principal: "*"
+            Action: s3:GetObject
+            Resource: !Sub arn:aws:s3:::${ImageHostingS3}/*
+
+  # Related to web/app browser
+  # Flow is Internet => ALB Listener => Target Group => EC2 Instances
+  # Note: we only need an ALB and EC2 for staging and prod
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Condition: isProd
+    Properties:
+      Name: !Sub "${Environment}-alb"
+      Scheme: "internet-facing"
+      Type: "application"
+      Subnets: !Split [",", !Ref PublicSubnets]
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
+      IpAddressType: "ipv4"
+
+  # DNSRecord:
+  #   Type: AWS::Route53::RecordSet
+  #   Condition: isProd
+  #   Properties:
+  #     HostedZoneId: !Sub "{{resolve:secretsmanager:${AppConfigSecret}:SecretString:appHostedZoneId}}"
+  #     Name: !Sub "{{resolve:secretsmanager:${AppConfigSecret}:SecretString:appDomainName}}."
+  #     Type: A
+  #     AliasTarget:
+  #       DNSName: !GetAtt ApplicationLoadBalancer.DNSName
+  #       HostedZoneId: !GetAtt ApplicationLoadBalancer.CanonicalHostedZoneID
+  #       EvaluateTargetHealth: true
+
+  ALBCertificate:
+    Type: AWS::CertificateManager::Certificate
+    Condition: isProd
+    Properties:
+      ValidationMethod: DNS
+      DomainName: !Sub "{{resolve:secretsmanager:${AppConfigSecret}:SecretString:appDomainName}}"
+
+  # listener basically listens to requests and passes it securely to load balancer
+  HTTPListener:
+    Type: "AWS::ElasticLoadBalancingV2::Listener"
+    Condition: isProd
+    Properties:
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 80
+      Protocol: "HTTP"
+      DefaultActions:
+        - Order: 1
+          RedirectConfig:
+            Protocol: "HTTPS"
+            Port: "443"
+            Host: "#{host}"
+            Path: "/#{path}"
+            Query: "#{query}"
+            StatusCode: "HTTP_301"
+          Type: "redirect"
+
+  HTTPSListener:
+    Type: "AWS::ElasticLoadBalancingV2::Listener"
+    Condition: isProd
+    Properties:
+      Certificates:
+        - !Ref ALBCertificate
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 443
+      Protocol: "HTTPS"
+      SslPolicy: "ELBSecurityPolicy-2016-08"
+      DefaultActions:
+        - Order: 1
+          TargetGroupArn: !Ref TargetGroupOne
+          Type: "forward"
+
+  TargetGroupOne:
+    Type: "AWS::ElasticLoadBalancingV2::TargetGroup"
+    Condition: isProd
+    Properties:
+      Port: 80
+      Protocol: "HTTP"
+      VpcId: !Ref VpcId
+      Targets:
+        - Id: !Ref RemixAppInstance
+
+  ECR:
+    Type: AWS::ECR::Repository
+    Condition: isProd
+    Properties:
+      EmptyOnDelete: True
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      ImageTagMutability: IMMUTABLE
+
+  RemixAppInstanceRole:
+    Type: AWS::IAM::Role
+    Condition: isProd
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: ECRAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: ecr:GetAuthorizationToken
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - ecr:BatchGetImage
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:BatchCheckLayerAvailability
+                Resource: !GetAtt ECR.Arn
+
+  # You must have a profile to attach a role to an EC2
+  RemixAppInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Condition: isProd
+    Properties:
+      InstanceProfileName: !Sub ${Environment}-remix-app-ec2-instance-profile
+      Path: /
+      Roles:
+        - !Ref RemixAppInstanceRole
+
+  RemixAppInstance:
+    Type: AWS::EC2::Instance
+    Condition: isProd
+    Properties:
+      ImageId: ami-037774efca2da0726
+      InstanceType: t2.micro
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          GroupSet:
+            - !Ref RemixAppSecurityGroup
+          SubnetId: !Ref PrivateSubnetOne
+      KeyName: !Sub "{{resolve:secretsmanager:${AppConfigSecret}:SecretString:webAppKeyPair}}"
+      IamInstanceProfile: !Ref RemixAppInstanceProfile
