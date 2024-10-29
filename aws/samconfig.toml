@@ -39,6 +39,11 @@ parameter_overrides = "Environment=dev ApiKeySecret=dev/apiKeys AppConfigSecret=
 
 
 [prod]
+[prod.build.parameters]
+cached = false
+parallel = true
+template_file = "infrastructure/template.yaml"
+
 [prod.global.parameters]
 stack_name = "SynqSell-Prod"
 
