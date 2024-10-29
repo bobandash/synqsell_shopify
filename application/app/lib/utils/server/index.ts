@@ -3,3 +3,4 @@ export { default as getJSONError } from './getJSONError.server';
 export { default as createJSONMessage } from './createJSONMessage.server';
 export { default as errorHandler } from './errorHandler.server';
 export { default as getSecrets } from './getSecrets.server';
+export { default as getAppBaseUrl } from './getAppBaseUrl.server';

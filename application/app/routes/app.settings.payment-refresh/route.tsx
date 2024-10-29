@@ -4,7 +4,11 @@ import { StatusCodes } from 'http-status-codes';
 import { useEffect } from 'react';
 import createAccountLink from '~/services/stripe/stripeConnect';
 import { authenticate } from '~/shopify.server';
-import { createJSONMessage, getJSONError } from '~/lib/utils/server';
+import {
+  createJSONMessage,
+  getAppBaseUrl,
+  getJSONError,
+} from '~/lib/utils/server';
 
 type LoaderData = {
   onboardingUrl: string;
@@ -17,7 +21,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     } = await authenticate.admin(request);
     const url = new URL(request.url);
     const searchParams = url.searchParams;
-    const appBaseUrl = `https://${shop}/admin/apps/synqsell/`;
+    const appBaseUrl = getAppBaseUrl(shop);
     const accountId = searchParams.get('accountId');
     if (!accountId) {
       throw createJSONMessage(

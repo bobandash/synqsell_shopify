@@ -17,7 +17,11 @@ import {
 } from '@remix-run/react';
 import { getStripePublishableKey } from '~/services/stripe/stripeConnect';
 import { convertFormDataToObject } from '~/lib/utils';
-import { createJSONMessage, getJSONError } from '~/lib/utils/server';
+import {
+  createJSONMessage,
+  getAppBaseUrl,
+  getJSONError,
+} from '~/lib/utils/server';
 import { FETCHER_KEYS, INTENTS } from './constants';
 import {
   beginStripeConnectOnboarding,
@@ -65,7 +69,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     } = await authenticate.admin(request);
     const url = new URL(request.url);
     const searchParams = url.searchParams;
-    const appBaseUrl = `https://${shop}/admin/apps/synqsell/`;
+    const appBaseUrl = getAppBaseUrl(shop);
     const accountId = searchParams.get('accountId');
     const [isRetailer, isSupplier] = await Promise.all([
       hasRole(sessionId, ROLES.RETAILER),
