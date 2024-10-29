@@ -2,31 +2,14 @@
 # https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-config.html
 version = 0.1
 
-[default]
-[default.global.parameters]
-stack_name = "Synqsell-Dev"
-
 [default.build.parameters]
 cached = true
 parallel = true
 template_file = "infrastructure/template.yaml"
 
-
-[default.validate.commands]
-pre_validate = "bash validate-stacks.sh"
-
 [default.validate.parameters]
 lint = true
 template_file = "infrastructure/template.yaml"
-
-[default.deploy.parameters]
-capabilities = "CAPABILITY_IAM CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND"
-confirm_changeset = true
-region = "us-east-2"
-s3_bucket = "synqsell-sam"
-image_repositories = []
-template_file = "infrastructure/template.yaml"
-parameter_overrides = "Environment=dev ApiKeySecret=dev/apiKeys AppConfigSecret=dev/appConfig"
 
 
 [default.package.parameters]
@@ -40,6 +23,20 @@ warm_containers = "EAGER"
 
 [default.local_start_lambda.parameters]
 warm_containers = "EAGER"
+
+[dev]
+[dev.global.parameters]
+stack_name = "Synqsell-Dev"
+
+[dev.deploy.parameters]
+capabilities = "CAPABILITY_IAM CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND"
+confirm_changeset = true
+region = "us-east-2"
+s3_bucket = "synqsell-sam"
+image_repositories = []
+template_file = "infrastructure/template.yaml"
+parameter_overrides = "Environment=dev ApiKeySecret=dev/apiKeys AppConfigSecret=dev/appConfig"
+
 
 [prod]
 [prod.global.parameters]

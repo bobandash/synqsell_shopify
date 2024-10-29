@@ -93,3 +93,5 @@ Outputs:
     Value: !Ref DatabaseUserCredentialSecret
   DatabaseConnectionSecret:
     Value: !Ref DatabaseConnectionSecret
+  BastionHostPublicIp:
+    Value: !GetAtt BastionHost.PublicIp

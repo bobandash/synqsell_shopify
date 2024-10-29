@@ -4,7 +4,7 @@
 # Common Commands
 # sam build
 # sam validate --template-file <name> --lint
-# sam deploy --config-env default
+# sam deploy --config-env dev
 # sam deploy --config-env prod
 
 # TODO: Add lambda layers for shared functions
@@ -13,8 +13,8 @@
 # TODO: Learn how to create a script that runs sam validate for all the stacks at once
 AWSTemplateFormatVersion: "2010-09-09"
 Transform:
-  - AWS::Serverless-2016-10-31
   - AWS::LanguageExtensions
+  - AWS::Serverless-2016-10-31
 Description: >
   SAM Template For all infrastructure for SynqSell
 
@@ -131,33 +131,35 @@ Resources:
       Tags:
         - Key: Environment
           Value: !Ref Environment
-# Outputs:
-#   s3Bucket:
-#     Description: S3 bucket name for storing all the merchants' logos
-#     Value: !Ref ImageHostingS3
-#   awsRegion:
-#     Description: AWS Region of Deployed Resources
-#     Value: !Ref AWS::Region
-#   dbUserSecretArn:
-#     Description: Secrets Manager for Database Admin User Credentials
-#     Value: !GetAtt DatabaseUserCredentialSecret.Id
-#   dbConnectionSecretArn:
-#     Description: Secrets Manager for Database Connection
-#     Value: !GetAtt DatabaseConnectionSecret.Id
-#   bastionHostPublicIP:
-#     Description: Public IP of your bastion host
-#     Value: !GetAtt BastionHost.PublicIp
-#   deliveryServiceCallbackUrl:
-#     Description: The public callback endpoint for calculating shipping rates on Shopify
-#     Value: !Sub
-#       - https://${ApiID}.execute-api.${AWS::Region}.amazonaws.com/dev/deliveryCarrierService/callback
-#       - ApiID: !Ref APIGateway
-#   stripeWebhookUrl:
-#     Description: The public endpoint for coordinating all stripe webhooks
-#     Value: !Sub
-#       - https://${ApiID}.execute-api.${AWS::Region}.amazonaws.com/dev/stripe/webhooks
-#       - ApiID: !Ref APIGateway
-#   albDNSName:
-#     Condition: isProd
-#     Description: The application url to set SynqSell
-#     Value: !GetAtt ApplicationLoadBalancer.DNSName
+
+# These outputs are to create the environment variables
+Outputs:
+  ImageHostingS3BucketName:
+    Description: S3 bucket name for storing all the merchants' logos
+    Value: !GetAtt ApplicationStack.Outputs.ImageHostingS3BucketName
+  AwsRegion:
+    Description: AWS Region of Deployed Resources
+    Value: !Ref AWS::Region
+  DbUserSecretArn:
+    Description: Secrets Manager for Database Admin User Credentials
+    Value: !GetAtt DatabaseStack.Outputs.DatabaseUserCredentialSecret
+  DbConnectionSecretArn:
+    Description: Secrets Manager for Database Connection
+    Value: !GetAtt DatabaseStack.Outputs.DatabaseConnectionSecret
+  BastionHostPublicIp:
+    Description: Public IP of your bastion host
+    Value: !GetAtt DatabaseStack.Outputs.BastionHostPublicIp
+  DeliveryServiceCallbackUrl:
+    Description: The public callback endpoint for calculating shipping rates on Shopify
+    Value: !Sub
+      - https://${ApiId}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/deliveryCarrierService/callback
+      - ApiId: !GetAtt ApiStack.Outputs.ApiGatewayId
+  StripeWebhookUrl:
+    Description: The public endpoint for coordinating all stripe webhooks
+    Value: !Sub
+      - https://${ApiId}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/stripe/webhooks
+      - ApiId: !GetAtt ApiStack.Outputs.ApiGatewayId
+  AlbDNSName:
+    Condition: isProd
+    Description: The application url to set SynqSell
+    Value: !GetAtt ApplicationStack.Outputs.DNSName

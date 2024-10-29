@@ -184,3 +184,10 @@ Resources:
           SubnetId: !Ref PrivateSubnetOne
       KeyName: !Sub "{{resolve:secretsmanager:${AppConfigSecret}:SecretString:webAppKeyPair}}"
       IamInstanceProfile: !Ref RemixAppInstanceProfile
+
+Outputs:
+  ImageHostingS3BucketName:
+    Value: !Ref ImageHostingS3
+  AlbDNSName:
+    Condition: isProd
+    Value: !GetAtt ApplicationLoadBalancer.DNSName
