@@ -138,7 +138,8 @@ const Admin = () => {
 
   useEffect(() => {
     if (actionData?.message) {
-      shopify.toast.show(actionData.message, { duration: 1000 });
+      shopify.toast.show(actionData.message);
+      actionData.message = '';
     }
   }, [actionData, shopify]);
 

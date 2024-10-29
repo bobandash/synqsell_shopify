@@ -3,7 +3,7 @@
 client_id = "da71c0d94fe799dfdcfd69923c0e5741"
 name = "SynqSell-Dev"
 handle = "synqsell-dev"
-application_url = "https://for-cubic-nt-hate.trycloudflare.com"
+application_url = "https://peninsula-precipitation-te-nights.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read_assigned_fulfillment_orders,read_customers,read_inventory,read_lo
 
 [auth]
 redirect_urls = [
-  "https://for-cubic-nt-hate.trycloudflare.com/auth/callback",
-  "https://for-cubic-nt-hate.trycloudflare.com/auth/shopify/callback",
-  "https://for-cubic-nt-hate.trycloudflare.com/api/auth/callback"
+  "https://peninsula-precipitation-te-nights.trycloudflare.com/auth/callback",
+  "https://peninsula-precipitation-te-nights.trycloudflare.com/auth/shopify/callback",
+  "https://peninsula-precipitation-te-nights.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]

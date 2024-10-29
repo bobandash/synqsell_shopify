@@ -237,7 +237,7 @@ const PaymentSettings = () => {
   return (
     <Page
       title={'Payment Integrations'}
-      subtitle="Add stripe integration to reliably disburse funds to suppliers if you're a retailer, or get paid as a retailer."
+      subtitle="Add Stripe Payments integration to reliably disburse funds to suppliers as a retailer, and Stripe Connect integration to reliably get paid as a supplier."
       primaryAction={{
         content: 'User Settings',
         helpText: 'Navigate to user profile settings.',

@@ -150,7 +150,7 @@ export function ErrorBoundary() {
           <Text variant="bodyLg" as="p" fontWeight="bold" alignment="center">
             Navigate back to <PolarisLink url="/app">main screen</PolarisLink>{' '}
             or{' '}
-            <PolarisLink url="mailto:support@synqsell.com">
+            <PolarisLink url="mailto:synqsell@gmail.com">
               contact support
             </PolarisLink>
             .

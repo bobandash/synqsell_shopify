@@ -29,7 +29,7 @@ const shopify = shopifyApp({
           amount: 100, // Pay up to $100 per 30 days w/ 5% commission
           currencyCode: 'USD',
           interval: BillingInterval.Usage,
-          terms: '5% commission on retailer and supplier cut.',
+          terms: '5% commission on all retailer and supplier proceeds.',
         },
       ],
     },

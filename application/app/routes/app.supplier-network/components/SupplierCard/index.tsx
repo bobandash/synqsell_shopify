@@ -91,9 +91,9 @@ const SupplierCard: FC<Props> = ({ supplier, setSelectedSupplierId }) => {
             </InlineStack>
           </div>
           <InlineStack gap={'200'}>
-            <a href={`mailto:${email}`} title={email}>
+            <Link url={`mailto:${email}`}>
               <Icon source={EmailIcon} tone="base" />
-            </a>
+            </Link>
           </InlineStack>
         </div>
         <BlockStack>
