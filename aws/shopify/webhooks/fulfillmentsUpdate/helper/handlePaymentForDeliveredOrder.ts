@@ -4,7 +4,9 @@ import { Payload, Session } from '../types';
 import { getStripe } from '../stripe';
 import { v4 as uuidv4 } from 'uuid';
 import { ORDER_PAYMENT_STATUS } from '../constants';
-import { createMapToRestObj } from '../util';
+import { createMapToRestObj, mutateAndValidateGraphQLData } from '../util';
+import { USAGE_CHARGE_MUTATION } from '../graphql';
+import { AppUsageRecordCreateMutation } from '../types/admin.generated';
 
 type SupplierOrderLineItem = {
     shopifySupplierOrderLineItemId: string;
@@ -29,7 +31,8 @@ type OrderLineItemDetail = {
     retailerShopifyVariantId: string;
     supplierShopifyVariantId: string;
     retailPricePerUnit: number;
-    amountPayablePerUnit: number;
+    retailerProfitPerUnit: number;
+    supplierProfitPerUnit: number;
     shopifyRetailerOrderLineItemId: string;
     shopifySupplierOrderLineItemId: string;
     quantity: number;
@@ -40,9 +43,23 @@ type OrderLineItemDetail = {
     priceListId: string;
 };
 
+type PayableAmounts = {
+    shippingPayableAmount: number;
+    orderPayableAmount: number;
+};
+
 // ==============================================================================================================
 // START: HELPER FUNCTIONS FOR INITIAL DATA
 // ==============================================================================================================
+// stripe api only accepts currency code in lower case fmt
+function getCurrencyStripeFmt(currency: string) {
+    return currency.toLowerCase();
+}
+
+// shopify api only accepts currency code in upper case fmt
+function getCurrencyShopifyFmt(currency: string) {
+    return currency.toUpperCase();
+}
 
 async function getRetailerSessionFromFulfillmentId(dbFulfillmentId: string, client: PoolClient) {
     try {
@@ -64,7 +81,7 @@ async function getRetailerSessionFromFulfillmentId(dbFulfillmentId: string, clie
     }
 }
 
-async function getOrderCurrencyStripeFmt(shopifySupplierOrderId: string, client: PoolClient) {
+async function getOrderCurrency(shopifySupplierOrderId: string, client: PoolClient) {
     try {
         const query = `
             SELECT "currency" FROM "Order"
@@ -76,7 +93,7 @@ async function getOrderCurrencyStripeFmt(shopifySupplierOrderId: string, client:
         }
         // stripe requires the currency in letter case 2-3 char format
         const currency: string = res.rows[0].currency;
-        return currency.toLowerCase();
+        return currency;
     } catch (error) {
         console.error(error);
         throw new Error(`Failed to get order currency from shopifySupplierOrderId ${shopifySupplierOrderId}`);
@@ -113,6 +130,36 @@ async function hasStripePayment(dbFulfillmentId: string, client: PoolClient) {
     } catch (error) {
         console.error(error);
         throw new Error(`Failed to check if fulfillment id ${dbFulfillmentId} has stripe payment.`);
+    }
+}
+
+async function getRetailerProfitFromFulfillment(
+    dbOrderId: string,
+    supplierOrderLineItems: SupplierOrderLineItem[],
+    client: PoolClient,
+) {
+    try {
+        const entireOrderLineItemDetails = await getOrderLineItemDetails(dbOrderId, client);
+        const entireOrderLineItemLookup = createMapToRestObj(
+            entireOrderLineItemDetails,
+            'shopifySupplierOrderLineItemId',
+        );
+        const retailerProfit = supplierOrderLineItems.reduce((acc, lineItem) => {
+            const { shopifySupplierOrderLineItemId, quantityFulfilled } = lineItem;
+            const entireOrderLineItem = entireOrderLineItemLookup.get(shopifySupplierOrderLineItemId);
+            if (!entireOrderLineItem) {
+                throw new Error(
+                    `No order line item exists in the database for shopifySupplierOrderLineItemId ${shopifySupplierOrderLineItemId}`,
+                );
+            }
+            const { retailerProfitPerUnit } = entireOrderLineItem;
+            const retailerLineItemProfit = retailerProfitPerUnit * quantityFulfilled;
+            return acc + retailerLineItemProfit;
+        }, 0);
+        return retailerProfit;
+    } catch (error) {
+        console.error(error);
+        throw new Error(`Failed to retailer profit from supplier order ${dbOrderId}.`);
     }
 }
 
@@ -157,7 +204,7 @@ async function getShippingTotalPaidToDate(dbOrderId: string, client: PoolClient)
     }
 }
 
-async function getShippingPayableAmount(
+async function getShippingPayableAmtForSupplier(
     dbOrderId: string,
     orderTotalShippingCost: number,
     totalFulfillmentQty: number,
@@ -172,7 +219,7 @@ async function getShippingPayableAmount(
     // handle case there's rounding errors for shipping price
     // e.g. 5 / 3 = 1.33 --> 1.33 * 3 = 4.99; missing 0.01
     let shippingPayableAmount = shippingPayableAmountEstimate;
-    // TODO: Figure out whether or not we need to increase the threshold
+    // TODO: Figure out whether or not we need to increase the threshold or make a dynamic way of calculating the threshold
     if (Math.abs(difference) <= 0.1) {
         shippingPayableAmount += difference;
     }
@@ -196,7 +243,7 @@ async function getOrderLineItemDetails(dbOrderId: string, client: PoolClient) {
     }
 }
 
-async function getOrderPayableAmount(
+async function getOrderPayableAmtForSupplier(
     dbOrderId: string,
     supplierOrderLineItems: SupplierOrderLineItem[],
     client: PoolClient,
@@ -206,7 +253,7 @@ async function getOrderPayableAmount(
         const entireOrderLineItemLookup = createMapToRestObj(
             entireOrderLineItemDetails,
             'shopifySupplierOrderLineItemId',
-        ); // this is a map of shopifySupplierOrderLineItemId = key to rest of order line item details
+        );
         const orderPayableAmount = supplierOrderLineItems.reduce((acc, lineItem) => {
             const { shopifySupplierOrderLineItemId, quantityFulfilled } = lineItem;
             const entireOrderLineItem = entireOrderLineItemLookup.get(shopifySupplierOrderLineItemId);
@@ -215,28 +262,10 @@ async function getOrderPayableAmount(
                     `No order line item exists in the database for shopifySupplierOrderLineItemId ${shopifySupplierOrderLineItemId}`,
                 );
             }
-            const {
-                amountPayablePerUnit,
-                quantity: totalQuantityOrdered,
-                quantityPaid: totalQuantityPaid,
-                quantityCancelled: totalQuantityCancelled,
-                quantityFulfilled: totalQuantityFulfilled,
-            } = entireOrderLineItem;
-            // if it ever throws these errors, have to investigate because do not want the retailer to be charged more than the total order
-            // NOTE: these errors are more of a sanity check, it most likely will never been thrown
-            if (totalQuantityCancelled + totalQuantityFulfilled + quantityFulfilled > totalQuantityOrdered) {
-                throw new Error(
-                    `The number of fulfilled items will exceed the total quantity ordered if shopifySupplierOrderLineItemId ${shopifySupplierOrderLineItemId} goes through.`,
-                );
-            } else if (totalQuantityPaid + quantityFulfilled > totalQuantityOrdered) {
-                throw new Error(
-                    `The number of items paid will exceed the total quantity ordered if shopifySupplierOrderLineItemId ${shopifySupplierOrderLineItemId} goes through.`,
-                );
-            }
-            const orderPayable = amountPayablePerUnit * lineItem.quantityFulfilled;
+            const { supplierProfitPerUnit } = entireOrderLineItem;
+            const orderPayable = supplierProfitPerUnit * quantityFulfilled;
             return acc + orderPayable;
         }, 0);
-
         return orderPayableAmount;
     } catch (error) {
         console.error(error);
@@ -244,22 +273,21 @@ async function getOrderPayableAmount(
     }
 }
 
-async function getPayableAmounts(
+async function getSupplierPayableAmounts(
     orderDetails: OrderDatabase,
-    supplierOrderLineItems: SupplierOrderLineItem[],
+    orderLineItems: SupplierOrderLineItem[],
     client: PoolClient,
 ) {
-    // NOTE: order lines represents the order line items inside the fulfilment
-    const totalFulfillmentQty = supplierOrderLineItems.reduce(
-        (acc, { quantityFulfilled }) => acc + quantityFulfilled,
-        0,
-    );
+    const totalFulfillmentQty = orderLineItems.reduce((acc, { quantityFulfilled }) => acc + quantityFulfilled, 0);
     const [shippingPayableAmount, orderPayableAmount] = await Promise.all([
-        getShippingPayableAmount(orderDetails.id, orderDetails.shippingCost, totalFulfillmentQty, client),
-        getOrderPayableAmount(orderDetails.id, supplierOrderLineItems, client),
+        getShippingPayableAmtForSupplier(orderDetails.id, orderDetails.shippingCost, totalFulfillmentQty, client),
+        getOrderPayableAmtForSupplier(orderDetails.id, orderLineItems, client),
     ]);
 
-    return { shippingPayableAmount, orderPayableAmount };
+    return {
+        shippingPayableAmount,
+        orderPayableAmount,
+    };
 }
 
 // ==============================================================================================================
@@ -267,7 +295,7 @@ async function getPayableAmounts(
 // ==============================================================================================================
 
 // ==============================================================================================================
-// START: PAY SUPPLIER USING STRIPE PAYMENTS/CONNECT LOGIC
+// START: PAY SUPPLIER USING STRIPE PAYMENTS/CONNECT LOGIC AND STORE IN DB
 // ==============================================================================================================
 async function getStripeAccountId(supplierId: string, client: PoolClient) {
     try {
@@ -327,7 +355,7 @@ async function paySupplierStripe(
     supplierId: string,
     retailerId: string,
     payableAmount: number,
-    currency: string,
+    stripeCurrency: string,
     client: PoolClient,
 ) {
     try {
@@ -340,7 +368,7 @@ async function paySupplierStripe(
         const paymentMethod = await getStripePaymentMethod(retailerStripeCustomerId);
         const event = await stripe.paymentIntents.create({
             amount: payableAmount,
-            currency,
+            currency: stripeCurrency,
             off_session: true,
             confirm: true,
             customer: retailerStripeCustomerId,
@@ -356,14 +384,7 @@ async function paySupplierStripe(
     }
 }
 
-// ==============================================================================================================
-// END: PAY SUPPLIER FOR DELIVERED ORDER LOGIC
-// ==============================================================================================================
-
-// ==============================================================================================================
-// START: STORE PAYMENT IN DATABASE LOGIC
-// ==============================================================================================================
-async function recordPaymentInDatabase(
+async function recordStripePaymentInDb(
     stripeEventId: string,
     orderPaid: number,
     shippingPaid: number,
@@ -372,30 +393,31 @@ async function recordPaymentInDatabase(
     client: PoolClient,
 ) {
     try {
-        const insertionQuery = `
-          INSERT INTO "Payment" (
-              "id",
-              "orderId",
-              "stripeEventId",
-              "status",
-              "orderPaid",
-              "shippingPaid",
-              "totalPaid",
-              "fulfillmentId",
-          )
-          VALUES (
-              $1,  -- id
-              $2,  -- orderId
-              $3,  -- stripeEventId
-              $4,  -- status
-              $5,  -- orderPaid
-              $6,  -- shippingPaid
-              $7,  -- totalPaid
-              $8, -- fulfillmentId
-          )
+        const query = `
+            INSERT INTO "Payment" (
+                "id",
+                "orderId",
+                "stripeEventId",
+                "status",
+                "orderPaid",
+                "shippingPaid",
+                "totalPaid",
+                "fulfillmentId",
+            )
+            VALUES (
+                $1,  -- id
+                $2,  -- orderId
+                $3,  -- stripeEventId
+                $4,  -- status
+                $5,  -- orderPaid
+                $6,  -- shippingPaid
+                $7,  -- totalPaid
+                $8, -- fulfillmentId
+            )
+            RETURNING "id"
         `;
         const totalPaid = orderPaid + shippingPaid;
-        await client.query(insertionQuery, [
+        const res = await client.query(query, [
             uuidv4(),
             dbOrderId,
             stripeEventId,
@@ -405,16 +427,181 @@ async function recordPaymentInDatabase(
             totalPaid,
             dbFulfillmentId,
         ]);
+        return res.rows[0].id as string;
     } catch (error) {
         console.error(error);
         throw new Error('Failed to add payment to database.');
     }
 }
 
+// stripe payment is flow of commission from retailer to supplier
+async function handleStripePayment(
+    supplierId: string,
+    retailerId: string,
+    payableAmounts: PayableAmounts,
+    currency: string,
+    dbFulfillmentId: string,
+    dbOrderId: string,
+    client: PoolClient,
+) {
+    try {
+        const { shippingPayableAmount, orderPayableAmount } = payableAmounts;
+        const totalPayableAmount = shippingPayableAmount + orderPayableAmount;
+        const stripeCurrency = getCurrencyStripeFmt(currency);
+        const stripeEventId = await paySupplierStripe(
+            supplierId,
+            retailerId,
+            totalPayableAmount,
+            stripeCurrency,
+            client,
+        );
+        const dbPaymentId = await recordStripePaymentInDb(
+            stripeEventId,
+            orderPayableAmount,
+            shippingPayableAmount,
+            dbFulfillmentId,
+            dbOrderId,
+            client,
+        );
+        return dbPaymentId;
+    } catch (error) {
+        console.error(error);
+        throw new Error(`Failed to handle stripe payment for fulfillment id ${dbFulfillmentId}.`);
+    }
+}
+
 // ==============================================================================================================
-// END: STORE PAYMENT IN DATABASE LOGIC
+// START: USE SHOPIFY BILLING API TO PAY SYNQSELL APP
 // ==============================================================================================================
-async function paySupplierForDeliveredOrder(
+async function getShopifySubscriptionLineItemId(sessionId: string, client: PoolClient) {
+    try {
+        const query = `
+            SELECT "shopifySubscriptionLineItemId" FROM "Billing"
+            WHERE "sessionId" = $1
+        `;
+        const res = await client.query(query);
+        if (res.rows.length === 0) {
+            throw new Error('The user is not subscribed to the Shopify Basic Usage plan.');
+        }
+        return res.rows[0].shopifySubscriptionLineItemId as string;
+    } catch (error) {
+        console.error(error);
+        throw new Error(`Failed to get subscription line id for session ${sessionId}.`);
+    }
+}
+
+async function createUsageChargeShopify(
+    shopifySubscriptionLineId: string,
+    amtToBill: number,
+    shopifyCurrency: string,
+    session: Session,
+) {
+    try {
+        // TODO: Use a less hacky solution in the future
+        // Basically, the currently capped usage amount is $100 per month, which means SynqSell as a platform would have to help the retailer/supplier achieve $2k/month (5% commission) after payout
+        // for the USAGE_CHARGE_MUTATION, it throws an error if the amount goes over, e.g. retailer paid $99 already; the transaction payable is $1.01 --> mutation fails
+        // right now, we're just going to let it fail because currency conversion to USD is not built in our data model yet
+        const res = await mutateAndValidateGraphQLData<AppUsageRecordCreateMutation>(
+            session.shop,
+            session.accessToken,
+            USAGE_CHARGE_MUTATION,
+            {
+                description: 'SynqSell usage charge for commission on delivered orders.',
+                price: {
+                    amount: amtToBill,
+                    currencyCode: shopifyCurrency,
+                },
+                subscriptionLineItemId: shopifySubscriptionLineId,
+            },
+            'Failed to create a usage charge to pay Synqsell from retailer.',
+        );
+        return res.appUsageRecordCreate?.appUsageRecord?.id ?? null;
+    } catch (error) {
+        console.error(error);
+        return null;
+    }
+}
+
+async function recordBillingTransactionInDb(
+    dbPaymentId: string,
+    sessionid: string,
+    shopifyUsageRecordId: string,
+    amountPaid: number,
+    shopifyCurrency: string,
+    client: PoolClient,
+) {
+    try {
+        const query = `
+            INSERT INTO "BillingTransaction" (
+                "id",
+                "createdAt",
+                "paymentId",
+                "sessionId",
+                "shopifyUsageRecordId",
+                "amountPaid",
+                "currencyCode"
+            )
+            VALUES (
+                $1,  -- id
+                $2,  -- createdAt
+                $3,  -- paymentId
+                $4,  -- sessionId
+                $5,  -- shopifyUsageRecordId
+                $6,  -- amountPaid
+                $7,  -- currencyCode
+            )
+        `;
+        await client.query(query, [
+            uuidv4(),
+            new Date(),
+            dbPaymentId,
+            sessionid,
+            shopifyUsageRecordId,
+            amountPaid,
+            shopifyCurrency,
+        ]);
+    } catch (error) {
+        console.error(error);
+        throw new Error('Failed to add Shopify billing transaction to database.');
+    }
+}
+
+async function handleShopifyUsageCharge(
+    dbPaymentId: string,
+    shopifyCurrency: string,
+    profit: number,
+    session: Session,
+    client: PoolClient,
+) {
+    try {
+        const shopifySubscriptionLineItemId = await getShopifySubscriptionLineItemId(session.id, client);
+        const shopifyUsageRecordId = await createUsageChargeShopify(
+            shopifySubscriptionLineItemId,
+            profit,
+            shopifyCurrency,
+            session,
+        );
+        if (shopifyUsageRecordId) {
+            await recordBillingTransactionInDb(
+                dbPaymentId,
+                session.id,
+                shopifyUsageRecordId,
+                profit,
+                shopifyCurrency,
+                client,
+            );
+        }
+    } catch (error) {
+        console.error(error);
+        throw new Error('Failed to handle supplier usage charge.');
+    }
+}
+
+// ==============================================================================================================
+// START: END SHOPIFY BILLING API TO PAY SYNQSELL APP
+// ==============================================================================================================
+
+async function handlePaymentForDeliveredOrder(
     supplierShop: string,
     shopifySupplierOrderId: string,
     supplierShopifyFulfillmentId: string,
@@ -422,50 +609,55 @@ async function paySupplierForDeliveredOrder(
     client: PoolClient,
 ) {
     try {
-        const [dbFulfillmentId, supplierSession, orderDetails, currency] = await Promise.all([
-            getDbFulfillmentIdFromSupplier(supplierShopifyFulfillmentId, client),
-            getSessionFromShop(supplierShop, client),
-            getDbOrderDetails(shopifySupplierOrderId, client),
-            getOrderCurrencyStripeFmt(shopifySupplierOrderId, client),
-        ]);
         const orderLineItems: SupplierOrderLineItem[] = supplierPayload.line_items.map((lineItem) => ({
             shopifySupplierOrderLineItemId: lineItem.admin_graphql_api_id,
             quantityFulfilled: lineItem.quantity,
         }));
-        const retailerSession = await getRetailerSessionFromFulfillmentId(dbFulfillmentId, client);
-        const fulfillmentHasBeenPaid = await hasStripePayment(dbFulfillmentId, client);
-        if (fulfillmentHasBeenPaid) {
+
+        const [dbFulfillmentId, supplierSession, orderDetails, currency] = await Promise.all([
+            getDbFulfillmentIdFromSupplier(supplierShopifyFulfillmentId, client),
+            getSessionFromShop(supplierShop, client),
+            getDbOrderDetails(shopifySupplierOrderId, client),
+            getOrderCurrency(shopifySupplierOrderId, client),
+        ]);
+        const [retailerSession, hasFulfillmentBeenPaid, supplierPayableAmounts] = await Promise.all([
+            getRetailerSessionFromFulfillmentId(dbFulfillmentId, client),
+            hasStripePayment(dbFulfillmentId, client),
+            getSupplierPayableAmounts(orderDetails, orderLineItems, client),
+        ]);
+
+        if (hasFulfillmentBeenPaid) {
             console.error(`Fulfillment ${supplierShopifyFulfillmentId} has already been paid`);
             return;
         }
 
-        const { shippingPayableAmount, orderPayableAmount } = await getPayableAmounts(
-            orderDetails,
-            orderLineItems,
-            client,
-        );
-        const totalPayableAmount = shippingPayableAmount + orderPayableAmount;
-        const stripeEventId = await paySupplierStripe(
+        // retailer has to pay the supplier the agreed upon proceeds
+        const dbPaymentId = await handleStripePayment(
             supplierSession.id,
             retailerSession.id,
-            totalPayableAmount,
+            supplierPayableAmounts,
             currency,
-            client,
-        );
-        await recordPaymentInDatabase(
-            stripeEventId,
-            orderPayableAmount,
-            shippingPayableAmount,
             dbFulfillmentId,
             orderDetails.id,
             client,
         );
+
+        const supplierProfit = supplierPayableAmounts.orderPayableAmount + supplierPayableAmounts.shippingPayableAmount;
+        const shopifyCurrency = getCurrencyShopifyFmt(currency);
+        // pay Synqsell from supplier and retailer billing api
+        const retailerProfit = await getRetailerProfitFromFulfillment(orderDetails.id, orderLineItems, client);
+        await Promise.all([
+            handleShopifyUsageCharge(dbPaymentId, shopifyCurrency, retailerProfit, retailerSession, client),
+            handleShopifyUsageCharge(dbPaymentId, shopifyCurrency, supplierProfit, supplierSession, client),
+        ]);
+
+        // TODO: refactor and add final update order status to completed if everything has been paid
     } catch (error) {
         console.error(error);
         throw new Error(
-            `Failed to pay supplier for delivered order ${shopifySupplierOrderId} and fulfillment id ${supplierShopifyFulfillmentId}.`,
+            `Failed to handle retailer and supplier Stripe + Shopify payments for delivered order ${shopifySupplierOrderId} and fulfillment id ${supplierShopifyFulfillmentId}.`,
         );
     }
 }
 
-export default paySupplierForDeliveredOrder;
+export default handlePaymentForDeliveredOrder;

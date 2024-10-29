@@ -42,7 +42,8 @@ model Session {
   supplierOrders               Order[]                @relation("SupplierOrder")
   stripeConnectAccount         StripeConnectAccount?
   stripeCustomerAccount        StripeCustomerAccount?
-  Billing                      Billing[]
+  billings                     Billing[]
+  billingTransactions          BillingTransaction[]
 }
 
 model Billing {
@@ -278,7 +279,8 @@ model OrderLineItem {
   retailerShopifyVariantId       String
   supplierShopifyVariantId       String
   retailPricePerUnit             Decimal    @db.Decimal(10, 2)
-  amountPayablePerUnit           Decimal    @db.Decimal(10, 2) // retrieve the supplier agreed upon profit
+  retailerProfitPerUnit          Decimal    @db.Decimal(10, 2)
+  supplierProfitPerUnit          Decimal    @db.Decimal(10, 2)
   shopifyRetailerOrderLineItemId String
   shopifySupplierOrderLineItemId String
   quantity                       Int
@@ -301,17 +303,31 @@ model Fulfillment {
 }
 
 model Payment {
-  id            String      @id @default(uuid())
-  orderId       String
-  stripeEventId String      @unique
-  status        String // need to listen to stripe's webhooks for this
-  orderPaid     Decimal     @db.Decimal(10, 2)
-  shippingPaid  Decimal     @db.Decimal(10, 2)
-  totalPaid     Decimal     @db.Decimal(10, 2)
-  createdAt     DateTime    @default(now())
-  fulfillmentId String      @unique
-  order         Order       @relation(fields: [orderId], references: [id])
-  fulfillment   Fulfillment @relation(fields: [fulfillmentId], references: [id])
+  id                  String               @id @default(uuid())
+  orderId             String
+  stripeEventId       String               @unique
+  status              String // need to listen to stripe's webhooks for this
+  orderPaid           Decimal              @db.Decimal(10, 2)
+  shippingPaid        Decimal              @db.Decimal(10, 2)
+  totalPaid           Decimal              @db.Decimal(10, 2)
+  createdAt           DateTime             @default(now())
+  fulfillmentId       String               @unique
+  order               Order                @relation(fields: [orderId], references: [id])
+  fulfillment         Fulfillment          @relation(fields: [fulfillmentId], references: [id])
+  billingTransactions BillingTransaction[]
+}
+
+// when a payment is made, we bill the merchants a portion of what they made
+model BillingTransaction {
+  id                   String   @id @default(uuid())
+  createdAt            DateTime @default(now())
+  paymentId            String
+  sessionId            String
+  shopifyUsageRecordId String   @unique
+  amountPaid           Decimal  @db.Decimal(10, 2)
+  currencyCode         String
+  payment              Payment  @relation(fields: [paymentId], references: [id])
+  session              Session  @relation(fields: [sessionId], references: [id])
 }
 
 model StripeConnectAccount {

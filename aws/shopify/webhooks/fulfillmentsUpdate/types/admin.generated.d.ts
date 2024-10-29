@@ -24,6 +24,15 @@ export type FulfillmentOrderOpenMutationVariables = AdminTypes.Exact<{
 
 export type FulfillmentOrderOpenMutation = { fulfillmentOrderOpen?: AdminTypes.Maybe<{ fulfillmentOrder?: AdminTypes.Maybe<Pick<AdminTypes.FulfillmentOrder, 'id'>>, userErrors: Array<Pick<AdminTypes.UserError, 'field' | 'message'>> }> };
 
+export type AppUsageRecordCreateMutationVariables = AdminTypes.Exact<{
+  description: AdminTypes.Scalars['String']['input'];
+  price: AdminTypes.MoneyInput;
+  subscriptionLineItemId: AdminTypes.Scalars['ID']['input'];
+}>;
+
+
+export type AppUsageRecordCreateMutation = { appUsageRecordCreate?: AdminTypes.Maybe<{ userErrors: Array<Pick<AdminTypes.UserError, 'field' | 'message'>>, appUsageRecord?: AdminTypes.Maybe<Pick<AdminTypes.AppUsageRecord, 'id'>> }> };
+
 interface GeneratedQueryTypes {
 }
 
@@ -31,6 +40,7 @@ interface GeneratedMutationTypes {
   "#graphql\n  mutation fulfillmentCancel($id: ID!) {\n    fulfillmentCancel(id: $id) {\n      fulfillment {\n        id\n        status\n      }\n      userErrors {\n        field\n        message\n      }\n    }\n  }\n": {return: FulfillmentCancelMutation, variables: FulfillmentCancelMutationVariables},
   "#graphql\n  mutation fulfillmentCreateV2($fulfillment: FulfillmentV2Input!) {\n    fulfillmentCreateV2(fulfillment: $fulfillment) {\n      fulfillment {\n        id\n        status\n      }\n      userErrors {\n        field\n        message\n      }\n    }\n  }\n": {return: FulfillmentCreateV2Mutation, variables: FulfillmentCreateV2MutationVariables},
   "#graphql\n  mutation fulfillmentOrderOpen($id: ID!) {\n    fulfillmentOrderOpen(id: $id) {\n      fulfillmentOrder {\n        id\n      }\n      userErrors {\n        field\n        message\n      }\n    }\n  }\n": {return: FulfillmentOrderOpenMutation, variables: FulfillmentOrderOpenMutationVariables},
+  "#graphql\n  mutation appUsageRecordCreate($description: String!, $price: MoneyInput!, $subscriptionLineItemId: ID!) {\n    appUsageRecordCreate(description: $description, price: $price, subscriptionLineItemId: $subscriptionLineItemId) {\n      userErrors {\n        field\n        message\n      }\n      appUsageRecord {\n        id\n      }\n    }\n  }\n": {return: AppUsageRecordCreateMutation, variables: AppUsageRecordCreateMutationVariables},
 }
 declare module '@shopify/admin-api-client' {
   type InputMaybe<T> = AdminTypes.InputMaybe<T>;

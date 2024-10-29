@@ -39,7 +39,8 @@ type AddOrderLineToDatabase = {
     retailerShopifyVariantId: string;
     supplierShopifyVariantId: string;
     retailPricePerUnit: number;
-    amountPayablePerUnit: number;
+    retailerProfitPerUnit: number;
+    supplierProfitPerUnit: number;
     shopifyRetailerOrderLineItemId: string;
     shopifySupplierOrderLineItemId: string;
     quantity: number;
@@ -50,6 +51,7 @@ type AddOrderLineToDatabase = {
 type PriceDetail = {
     retailPrice: string;
     retailerPayment: string;
+    supplierProfit: string;
 };
 
 type ShippingRate = {
@@ -372,7 +374,8 @@ async function addOrderLineToDatabase(props: AddOrderLineToDatabase, client: Poo
                 "retailerShopifyVariantId",
                 "supplierShopifyVariantId",
                 "retailPricePerUnit",
-                "amountPayablePerUnit",
+                "retailerProfitPerUnit",
+                "supplierProfitPerUnit",
                 "shopifyRetailerOrderLineItemId",
                 "shopifySupplierOrderLineItemId",
                 "quantity",
@@ -384,19 +387,21 @@ async function addOrderLineToDatabase(props: AddOrderLineToDatabase, client: Poo
                 $2,  -- retailerShopifyVariantId
                 $3,  -- supplierShopifyVariantId
                 $4,  -- retailPricePerUnit
-                $5,  -- amountPayablePerUnit
-                $6,  -- shopifyRetailerOrderLineItemId
-                $7,  -- shopifySupplierOrderLineItemId
-                $8,  -- quantity
-                $9, -- orderId
-                $10  -- priceListId
+                $5,  -- retailerProfitPerUnit
+                $6,  -- supplierProfitPerUnit
+                $7,  -- shopifyRetailerOrderLineItemId
+                $8,  -- shopifySupplierOrderLineItemId
+                $9,  -- quantity
+                $10, -- orderId
+                $11  -- priceListId
             )
         `;
         const {
             retailerShopifyVariantId,
             supplierShopifyVariantId,
             retailPricePerUnit,
-            amountPayablePerUnit,
+            retailerProfitPerUnit,
+            supplierProfitPerUnit,
             shopifyRetailerOrderLineItemId,
             shopifySupplierOrderLineItemId,
             quantity,
@@ -409,7 +414,8 @@ async function addOrderLineToDatabase(props: AddOrderLineToDatabase, client: Poo
             retailerShopifyVariantId,
             supplierShopifyVariantId,
             retailPricePerUnit,
-            amountPayablePerUnit,
+            retailerProfitPerUnit,
+            supplierProfitPerUnit,
             shopifyRetailerOrderLineItemId,
             shopifySupplierOrderLineItemId,
             quantity,
@@ -446,18 +452,15 @@ async function addAllOrderLineItemsToDatabase(
             if (!supplierOrderLineItemDetails) {
                 throw new Error(`Order line does not exist for supplier shopify variant ${supplierShopifyVariantId}`);
             }
-            const prices = await getRetailPriceAndProfit(
-                supplierShopifyVariantId,
-                retailerLineItem.priceListId,
-                client,
-            );
+            const prices = await getVariantPriceDetails(supplierShopifyVariantId, retailerLineItem.priceListId, client);
 
             return addOrderLineToDatabase(
                 {
                     retailerShopifyVariantId,
                     supplierShopifyVariantId,
                     retailPricePerUnit: parseFloat(prices.retailPrice),
-                    amountPayablePerUnit: parseFloat(prices.retailerPayment),
+                    retailerProfitPerUnit: parseFloat(prices.retailerPayment),
+                    supplierProfitPerUnit: parseFloat(prices.supplierProfit),
                     shopifyRetailerOrderLineItemId: retailerLineItem.shopifyLineItemId,
                     shopifySupplierOrderLineItemId: supplierOrderLineItemDetails.shopifyLineItemId,
                     quantity: retailerLineItem.quantity,
@@ -475,12 +478,13 @@ async function addAllOrderLineItemsToDatabase(
     }
 }
 
-async function getRetailPriceAndProfit(supplierShopifyVariantId: string, priceListId: string, client: PoolClient) {
+async function getVariantPriceDetails(supplierShopifyVariantId: string, priceListId: string, client: PoolClient) {
     try {
         const query = `
             SELECT 
                 "Variant"."retailPrice",
-                "Variant"."retailerPayment"
+                "Variant"."retailerPayment",
+                "Variant"."supplierProfit"
             FROM "Variant"
             INNER JOIN "Product" ON "Product"."id" = "Variant"."productId"
             WHERE

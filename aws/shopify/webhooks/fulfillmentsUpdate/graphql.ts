@@ -41,3 +41,17 @@ export const OPEN_FULFILLMENT_ORDER_MUTATION = `#graphql
     }
   }
 `;
+
+export const USAGE_CHARGE_MUTATION = `#graphql
+  mutation appUsageRecordCreate($description: String!, $price: MoneyInput!, $subscriptionLineItemId: ID!) {
+    appUsageRecordCreate(description: $description, price: $price, subscriptionLineItemId: $subscriptionLineItemId) {
+      userErrors {
+        field
+        message
+      }
+      appUsageRecord {
+        id
+      }
+    }
+  }
+`;

@@ -2,7 +2,7 @@ import { APIGatewayProxyResult } from 'aws-lambda';
 import { PoolClient } from 'pg';
 import { initializePool } from './db';
 import { RolesProps, ShopifyEvent } from './types';
-import { cancelRetailerFulfillment, paySupplierForDeliveredOrder, resyncRetailerFulfillment } from './helper';
+import { cancelRetailerFulfillment, handlePaymentForDeliveredOrder, resyncRetailerFulfillment } from './helper';
 import { composeGid } from '@shopify/admin-graphql-api-utilities';
 import { RESPONSE, ROLES } from './constants';
 
@@ -66,7 +66,7 @@ export const lambdaHandler = async (event: ShopifyEvent): Promise<APIGatewayProx
         switch (shipmentStatus) {
             case 'delivered':
                 if (isSupplierFulfillment) {
-                    await paySupplierForDeliveredOrder(shop, shopifyOrderId, shopifyFulfillmentId, payload, client);
+                    await handlePaymentForDeliveredOrder(shop, shopifyOrderId, shopifyFulfillmentId, payload, client);
                 }
                 break;
         }
