@@ -6,11 +6,8 @@ import {
 import { Button, InlineGrid, InlineStack, Page } from '@shopify/polaris';
 import { StatusCodes } from 'http-status-codes';
 import { authenticate } from '~/shopify.server';
-import {
-  convertFormDataToObject,
-  createJSONMessage,
-  getJSONError,
-} from '~/util';
+import { convertFormDataToObject } from '~/lib/utils';
+import { createJSONMessage, getJSONError } from '~/lib/utils/server';
 import { isValidPriceList } from '~/services/models/priceList';
 import {
   useLoaderData,

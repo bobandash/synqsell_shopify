@@ -13,11 +13,8 @@ import {
   type LoaderFunctionArgs,
 } from '@remix-run/node';
 import { StatusCodes } from 'http-status-codes';
-import {
-  convertFormDataToObject,
-  createJSONMessage,
-  getJSONError,
-} from '~/util';
+import { createJSONMessage, getJSONError } from '~/lib/utils/server';
+import { convertFormDataToObject } from '~/lib/utils';
 import { authenticate } from '~/shopify.server';
 import { hasRole } from '~/services/models/roles';
 import { ROLES } from '~/constants';

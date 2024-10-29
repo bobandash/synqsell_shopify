@@ -16,11 +16,8 @@ import {
   useSearchParams,
 } from '@remix-run/react';
 import { getStripePublishableKey } from '~/services/stripe/stripeConnect';
-import {
-  convertFormDataToObject,
-  createJSONMessage,
-  getJSONError,
-} from '~/util';
+import { convertFormDataToObject } from '~/lib/utils';
+import { createJSONMessage, getJSONError } from '~/lib/utils/server';
 import { FETCHER_KEYS, INTENTS } from './constants';
 import {
   beginStripeConnectOnboarding,

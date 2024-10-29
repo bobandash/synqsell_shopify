@@ -1,7 +1,7 @@
 import type { Prisma } from '@prisma/client';
 import db from '../../db.server';
 import { ROLES } from '~/constants';
-import { convertObjectValuesToArr } from '~/util';
+import { convertObjectValuesToArr } from '~/lib/utils';
 import { errorHandler } from '~/lib/utils/server';
 
 interface SharedRoleProps {

@@ -20,11 +20,8 @@ import {
   type ActionFunctionArgs,
   type LoaderFunctionArgs,
 } from '@remix-run/node';
-import {
-  convertFormDataToObject,
-  createJSONMessage,
-  getJSONError,
-} from '~/util';
+import { convertFormDataToObject } from '~/lib/utils';
+import { createJSONMessage, getJSONError } from '~/lib/utils/server';
 import { authenticate } from '~/shopify.server';
 import { StatusCodes } from 'http-status-codes';
 import { useEffect, useState } from 'react';

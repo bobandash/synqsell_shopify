@@ -45,11 +45,8 @@ import {
 } from '~/constants';
 
 import { authenticate } from '~/shopify.server';
-import {
-  convertFormDataToObject,
-  createJSONMessage,
-  getJSONError,
-} from '~/util';
+import { createJSONMessage, getJSONError } from '~/lib/utils/server';
+import { convertFormDataToObject } from '~/lib/utils';
 import {
   categoryChoices,
   formatPriceListFields,
