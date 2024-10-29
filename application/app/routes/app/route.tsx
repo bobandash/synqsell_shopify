@@ -11,13 +11,12 @@ import { boundary } from '@shopify/shopify-app-remix/server';
 import { AppProvider } from '@shopify/shopify-app-remix/react';
 import { NavMenu } from '@shopify/app-bridge-react';
 import polarisStyles from '@shopify/polaris/build/esm/styles.css?url';
-import { authenticate } from '../shopify.server';
+import { authenticate } from '../../shopify.server';
 import { getRoles } from '~/services/models/roles';
 import { ROLES } from '~/constants';
 import { useEffect, useState } from 'react';
 import { RoleProvider } from '~/context/RoleProvider';
 import { getJSONError } from '~/lib/utils/server';
-import logger from '~/logger';
 import {
   BlockStack,
   Card,
@@ -33,19 +32,26 @@ import { WarningIcon } from '~/assets';
 import { userHasStripeConnectAccount } from '~/services/models/stripeConnectAccount';
 import { userHasStripePaymentMethod } from '~/services/models/stripeCustomerAccount';
 import sharedStyles from '~/shared.module.css';
+import { handleBilling } from './loader';
 
 export const links = () => [{ rel: 'stylesheet', href: polarisStyles }];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
-    const { session } = await authenticate.admin(request);
-    const { id: sessionId } = session;
+    const {
+      session: { id: sessionId, shop },
+      billing,
+    } = await authenticate.admin(request);
+
+    await handleBilling(shop, sessionId, billing);
+
     const [roles, hasStripeConnectAccount, hasStripePaymentMethod] =
       await Promise.all([
         getRoles(sessionId),
         userHasStripeConnectAccount(sessionId),
         userHasStripePaymentMethod(sessionId),
       ]);
+
     const roleNames = roles.map((role) => role.name);
 
     return json({
@@ -55,7 +61,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       hasStripePaymentMethod,
     });
   } catch (error) {
-    logger.error(error);
     throw getJSONError(error, '/app');
   }
 };

@@ -42,6 +42,15 @@ model Session {
   supplierOrders               Order[]                @relation("SupplierOrder")
   stripeConnectAccount         StripeConnectAccount?
   stripeCustomerAccount        StripeCustomerAccount?
+  Billing                      Billing[]
+}
+
+model Billing {
+  id                            String  @id @default(uuid())
+  shopifySubscriptionLineItemId String
+  plan                          String
+  sessionId                     String
+  session                       Session @relation(fields: [sessionId], references: [id])
 }
 
 model FulfillmentService {

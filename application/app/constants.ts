@@ -4,6 +4,10 @@ export const ROLES = {
   ADMIN: 'admin',
 };
 
+export const PLANS = {
+  BASIC_PLAN: 'Basic Plan',
+} as const;
+
 export const ACCESS_REQUEST_STATUS = {
   REJECTED: 'rejected',
   PENDING: 'pending',
@@ -66,6 +70,8 @@ export const ORDER_PAYMENT_STATUS = {
 } as const;
 
 // TODO: put this in types.ts
+export type PlanOptions = (typeof PLANS)[keyof typeof PLANS];
+
 export type RolesOptionsProps = (typeof ROLES)[keyof typeof ROLES];
 
 export type AccessRequestStatusOptionsProps =
