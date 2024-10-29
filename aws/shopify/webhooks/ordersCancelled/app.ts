@@ -27,7 +27,7 @@ async function isProcessableOrder(shopifyOrderId: string, supplierId: string, cl
     try {
         const orderQuery = `
             SELECT "paymentStatus" FROM "Order"
-            WHERE "supplierId" = $1 AND "shopifySupplierOrderId" = $2
+            WHERE "supplierId" = $1 AND "supplierShopifyOrderId" = $2
             LIMIT 1
         `;
         const orderData = await client.query(orderQuery, [supplierId, shopifyOrderId]);

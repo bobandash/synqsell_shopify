@@ -21,8 +21,8 @@ import createMapIdToRestObj from '../util/createMapToRestObj';
 
 type DbOrderLineItemDetails = {
     retailerShopifyVariantId: string;
-    shopifySupplierOrderLineItemId: string;
-    shopifyRetailerOrderLineItemId: string;
+    supplierShopifyOrderLineItemId: string;
+    retailerShopifyOrderLineItemId: string;
 };
 
 type ShopifyRetailerOrderLineWithRetailerVariantId = {
@@ -38,40 +38,40 @@ async function getOrderIdFromDatabase(supplierShopifyOrderId: string, client: Po
     try {
         const query = `
           SELECT "id" FROM "Order"
-          WHERE "shopifySupplierOrderId" = $1
+          WHERE "supplierShopifyOrderId" = $1
           LIMIT 1
         `;
         const queryRes = await client.query(query, [supplierShopifyOrderId]);
         if (queryRes.rows.length === 0) {
-            throw new Error('No order exists for shopifySupplierOrderId ' + supplierShopifyOrderId);
+            throw new Error('No order exists for supplierShopifyOrderId ' + supplierShopifyOrderId);
         }
 
         return queryRes.rows[0].id as string;
     } catch (error) {
         console.error(error);
-        throw new Error('Failed to database order id for shopifySupplierOrderId ' + supplierShopifyOrderId);
+        throw new Error('Failed to database order id for supplierShopifyOrderId ' + supplierShopifyOrderId);
     }
 }
 
 async function getRetailerShopifyFulfillmentOrderId(supplierShopifyOrderId: string, client: PoolClient) {
     try {
         const query = `
-          SELECT "shopifyRetailerFulfillmentOrderId" FROM "Order"
-          WHERE "shopifySupplierOrderId" = $1
+          SELECT "retailerShopifyFulfillmentOrderId" FROM "Order"
+          WHERE "supplierShopifyOrderId" = $1
           LIMIT 1
         `;
         const queryRes = await client.query(query, [supplierShopifyOrderId]);
         if (queryRes.rows.length === 0) {
             throw new Error(
-                'No shopifyRetailerFulfillmentOrderId exists for shopifySupplierOrderId ' + supplierShopifyOrderId,
+                'No retailerShopifyFulfillmentOrderId exists for supplierShopifyOrderId ' + supplierShopifyOrderId,
             );
         }
 
-        return queryRes.rows[0].shopifyRetailerFulfillmentOrderId as string;
+        return queryRes.rows[0].retailerShopifyFulfillmentOrderId as string;
     } catch (error) {
         console.error(error);
         throw new Error(
-            'Failed to get shopifyRetailerFulfillmentOrderId from shopifySupplierOrderId ' + supplierShopifyOrderId,
+            'Failed to get retailerShopifyFulfillmentOrderId from supplierShopifyOrderId ' + supplierShopifyOrderId,
         );
     }
 }
@@ -81,7 +81,7 @@ async function getRetailerSession(shopifyFulfillmentOrderId: string, client: Poo
         const query = `
           SELECT "Session".* FROM "Order"
           INNER JOIN "Session" ON "Order"."retailerId" = "Session"."id"
-          WHERE "Order"."shopifyRetailerFulfillmentOrderId" = $1
+          WHERE "Order"."retailerShopifyFulfillmentOrderId" = $1
           LIMIT 1
         `;
         const queryRes = await client.query(query, [shopifyFulfillmentOrderId]);
@@ -171,9 +171,9 @@ async function getRetailerOrderLineItems(
         // so the simplest way to do it is by matching the order line item id with the variants
         const supplierShopifyLineItemIds = supplierLineItems.map(({ shopifyLineItemId }) => shopifyLineItemId);
         const query = `
-            SELECT "retailerShopifyVariantId", "shopifySupplierOrderLineItemId", "shopifyRetailerOrderLineItemId"
+            SELECT "retailerShopifyVariantId", "supplierShopifyOrderLineItemId", "retailerShopifyOrderLineItemId"
             FROM "OrderLineItem"
-            WHERE "shopifySupplierOrderLineItemId" = ANY($1)
+            WHERE "supplierShopifyOrderLineItemId" = ANY($1)
         `;
         const [queryRes, retailerOrderLineItemsWithVariantId] = await Promise.all([
             client.query(query, [supplierShopifyLineItemIds]),
@@ -182,7 +182,7 @@ async function getRetailerOrderLineItems(
         const dbLineItemDetails: DbOrderLineItemDetails[] = queryRes.rows;
         const supplierOrderLineItemIdToRestMap = createMapIdToRestObj(
             dbLineItemDetails,
-            'shopifySupplierOrderLineItemId',
+            'supplierShopifyOrderLineItemId',
         );
         const retailerVariantIdToRetailerOrderLineIdMap = createMapIdToRestObj(
             retailerOrderLineItemsWithVariantId,
@@ -193,10 +193,10 @@ async function getRetailerOrderLineItems(
             const shopifySupplierLineItemId = lineItem.shopifyLineItemId;
             const {
                 retailerShopifyVariantId,
-                shopifyRetailerOrderLineItemId: shopifyRetailerFulfillmentOrderLineItemId,
+                retailerShopifyOrderLineItemId: shopifyRetailerFulfillmentOrderLineItemId,
             } = supplierOrderLineItemIdToRestMap.get(shopifySupplierLineItemId) ?? {
                 retailerShopifyVariantId: undefined,
-                shopifyRetailerOrderLineItemId: undefined,
+                retailerShopifyOrderLineItemId: undefined,
             };
 
             if (!retailerShopifyVariantId || !shopifyRetailerFulfillmentOrderLineItemId) {
@@ -257,7 +257,7 @@ async function updateOrderLineItemsQuantityCancelled(
     client: PoolClient,
 ) {
     try {
-        const updateQuery = `UPDATE "OrderLineItem" SET "quantityCancelled" = $1 WHERE "shopifyRetailerOrderLineItemId" = $2`;
+        const updateQuery = `UPDATE "OrderLineItem" SET "quantityCancelled" = $1 WHERE "retailerShopifyOrderLineItemId" = $2`;
         const updateOrderLineItemPromises = retailerLineItems.map((lineItem) =>
             client.query(updateQuery, [lineItem.quantity, lineItem.shopifyFulfillmentLineItemId]),
         );
@@ -282,12 +282,12 @@ async function refundRetailerOrder(
     client: PoolClient,
 ) {
     const dbOrderId = await getOrderIdFromDatabase(supplierShopifyOrderId, client);
-    const shopifyRetailerFulfillmentOrderId = await getRetailerShopifyFulfillmentOrderId(
+    const retailerShopifyFulfillmentOrderId = await getRetailerShopifyFulfillmentOrderId(
         supplierShopifyOrderId,
         client,
     );
-    const retailerSession = await getRetailerSession(shopifyRetailerFulfillmentOrderId, client);
-    const shopifyRetailerOrderId = await getRetailerShopifyOrderId(shopifyRetailerFulfillmentOrderId, retailerSession);
+    const retailerSession = await getRetailerSession(retailerShopifyFulfillmentOrderId, client);
+    const shopifyRetailerOrderId = await getRetailerShopifyOrderId(retailerShopifyFulfillmentOrderId, retailerSession);
     const retailerLineItems = await getRetailerOrderLineItems(
         supplierLineItems,
         shopifyRetailerOrderId,

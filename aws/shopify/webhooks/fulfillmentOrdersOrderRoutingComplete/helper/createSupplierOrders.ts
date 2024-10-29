@@ -41,8 +41,8 @@ type AddOrderLineToDatabase = {
     retailPricePerUnit: number;
     retailerProfitPerUnit: number;
     supplierProfitPerUnit: number;
-    shopifyRetailerOrderLineItemId: string;
-    shopifySupplierOrderLineItemId: string;
+    retailerShopifyOrderLineItemId: string;
+    supplierShopifyOrderLineItemId: string;
     quantity: number;
     orderId: string;
     priceListId: string;
@@ -331,8 +331,8 @@ async function getOrderDetails(shopifyOrderId: string, session: Session) {
 }
 
 async function addOrderToDatabase(
-    shopifyRetailerFulfillmentOrderId: string,
-    shopifySupplierOrderId: string,
+    retailerShopifyFulfillmentOrderId: string,
+    supplierShopifyOrderId: string,
     supplierShippingRate: ShippingRate,
     retailerSessionId: string,
     supplierSessionId: string,
@@ -341,7 +341,7 @@ async function addOrderToDatabase(
     try {
         const query = `
             INSERT INTO 
-            "Order" ("id", "currency", "shopifyRetailerFulfillmentOrderId", "shopifySupplierOrderId", "retailerId", "supplierId", "shippingCost", "paymentStatus", "updatedAt")
+            "Order" ("id", "currency", "retailerShopifyFulfillmentOrderId", "supplierShopifyOrderId", "retailerId", "supplierId", "shippingCost", "paymentStatus", "updatedAt")
             VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)
             RETURNING id
         `;
@@ -350,8 +350,8 @@ async function addOrderToDatabase(
         const newOrder = await client.query(query, [
             uuidv4(),
             supplierShippingRate.priceWithCurrency.currencyCode,
-            shopifyRetailerFulfillmentOrderId,
-            shopifySupplierOrderId,
+            retailerShopifyFulfillmentOrderId,
+            supplierShopifyOrderId,
             retailerSessionId,
             supplierSessionId,
             supplierShippingRate.priceWithCurrency.amount,
@@ -376,8 +376,8 @@ async function addOrderLineToDatabase(props: AddOrderLineToDatabase, client: Poo
                 "retailPricePerUnit",
                 "retailerProfitPerUnit",
                 "supplierProfitPerUnit",
-                "shopifyRetailerOrderLineItemId",
-                "shopifySupplierOrderLineItemId",
+                "retailerShopifyOrderLineItemId",
+                "supplierShopifyOrderLineItemId",
                 "quantity",
                 "orderId",
                 "priceListId"
@@ -389,8 +389,8 @@ async function addOrderLineToDatabase(props: AddOrderLineToDatabase, client: Poo
                 $4,  -- retailPricePerUnit
                 $5,  -- retailerProfitPerUnit
                 $6,  -- supplierProfitPerUnit
-                $7,  -- shopifyRetailerOrderLineItemId
-                $8,  -- shopifySupplierOrderLineItemId
+                $7,  -- retailerShopifyOrderLineItemId
+                $8,  -- supplierShopifyOrderLineItemId
                 $9,  -- quantity
                 $10, -- orderId
                 $11  -- priceListId
@@ -402,8 +402,8 @@ async function addOrderLineToDatabase(props: AddOrderLineToDatabase, client: Poo
             retailPricePerUnit,
             retailerProfitPerUnit,
             supplierProfitPerUnit,
-            shopifyRetailerOrderLineItemId,
-            shopifySupplierOrderLineItemId,
+            retailerShopifyOrderLineItemId,
+            supplierShopifyOrderLineItemId,
             quantity,
             orderId,
             priceListId,
@@ -416,8 +416,8 @@ async function addOrderLineToDatabase(props: AddOrderLineToDatabase, client: Poo
             retailPricePerUnit,
             retailerProfitPerUnit,
             supplierProfitPerUnit,
-            shopifyRetailerOrderLineItemId,
-            shopifySupplierOrderLineItemId,
+            retailerShopifyOrderLineItemId,
+            supplierShopifyOrderLineItemId,
             quantity,
             orderId,
             priceListId,
@@ -461,8 +461,8 @@ async function addAllOrderLineItemsToDatabase(
                     retailPricePerUnit: parseFloat(prices.retailPrice),
                     retailerProfitPerUnit: parseFloat(prices.retailerPayment),
                     supplierProfitPerUnit: parseFloat(prices.supplierProfit),
-                    shopifyRetailerOrderLineItemId: retailerLineItem.shopifyLineItemId,
-                    shopifySupplierOrderLineItemId: supplierOrderLineItemDetails.shopifyLineItemId,
+                    retailerShopifyOrderLineItemId: retailerLineItem.shopifyLineItemId,
+                    supplierShopifyOrderLineItemId: supplierOrderLineItemDetails.shopifyLineItemId,
                     quantity: retailerLineItem.quantity,
                     orderId: newDbOrderId,
                     priceListId: retailerLineItem.priceListId,

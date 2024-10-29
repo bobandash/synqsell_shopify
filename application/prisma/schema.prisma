@@ -259,8 +259,8 @@ model CarrierService {
 model Order {
   id                                String          @id @default(uuid())
   currency                          String
-  shopifyRetailerFulfillmentOrderId String
-  shopifySupplierOrderId            String
+  retailerShopifyFulfillmentOrderId String
+  supplierShopifyOrderId            String
   retailerId                        String?
   supplierId                        String?
   shippingCost                      Decimal         @default(0) @db.Decimal(10, 2)
@@ -281,8 +281,8 @@ model OrderLineItem {
   retailPricePerUnit             Decimal    @db.Decimal(10, 2)
   retailerProfitPerUnit          Decimal    @db.Decimal(10, 2)
   supplierProfitPerUnit          Decimal    @db.Decimal(10, 2)
-  shopifyRetailerOrderLineItemId String
-  shopifySupplierOrderLineItemId String
+  retailerShopifyOrderLineItemId String
+  supplierShopifyOrderLineItemId String
   quantity                       Int
   quantityFulfilled              Int        @default(0)
   quantityPaid                   Int        @default(0)

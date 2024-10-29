@@ -44,28 +44,28 @@ async function getDbFulfillmentId(retailerShopifyFulfillmentId: string, client: 
     }
 }
 
-async function getShopifyRetailerFulfillmentOrderId(dbFulfillmentId: string, client: PoolClient) {
+async function getretailerShopifyFulfillmentOrderId(dbFulfillmentId: string, client: PoolClient) {
     try {
         const query = `
-          SELECT "shopifyRetailerFulfillmentOrderId" 
+          SELECT "retailerShopifyFulfillmentOrderId" 
           FROM "Order" 
           WHERE "id" = (SELECT "orderId" FROM "Fulfillment" WHERE "id" = $1)
         `;
         const res = await client.query(query, [dbFulfillmentId]);
         if (res.rows.length === 0) {
-            throw new Error(`No shopifyRetailerFulfillmentOrderId exists for dbFulfillmentId ${dbFulfillmentId}.`);
+            throw new Error(`No retailerShopifyFulfillmentOrderId exists for dbFulfillmentId ${dbFulfillmentId}.`);
         }
         return res.rows[0].id as string;
     } catch (error) {
         console.error(error);
         throw new Error(
-            `Failed to retrieve shopifyRetailerFulfillmentOrderId from dbFulfillmentId ${dbFulfillmentId}.`,
+            `Failed to retrieve retailerShopifyFulfillmentOrderId from dbFulfillmentId ${dbFulfillmentId}.`,
         );
     }
 }
 
 async function updateRetailerFulfillmentOnShopify(
-    shopifyRetailerFulfillmentOrderId: string,
+    retailerShopifyFulfillmentOrderId: string,
     lineItems: PayloadLineItem[],
     trackingInfo: PayloadTrackingInfo,
     retailerSession: Session,
@@ -73,7 +73,7 @@ async function updateRetailerFulfillmentOnShopify(
     const fulfillmentInput = {
         trackingInfo,
         lineItemsByFulfillmentOrder: {
-            fulfillmentOrderId: shopifyRetailerFulfillmentOrderId,
+            fulfillmentOrderId: retailerShopifyFulfillmentOrderId,
             fulfillmentOrderLineItems: lineItems,
         },
     };
@@ -132,9 +132,9 @@ async function resyncRetailerFulfillment(
         getSessionFromShop(shop, client),
         getDbFulfillmentId(retailerShopifyFulfillmentId, client),
     ]);
-    const shopifyRetailerFulfillmentOrderId = await getShopifyRetailerFulfillmentOrderId(dbFulfillmentId, client);
+    const retailerShopifyFulfillmentOrderId = await getretailerShopifyFulfillmentOrderId(dbFulfillmentId, client);
     const newRetailerShopifyFulfillmentId = await updateRetailerFulfillmentOnShopify(
-        shopifyRetailerFulfillmentOrderId,
+        retailerShopifyFulfillmentOrderId,
         lineItems,
         trackingInfo,
         retailerSession,

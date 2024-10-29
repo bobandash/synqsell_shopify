@@ -31,8 +31,8 @@ type FulfillmentDetails = {
 };
 
 type SupplierAndRetailerOrderLineItem = {
-    shopifyRetailerOrderLineItemId: string;
-    shopifySupplierOrderLineItemId: string;
+    retailerShopifyOrderLineItemId: string;
+    supplierShopifyOrderLineItemId: string;
 };
 
 // ==============================================================================================================
@@ -42,11 +42,11 @@ type SupplierAndRetailerOrderLineItem = {
 async function getRetailerSessionFromSupplierOrder(supplierShopifyOrderId: string, client: PoolClient) {
     try {
         const retailerSessionQuery = `
-    SELECT "Session".* FROM "Order"
-    INNER JOIN "Session" ON "Session"."id" = "Order"."retailerId" 
-    WHERE "shopifySupplierOrderId" = $1
-    LIMIT 1        
-  `;
+            SELECT "Session".* FROM "Order"
+            INNER JOIN "Session" ON "Session"."id" = "Order"."retailerId" 
+            WHERE "supplierShopifyOrderId" = $1
+            LIMIT 1        
+        `;
         const res = await client.query(retailerSessionQuery, [supplierShopifyOrderId]);
         if (res.rows.length === 0) {
             throw new Error('No retailer session exists for ' + supplierShopifyOrderId);
@@ -118,11 +118,11 @@ async function getSupplierAndRetailerOrderLineItems(supplierShopifyOrderId: stri
     try {
         const query = `
           SELECT 
-            "OrderLineItem"."shopifyRetailerOrderLineItemId" AS "shopifyRetailerOrderLineItemId",
-            "OrderLineItem"."shopifySupplierOrderLineItemId" AS "shopifySupplierOrderLineItemId"
+            "OrderLineItem"."retailerShopifyOrderLineItemId" AS "retailerShopifyOrderLineItemId",
+            "OrderLineItem"."supplierShopifyOrderLineItemId" AS "supplierShopifyOrderLineItemId"
           FROM "Order"
           INNER JOIN "OrderLineItem" ON "OrderLineItem"."orderId" = "Order"."id"
-          WHERE "shopifySupplierOrderId" = $1
+          WHERE "supplierShopifyOrderId" = $1
         `;
         const queryRes = await client.query(query, [supplierShopifyOrderId]);
         if (queryRes.rows.length === 0) {
@@ -139,16 +139,16 @@ async function getSupplierAndRetailerOrderLineItems(supplierShopifyOrderId: stri
 async function getRetailerShopifyFulfillmentOrderId(supplierShopifyOrderId: string, client: PoolClient) {
     try {
         const query = `
-          SELECT "shopifyRetailerFulfillmentOrderId"
+          SELECT "retailerShopifyFulfillmentOrderId"
           FROM "Order"
-          WHERE "shopifySupplierOrderId" = $1
+          WHERE "supplierShopifyOrderId" = $1
           LIMIT 1
         `;
         const queryRes = await client.query(query, [supplierShopifyOrderId]);
         if (queryRes.rows.length === 0) {
             throw new Error('There is no retailer fulfillment order id for ' + supplierShopifyOrderId);
         }
-        return queryRes.rows[0].shopifyRetailerFulfillmentOrderId as string;
+        return queryRes.rows[0].retailerShopifyFulfillmentOrderId as string;
     } catch (error) {
         console.error(error);
         throw new Error('Failed to get retailer fulfillment order id from supplier order id ' + supplierShopifyOrderId);
@@ -170,8 +170,8 @@ async function addRetailerFulfillmentOnShopify(
         ]);
     const orderLineItemsIdMap = createMapIdToRestObj(
         supplierAndRetailerOrderLineItems,
-        'shopifySupplierOrderLineItemId',
-    ); // key = shopifySupplierOrderLineItemId, value = {shopifyRetailerOrderLineItemId: string}
+        'supplierShopifyOrderLineItemId',
+    ); // key = supplierShopifyOrderLineItemId, value = {retailerShopifyOrderLineItemId: string}
 
     const { trackingInfo, lineItems } = supplierFulfillmentDetails;
 
@@ -193,7 +193,7 @@ async function addRetailerFulfillmentOnShopify(
             fulfillmentOrderId: retailerShopifyFulfillmentOrderId,
             fulfillmentOrderLineItems: lineItems.map(({ shopifyLineItemId, quantity }) => {
                 const retailerFulfillmentOrderLineItemId =
-                    orderLineItemsIdMap.get(shopifyLineItemId)?.shopifyRetailerOrderLineItemId;
+                    orderLineItemsIdMap.get(shopifyLineItemId)?.retailerShopifyOrderLineItemId;
                 if (!retailerFulfillmentOrderLineItemId) {
                     throw new Error(
                         `Supplier line item id ${shopifyLineItemId} has no matching retailer fulfillment order line item.`,
@@ -225,7 +225,7 @@ async function getDbOrderId(supplierShopifyOrderId: string, client: PoolClient) 
     try {
         const orderQuery = `
             SELECT "id" FROM "Order"
-            WHERE "shopifySupplierOrderId" = $1
+            WHERE "supplierShopifyOrderId" = $1
             LIMIT 1        
         `;
         const orderRes = await client.query(orderQuery, [supplierShopifyOrderId]);

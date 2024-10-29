@@ -24,7 +24,7 @@ async function isSynqsellOrder(shopifyOrderId: string, supplierId: string, clien
     try {
         const query = `
             SELECT "id" FROM "Order"
-            WHERE "supplierId" = $1 AND "shopifySupplierOrderId" = $2
+            WHERE "supplierId" = $1 AND "supplierShopifyOrderId" = $2
         `;
         const orderData = await client.query(query, [supplierId, shopifyOrderId]);
         return orderData.rows.length > 0;

@@ -9,15 +9,15 @@ import { USAGE_CHARGE_MUTATION } from '../graphql';
 import { AppUsageRecordCreateMutation } from '../types/admin.generated';
 
 type SupplierOrderLineItem = {
-    shopifySupplierOrderLineItemId: string;
+    supplierShopifyOrderLineItemId: string;
     quantityFulfilled: number;
 };
 
 type OrderDatabase = {
     id: string;
     currency: string;
-    shopifyRetailerFulfillmentOrderId: string;
-    shopifySupplierOrderId: string;
+    retailerShopifyFulfillmentOrderId: string;
+    supplierShopifyOrderId: string;
     retailerId: string;
     supplierId: string;
     shippingCost: number;
@@ -33,8 +33,8 @@ type OrderLineItemDetail = {
     retailPricePerUnit: number;
     retailerProfitPerUnit: number;
     supplierProfitPerUnit: number;
-    shopifyRetailerOrderLineItemId: string;
-    shopifySupplierOrderLineItemId: string;
+    retailerShopifyOrderLineItemId: string;
+    supplierShopifyOrderLineItemId: string;
     quantity: number;
     quantityFulfilled: number;
     quantityPaid: number;
@@ -81,40 +81,40 @@ async function getRetailerSessionFromFulfillmentId(dbFulfillmentId: string, clie
     }
 }
 
-async function getOrderCurrency(shopifySupplierOrderId: string, client: PoolClient) {
+async function getOrderCurrency(supplierShopifyOrderId: string, client: PoolClient) {
     try {
         const query = `
             SELECT "currency" FROM "Order"
-            WHERE "shopifySupplierOrderId" = $1
+            WHERE "supplierShopifyOrderId" = $1
         `;
-        const res = await client.query(query, [shopifySupplierOrderId]);
+        const res = await client.query(query, [supplierShopifyOrderId]);
         if (res.rows.length === 0) {
-            throw new Error(`Order with shopifySupplierOrderId ${shopifySupplierOrderId} does not exist.`);
+            throw new Error(`Order with supplierShopifyOrderId ${supplierShopifyOrderId} does not exist.`);
         }
         // stripe requires the currency in letter case 2-3 char format
         const currency: string = res.rows[0].currency;
         return currency;
     } catch (error) {
         console.error(error);
-        throw new Error(`Failed to get order currency from shopifySupplierOrderId ${shopifySupplierOrderId}`);
+        throw new Error(`Failed to get order currency from supplierShopifyOrderId ${supplierShopifyOrderId}`);
     }
 }
 
-async function getDbOrderDetails(shopifySupplierOrderId: string, client: PoolClient) {
+async function getDbOrderDetails(supplierShopifyOrderId: string, client: PoolClient) {
     try {
         const query = `
             SELECT * FROM "Order"
-            WHERE "shopifySupplierOrderId" = $1
+            WHERE "supplierShopifyOrderId" = $1
             LIMIT 1
         `;
-        const res = await client.query(query, [shopifySupplierOrderId]);
+        const res = await client.query(query, [supplierShopifyOrderId]);
         if (res.rows.length === 0) {
-            throw new Error(`No order exists for shopifySupplierOrderId ${shopifySupplierOrderId}.`);
+            throw new Error(`No order exists for supplierShopifyOrderId ${supplierShopifyOrderId}.`);
         }
         return res.rows[0] as OrderDatabase;
     } catch (error) {
         console.error(error);
-        throw new Error(`Failed to get database order details from ${shopifySupplierOrderId}.`);
+        throw new Error(`Failed to get database order details from ${supplierShopifyOrderId}.`);
     }
 }
 
@@ -142,14 +142,14 @@ async function getRetailerProfitFromFulfillment(
         const entireOrderLineItemDetails = await getOrderLineItemDetails(dbOrderId, client);
         const entireOrderLineItemLookup = createMapToRestObj(
             entireOrderLineItemDetails,
-            'shopifySupplierOrderLineItemId',
+            'supplierShopifyOrderLineItemId',
         );
         const retailerProfit = supplierOrderLineItems.reduce((acc, lineItem) => {
-            const { shopifySupplierOrderLineItemId, quantityFulfilled } = lineItem;
-            const entireOrderLineItem = entireOrderLineItemLookup.get(shopifySupplierOrderLineItemId);
+            const { supplierShopifyOrderLineItemId, quantityFulfilled } = lineItem;
+            const entireOrderLineItem = entireOrderLineItemLookup.get(supplierShopifyOrderLineItemId);
             if (!entireOrderLineItem) {
                 throw new Error(
-                    `No order line item exists in the database for shopifySupplierOrderLineItemId ${shopifySupplierOrderLineItemId}`,
+                    `No order line item exists in the database for supplierShopifyOrderLineItemId ${supplierShopifyOrderLineItemId}`,
                 );
             }
             const { retailerProfitPerUnit } = entireOrderLineItem;
@@ -252,14 +252,14 @@ async function getOrderPayableAmtForSupplier(
         const entireOrderLineItemDetails = await getOrderLineItemDetails(dbOrderId, client);
         const entireOrderLineItemLookup = createMapToRestObj(
             entireOrderLineItemDetails,
-            'shopifySupplierOrderLineItemId',
+            'supplierShopifyOrderLineItemId',
         );
         const orderPayableAmount = supplierOrderLineItems.reduce((acc, lineItem) => {
-            const { shopifySupplierOrderLineItemId, quantityFulfilled } = lineItem;
-            const entireOrderLineItem = entireOrderLineItemLookup.get(shopifySupplierOrderLineItemId);
+            const { supplierShopifyOrderLineItemId, quantityFulfilled } = lineItem;
+            const entireOrderLineItem = entireOrderLineItemLookup.get(supplierShopifyOrderLineItemId);
             if (!entireOrderLineItem) {
                 throw new Error(
-                    `No order line item exists in the database for shopifySupplierOrderLineItemId ${shopifySupplierOrderLineItemId}`,
+                    `No order line item exists in the database for supplierShopifyOrderLineItemId ${supplierShopifyOrderLineItemId}`,
                 );
             }
             const { supplierProfitPerUnit } = entireOrderLineItem;
@@ -603,22 +603,22 @@ async function handleShopifyUsageCharge(
 
 async function handlePaymentForDeliveredOrder(
     supplierShop: string,
-    shopifySupplierOrderId: string,
+    supplierShopifyOrderId: string,
     supplierShopifyFulfillmentId: string,
     supplierPayload: Payload,
     client: PoolClient,
 ) {
     try {
         const orderLineItems: SupplierOrderLineItem[] = supplierPayload.line_items.map((lineItem) => ({
-            shopifySupplierOrderLineItemId: lineItem.admin_graphql_api_id,
+            supplierShopifyOrderLineItemId: lineItem.admin_graphql_api_id,
             quantityFulfilled: lineItem.quantity,
         }));
 
         const [dbFulfillmentId, supplierSession, orderDetails, currency] = await Promise.all([
             getDbFulfillmentIdFromSupplier(supplierShopifyFulfillmentId, client),
             getSessionFromShop(supplierShop, client),
-            getDbOrderDetails(shopifySupplierOrderId, client),
-            getOrderCurrency(shopifySupplierOrderId, client),
+            getDbOrderDetails(supplierShopifyOrderId, client),
+            getOrderCurrency(supplierShopifyOrderId, client),
         ]);
         const [retailerSession, hasFulfillmentBeenPaid, supplierPayableAmounts] = await Promise.all([
             getRetailerSessionFromFulfillmentId(dbFulfillmentId, client),
@@ -655,7 +655,7 @@ async function handlePaymentForDeliveredOrder(
     } catch (error) {
         console.error(error);
         throw new Error(
-            `Failed to handle retailer and supplier Stripe + Shopify payments for delivered order ${shopifySupplierOrderId} and fulfillment id ${supplierShopifyFulfillmentId}.`,
+            `Failed to handle retailer and supplier Stripe + Shopify payments for delivered order ${supplierShopifyOrderId} and fulfillment id ${supplierShopifyFulfillmentId}.`,
         );
     }
 }
