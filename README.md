@@ -78,6 +78,7 @@ Here are a list of features that are still needed before the application can be 
 - (DONE) Add ALB and EC2 to deploy web/application server
 - Create a CD Pipeline for adding the new application code to the ecr
 - One final check to verify all API endpoints, webhooks, and application code work as intended
+- Update readme: https://shopify.dev/docs/apps/launch/protected-customer-data, https://partners.shopify.com/3776451/apps/{app_number}/customer_data, instructions to update shopify.app.toml w/ eventbridge url and running shopify app deploy --config shopify.app.toml
 
 Here are the nice to have features / should be done after deployment:
 
