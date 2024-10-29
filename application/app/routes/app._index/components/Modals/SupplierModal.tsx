@@ -1,6 +1,7 @@
 import { Modal, type ShopifyGlobal, TitleBar } from '@shopify/app-bridge-react';
 import { INTENTS, MODALS } from '../../constants';
 import { useNavigation, useSubmit } from '@remix-run/react';
+import { Link } from '@shopify/polaris';
 import { type FC, useCallback } from 'react';
 import { useField, useForm } from '@shopify/react-form';
 
@@ -55,11 +56,12 @@ const SupplierModal: FC<Props> = ({ checklistItemId, shopify }) => {
         </p>
         <br />
         <p>
-          To become a supplier, we ask that your annual sales total at least
-          $5000 USD. If you do not meet this threshold but still wish to become
-          a supplier, please reach out to us at{' '}
-          <a href="mailto:support@synqsell.com">support@synqsell.com</a> with an
-          explanation.
+          To become a supplier, we ask that you have a proven sales record and
+          the products you're looking to distribute don't need a license for
+          retailers to sell. If you do not meet these requirements but still
+          wish to become a supplier, please reach out to us at{' '}
+          <Link url="mailto:synqsell@gmail.com">synqsell@gmail.com</Link> with
+          an explanation.
         </p>
       </div>
       <TitleBar title="Become a supplier on SynqSell">

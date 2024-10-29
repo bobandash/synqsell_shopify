@@ -90,7 +90,7 @@ async function main() {
                 position: 1,
                 header: 'Request access to become a supplier',
                 subheader:
-                  'Generate at least $5,000 USD in annual sales and request approval to become a supplier.',
+                  'Have a proven sales record and sell products that are allowed to be distributed.',
                 buttonText: 'Request approval',
               },
               {
