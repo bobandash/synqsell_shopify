@@ -3,4 +3,4 @@ export const ROLES = {
     SUPPLIER: 'supplier',
     ADMIN: 'admin',
 };
-export type RolesOptionsProps = (typeof ROLES)[keyof typeof ROLES];
+export type RolesOptions = (typeof ROLES)[keyof typeof ROLES];

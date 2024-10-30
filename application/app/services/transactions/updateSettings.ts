@@ -1,7 +1,7 @@
 import db from '~/db.server';
 import { hasRole, updateRoleVisibilityTx } from '../models/roles';
 import { CHECKLIST_ITEM_KEYS, ROLES } from '~/constants';
-import type { ChecklistItemKeysOptionsProps } from '~/constants';
+import type { ChecklistItemKeysOptions } from '~/constants';
 import { updateUserProfileTx } from '../models/userProfile';
 import { updateChecklistStatusTx } from '../models/checklistStatus';
 import type { Prisma } from '@prisma/client';
@@ -33,7 +33,7 @@ async function updateRoleAndChecklistItemTx(
   sessionId: string,
   role: string,
   isVisibleInNetwork: boolean,
-  checklistItemKey: ChecklistItemKeysOptionsProps,
+  checklistItemKey: ChecklistItemKeysOptions,
 ) {
   try {
     await Promise.all([

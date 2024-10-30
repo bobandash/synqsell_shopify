@@ -67,33 +67,32 @@ export const ORDER_PAYMENT_STATUS = {
   PAID: 'PAID',
 } as const;
 
-// TODO: put this in types.ts
+export const CARRIER_SERVICE_NAME = 'SynqSell';
+
 export type PlanOptions = (typeof PLANS)[keyof typeof PLANS];
 
-export type RolesOptionsProps = (typeof ROLES)[keyof typeof ROLES];
+export type RolesOptions = (typeof ROLES)[keyof typeof ROLES];
 
-export type AccessRequestStatusOptionsProps =
+export type AccessRequestStatusOptions =
   (typeof ACCESS_REQUEST_STATUS)[keyof typeof ACCESS_REQUEST_STATUS];
 
-export type ChecklistItemKeysOptionsProps =
+export type ChecklistItemKeysOptions =
   (typeof CHECKLIST_ITEM_KEYS)[keyof typeof CHECKLIST_ITEM_KEYS];
 
-export type PriceListCategoryOptionsProps =
+export type PriceListCategoryOptions =
   (typeof PRICE_LIST_CATEGORY)[keyof typeof PRICE_LIST_CATEGORY];
 
-export type PriceListImportSettingsOptionsProps =
+export type PriceListImportSettingsOptions =
   (typeof PRICE_LIST_IMPORT_SETTINGS)[keyof typeof PRICE_LIST_IMPORT_SETTINGS];
 
-export type PriceListPricingStrategyOptionProps =
+export type PriceListPricingStrategyOptions =
   (typeof PRICE_LIST_PRICING_STRATEGY)[keyof typeof PRICE_LIST_PRICING_STRATEGY];
 
-export type PartnershipRequestTypeProps =
+export type PartnershipRequestTypeOptions =
   (typeof PARTNERSHIP_REQUEST_TYPE)[keyof typeof PARTNERSHIP_REQUEST_TYPE];
 
-export type OrderPaymentStatusProps =
+export type OrderPaymentStatusOptions =
   (typeof ORDER_PAYMENT_STATUS)[keyof typeof ORDER_PAYMENT_STATUS];
 
-export type PartnershipRequestStatusProps =
+export type PartnershipRequestStatusOptions =
   (typeof PARTNERSHIP_REQUEST_STATUS)[keyof typeof PARTNERSHIP_REQUEST_STATUS];
-
-export const CARRIER_SERVICE_NAME = 'SynqSell';

@@ -1,8 +1,8 @@
 import db from '~/db.server';
 import { errorHandler } from '~/lib/utils/server';
-import { type ChecklistItemKeysOptionsProps } from '~/constants';
+import { type ChecklistItemKeysOptions } from '~/constants';
 
-export async function hasChecklistItem(key: ChecklistItemKeysOptionsProps) {
+export async function hasChecklistItem(key: ChecklistItemKeysOptions) {
   try {
     const checklistItem = await db.checklistItem.findFirst({
       where: {
@@ -27,7 +27,7 @@ export async function hasChecklistItem(key: ChecklistItemKeysOptionsProps) {
 
 export async function checklistItemIdMatchesKey(
   checklistItemId: string,
-  key: ChecklistItemKeysOptionsProps,
+  key: ChecklistItemKeysOptions,
 ) {
   try {
     const matches = await db.checklistItem.findFirst({
@@ -52,7 +52,7 @@ export async function checklistItemIdMatchesKey(
   }
 }
 
-export async function getChecklistItem(key: ChecklistItemKeysOptionsProps) {
+export async function getChecklistItem(key: ChecklistItemKeysOptions) {
   try {
     const checklistItem = await db.checklistItem.findFirstOrThrow({
       where: {

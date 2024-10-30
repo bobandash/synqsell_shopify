@@ -2,7 +2,7 @@ import db from '../../db.server';
 import { type Prisma } from '@prisma/client';
 import { getChecklistItem } from './checklistItem';
 import { errorHandler } from '~/lib/utils/server';
-import type { ChecklistItemKeysOptionsProps } from '~/constants';
+import type { ChecklistItemKeysOptions } from '~/constants';
 
 export type ChecklistStatusProps = {
   id: string;
@@ -129,7 +129,7 @@ export async function markCheckListStatus(
 export async function updateChecklistStatusTx(
   tx: Prisma.TransactionClient,
   sessionId: string,
-  checklistItemKey: ChecklistItemKeysOptionsProps,
+  checklistItemKey: ChecklistItemKeysOptions,
   isCompleted: boolean,
 ) {
   try {
@@ -185,7 +185,7 @@ export async function getChecklistStatusBatch(
 export async function updateChecklistStatusBatchTx(
   tx: Prisma.TransactionClient,
   sessionIds: string[],
-  checklistItemKey: ChecklistItemKeysOptionsProps,
+  checklistItemKey: ChecklistItemKeysOptions,
   isCompleted: boolean,
 ) {
   try {

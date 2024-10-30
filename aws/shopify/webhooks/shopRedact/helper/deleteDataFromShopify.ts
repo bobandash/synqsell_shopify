@@ -1,6 +1,6 @@
 import { PoolClient } from 'pg';
 import { Session } from '../types';
-import { ROLES, RolesOptionsProps } from '../constants';
+import { ROLES, RolesOptions } from '../constants';
 import { mutateAndValidateGraphQLData } from '../util';
 import { DELETE_PRODUCT_MUTATION } from '../graphql';
 import { ProductDeleteMutation } from '../types/admin.generated';
@@ -29,7 +29,7 @@ async function getSession(sessionId: string, client: PoolClient) {
     }
 }
 
-async function isRole(sessionId: string, role: RolesOptionsProps, client: PoolClient) {
+async function isRole(sessionId: string, role: RolesOptions, client: PoolClient) {
     try {
         const query = `
             SELECT * FROM "Role"

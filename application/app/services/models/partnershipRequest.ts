@@ -1,6 +1,6 @@
 import {
-  type PartnershipRequestStatusProps,
-  type PartnershipRequestTypeProps,
+  type PartnershipRequestStatusOptions,
+  type PartnershipRequestTypeOptions,
 } from '~/constants';
 import { errorHandler } from '~/lib/utils/server';
 import db from '~/db.server';
@@ -11,8 +11,8 @@ type CreatePartnershipRequestProps = {
   recipientId: string;
   senderId: string;
   message: string;
-  type: PartnershipRequestTypeProps;
-  status: PartnershipRequestStatusProps;
+  type: PartnershipRequestTypeOptions;
+  status: PartnershipRequestStatusOptions;
 };
 
 type CreatePartnershipRequestTxProps = CreatePartnershipRequestProps & {
@@ -22,7 +22,7 @@ type CreatePartnershipRequestTxProps = CreatePartnershipRequestProps & {
 export async function hasPartnershipRequestMultiplePriceLists(
   priceListIds: string[],
   senderId: string,
-  type: PartnershipRequestTypeProps,
+  type: PartnershipRequestTypeOptions,
 ) {
   try {
     const partnershipRequest = await db.partnershipRequest.findFirst({
@@ -166,7 +166,7 @@ export async function createOrUpdatePartnershipRequestTx(
 export async function getPartnershipRequestMultiplePriceLists(
   priceListIds: string[],
   senderId: string,
-  type: PartnershipRequestTypeProps,
+  type: PartnershipRequestTypeOptions,
 ) {
   try {
     const partnershipRequest = await db.partnershipRequest.findFirstOrThrow({
@@ -197,7 +197,7 @@ export async function getPartnershipRequestMultiplePriceLists(
 export async function hasPartnershipRequest(
   priceListId: string,
   senderId: string,
-  type: PartnershipRequestTypeProps,
+  type: PartnershipRequestTypeOptions,
 ) {
   try {
     const partnershipRequest = await db.partnershipRequest.findFirst({
@@ -251,7 +251,7 @@ export async function isValidPartnershipRequest(id: string) {
 export async function getPartnershipRequest(
   priceListId: string,
   senderId: string,
-  type: PartnershipRequestTypeProps,
+  type: PartnershipRequestTypeOptions,
 ) {
   try {
     const partnershipRequest = await db.partnershipRequest.findFirstOrThrow({
@@ -279,7 +279,7 @@ export async function getPartnershipRequest(
 
 export async function getAllPartnershipRequests(
   recipientId: string,
-  type: PartnershipRequestTypeProps,
+  type: PartnershipRequestTypeOptions,
 ) {
   try {
     const partnershipRequests = await db.partnershipRequest.findMany({

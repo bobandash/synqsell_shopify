@@ -5,7 +5,7 @@ export const ORDER_PAYMENT_STATUS = {
     CANCELLED: 'CANCELLED',
 } as const;
 
-export type OrderPaymentStatusProps = (typeof ORDER_PAYMENT_STATUS)[keyof typeof ORDER_PAYMENT_STATUS];
+export type OrderPaymentStatusOptions = (typeof ORDER_PAYMENT_STATUS)[keyof typeof ORDER_PAYMENT_STATUS];
 
 export const RESPONSE = {
     NOT_SYNQSELL_ORDER: {

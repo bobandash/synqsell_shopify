@@ -1,4 +1,4 @@
-import { ORDER_PAYMENT_STATUS, ROLES } from "./constants";
+import { ORDER_PAYMENT_STATUS, ROLES } from './constants';
 
 export type ShopifyEvent = {
     version: string;
@@ -124,7 +124,6 @@ export type Session = {
     emailVerified?: boolean;
 };
 
-
 export type FulfillmentDetail = {
     id: string;
     supplierShopifyFulfillmentId: string;
@@ -143,6 +142,6 @@ export type PayloadTrackingInfo = {
     urls: string[];
 };
 
-export type OrderPaymentStatusProps = (typeof ORDER_PAYMENT_STATUS)[keyof typeof ORDER_PAYMENT_STATUS];
+export type OrderPaymentStatusOptions = (typeof ORDER_PAYMENT_STATUS)[keyof typeof ORDER_PAYMENT_STATUS];
 export type RolesProps = (typeof ROLES)[keyof typeof ROLES];
 export type Payload = ShopifyEvent['detail']['payload'];

@@ -3,8 +3,8 @@ import {
   ACCESS_REQUEST_STATUS,
   CHECKLIST_ITEM_KEYS,
   ROLES,
-  type RolesOptionsProps,
-  type AccessRequestStatusOptionsProps,
+  type RolesOptions,
+  type AccessRequestStatusOptions,
 } from '~/constants';
 import db from '~/db.server';
 import { type Prisma } from '@prisma/client';
@@ -100,7 +100,7 @@ async function deleteSupplierRolesBatchTx(
 
 async function getSessionIdsWithoutRole(
   sessionIds: string[],
-  role: RolesOptionsProps,
+  role: RolesOptions,
 ) {
   const sessionsWithRoleData = await getRoleBatch(sessionIds, role);
   const sessionIdsWithRoleSet = new Set(
@@ -200,7 +200,7 @@ async function rejectSuppliers(
 
 export async function updateSupplierAccessAction(
   supplierAccessRequestInfo: SupplierAccessRequestInfo[],
-  status: AccessRequestStatusOptionsProps,
+  status: AccessRequestStatusOptions,
 ) {
   try {
     if (status === ACCESS_REQUEST_STATUS.REJECTED) {

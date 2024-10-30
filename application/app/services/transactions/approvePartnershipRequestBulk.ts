@@ -3,7 +3,7 @@ import db from '../../db.server';
 import { deletePartnershipRequestsTx } from '../models/partnershipRequest';
 import {
   PARTNERSHIP_REQUEST_TYPE,
-  type PartnershipRequestTypeProps,
+  type PartnershipRequestTypeOptions,
 } from '~/constants';
 import { createPartnershipsTx } from '../models/partnership';
 import type { Prisma } from '@prisma/client';
@@ -17,7 +17,7 @@ type PartnershipRequest = Prisma.PartnershipRequestGetPayload<{
 // TODO: Refactor this file
 async function getOppositeSidePartnershipRequestIds(
   partnershipRequests: PartnershipRequest[],
-  type: PartnershipRequestTypeProps,
+  type: PartnershipRequestTypeOptions,
 ) {
   // An edge case occurs when both a retailer and a supplier submit partnership requests simultaneously.
   // In this situation, both requests appear in the partnership tab by default. To handle this, you should
@@ -64,7 +64,7 @@ async function getOppositeSidePartnershipRequestIds(
 
 async function approvePartnershipRequestBulk(
   partnershipRequestIds: string[],
-  type: PartnershipRequestTypeProps,
+  type: PartnershipRequestTypeOptions,
 ) {
   try {
     const partnershipRequests = await db.partnershipRequest.findMany({

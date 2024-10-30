@@ -1,7 +1,7 @@
 import { APIGatewayProxyResult } from 'aws-lambda';
 import { PoolClient } from 'pg';
 import { initializePool } from './db';
-import { RolesOptionsProps, Session, ShopifyEvent } from './types';
+import { RolesOptions, Session, ShopifyEvent } from './types';
 import { markRetailerProductsArchived, updateAppUninstalledStatus, deleteRetailerImportedProductsDb } from './helper';
 import { ROLES } from './constants';
 
@@ -20,7 +20,7 @@ async function getSession(shop: string, client: PoolClient) {
     }
 }
 
-async function isRole(sessionId: string, role: RolesOptionsProps, client: PoolClient) {
+async function isRole(sessionId: string, role: RolesOptions, client: PoolClient) {
     try {
         const query = `
             SELECT * FROM "Role"

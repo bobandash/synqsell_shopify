@@ -2,7 +2,7 @@ import type { Prisma } from '@prisma/client';
 import { errorHandler } from '~/lib/utils/server';
 import db from '~/db.server';
 import { ROLES } from '~/constants';
-import type { RolesOptionsProps } from '~/constants';
+import type { RolesOptions } from '~/constants';
 
 type NewPartnershipData = {
   retailerId: string;
@@ -116,7 +116,7 @@ export async function getAllSupplierPartnerships(retailerId: string) {
 
 export async function getAllPartnerships(
   sessionId: string,
-  role: RolesOptionsProps,
+  role: RolesOptions,
 ) {
   try {
     const supplierPartnerships = await db.partnership.findMany({
