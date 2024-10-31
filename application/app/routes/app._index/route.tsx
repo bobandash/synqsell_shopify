@@ -6,7 +6,13 @@ import {
   getMissingChecklistIds,
   getTablesAndStatuses,
 } from '~/services/models/checklistTable';
-import { Await, defer, useActionData, useLoaderData } from '@remix-run/react';
+import {
+  Await,
+  defer,
+  useActionData,
+  useLoaderData,
+  useNavigation,
+} from '@remix-run/react';
 import { Suspense, useEffect } from 'react';
 import { INTENTS, MODALS } from './constants';
 import {
@@ -86,15 +92,20 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 function Index() {
   const loaderData = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
+  const navigation = useNavigation();
 
   useEffect(() => {
-    if (actionData && 'message' in actionData) {
+    if (navigation.state === 'loading') {
       shopify.modal.hide(MODALS.BECOME_RETAILER);
       shopify.modal.hide(MODALS.BECOME_SUPPLIER);
-      shopify.toast.show(actionData.message);
-      actionData.message = null;
     }
-  }, [actionData]);
+  }, [navigation]);
+
+  useEffect(() => {
+    if (navigation.state === 'idle' && actionData && 'message' in actionData) {
+      shopify.toast.show(actionData.message);
+    }
+  }, [actionData, navigation]);
 
   return (
     <Page title="SynqSell" subtitle="Where Brand Partnerships Flourish">

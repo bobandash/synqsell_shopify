@@ -11,6 +11,7 @@ import type { TransformedChecklistTableData, LoaderResponse } from '../types';
 import ChecklistTable from '../components/ChecklistTable';
 import { BlockStack } from '@shopify/polaris';
 
+// TODO: add optimistic rendering
 function ChecklistTables() {
   const { tables: tablesData } = useAsyncValue() as LoaderResponse;
   const navigate = useNavigate();
