@@ -50,7 +50,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const { id: sessionId } = session;
 
     const [isSupplier, hasStripeConnectAccount] = await Promise.all([
-      hasRole(sessionId, ROLES.RETAILER),
+      hasRole(sessionId, ROLES.SUPPLIER),
       userHasStripeConnectAccount(sessionId),
     ]);
 
@@ -65,12 +65,20 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       cursor = prev;
     }
 
-    if (!isSupplier || !hasStripeConnectAccount) {
+    if (!isSupplier) {
       throw createJSONMessage(
-        'Unauthorized. User is not supplier or does not have a payment method.',
+        'Unauthorized. User is not supplier.',
         StatusCodes.UNAUTHORIZED,
       );
     }
+
+    if (!hasStripeConnectAccount) {
+      throw createJSONMessage(
+        'User does not have a payment method set.',
+        StatusCodes.UNAUTHORIZED,
+      );
+    }
+
     const retailerPaginatedInfo = await getRetailerPaginatedInfo({
       isReverseDirection,
       sessionId,
