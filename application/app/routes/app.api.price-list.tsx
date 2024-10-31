@@ -12,22 +12,21 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const sessionId = session.id;
     const url = new URL(request.url);
     const paramsString = url.searchParams.get('params');
-    if (paramsString) {
-      const params = JSON.parse(decodeURIComponent(paramsString));
-      const productIds: string[] = params.productIds;
-      const productIdToStoreUrl = await getIdMappedToStoreUrl(
-        admin.graphql,
-        sessionId,
-        productIds,
+    if (!paramsString) {
+      logger.error('No parameters passed to get store urls from product ids.');
+      throw json(
+        { error: 'No parameters passed to get store urls from product ids.' },
+        StatusCodes.BAD_REQUEST,
       );
-      return json(productIdToStoreUrl, StatusCodes.OK);
     }
-
-    logger.error('No parameters passed to get store urls from product ids.');
-    throw json(
-      { error: 'No parameters passed to get store urls from product ids.' },
-      StatusCodes.BAD_REQUEST,
+    const params = JSON.parse(decodeURIComponent(paramsString));
+    const productIds: string[] = params.productIds;
+    const productIdToStoreUrl = await getIdMappedToStoreUrl(
+      admin.graphql,
+      sessionId,
+      productIds,
     );
+    return json(productIdToStoreUrl, StatusCodes.OK);
   } catch (error) {
     throw getJSONError(error, 'settings');
   }
