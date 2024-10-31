@@ -126,6 +126,36 @@ export async function markCheckListStatus(
   }
 }
 
+export async function updateChecklistStatus(
+  sessionId: string,
+  checklistItemKey: ChecklistItemKeysOptions,
+  isCompleted: boolean,
+) {
+  try {
+    const checklistItem = await getChecklistItem(checklistItemKey);
+    const checklistStatus = await getChecklistStatus(
+      sessionId,
+      checklistItem.id,
+    );
+    const updatedChecklistStatus = await db.checklistStatus.update({
+      where: {
+        id: checklistStatus.id,
+      },
+      data: {
+        isCompleted,
+      },
+    });
+    return updatedChecklistStatus;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to update checklist status.',
+      updateChecklistStatus,
+      { sessionId, checklistItemKey, isCompleted },
+    );
+  }
+}
+
 export async function updateChecklistStatusTx(
   tx: Prisma.TransactionClient,
   sessionId: string,

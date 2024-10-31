@@ -35,13 +35,14 @@ import {
   getPartnershipRequest,
   hasPartnershipRequest,
 } from '~/services/models/partnershipRequest';
-import { PARTNERSHIP_REQUEST_TYPE } from '~/constants';
+import { CHECKLIST_ITEM_KEYS, PARTNERSHIP_REQUEST_TYPE } from '~/constants';
 import getQueryStr from '~/services/shopify/utils/getQueryStr';
 import { queryExternalStoreAdminAPI } from '~/services/shopify/utils';
 import { VARIANT_CREATION_DETAILS_BULK_QUERY } from '~/services/shopify/variants/graphql';
 import { v4 as uuid } from 'uuid';
 import { createMapIdToRestObj } from '~/lib/utils';
 import { errorHandler, getJSONError } from '~/lib/utils/server';
+import { updateChecklistStatus } from '~/services/models/checklistStatus';
 
 export type ImportProductFormData = InferType<typeof formDataObjectSchema>;
 
@@ -327,17 +328,28 @@ export async function importProductAction(
       retailerNewShopifyProductId,
       graphql,
     );
-    // if the user imports the product and isn't a partner of the price list, add the user as a partner
-    // this allows the supplier to know that the retailer is interested in their products
+
     await db.$transaction(async (tx) => {
-      await handlePartnership(tx, sessionId, supplierSession.id, priceList.id);
-      await addImportedProductToDatabaseTx(
-        tx,
-        variantsPayload,
-        product,
-        sessionId,
-      );
+      await Promise.all([
+        // if the user imports the product and isn't a partner of the price list, add the user as a partner
+        // this allows the supplier to know that the retailer is interested in their products
+        handlePartnership(tx, sessionId, supplierSession.id, priceList.id),
+        addImportedProductToDatabaseTx(tx, variantsPayload, product, sessionId),
+      ]);
     });
+
+    await Promise.all([
+      updateChecklistStatus(
+        sessionId,
+        CHECKLIST_ITEM_KEYS.RETAILER_REQUEST_PARTNERSHIP,
+        true,
+      ),
+      updateChecklistStatus(
+        sessionId,
+        CHECKLIST_ITEM_KEYS.RETAILER_IMPORT_PRODUCT,
+        true,
+      ),
+    ]);
 
     return json(
       {

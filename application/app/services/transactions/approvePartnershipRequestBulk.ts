@@ -14,7 +14,6 @@ type PartnershipRequest = Prisma.PartnershipRequestGetPayload<{
   };
 }>;
 
-// TODO: Refactor this file
 async function getOppositeSidePartnershipRequestIds(
   partnershipRequests: PartnershipRequest[],
   type: PartnershipRequestTypeOptions,
