@@ -57,12 +57,20 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       cursor = prev;
     }
 
-    if (!isRetailer || !hasStripePaymentMethod) {
+    if (!isRetailer) {
       throw createJSONMessage(
-        'Unauthorized. User is not a retailer or does not have a payment method',
+        'Unauthorized. User is not a retailer',
         StatusCodes.UNAUTHORIZED,
       );
     }
+
+    if (!hasStripePaymentMethod) {
+      throw createJSONMessage(
+        'Unauthorized. User is does not have a payment method',
+        StatusCodes.UNAUTHORIZED,
+      );
+    }
+
     const supplierInfo = await getSupplierPaginatedInfo({
       isReverseDirection,
       sessionId,
