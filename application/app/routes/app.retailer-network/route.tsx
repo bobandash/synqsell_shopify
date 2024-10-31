@@ -140,11 +140,11 @@ const SupplierNetwork = () => {
     setRetailers(retailerPaginatedInfo.retailers);
     setNextCursor(retailerPaginatedInfo.nextCursor);
     setPrevCursor(retailerPaginatedInfo.prevCursor);
-    shopify.modal.hide(MODALS.INITIATE_PARTNERSHIP);
   }, [retailerPaginatedInfo]);
 
   useEffect(() => {
     if (actionData && 'message' in actionData) {
+      shopify.modal.hide(MODALS.INITIATE_PARTNERSHIP);
       shopify.toast.show(actionData.message as string);
     }
   }, [actionData]);

@@ -1,7 +1,7 @@
 import { Modal, TitleBar } from '@shopify/app-bridge-react';
 import { INTENTS, MODALS } from '../constants';
 import { useMemo, type FC } from 'react';
-import { useSubmit as useRemixSubmit } from '@remix-run/react';
+import { useNavigation, useSubmit as useRemixSubmit } from '@remix-run/react';
 import { BlockStack, Form, TextField, ChoiceList } from '@shopify/polaris';
 import { notEmpty, useField, useForm, useSubmit } from '@shopify/react-form';
 import type { PriceListJsonify } from '../loader/getRetailerPaginatedInfo';
@@ -21,6 +21,8 @@ const PriceListRequestModal: FC<Props> = ({
   handleSelectPriceListIds,
 }) => {
   const remixSubmit = useRemixSubmit();
+  const navigate = useNavigation();
+  const isSubmitting = navigate.state === 'submitting';
 
   const { fields } = useForm({
     fields: {
@@ -33,7 +35,7 @@ const PriceListRequestModal: FC<Props> = ({
     },
   });
 
-  const { submit, submitting } = useSubmit(async (fieldValues) => {
+  const { submit } = useSubmit(async (fieldValues) => {
     const newFieldValues = {
       ...fieldValues,
       priceListIds: JSON.stringify(selectedPriceListIds),
@@ -42,14 +44,14 @@ const PriceListRequestModal: FC<Props> = ({
     return { status: 'success' };
   }, fields);
 
-  const choices = useMemo(() => {
-    return priceLists.map((priceList) => {
-      return {
+  const choices = useMemo(
+    () =>
+      priceLists.map((priceList) => ({
         label: priceList.name,
         value: priceList.id,
-      };
-    });
-  }, [priceLists]);
+      })),
+    [priceLists],
+  );
 
   return (
     <Modal id={MODALS.INITIATE_PARTNERSHIP}>
@@ -79,8 +81,8 @@ const PriceListRequestModal: FC<Props> = ({
         </Form>
       </div>
       <TitleBar title="Initiate Partnership">
-        <button variant="primary" onClick={submit} disabled={submitting}>
-          Initiate Partnership
+        <button variant="primary" onClick={submit} disabled={isSubmitting}>
+          {isSubmitting ? 'Initiating Partnership' : 'Initiate Partnership'}
         </button>
       </TitleBar>
     </Modal>
