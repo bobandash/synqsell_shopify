@@ -44,14 +44,13 @@ const PaymentForm: FC<Props> = ({
     key: FETCHER_KEYS.FINISH_STRIPE_ONBOARDING,
   });
 
-  const handleFinishPaymentsOnboarding = useCallback(() => {
-    finishOnboardingFetcher.submit(
-      {
-        intent: INTENTS.FINISH_STRIPE_CUSTOMER_ONBOARDING,
-      },
-      { method: 'POST' },
-    );
-  }, [finishOnboardingFetcher]);
+  useEffect(() => {
+    if (error) {
+      shopify.toast.show(error, {
+        isError: true,
+      });
+    }
+  }, [error, shopify]);
 
   const retrievePaymentMethodId = useCallback(
     async (setupIntentClientSecret: string) => {
@@ -63,19 +62,23 @@ const PaymentForm: FC<Props> = ({
           setupIntentClientSecret,
         );
         const setupIntent = result.setupIntent;
-
         if (setupIntent?.status !== 'processing') {
           clearInterval(processingInterval);
         }
         switch (setupIntent?.status) {
           case 'succeeded':
             setRetailerPaymentBanner({
-              text: 'Success! Your retailer payment method has been saved. Please refresh the page.',
+              text: 'Success! Your retailer payment method has been saved.',
               tone: 'success',
             });
             setIsProcessing(false);
             setAddedPaymentMethod(true);
-            handleFinishPaymentsOnboarding();
+            finishOnboardingFetcher.submit(
+              {
+                intent: INTENTS.FINISH_STRIPE_CUSTOMER_ONBOARDING,
+              },
+              { method: 'POST' },
+            );
             break;
           case 'processing':
             setIsProcessing(true);
@@ -94,7 +97,7 @@ const PaymentForm: FC<Props> = ({
         }
       }, 5000);
     },
-    [stripe, setRetailerPaymentBanner, handleFinishPaymentsOnboarding],
+    [stripe, setRetailerPaymentBanner, finishOnboardingFetcher],
   );
 
   useEffect(() => {
@@ -105,14 +108,9 @@ const PaymentForm: FC<Props> = ({
       'setup_intent_client_secret',
     );
     if (setupIntentClientSecret) {
+      setIsProcessing(true);
       retrievePaymentMethodId(setupIntentClientSecret);
-      setSearchParams((prev) => {
-        const newParams = new URLSearchParams(prev);
-        newParams.delete('setup_intent_client_secret');
-        newParams.delete('setup_intent');
-        newParams.delete('redirect_status');
-        return newParams;
-      });
+      setSearchParams(new URLSearchParams());
     }
   }, [searchParams, stripe, setSearchParams, retrievePaymentMethodId]);
 
@@ -135,20 +133,8 @@ const PaymentForm: FC<Props> = ({
     [elements, stripe, appBaseUrl],
   );
 
-  useEffect(() => {
-    if (error) {
-      shopify.toast.show(error, {
-        isError: true,
-      });
-    }
-  }, [error, shopify]);
-
   if (isProcessing) {
-    return (
-      <Card>
-        <Text as="p">Loading..</Text>
-      </Card>
-    );
+    return <Text as="p">Processing Payment Method...</Text>;
   }
 
   if (addedPaymentMethod || hasCustomerPaymentMethod) {
