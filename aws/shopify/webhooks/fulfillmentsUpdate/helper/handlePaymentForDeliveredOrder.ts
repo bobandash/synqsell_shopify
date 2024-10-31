@@ -513,7 +513,7 @@ async function createUsageChargeShopify(
                 },
                 subscriptionLineItemId: shopifySubscriptionLineId,
             },
-            'Failed to create a usage charge to pay Synqsell from retailer.',
+            'Failed to create a usage charge to pay SynqSell from retailer.',
         );
         return res.appUsageRecordCreate?.appUsageRecord?.id ?? null;
     } catch (error) {
@@ -644,7 +644,7 @@ async function handlePaymentForDeliveredOrder(
 
         const supplierProfit = supplierPayableAmounts.orderPayableAmount + supplierPayableAmounts.shippingPayableAmount;
         const shopifyCurrency = getCurrencyShopifyFmt(currency);
-        // pay Synqsell from supplier and retailer billing api
+        // pay SynqSell from supplier and retailer billing api
         const retailerProfit = await getRetailerProfitFromFulfillment(orderDetails.id, orderLineItems, client);
         await Promise.all([
             handleShopifyUsageCharge(dbPaymentId, shopifyCurrency, retailerProfit, retailerSession, client),

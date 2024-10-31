@@ -52,7 +52,7 @@ export const lambdaHandler = async (event: ShopifyEvent): Promise<APIGatewayProx
             return {
                 statusCode: 200,
                 body: JSON.stringify({
-                    message: 'We do not need to handle logic for products not in Synqsell.',
+                    message: 'We do not need to handle logic for products not in SynqSell.',
                 }),
             };
         }

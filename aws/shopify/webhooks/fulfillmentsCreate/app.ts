@@ -50,7 +50,7 @@ export const lambdaHandler = async (event: ShopifyEvent): Promise<APIGatewayProx
             return {
                 statusCode: 200,
                 body: JSON.stringify({
-                    message: `${shopifyOrderId} is not a Synqsell order.`,
+                    message: `${shopifyOrderId} is not a SynqSell order.`,
                 }),
             };
         }

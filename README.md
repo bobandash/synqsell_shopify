@@ -59,7 +59,7 @@ When I worked in the eCommerce space selling anime merchandise, I had some key o
     </ul>
 </ol>
 
-These observations led me to a crucial question: could I create a risk-free method for wholesale customers to test out manufacturers' promising but underperforming products, and potentially trigger the positive feedback loop of successful products? That was my motivation for building Synqsell, a Shopify app that allows cross-store product imports between suppliers and retailers, and automatic synchronization of prices, orders, and payments.
+These observations led me to a crucial question: could I create a risk-free method for wholesale customers to test out manufacturers' promising but underperforming products, and potentially trigger the positive feedback loop of successful products? That was my motivation for building SynqSell, a Shopify app that allows cross-store product imports between suppliers and retailers, and automatic synchronization of prices, orders, and payments.
 
 ### Deployment
 
@@ -228,13 +228,13 @@ When you are done with the local development, navigate to AWS CloudFormation on 
 
 ## Architecture
 
-This is the current architecture of Synqsell.
+This is the current architecture of SynqSell.
 <br />
 <br />
 Note: the architecture currently has many single points of failure. This is intentional because of the application's lack of users; If the application scales with more users, the architecture should continue to evolve alongside the growth.
 <br />
 <br />
-![Synqsell Architecture (2)](https://github.com/user-attachments/assets/524ce31d-2c4a-47ff-92a7-aeafa9d70e29)
+![SynqSell Architecture (2)](https://github.com/user-attachments/assets/524ce31d-2c4a-47ff-92a7-aeafa9d70e29)
 
 ## Technical Approach and Obstacles
 

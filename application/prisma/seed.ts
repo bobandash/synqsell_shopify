@@ -38,7 +38,7 @@ async function main() {
                 position: 1,
                 header: 'Become a retailer',
                 subheader:
-                  "Click get access to add Synqsell's functionality onto your store and start importing products from our supplier network.",
+                  "Click get access to add SynqSell's functionality onto your store and start importing products from our supplier network.",
                 buttonText: 'Get Access',
               },
               {

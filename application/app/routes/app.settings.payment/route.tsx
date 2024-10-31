@@ -155,7 +155,7 @@ const PaymentSettings = () => {
       if (hasStripeConnectAccount) {
         setSupplierPaymentBanner({
           tone: 'success',
-          text: 'Success! Your supplier stripe connect account has been saved. Please refresh the page to get the supplier network as a tab.',
+          text: 'Success! Your Stripe connect account has been saved.',
         });
         setSearchParams((prev) => {
           const newParams = new URLSearchParams(prev);
@@ -166,7 +166,7 @@ const PaymentSettings = () => {
       } else {
         setSupplierPaymentBanner({
           tone: 'warning',
-          text: 'Failed to completely onboard your supplier stripe connect account. Please try onboarding again.',
+          text: 'Failed to completely onboard your Stripe connect account. Please try onboarding again.',
         });
       }
     }
@@ -259,7 +259,7 @@ const PaymentSettings = () => {
           {supplierPaymentBanner.text &&
             supplierPaymentBanner.tone !== 'undefined' && (
               <Banner
-                title="Retailer Payment Method"
+                title="Supplier Payment Method"
                 tone={supplierPaymentBanner.tone}
                 onDismiss={dismissSupplierPaymentBanner}
               >
@@ -304,7 +304,7 @@ const PaymentSettings = () => {
                   }
                 >
                   {beginStripeCustomerOnboardingFetcher.state === 'submitting'
-                    ? 'Creating a connected account'
+                    ? 'Starting onboarding process...'
                     : 'Start Onboarding Process'}
                 </Button>
               </Card>

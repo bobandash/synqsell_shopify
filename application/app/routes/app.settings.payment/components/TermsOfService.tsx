@@ -9,7 +9,7 @@ const TermsOfService = () => {
     <Layout.AnnotatedSection
       id="termsOfService"
       title="Terms of Service and Usage Policies"
-      description="How Synqsell stores payment information, and details of payment flow."
+      description="How SynqSell stores payment information, and details of payment flow."
     >
       <Card>
         <BlockStack gap="200">
@@ -29,8 +29,8 @@ const TermsOfService = () => {
                 Retailer Policy:
               </Text>
               <Text variant="bodyMd" as="p">
-                Synqsell will only charge your payment method when you import a
-                product from Synqsell, a customer buys the imported product, and
+                SynqSell will only charge your payment method when you import a
+                product from SynqSell, a customer buys the imported product, and
                 the supplier ships the product and the tracking shows delivered.
                 You will be billed the aforementioned terms that you and the
                 supplier agreed upon (the supplier profit).
@@ -43,7 +43,7 @@ const TermsOfService = () => {
                 Supplier Policy:
               </Text>
               <Text variant="bodyMd" as="p">
-                Synqsell currently only support automatic payments. Once the
+                SynqSell currently only support automatic payments. Once the
                 item is marked as delivered, you will receive the paid balance
                 in your Stripe Connect account, which typically will be
                 disbursed to your bank account in 3-14 business days.

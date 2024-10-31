@@ -26,12 +26,12 @@ Here are a list of common commands used for development.
   ```
 - When developing in lambda, and you need real-time logs in your console
   ```sh
-  sam logs -n <FunctionName> --stack-name Synqsell -t
+  sam logs -n <FunctionName> --stack-name SynqSell -t
   ```
   - `<FunctionName>` - this is found in your CloudFormation template
 - When you want to sync your local changes into the deployed cloudformation stack without running sam build + sam deploy everytime
   ```sh
-  sam sync --stack-name Synqsell --resource-id <FunctionName>
+  sam sync --stack-name SynqSell --resource-id <FunctionName>
   ```
   - `<FunctionName>` - this is found in your CloudFormation template
 
@@ -39,7 +39,7 @@ Here are a list of common commands used for development.
 
 Below is the README.md when initializing SAM. I will delete in the future, but for now, it may contain some information I need, so I'm keeping it for now
 
-sam logs -n ProductsUpdateFunction --stack-name Synqsell -t
+sam logs -n ProductsUpdateFunction --stack-name SynqSell -t
 
 This project contains source code and supporting files for a serverless application that you can deploy with the SAM CLI. It includes the following files and folders.
 

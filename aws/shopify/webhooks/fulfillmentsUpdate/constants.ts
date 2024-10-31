@@ -15,7 +15,7 @@ export const RESPONSE = {
     NOT_RELATED: {
         statusCode: 200,
         body: JSON.stringify({
-            message: 'Fulfillment update is not related to Synqsell fulfillment.',
+            message: 'Fulfillment update is not related to SynqSell fulfillment.',
         }),
     },
     SUCCESS: {

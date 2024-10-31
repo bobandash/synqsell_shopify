@@ -327,7 +327,7 @@ const UserSettings = () => {
                     multiline={4}
                     autoComplete="off"
                     placeholder={
-                      "If you plan to use Synqsell as a retailer, let suppliers know what products you're searching for!"
+                      "If you plan to use SynqSell as a retailer, let suppliers know what products you're searching for!"
                     }
                     {...fields.desiredProducts}
                   />

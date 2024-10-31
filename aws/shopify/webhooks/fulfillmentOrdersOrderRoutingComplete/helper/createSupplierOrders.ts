@@ -233,7 +233,7 @@ async function createDraftOrder(
             ...restOfCustomerShippingDetails,
             provinceCode,
         },
-        tags: 'Synqsell',
+        tags: 'SynqSell',
     };
 
     const newDraftOrder = await mutateAndValidateGraphQLData<DraftOrderCreateMutation>(

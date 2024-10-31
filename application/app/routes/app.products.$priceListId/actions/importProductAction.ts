@@ -234,8 +234,8 @@ async function getRetailerVariantCreationINput(
           } = variant;
           // for some reason, sku is a required field for variants even though documentation says otherwise
           const sku = inventoryItem.sku
-            ? `Synqsell ${supplierName} ${inventoryItem.sku}`
-            : `Synqsell ${supplierName} ${uuid()}`;
+            ? `SynqSell ${supplierName} ${inventoryItem.sku}`
+            : `SynqSell ${supplierName} ${uuid()}`;
 
           return {
             ...rest,

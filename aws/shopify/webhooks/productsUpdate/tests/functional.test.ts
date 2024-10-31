@@ -40,13 +40,13 @@ describe('Shopify products/update webhook', () => {
         await pool.end();
     });
 
-    describe('Not Synqsell Product', () => {
+    describe('Not SynqSell Product', () => {
         test('should not perform any operations if not SynqSell product', async () => {
             const payload = notSynqsellProductUpdateEvent;
             const result = await lambdaHandler(payload);
             expect(result.statusCode).toBe(200);
             expect(result.body).toBe(
-                JSON.stringify({ message: 'Do not need to handle logic for products not in Synqsell.' }),
+                JSON.stringify({ message: 'Do not need to handle logic for products not in SynqSell.' }),
             );
         });
     });
