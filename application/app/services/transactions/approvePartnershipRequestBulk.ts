@@ -84,12 +84,12 @@ async function approvePartnershipRequestBulk(
       // partnership request type === retailer means that the retailer (sender) sent a request to partner with a supplier (recipient)
       const retailerId =
         type === PARTNERSHIP_REQUEST_TYPE.RETAILER
-          ? request.senderId
-          : request.recipientId;
-      const supplierId =
-        type === PARTNERSHIP_REQUEST_TYPE.RETAILER
           ? request.recipientId
           : request.senderId;
+      const supplierId =
+        type === PARTNERSHIP_REQUEST_TYPE.RETAILER
+          ? request.senderId
+          : request.recipientId;
 
       return {
         retailerId,

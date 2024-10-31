@@ -21,6 +21,7 @@ export async function approveSuppliersAction(
 ) {
   await approveSuppliersActionSchema.validate(data);
   const { partnershipRequestIds } = data;
+  console.log(partnershipRequestIds);
   await approvePartnershipRequestBulk(
     partnershipRequestIds,
     PARTNERSHIP_REQUEST_TYPE.RETAILER,
