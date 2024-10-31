@@ -1,7 +1,6 @@
 import {
   BlockStack,
   Button,
-  Card,
   Form,
   Icon,
   InlineStack,
@@ -41,7 +40,7 @@ const PaymentForm: FC<Props> = ({
   const [addedPaymentMethod, setAddedPaymentMethod] = useState<boolean>(false);
 
   const finishOnboardingFetcher = useFetcher({
-    key: FETCHER_KEYS.FINISH_STRIPE_ONBOARDING,
+    key: FETCHER_KEYS.FINISH_STRIPE_CUSTOMER_ONBOARDING,
   });
 
   useEffect(() => {

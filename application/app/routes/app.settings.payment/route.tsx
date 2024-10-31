@@ -1,20 +1,8 @@
-import {
-  Banner,
-  BlockStack,
-  Button,
-  Card,
-  Layout,
-  Page,
-} from '@shopify/polaris';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Banner, BlockStack, Card, Layout, Page } from '@shopify/polaris';
+import { useCallback, useMemo, useState } from 'react';
 import type { ActionFunctionArgs, LoaderFunctionArgs } from '@remix-run/node';
 import { json } from '@remix-run/node';
-import {
-  useFetcher,
-  useLoaderData,
-  useNavigate,
-  useSearchParams,
-} from '@remix-run/react';
+import { useLoaderData, useNavigate } from '@remix-run/react';
 import { getStripePublishableKey } from '~/services/stripe/stripeConnect';
 import { convertFormDataToObject } from '~/lib/utils';
 import {
@@ -22,12 +10,11 @@ import {
   getAppBaseUrl,
   getJSONError,
 } from '~/lib/utils/server';
-import { FETCHER_KEYS, INTENTS } from './constants';
+import { INTENTS } from './constants';
 import {
   beginStripeConnectOnboarding,
   finishStripeConnectOnboarding,
   finishStripeCustomerOnboarding,
-  type BeginStripeOnboardingData,
 } from './actions';
 import { StatusCodes } from 'http-status-codes';
 import { authenticate } from '~/shopify.server';
@@ -36,17 +23,15 @@ import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import { hasRole } from '~/services/models/roles';
 import { ROLES } from '~/constants';
-import {
-  handleStripeConnectAccount,
-  handleStripeCustomerAccount,
-} from './loader';
+import { handleStripeCustomerAccount } from './loader';
 import type { BannerState } from './types';
 import { PaddedBox } from '~/components';
 import {
   PaymentForm,
-  SuccessfulIntegration,
+  StripeConnectOnboarding,
   TermsOfService,
 } from './components';
+import { userHasStripeConnectAccount } from '~/services/models/stripeConnectAccount';
 
 type LoaderData = {
   userCurrency: string;
@@ -62,24 +47,26 @@ type BeginStripeOnboardingFormData = {
   appBaseUrl: string;
 };
 
+type FinishStripeAccountOnboardingFormData = {
+  intent: string;
+  accountId: string;
+};
+
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
     const {
       session: { id: sessionId, shop },
     } = await authenticate.admin(request);
-    const url = new URL(request.url);
-    const searchParams = url.searchParams;
     const appBaseUrl = getAppBaseUrl(shop);
-    const accountId = searchParams.get('accountId');
-    const [isRetailer, isSupplier] = await Promise.all([
+    const [isRetailer] = await Promise.all([
       hasRole(sessionId, ROLES.RETAILER),
       hasRole(sessionId, ROLES.SUPPLIER),
     ]);
 
-    const [{ clientSecret, hasPaymentMethod }, { hasStripeConnectAccount }] =
+    const [{ clientSecret, hasPaymentMethod }, hasStripeConnectAccount] =
       await Promise.all([
         handleStripeCustomerAccount(isRetailer, sessionId),
-        handleStripeConnectAccount(isSupplier, sessionId, accountId),
+        userHasStripeConnectAccount(sessionId),
       ]);
 
     const stripePublishableKey = getStripePublishableKey();
@@ -106,10 +93,18 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const formDataObject = convertFormDataToObject(formData);
     switch (intent) {
       case INTENTS.CREATE_STRIPE_CUSTOMER_ACCOUNT:
-        const data = formDataObject as BeginStripeOnboardingFormData;
-        return await beginStripeConnectOnboarding(data.appBaseUrl);
+        const stripeCustomerData =
+          formDataObject as BeginStripeOnboardingFormData;
+        return await beginStripeConnectOnboarding(
+          stripeCustomerData.appBaseUrl,
+        );
       case INTENTS.FINISH_STRIPE_CONNECT_ONBOARDING:
-        return await finishStripeConnectOnboarding(sessionId);
+        const stripeConnectData =
+          formDataObject as FinishStripeAccountOnboardingFormData;
+        return await finishStripeConnectOnboarding(
+          stripeConnectData.accountId,
+          sessionId,
+        );
       case INTENTS.FINISH_STRIPE_CUSTOMER_ONBOARDING:
         return await finishStripeCustomerOnboarding(sessionId);
     }
@@ -129,53 +124,11 @@ const PaymentSettings = () => {
     clientSecret,
     hasPaymentMethod,
   } = useLoaderData<typeof loader>() as LoaderData;
-  const [stripeOnboardingUrl, setStripeOnboardingUrl] = useState<string>('');
+
   const [retailerPaymentBanner, setRetailerPaymentBanner] =
     useState<BannerState>({ text: '', tone: 'undefined' });
   const [supplierPaymentBanner, setSupplierPaymentBanner] =
     useState<BannerState>({ text: '', tone: 'undefined' });
-  const [searchParams, setSearchParams] = useSearchParams();
-
-  const finishOnboardingFetcher = useFetcher({
-    key: FETCHER_KEYS.FINISH_STRIPE_ONBOARDING,
-  });
-
-  const handleFinishConnectOnboarding = useCallback(() => {
-    finishOnboardingFetcher.submit(
-      {
-        intent: INTENTS.FINISH_STRIPE_CUSTOMER_ONBOARDING,
-      },
-      { method: 'POST' },
-    );
-  }, [finishOnboardingFetcher]);
-
-  useEffect(() => {
-    const accountId = searchParams.get('accountId');
-    if (accountId) {
-      if (hasStripeConnectAccount) {
-        setSupplierPaymentBanner({
-          tone: 'success',
-          text: 'Success! Your Stripe connect account has been saved.',
-        });
-        setSearchParams((prev) => {
-          const newParams = new URLSearchParams(prev);
-          newParams.delete('accountId');
-          return newParams;
-        });
-        handleFinishConnectOnboarding();
-      } else {
-        setSupplierPaymentBanner({
-          tone: 'warning',
-          text: 'Failed to completely onboard your Stripe connect account. Please try onboarding again.',
-        });
-      }
-    }
-  }, [
-    searchParams,
-    hasStripeConnectAccount,
-    setSearchParams,
-    handleFinishConnectOnboarding,
-  ]);
 
   const dismissRetailerPaymentBanner = useCallback(() => {
     setRetailerPaymentBanner({
@@ -200,39 +153,6 @@ const PaymentSettings = () => {
   );
 
   // form fetcher for handling stripe connect onboarding
-  const beginStripeCustomerOnboardingFetcher = useFetcher({
-    key: FETCHER_KEYS.CREATE_STRIPE_PAYMENTS_ACCOUNT,
-  });
-
-  const handleBeginPaymentsOnboarding = useCallback(() => {
-    beginStripeCustomerOnboardingFetcher.submit(
-      {
-        intent: INTENTS.CREATE_STRIPE_CUSTOMER_ACCOUNT,
-        appBaseUrl: appBaseUrl,
-      },
-      { method: 'POST' },
-    );
-  }, [beginStripeCustomerOnboardingFetcher, appBaseUrl]);
-
-  useEffect(() => {
-    if (
-      beginStripeCustomerOnboardingFetcher.state == 'idle' &&
-      beginStripeCustomerOnboardingFetcher.data
-    ) {
-      const data = beginStripeCustomerOnboardingFetcher.data;
-      if (data) {
-        const { onboardingUrl } = data as BeginStripeOnboardingData;
-        setStripeOnboardingUrl(onboardingUrl);
-      }
-    }
-    beginStripeCustomerOnboardingFetcher.data = undefined;
-  }, [beginStripeCustomerOnboardingFetcher]);
-
-  useEffect(() => {
-    if (stripeOnboardingUrl) {
-      open(stripeOnboardingUrl, '_top');
-    }
-  }, [stripeOnboardingUrl]);
 
   return (
     <Page
@@ -259,7 +179,7 @@ const PaymentSettings = () => {
           {supplierPaymentBanner.text &&
             supplierPaymentBanner.tone !== 'undefined' && (
               <Banner
-                title="Supplier Payment Method"
+                title="Supplier Stripe Connect"
                 tone={supplierPaymentBanner.tone}
                 onDismiss={dismissSupplierPaymentBanner}
               >
@@ -289,31 +209,11 @@ const PaymentSettings = () => {
           </Layout.AnnotatedSection>
         )}
         {isSupplier && (
-          <Layout.AnnotatedSection
-            id="supplierPaymentMethod"
-            title="Receive Payments (Supplier)"
-            description="Onboard with Stripe Connect to receive payments from retailers."
-          >
-            {!hasStripeConnectAccount ? (
-              <Card>
-                <Button
-                  variant={'primary'}
-                  onClick={handleBeginPaymentsOnboarding}
-                  disabled={
-                    beginStripeCustomerOnboardingFetcher.state === 'submitting'
-                  }
-                >
-                  {beginStripeCustomerOnboardingFetcher.state === 'submitting'
-                    ? 'Starting onboarding process...'
-                    : 'Start Onboarding Process'}
-                </Button>
-              </Card>
-            ) : (
-              <Card>
-                <SuccessfulIntegration text="Stripe Connect has been successfully integrated." />
-              </Card>
-            )}
-          </Layout.AnnotatedSection>
+          <StripeConnectOnboarding
+            hasStripeConnectAccount={hasStripeConnectAccount}
+            appBaseUrl={appBaseUrl}
+            setSupplierPaymentBanner={setSupplierPaymentBanner}
+          />
         )}
         <TermsOfService />
       </Layout>

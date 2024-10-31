@@ -6,17 +6,39 @@ import {
   markCheckListStatus,
 } from '~/services/models/checklistStatus';
 import { createJSONMessage } from '~/lib/utils/server';
-async function finishStripePaymentsOnboarding(sessionId: string) {
+import { isAccountOnboarded } from '~/services/stripe/stripeConnect';
+import { addStripeConnectAccountDb } from '~/services/models/stripeConnectAccount';
+
+type FinishStripeConnectOnboardingData = {
+  message: string;
+};
+
+async function finishStripeConnectOnboarding(
+  accountId: string,
+  sessionId: string,
+) {
+  const isStripeAccountOnboarded = await isAccountOnboarded(accountId);
+  if (!isStripeAccountOnboarded) {
+    return createJSONMessage(
+      'Failed to fully onboard Stripe Connect Account.',
+      StatusCodes.OK, // TODO: check if this is the correct status code
+    );
+  }
   const checklistItemId = (
     await getChecklistItem(CHECKLIST_ITEM_KEYS.SUPPLIER_ADD_PAYMENT_METHOD)
   ).id;
   const checklistStatus = await getChecklistStatus(sessionId, checklistItemId);
-  await markCheckListStatus(checklistStatus.id, true);
-
+  await Promise.all([
+    addStripeConnectAccountDb(sessionId, accountId),
+    markCheckListStatus(checklistStatus.id, true),
+  ]);
   return createJSONMessage(
-    'Completed checklist item for supplier payments setup',
+    'Successfully finished onboarding Stripe Connect Account.',
     StatusCodes.OK,
   );
 }
 
-export default finishStripePaymentsOnboarding;
+export {
+  finishStripeConnectOnboarding,
+  type FinishStripeConnectOnboardingData,
+};
