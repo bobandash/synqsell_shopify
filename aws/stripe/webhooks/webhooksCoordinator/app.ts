@@ -72,6 +72,7 @@ export const lambdaHandler = async (event: Event) => {
     let client: null | PoolClient = null;
     const stripeSignature = event.headers['Stripe-Signature'];
     const body = event.body;
+    const env = process.env.NODE_ENV ?? 'dev';
 
     try {
         const payload = JSON.parse(body);
@@ -97,10 +98,10 @@ export const lambdaHandler = async (event: Event) => {
         await addWebhookToProcessed(webhookId, client);
         switch (webhookTopic) {
             case 'account.application.deauthorized':
-                invokeLambda('stripe_connect_account_application_deauthorized', payload);
+                invokeLambda(`${env}_stripe_account_application_deauthorized`, payload);
                 break;
             case 'payment_method.detached':
-                invokeLambda('stripe_payment_method_detached', payload);
+                invokeLambda(`${env}_stripe_payment_method_detached`, payload);
                 break;
             default:
                 return {

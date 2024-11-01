@@ -24,29 +24,30 @@ export const lambdaHandler = async (event: Event) => {
     try {
         const invocations = event.Records.map(async (record) => {
             const shopifyEvent: ShopifyEvent = JSON.parse(record.body);
+            const env = process.env.NODE_ENV ?? 'dev';
             const webhookTopic = shopifyEvent.detail.metadata['X-Shopify-Topic'];
             switch (webhookTopic) {
                 case 'products/delete':
-                    return invokeLambda('products_delete', shopifyEvent);
+                    return invokeLambda(`${env}_products_delete`, shopifyEvent);
                 case 'products/update':
-                    return invokeLambda('products_update', shopifyEvent);
+                    return invokeLambda(`${env}_products_update`, shopifyEvent);
                 case 'fulfillment_orders/order_routing_complete':
-                    return invokeLambda('order_routing_complete', shopifyEvent);
+                    return invokeLambda(`${env}_order_routing_complete`, shopifyEvent);
                 case 'fulfillments/create':
-                    return invokeLambda('fulfillments_create', shopifyEvent);
+                    return invokeLambda(`${env}_fulfillments_create`, shopifyEvent);
                 case 'orders/cancelled':
-                    return invokeLambda('orders_cancelled', shopifyEvent);
+                    return invokeLambda(`${env}_orders_cancelled`, shopifyEvent);
                 case 'fulfillments/update':
-                    return invokeLambda('fulfillments_update', shopifyEvent);
+                    return invokeLambda(`${env}_fulfillments_update`, shopifyEvent);
                 case 'app/uninstalled':
-                    return invokeLambda('app_uninstalled', shopifyEvent);
+                    return invokeLambda(`${env}_app_uninstalled`, shopifyEvent);
                 case 'shop/redact':
-                    return invokeLambda('shop_redact', shopifyEvent);
+                    return invokeLambda(`${env}_shop_redact`, shopifyEvent);
                 // we do not store any customers' data, so we can return a 200 request for these
                 case 'customers/data_request':
-                    return invokeLambda('customers_data_request', shopifyEvent);
+                    return invokeLambda(`${env}_customers_data_request`, shopifyEvent);
                 case 'customers/redact':
-                    return invokeLambda('customers_redact', shopifyEvent);
+                    return invokeLambda(`${env}_customers_redact`, shopifyEvent);
                 default:
                     console.error(`Webhook topic ${webhookTopic} is not handled.`);
                     return Promise.resolve();

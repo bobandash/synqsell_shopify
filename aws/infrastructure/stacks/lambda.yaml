@@ -34,6 +34,7 @@ Globals:
         DB_USER_CREDENTIALS_SECRET_ID: !Ref DatabaseUserCredentialSecret
         DB_CONNECTION_SECRET_ID: !Ref DatabaseConnectionSecret
         API_KEYS_SECRET_ID: !Ref ApiKeySecret
+        NODE_ENV: !Ref Environment
     LoggingConfig:
       LogFormat: JSON
     VpcConfig:
@@ -242,8 +243,6 @@ Resources:
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
-        External:
-          - aws-sdk
         Minify: true
         Target: es2020
         Sourcemap: false

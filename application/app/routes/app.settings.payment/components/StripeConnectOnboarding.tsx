@@ -34,6 +34,7 @@ const StripeConnectOnboarding = ({
 
   // handle stripe connect onboarding premature exit or finish workflow
   // prev impl was using loader to check if the account was onboarded successfully and adding it, but this method will not revalidate the route on success to get navigation visible
+
   useEffect(() => {
     const accountId = searchParams.get('accountId');
     if (!accountId) {
@@ -43,7 +44,7 @@ const StripeConnectOnboarding = ({
     if (data) {
       const formattedData = data as FinishStripeConnectOnboardingData;
       const isSuccess = formattedData.message.startsWith('Success');
-      if (isSuccess) {
+      if (isSuccess && finishStripeConnectOnboardingFetcher.state === 'idle') {
         setSearchParams(new URLSearchParams());
       }
       setSupplierPaymentBanner({
