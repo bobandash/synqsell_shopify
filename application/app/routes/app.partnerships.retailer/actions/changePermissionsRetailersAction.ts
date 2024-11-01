@@ -8,7 +8,7 @@ import {
 import type { Prisma } from '@prisma/client';
 import db from '~/db.server';
 import { StatusCodes } from 'http-status-codes';
-import { createJSONMessage, errorHandler } from '~/lib/utils/server';
+import { createJSONSuccess, errorHandler } from '~/lib/utils/server';
 
 export type ChangePermissionsRetailersAction = {
   intent: IntentsProps;
@@ -123,7 +123,7 @@ export async function changePermissionRetailersAction(
       ),
     ]);
   });
-  return createJSONMessage(
+  return createJSONSuccess(
     'Successfully updated price list permissions.',
     StatusCodes.OK,
   );

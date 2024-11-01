@@ -7,6 +7,33 @@ import {
   isValidPriceList,
 } from '~/services/models/priceList';
 import { hasRole } from '~/services/models/roles';
+import { errorHandler } from '~/lib/utils/server';
+import { isImportedProduct } from '~/services/models/importedProduct';
+
+// if so, this should fail the update / creation
+async function hasImportedProducts(shopifyProductIds: string[]) {
+  try {
+    const res = await Promise.all(
+      shopifyProductIds.map((shopifyProductId) =>
+        isImportedProduct(shopifyProductId),
+      ),
+    );
+
+    if (res.includes(true)) {
+      return true;
+    }
+    return false;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to check if list of shopify product ids has imported product',
+      hasImportedProducts,
+      { shopifyProductIds },
+    );
+  }
+}
+
+export default hasImportedProducts;
 
 export const priceListDataSchema = object({
   settings: object({
@@ -40,7 +67,19 @@ export const priceListDataSchema = object({
   }),
   products: array().of(
     object({
-      shopifyProductId: string().required(),
+      shopifyProductId: string()
+        .required()
+        .test(
+          'is-imported',
+          'Cannot add SynqSell imported products to price list.',
+          async (shopifyProductId) => {
+            const isImported = await isImportedProduct(shopifyProductId);
+            if (isImported) {
+              return false;
+            }
+            return true;
+          },
+        ),
       variants: array().of(
         object({
           shopifyVariantId: string().required(),

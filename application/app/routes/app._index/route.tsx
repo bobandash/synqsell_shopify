@@ -20,7 +20,11 @@ import {
   getStartedRetailerAction,
   getStartedSupplierAction,
 } from './actions';
-import { convertFormDataToObject } from '~/lib/utils';
+import {
+  convertFormDataToObject,
+  isActionDataError,
+  isActionDataSuccess,
+} from '~/lib/utils';
 import { ChecklistTables } from './asyncComponents';
 import { TableSkeleton } from './components/Skeleton';
 import { PaddedBox } from '~/components';
@@ -32,7 +36,8 @@ import {
 } from './loader';
 import { getOrCreateUserPreferences } from '~/services/models/userPreferences';
 import { getSession } from '~/services/models/session';
-import { getJSONError } from '~/lib/utils/server';
+import { createJSONError, handleRouteError } from '~/lib/utils/server';
+import { StatusCodes } from 'http-status-codes';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
@@ -62,7 +67,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       tables: tablesPromise,
     });
   } catch (error) {
-    throw getJSONError(error, '/app/_index');
+    throw handleRouteError(error, '/app/_index');
   }
 };
 
@@ -83,9 +88,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         return getStartedRetailerAction(graphql, formDataObject, sessionId);
       case INTENTS.SUPPLIER_GET_STARTED:
         return getStartedSupplierAction(formDataObject, sessionId);
+      default:
+        return createJSONError(
+          `Invalid intent ${intent}.`,
+          StatusCodes.BAD_REQUEST,
+        );
     }
   } catch (error) {
-    return getJSONError(error, '/app/_index');
+    return handleRouteError(error, '/app/_index');
   }
 };
 
@@ -102,7 +112,14 @@ function Index() {
   }, [navigation]);
 
   useEffect(() => {
-    if (navigation.state === 'idle' && actionData && 'message' in actionData) {
+    if (!actionData || navigation.state !== 'idle') {
+      return;
+    }
+    if (isActionDataError(actionData)) {
+      shopify.toast.show(actionData.error.message, {
+        isError: true,
+      });
+    } else if (isActionDataSuccess(actionData)) {
       shopify.toast.show(actionData.message);
     }
   }, [actionData, navigation]);

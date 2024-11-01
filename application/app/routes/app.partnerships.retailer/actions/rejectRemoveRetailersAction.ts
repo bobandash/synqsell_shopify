@@ -4,7 +4,7 @@ import { deletePartnershipRequestsTx } from '~/services/models/partnershipReques
 import { deletePartnershipsTx } from '~/services/models/partnership';
 import db from '~/db.server';
 import { StatusCodes } from 'http-status-codes';
-import { createJSONMessage } from '~/lib/utils/server';
+import { createJSONSuccess } from '~/lib/utils/server';
 import {
   partnershipIdListSchema,
   partnershipRequestIdListSchema,
@@ -33,7 +33,7 @@ export async function rejectRemoveRetailersAction(
       deletePartnershipRequestsTx(tx, partnershipRequestIds),
     ]);
   });
-  return createJSONMessage(
+  return createJSONSuccess(
     'Successfully removed partnerships.',
     StatusCodes.OK,
   );

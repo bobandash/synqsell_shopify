@@ -9,7 +9,7 @@ import { getChecklistStatus } from '~/services/models/checklistStatus';
 import { INTENTS } from '../constants';
 import { checklistItemIdMatchesKey } from '~/services/models/checklistItem';
 import { CHECKLIST_ITEM_KEYS } from '~/constants';
-import { createJSONMessage } from '~/lib/utils/server';
+import { createJSONSuccess } from '~/lib/utils/server';
 
 export type GetStartedSupplierActionData = {
   supplierAccessRequest: {
@@ -51,7 +51,7 @@ export async function getStartedSupplierAction(
   const supplierAccessRequestExists = await hasSupplierAccessRequest(sessionId);
   await getOrCreateSupplierAccessRequest(sessionId, checklistStatus.id);
 
-  return createJSONMessage(
+  return createJSONSuccess(
     'Your request to become a supplier has been submitted successfully. Please wait for the app owner to review your request.',
     supplierAccessRequestExists ? StatusCodes.OK : StatusCodes.CREATED,
   );

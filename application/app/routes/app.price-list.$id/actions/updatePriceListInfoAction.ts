@@ -18,7 +18,7 @@ import {
 } from './util/schemas';
 import { updatePartnershipsInPriceListTx } from './util';
 import { StatusCodes } from 'http-status-codes';
-import { createJSONMessage, errorHandler } from '~/lib/utils/server';
+import { createJSONSuccess, errorHandler } from '~/lib/utils/server';
 
 // TODO: Refactor this entire file, the code is verbose
 
@@ -311,12 +311,12 @@ async function updateAllPriceListInformationAction(
         ]);
       },
       {
-        maxWait: 20000, // TODO: Find a better way to handle this logic
+        maxWait: 20000, // TODO: this function takes too long when ec2 is small, refactor if possible
         timeout: 100000,
       },
     );
 
-    return createJSONMessage(
+    return createJSONSuccess(
       'Successfully updated price list.',
       StatusCodes.OK,
     );

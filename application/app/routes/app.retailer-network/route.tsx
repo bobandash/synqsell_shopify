@@ -12,8 +12,12 @@ import {
   type LoaderFunctionArgs,
 } from '@remix-run/node';
 import { StatusCodes } from 'http-status-codes';
-import { convertFormDataToObject } from '~/lib/utils';
-import { createJSONMessage, getJSONError } from '~/lib/utils/server';
+import {
+  convertFormDataToObject,
+  isActionDataError,
+  isActionDataSuccess,
+} from '~/lib/utils';
+import { createJSONError, handleRouteError } from '~/lib/utils/server';
 import { authenticate } from '~/shopify.server';
 import { hasRole } from '~/services/models/roles';
 import { ROLES } from '~/constants';
@@ -66,15 +70,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }
 
     if (!isSupplier) {
-      throw createJSONMessage(
-        'Unauthorized. User is not supplier.',
-        StatusCodes.UNAUTHORIZED,
-      );
+      throw createJSONError('User is not supplier.', StatusCodes.UNAUTHORIZED);
     }
 
     if (!hasStripeConnectAccount) {
-      throw createJSONMessage(
-        'User does not have a payment method set.',
+      throw createJSONError(
+        'Supplier did not integrate with Stripe Connect.',
         StatusCodes.UNAUTHORIZED,
       );
     }
@@ -88,7 +89,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
     return json({ retailerPaginatedInfo, priceLists }, StatusCodes.OK);
   } catch (error) {
-    throw getJSONError(error, '/app/retailer-network');
+    throw handleRouteError(error, '/app/retailer-network');
   }
 };
 
@@ -105,11 +106,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           supplierId: sessionId,
           ...(formDataObject as InitiatePartnershipData),
         });
+      default:
+        return createJSONError(
+          `Intent ${intent} is not valid`,
+          StatusCodes.NOT_IMPLEMENTED,
+        );
     }
-
-    return createJSONMessage('Not implemented', StatusCodes.NOT_IMPLEMENTED);
   } catch (error) {
-    return getJSONError(error, '/app/retailer-network');
+    return handleRouteError(error, '/app/retailer-network');
   }
 };
 
@@ -143,7 +147,12 @@ const SupplierNetwork = () => {
   }, [retailerPaginatedInfo]);
 
   useEffect(() => {
-    if (actionData && 'message' in actionData) {
+    if (!actionData) {
+      return;
+    }
+    if (isActionDataError(actionData)) {
+      shopify.toast.show(actionData.error.message, { isError: true });
+    } else if (isActionDataSuccess(actionData)) {
       shopify.modal.hide(MODALS.INITIATE_PARTNERSHIP);
       shopify.toast.show(actionData.message as string);
     }

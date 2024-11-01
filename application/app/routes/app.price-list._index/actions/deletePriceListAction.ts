@@ -1,7 +1,7 @@
 import { type FormDataObject } from '~/types';
 import { array, object, string, type InferType } from 'yup';
 import { deletePriceListBatch } from '~/services/models/priceList';
-import { createJSONMessage } from '~/lib/utils/server';
+import { createJSONSuccess } from '~/lib/utils/server';
 import { INTENTS } from '../constants';
 import { StatusCodes } from 'http-status-codes';
 type deletePriceListData = InferType<typeof deletePriceListSchema>;
@@ -19,7 +19,7 @@ async function deletePriceListAction(
   const { priceListIds } = formDataObject as unknown as deletePriceListData;
   const priceListIdsArr = priceListIds;
   await deletePriceListBatch(priceListIdsArr, sessionId);
-  return createJSONMessage(
+  return createJSONSuccess(
     `Successfully deleted the price list(s).`,
     StatusCodes.OK,
   );

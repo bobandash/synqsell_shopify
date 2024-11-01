@@ -41,7 +41,7 @@ import { queryExternalStoreAdminAPI } from '~/services/shopify/utils';
 import { VARIANT_CREATION_DETAILS_BULK_QUERY } from '~/services/shopify/variants/graphql';
 import { v4 as uuid } from 'uuid';
 import { createMapIdToRestObj } from '~/lib/utils';
-import { errorHandler, getJSONError } from '~/lib/utils/server';
+import { errorHandler, handleRouteError } from '~/lib/utils/server';
 import { updateChecklistStatus } from '~/services/models/checklistStatus';
 
 export type ImportProductFormData = InferType<typeof formDataObjectSchema>;
@@ -359,6 +359,6 @@ export async function importProductAction(
       { status: StatusCodes.OK },
     );
   } catch (error) {
-    throw getJSONError(error, 'Price List');
+    throw handleRouteError(error, 'Price List');
   }
 }

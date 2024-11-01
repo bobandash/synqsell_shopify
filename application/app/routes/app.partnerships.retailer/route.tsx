@@ -8,6 +8,7 @@ import {
   useLoaderData,
   useLocation,
   useNavigate,
+  useNavigation,
   useSubmit as useRemixSubmit,
 } from '@remix-run/react';
 import {
@@ -25,8 +26,16 @@ import { ROLES } from '~/constants';
 import { useRoleContext } from '~/context/RoleProvider';
 import { hasRole } from '~/services/models/roles';
 import { authenticate } from '~/shopify.server';
-import { convertFormDataToObject } from '~/lib/utils';
-import { createJSONMessage, getJSONError } from '~/lib/utils/server';
+import {
+  convertFormDataToObject,
+  isActionDataError,
+  isActionDataSuccess,
+} from '~/lib/utils';
+import {
+  createJSONError,
+  createJSONSuccess,
+  handleRouteError,
+} from '~/lib/utils/server';
 import { INTENTS, MODALS, RETAILER_ACCESS_REQUEST_STATUS } from './constants';
 import {
   approveRetailersAction,
@@ -61,7 +70,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     } = await authenticate.admin(request);
     const isSupplier = await hasRole(sessionId, ROLES.SUPPLIER);
     if (!isSupplier) {
-      throw createJSONMessage(
+      throw createJSONError(
         'User is not a supplier. Unauthorized to view retailer partnership requests.',
         StatusCodes.UNAUTHORIZED,
       );
@@ -72,7 +81,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     ]);
     return json({ partnershipInfo, priceLists }, { status: StatusCodes.OK });
   } catch (error) {
-    throw getJSONError(error, '/app/partnerships/retailer');
+    throw handleRouteError(error, '/app/partnerships/retailer');
   }
 };
 
@@ -95,9 +104,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           data as ChangePermissionsRetailersAction,
         );
     }
-    return createJSONMessage('Not Implemented.', StatusCodes.NOT_IMPLEMENTED);
+    return createJSONSuccess('Not Implemented.', StatusCodes.NOT_IMPLEMENTED);
   } catch (error) {
-    throw getJSONError(error, 'admin network');
+    throw handleRouteError(error, 'admin network');
   }
 };
 
@@ -124,6 +133,7 @@ const RetailerPartnerships = () => {
     handleSelectionChange,
     clearSelection,
   } = useIndexResourceState(filteredRequestsData);
+  const navigation = useNavigation();
 
   useEffect(() => {
     setRequestsData(partnershipInfo);
@@ -131,14 +141,19 @@ const RetailerPartnerships = () => {
   }, [partnershipInfo]);
 
   useEffect(() => {
-    if (actionData && 'message' in actionData) {
+    if (!actionData || navigation.state !== 'idle') {
+      return;
+    }
+    if (isActionDataError(actionData)) {
+      shopify.toast.show(actionData.error.message, {
+        isError: true,
+      });
+    } else if (isActionDataSuccess(actionData)) {
       shopify.toast.show(actionData.message);
       clearSelection();
-      // prematurely hide modal every time
-      shopify.modal.hide(MODALS.CHANGE_PERMISSION);
       setSelectedPriceListIds([]);
     }
-  }, [actionData, shopify, clearSelection]);
+  }, [actionData, navigation, clearSelection, shopify]);
 
   const navigateSupplierRequests = useCallback(() => {
     navigate('/app/partnerships/supplier');

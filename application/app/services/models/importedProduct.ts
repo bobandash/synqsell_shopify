@@ -25,3 +25,21 @@ export async function hasRetailerImportedProduct(
     );
   }
 }
+
+export async function isImportedProduct(shopifyProductId: string) {
+  try {
+    const importedProduct = await db.importedProduct.findFirst({
+      where: {
+        shopifyProductId,
+      },
+    });
+    return importedProduct !== null;
+  } catch (error) {
+    throw errorHandler(
+      error,
+      'Failed to check if product is an imported product.',
+      isImportedProduct,
+      { shopifyProductId },
+    );
+  }
+}

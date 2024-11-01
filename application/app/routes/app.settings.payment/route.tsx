@@ -6,9 +6,9 @@ import { useLoaderData, useNavigate } from '@remix-run/react';
 import { getStripePublishableKey } from '~/services/stripe/stripeConnect';
 import { convertFormDataToObject } from '~/lib/utils';
 import {
-  createJSONMessage,
+  createJSONError,
   getAppBaseUrl,
-  getJSONError,
+  handleRouteError,
 } from '~/lib/utils/server';
 import { INTENTS } from './constants';
 import {
@@ -78,7 +78,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       hasPaymentMethod,
     });
   } catch (error) {
-    throw getJSONError(error, '/app/settings/payment');
+    throw handleRouteError(error, '/app/settings/payment');
   }
 };
 
@@ -107,10 +107,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         );
       case INTENTS.FINISH_STRIPE_CUSTOMER_ONBOARDING:
         return await finishStripeCustomerOnboarding(sessionId);
+      default:
+        return createJSONError(
+          `Intent ${intent} is not valid`,
+          StatusCodes.NOT_IMPLEMENTED,
+        );
     }
-    return createJSONMessage('Not Implemented', StatusCodes.NOT_IMPLEMENTED);
   } catch (error) {
-    return getJSONError(error, '/app/settings/payment');
+    return handleRouteError(error, '/app/settings/payment');
   }
 };
 
@@ -153,7 +157,6 @@ const PaymentSettings = () => {
   );
 
   // form fetcher for handling stripe connect onboarding
-
   return (
     <Page
       title={'Payment Integrations'}

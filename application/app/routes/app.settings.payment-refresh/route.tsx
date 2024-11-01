@@ -5,9 +5,9 @@ import { useEffect } from 'react';
 import createAccountLink from '~/services/stripe/stripeConnect';
 import { authenticate } from '~/shopify.server';
 import {
-  createJSONMessage,
+  createJSONError,
   getAppBaseUrl,
-  getJSONError,
+  handleRouteError,
 } from '~/lib/utils/server';
 
 type LoaderData = {
@@ -24,15 +24,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const appBaseUrl = getAppBaseUrl(shop);
     const accountId = searchParams.get('accountId');
     if (!accountId) {
-      throw createJSONMessage(
-        'No account id was provided',
+      throw createJSONError(
+        'No account id was provided.',
         StatusCodes.BAD_REQUEST,
       );
     }
     const accountLink = await createAccountLink(accountId, appBaseUrl);
     return json({ onboardingUrl: accountLink.url });
   } catch (error) {
-    throw getJSONError(error, '/app/settings/payment-refresh');
+    throw handleRouteError(error, '/app/settings/payment-refresh');
   }
 };
 
@@ -45,7 +45,7 @@ const StripePaymentRefresh = () => {
     }
   }, [onboardingUrl]);
 
-  return <div></div>;
+  return null;
 };
 
 export default StripePaymentRefresh;

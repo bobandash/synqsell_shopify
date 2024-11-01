@@ -45,7 +45,7 @@ import {
 } from '~/constants';
 
 import { authenticate } from '~/shopify.server';
-import { createJSONMessage, getJSONError } from '~/lib/utils/server';
+import { createJSONError, handleRouteError } from '~/lib/utils/server';
 import { convertFormDataToObject } from '~/lib/utils';
 import {
   categoryChoices,
@@ -79,11 +79,52 @@ import { getExistingPriceListData } from './loader/getExistingPriceListData';
 import { getNewPriceListData } from './loader/getNewPriceListData';
 import type { PartnershipRowData } from './loader/getPartnershipData';
 import { createPriceListAction, updatePriceListInfoAction } from './actions';
+import {
+  isActionDataError,
+  isActionDataSuccess,
+} from '~/lib/utils/actionDataUtils';
 
 type LoaderDataProps = {
   settingsData: Settings;
   productsData: ProductPropsWithPositions[];
   partnershipsData: PartnershipRowData[];
+};
+
+export const loader = async ({ request, params }: LoaderFunctionArgs) => {
+  try {
+    const {
+      session,
+      admin: { graphql },
+    } = await authenticate.admin(request);
+    const { id: sessionId } = session;
+    const { id: priceListId } = params;
+    const isNew = priceListId === 'new';
+    let data = null;
+
+    if (!priceListId) {
+      throw createJSONError(
+        'There is no price list id.',
+        StatusCodes.BAD_REQUEST,
+      );
+    }
+
+    const hasPriceList = await userHasPriceList(sessionId, priceListId);
+    if (!isNew && !hasPriceList) {
+      throw createJSONError(
+        'User does not own this price list.',
+        StatusCodes.UNAUTHORIZED,
+      );
+    }
+
+    if (!isNew) {
+      data = await getExistingPriceListData(sessionId, priceListId, graphql);
+    } else {
+      data = await getNewPriceListData(sessionId);
+    }
+    return json(data, StatusCodes.OK);
+  } catch (error) {
+    throw handleRouteError(error, '/app/price-list/$id');
+  }
 };
 
 export const action = async ({ request, params }: ActionFunctionArgs) => {
@@ -93,8 +134,8 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
     const formData = await request.formData();
     const { id: priceListId } = params;
     if (!priceListId) {
-      return createJSONMessage(
-        'There is no price list id',
+      return createJSONError(
+        'There is no price list id;',
         StatusCodes.BAD_REQUEST,
       );
     }
@@ -112,45 +153,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       sessionId,
     );
   } catch (error) {
-    console.error(error);
-    return getJSONError(error, '/app/price-list/$id');
-  }
-};
-
-export const loader = async ({ request, params }: LoaderFunctionArgs) => {
-  try {
-    const {
-      session,
-      admin: { graphql },
-    } = await authenticate.admin(request);
-    const { id: sessionId } = session;
-    const { id: priceListId } = params;
-    const isNew = priceListId === 'new';
-    let data = null;
-
-    if (!priceListId) {
-      throw createJSONMessage(
-        'Price list id is empty',
-        StatusCodes.BAD_REQUEST,
-      );
-    }
-
-    const hasPriceList = await userHasPriceList(sessionId, priceListId);
-    if (!isNew && !hasPriceList) {
-      throw createJSONMessage(
-        'User does not own this price list.',
-        StatusCodes.UNAUTHORIZED,
-      );
-    }
-
-    if (!isNew) {
-      data = await getExistingPriceListData(sessionId, priceListId, graphql);
-    } else {
-      data = await getNewPriceListData(sessionId);
-    }
-    return json(data, StatusCodes.OK);
-  } catch (error) {
-    throw getJSONError(error, '/app/price-list/$id');
+    return handleRouteError(error, '/app/price-list/$id');
   }
 };
 
@@ -188,19 +191,20 @@ const CreateEditPriceList = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   // this is for pending message
+
   useEffect(() => {
-    if (actionData && 'message' in actionData) {
-      shopify.toast.show(actionData.message);
-      setError('');
-    } else if (
-      actionData &&
-      'error' in actionData &&
-      'message' in actionData.error
-    ) {
-      shopify.toast.show('Error: see above.', {
+    if (!actionData) {
+      return;
+    }
+    if (isActionDataError(actionData)) {
+      const errorMessage = actionData.error.message;
+      shopify.toast.show(errorMessage, {
         isError: true,
       });
-      setError(actionData.error.message);
+      setError(errorMessage);
+    } else if (isActionDataSuccess(actionData)) {
+      shopify.toast.show(actionData.message);
+      setError('');
     }
   }, [actionData, shopify]);
 
@@ -398,12 +402,11 @@ const CreateEditPriceList = () => {
       variants: product.variants.map(({ id }) => ({ id })),
     }));
 
+    // TODO: research https://shopify.dev/docs/api/app-bridge-library/apis/resource-picker to see the query for not including imported products
     const productsSelected = await shopify.resourcePicker({
       type: 'product',
       multiple: true,
       action: 'select',
-      showArchived: false,
-      showDraft: false,
       selectionIds: resourcePickerInitialSelection,
     });
 

@@ -6,7 +6,7 @@ import {
   markCheckListStatus,
 } from '~/services/models/checklistStatus';
 import { changePaymentMethodStatus } from '~/services/models/stripeCustomerAccount';
-import { createJSONMessage } from '~/lib/utils/server';
+import { createJSONSuccess } from '~/lib/utils/server';
 
 async function finishStripeCustomerOnboarding(sessionId: string) {
   const checklistItemId = (
@@ -19,7 +19,7 @@ async function finishStripeCustomerOnboarding(sessionId: string) {
     changePaymentMethodStatus(sessionId, true),
   ]);
 
-  return createJSONMessage(
+  return createJSONSuccess(
     'Finished adding payment method for stripe customer.',
     StatusCodes.OK,
   );

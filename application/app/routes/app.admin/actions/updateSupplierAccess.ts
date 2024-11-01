@@ -10,7 +10,7 @@ import db from '~/db.server';
 import { type Prisma } from '@prisma/client';
 import { getRoleBatch } from '~/services/models/roles';
 import { updateChecklistStatusBatchTx } from '~/services/models/checklistStatus';
-import { createJSONMessage, errorHandler } from '~/lib/utils/server';
+import { createJSONSuccess, errorHandler } from '~/lib/utils/server';
 
 export type SupplierAccessRequestInfo = {
   supplierAccessRequestId: string;
@@ -145,7 +145,7 @@ export async function approveSuppliers(
       ]);
     });
 
-    return createJSONMessage(
+    return createJSONSuccess(
       'Suppliers were successfully approved.',
       StatusCodes.OK,
     );
@@ -184,7 +184,7 @@ async function rejectSuppliers(
       ]);
     });
 
-    return createJSONMessage(
+    return createJSONSuccess(
       'Suppliers were successfully rejected.',
       StatusCodes.OK,
     );
@@ -198,22 +198,14 @@ async function rejectSuppliers(
   }
 }
 
+// TODO: add Yup Validation
 export async function updateSupplierAccessAction(
   supplierAccessRequestInfo: SupplierAccessRequestInfo[],
   status: AccessRequestStatusOptions,
 ) {
-  try {
-    if (status === ACCESS_REQUEST_STATUS.REJECTED) {
-      return await rejectSuppliers(supplierAccessRequestInfo);
-    } else if (status === ACCESS_REQUEST_STATUS.APPROVED) {
-      return await approveSuppliers(supplierAccessRequestInfo);
-    }
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to update supplier access statuses.',
-      updateSupplierAccessAction,
-      { supplierAccessRequestInfo, status },
-    );
+  if (status === ACCESS_REQUEST_STATUS.REJECTED) {
+    return await rejectSuppliers(supplierAccessRequestInfo);
+  } else if (status === ACCESS_REQUEST_STATUS.APPROVED) {
+    return await approveSuppliers(supplierAccessRequestInfo);
   }
 }

@@ -17,8 +17,12 @@ import {
 } from '@shopify/polaris';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRoleContext } from '~/context/RoleProvider';
-import { convertFormDataToObject } from '~/lib/utils';
-import { createJSONMessage, getJSONError } from '~/lib/utils/server';
+import {
+  convertFormDataToObject,
+  isActionDataError,
+  isActionDataSuccess,
+} from '~/lib/utils';
+import { createJSONError, handleRouteError } from '~/lib/utils/server';
 import { authenticate } from '~/shopify.server';
 import { StatusCodes } from 'http-status-codes';
 import type { ActionFunctionArgs, LoaderFunctionArgs } from '@remix-run/node';
@@ -47,7 +51,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     } = await authenticate.admin(request);
     const isRetailer = await hasRole(sessionId, ROLES.RETAILER);
     if (!isRetailer) {
-      throw createJSONMessage(
+      throw createJSONError(
         'User is not retailer. Unauthorized to view supplier partnership requests.',
         StatusCodes.NOT_IMPLEMENTED,
       );
@@ -55,7 +59,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const supplierPartnershipInfo = await getSupplierPartnershipInfo(sessionId);
     return json(supplierPartnershipInfo, StatusCodes.OK);
   } catch (error) {
-    throw getJSONError(error, 'supplier partnerships');
+    throw handleRouteError(error, 'supplier partnerships');
   }
 };
 
@@ -73,14 +77,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         return await rejectRemoveSuppliersAction(
           data as RejectRemoveSuppliersActionProps,
         );
+      default:
+        return createJSONError(
+          `Intent ${intent} is invalid.`,
+          StatusCodes.NOT_IMPLEMENTED,
+        );
     }
-
-    return createJSONMessage(
-      'Functionality has not been implemented yet.',
-      StatusCodes.NOT_IMPLEMENTED,
-    );
   } catch (error) {
-    throw getJSONError(error, '/app/partnerships/supplier');
+    return handleRouteError(error, '/app/partnerships/supplier');
   }
 };
 
@@ -104,14 +108,20 @@ const SupplierPartnerships = () => {
     clearSelection,
   } = useIndexResourceState(filteredRequestsData);
 
-  // TODO: handle bug where queries are reset when approve / reject suppliers
   useEffect(() => {
     setRequestsData(data);
     setFilteredRequestsData(data);
   }, [data]);
 
   useEffect(() => {
-    if (actionData && 'message' in actionData) {
+    if (!actionData) {
+      return;
+    }
+    if (isActionDataError(actionData)) {
+      shopify.toast.show(actionData.error.message, {
+        isError: true,
+      });
+    } else if (isActionDataSuccess(actionData)) {
       shopify.toast.show(actionData.message);
       clearSelection();
     }

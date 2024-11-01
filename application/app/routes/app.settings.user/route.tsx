@@ -28,8 +28,12 @@ import {
   type ProfileProps,
   getProfile,
 } from '~/services/models/userProfile';
-import { convertFormDataToObject } from '~/lib/utils';
-import { createJSONMessage, getJSONError } from '~/lib/utils/server';
+import {
+  convertFormDataToObject,
+  isActionDataError,
+  isActionDataSuccess,
+} from '~/lib/utils';
+import { createJSONSuccess, handleRouteError } from '~/lib/utils/server';
 import {
   useActionData,
   useLoaderData,
@@ -96,7 +100,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       },
     );
   } catch (error) {
-    throw getJSONError(error, 'settings');
+    throw handleRouteError(error, 'settings');
   }
 };
 // TODO: Refactor social social media model to be more flexible so you don't have to destructure props in future
@@ -152,12 +156,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       visibilityObj,
     );
 
-    return createJSONMessage(
+    return createJSONSuccess(
       'Successfully updated user settings.',
       StatusCodes.OK,
     );
   } catch (error) {
-    throw getJSONError(error, '/app/settings/user');
+    throw handleRouteError(error, '/app/settings/user');
   }
 };
 
@@ -182,7 +186,13 @@ const UserSettings = () => {
   const remixSubmit = useRemixSubmit();
 
   useEffect(() => {
-    if (actionData && 'message' in actionData) {
+    if (!actionData) {
+      return;
+    }
+
+    if (isActionDataError(actionData)) {
+      shopify.toast.show(actionData.error.message, { isError: true });
+    } else if (isActionDataSuccess(actionData)) {
       shopify.toast.show(actionData.message);
     }
   }, [actionData, shopify]);

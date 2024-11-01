@@ -13,8 +13,16 @@ import {
   type LoaderFunctionArgs,
 } from '@remix-run/node';
 import { StatusCodes } from 'http-status-codes';
-import { createJSONMessage, getJSONError } from '~/lib/utils/server';
-import { convertFormDataToObject } from '~/lib/utils';
+import {
+  createJSONError,
+  createJSONSuccess,
+  handleRouteError,
+} from '~/lib/utils/server';
+import {
+  convertFormDataToObject,
+  isActionDataError,
+  isActionDataSuccess,
+} from '~/lib/utils';
 import { authenticate } from '~/shopify.server';
 import { hasRole } from '~/services/models/roles';
 import { ROLES } from '~/constants';
@@ -58,14 +66,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }
 
     if (!isRetailer) {
-      throw createJSONMessage(
+      throw createJSONSuccess(
         'Unauthorized. User is not a retailer',
         StatusCodes.UNAUTHORIZED,
       );
     }
 
     if (!hasStripePaymentMethod) {
-      throw createJSONMessage(
+      throw createJSONSuccess(
         'Unauthorized. User is does not have a payment method',
         StatusCodes.UNAUTHORIZED,
       );
@@ -78,7 +86,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     });
     return json(supplierInfo, StatusCodes.OK);
   } catch (error) {
-    throw getJSONError(error, '/app/supplier-network');
+    throw handleRouteError(error, '/app/supplier-network');
   }
 };
 
@@ -95,10 +103,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           formDataObject as RequestAccessFormData,
           sessionId,
         );
+      default:
+        return createJSONError(
+          `Intent ${intent} is not valid`,
+          StatusCodes.NOT_IMPLEMENTED,
+        );
     }
-    return createJSONMessage('Not Implemented', StatusCodes.NOT_IMPLEMENTED);
   } catch (error) {
-    return getJSONError(error, '/app/supplier-network');
+    return handleRouteError(error, '/app/supplier-network');
   }
 };
 
@@ -120,7 +132,12 @@ const SupplierNetwork = () => {
   }, [data]);
 
   useEffect(() => {
-    if (actionData && 'message' in actionData) {
+    if (!actionData) {
+      return;
+    }
+    if (isActionDataError(actionData)) {
+      shopify.toast.show(actionData.error.message, { isError: true });
+    } else if (isActionDataSuccess(actionData)) {
       shopify.toast.show(actionData.message);
     }
   }, [actionData]);

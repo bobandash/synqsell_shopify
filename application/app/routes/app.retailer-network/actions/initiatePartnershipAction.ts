@@ -1,5 +1,5 @@
 import { array, object, string } from 'yup';
-import { createJSONMessage } from '~/lib/utils/server';
+import { createJSONSuccess } from '~/lib/utils/server';
 import { INTENTS } from '../constants';
 import { isValidPriceList } from '~/services/models/priceList';
 import {
@@ -75,8 +75,8 @@ async function initiatePartnershipAction(
     ]);
   });
 
-  return createJSONMessage(
-    'Successfully sent supplier partnership request to retailer.',
+  return createJSONSuccess(
+    'Successfully sent partnership request to retailer.',
     StatusCodes.CREATED,
   );
 }

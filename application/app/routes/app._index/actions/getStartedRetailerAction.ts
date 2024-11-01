@@ -26,7 +26,7 @@ import {
 } from '~/services/helper/fulfillmentService';
 import { INTENTS } from '../constants';
 import { checklistItemIdMatchesKey } from '~/services/models/checklistItem';
-import { getJSONError, errorHandler } from '~/lib/utils/server';
+import { errorHandler, createJSONSuccess } from '~/lib/utils/server';
 
 const getStartedRetailerSchema = object({
   intent: string().oneOf([INTENTS.RETAILER_GET_STARTED]),
@@ -50,51 +50,39 @@ export type GetStartedRetailerActionData = {
 };
 
 // TODO: Refactor this file after MVP is deployed
-
 // Guard check for fetcher data
 export async function getStartedRetailerAction(
   graphql: GraphQL,
   formDataObject: FormDataObject,
   sessionId: string,
 ) {
-  try {
-    await getStartedRetailerSchema.validate(formDataObject);
-    const { checklistItemId } = formDataObject as RetailerData;
-    const [
-      checklistStatusCompleted,
-      fulfillmentServiceExists,
-      hasRetailerRole,
-    ] = await Promise.all([
+  await getStartedRetailerSchema.validate(formDataObject);
+  const { checklistItemId } = formDataObject as RetailerData;
+  const [checklistStatusCompleted, fulfillmentServiceExists, hasRetailerRole] =
+    await Promise.all([
       isChecklistStatusCompleted(sessionId, checklistItemId),
       hasFulfillmentService(sessionId, graphql),
       hasRole(sessionId, ROLES.RETAILER),
     ]);
 
-    if (
-      checklistStatusCompleted &&
-      fulfillmentServiceExists &&
-      hasRetailerRole
-    ) {
-      const completedFields = await handleCompleted(sessionId, checklistItemId);
-      return completedFields;
-    }
-
-    await createOrGetFields(
-      checklistStatusCompleted,
-      fulfillmentServiceExists,
-      hasRetailerRole,
-      graphql,
-      sessionId,
-      checklistItemId,
-    );
-
-    return json(
-      { message: 'You have successfully became a retailer.' },
-      StatusCodes.OK,
-    );
-  } catch (error) {
-    throw getJSONError(error, 'index');
+  if (checklistStatusCompleted && fulfillmentServiceExists && hasRetailerRole) {
+    const completedFields = await handleCompleted(sessionId, checklistItemId);
+    return completedFields;
   }
+
+  await createOrGetFields(
+    checklistStatusCompleted,
+    fulfillmentServiceExists,
+    hasRetailerRole,
+    graphql,
+    sessionId,
+    checklistItemId,
+  );
+
+  return createJSONSuccess(
+    'You have successfully became a retailer.',
+    StatusCodes.OK,
+  );
 }
 
 // Just return all the relevant fields, fulfillmentService, checklistStatus, and role if the item is already completed

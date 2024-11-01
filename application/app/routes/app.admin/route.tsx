@@ -33,8 +33,13 @@ import {
   updateSupplierAccessAction,
   type SupplierAccessRequestInfo,
 } from './actions';
-import { createJSONMessage, getJSONError } from '~/lib/utils/server';
-import { convertFormDataToObject, convertToDate } from '~/lib/utils';
+import { createJSONError, handleRouteError } from '~/lib/utils/server';
+import {
+  convertFormDataToObject,
+  convertToDate,
+  isActionDataError,
+  isActionDataSuccess,
+} from '~/lib/utils';
 
 type RowMarkupProps = {
   data: GetSupplierAccessRequestJSONProps;
@@ -58,15 +63,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const { id: sessionId } = session;
     const isAdmin = await hasRole(sessionId, ROLES.ADMIN);
     if (!isAdmin) {
-      throw createJSONMessage(
-        'Unauthorized. User is not an admin.',
+      throw createJSONError(
+        'Unauthorized. User is not an administrator.',
         StatusCodes.UNAUTHORIZED,
       );
     }
     const supplierAccessRequests = await getAllSupplierAccessRequests();
     return json(supplierAccessRequests, StatusCodes.OK);
   } catch (error) {
-    throw getJSONError(error, '/app/admin');
+    throw handleRouteError(error, '/app/admin');
   }
 };
 
@@ -76,7 +81,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const data = convertFormDataToObject(formData) as ActionData;
     const { intent, supplierAccessRequestInfo } = data;
     if (!supplierAccessRequestInfo) {
-      return createJSONMessage(
+      return createJSONError(
         'There were no suppliers selected.',
         StatusCodes.BAD_REQUEST,
       );
@@ -93,14 +98,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           supplierAccessRequestInfo,
           ACCESS_REQUEST_STATUS.REJECTED,
         );
+      default:
+        return createJSONError(
+          `Intent ${intent} not implemented`,
+          StatusCodes.NOT_IMPLEMENTED,
+        );
     }
-
-    return createJSONMessage(
-      'Intent not implemented',
-      StatusCodes.NOT_IMPLEMENTED,
-    );
   } catch (error) {
-    return getJSONError(error, '/app/admin');
+    return handleRouteError(error, '/app/admin');
   }
 };
 
@@ -137,9 +142,15 @@ const Admin = () => {
   }, [query, requestsData]);
 
   useEffect(() => {
-    if (actionData?.message) {
+    if (!actionData) {
+      return;
+    }
+    if (isActionDataError(actionData)) {
+      shopify.toast.show(actionData.error.message, {
+        isError: true,
+      });
+    } else if (isActionDataSuccess(actionData)) {
       shopify.toast.show(actionData.message);
-      actionData.message = '';
     }
   }, [actionData, shopify]);
 

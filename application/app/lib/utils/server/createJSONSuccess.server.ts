@@ -1,7 +1,8 @@
 import { json } from '@remix-run/node';
 import type { StatusCodes } from 'http-status-codes';
 
-function createJSONMessage(message: string, statusCode: StatusCodes) {
+// this is for success messages
+function createJSONSuccess(message: string, statusCode: StatusCodes) {
   return json(
     {
       message,
@@ -10,4 +11,4 @@ function createJSONMessage(message: string, statusCode: StatusCodes) {
   );
 }
 
-export default createJSONMessage;
+export default createJSONSuccess;

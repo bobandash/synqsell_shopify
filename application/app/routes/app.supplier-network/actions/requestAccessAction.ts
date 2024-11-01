@@ -15,7 +15,7 @@ import { StatusCodes } from 'http-status-codes';
 import db from '~/db.server';
 import { updateChecklistStatusTx } from '~/services/models/checklistStatus';
 import { sessionIdSchema } from '~/schemas/models';
-import { createJSONMessage } from '~/lib/utils/server';
+import { createJSONSuccess } from '~/lib/utils/server';
 
 export type RequestAccessFormData = {
   intent: IntentsProps;
@@ -76,7 +76,7 @@ export async function requestAccessAction(
     ]);
   });
 
-  return createJSONMessage(
+  return createJSONSuccess(
     'Successfully created partnership request.',
     StatusCodes.CREATED,
   );

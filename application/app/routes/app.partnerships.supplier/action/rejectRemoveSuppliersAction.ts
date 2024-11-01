@@ -8,7 +8,7 @@ import {
   partnershipIdListSchema,
   partnershipRequestIdListSchema,
 } from '~/schemas/models';
-import { createJSONMessage } from '~/lib/utils/server';
+import { createJSONSuccess } from '~/lib/utils/server';
 
 export type RejectRemoveSuppliersActionProps = {
   intent: IntentsProps;
@@ -34,7 +34,7 @@ export async function rejectRemoveSuppliersAction(
     ]);
   });
 
-  return createJSONMessage(
+  return createJSONSuccess(
     'Successfully removed partnerships.',
     StatusCodes.OK,
   );

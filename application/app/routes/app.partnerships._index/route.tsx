@@ -4,7 +4,7 @@ import { StatusCodes } from 'http-status-codes';
 import { ROLES } from '~/constants';
 import { hasRole } from '~/services/models/roles';
 import { authenticate } from '~/shopify.server';
-import { createJSONMessage, getJSONError } from '~/lib/utils/server';
+import { createJSONError, handleRouteError } from '~/lib/utils/server';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
@@ -20,13 +20,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     } else if (isSupplier) {
       return redirect('/app/partnerships/retailer');
     }
-
-    throw createJSONMessage(
+    throw createJSONError(
       'User is not retailer or supplier. Unauthorized to view partnership information.',
       StatusCodes.UNAUTHORIZED,
     );
   } catch (error) {
-    throw getJSONError(error, '/partnerships/_index');
+    throw handleRouteError(error, '/partnerships/_index');
   }
 };
 

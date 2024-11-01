@@ -6,8 +6,8 @@ import {
 import { Button, InlineGrid, InlineStack, Page } from '@shopify/polaris';
 import { StatusCodes } from 'http-status-codes';
 import { authenticate } from '~/shopify.server';
-import { convertFormDataToObject } from '~/lib/utils';
-import { createJSONMessage, getJSONError } from '~/lib/utils/server';
+import { convertFormDataToObject, isActionDataError } from '~/lib/utils';
+import { createJSONError, handleRouteError } from '~/lib/utils/server';
 import { isValidPriceList } from '~/services/models/priceList';
 import {
   useLoaderData,
@@ -67,14 +67,14 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     let cursor = next || prev || null;
 
     if (!(await isValidPriceList(priceListId))) {
-      throw createJSONMessage(
+      throw createJSONError(
         'Price list could not be found.',
         StatusCodes.NOT_FOUND,
       );
     }
 
     if (!(await hasAccessToViewPriceList(priceListId, sessionId))) {
-      throw createJSONMessage(
+      throw createJSONError(
         'You do not have access to view products in this price list.',
         StatusCodes.UNAUTHORIZED,
       );
@@ -90,7 +90,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
       await getPriceListsWithAccessForSpecificSupplier(priceListId, sessionId);
     return json({ productCardInfo, priceListsWithAccess }, StatusCodes.OK);
   } catch (error) {
-    throw getJSONError(error, '/products/priceListId');
+    throw handleRouteError(error, '/products/priceListId');
   }
 };
 
@@ -107,10 +107,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       case INTENTS.IMPORT_PRODUCT:
         const data = formDataObject as ImportProductFormData;
         return await importProductAction(data, sessionId, graphql);
+      default:
+        return createJSONError(
+          `Intent ${intent} is not valid`,
+          StatusCodes.NOT_IMPLEMENTED,
+        );
     }
-    return createJSONMessage('Not implemented.', StatusCodes.UNAUTHORIZED);
   } catch (error) {
-    return getJSONError(error, '/products/priceListId');
+    return handleRouteError(error, '/products/priceListId');
   }
 };
 
@@ -188,6 +192,15 @@ const PriceListProducts = () => {
       });
     }
   }, [navigation, actionData]);
+
+  useEffect(() => {
+    if (!actionData) {
+      return;
+    }
+    if (isActionDataError(actionData)) {
+      shopify.toast.show(actionData.error.message, { isError: true });
+    }
+  }, [actionData]);
 
   // to render between different price lists in the ui
   const actionGroups = useMemo(() => {

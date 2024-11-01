@@ -16,7 +16,7 @@ import { getRoles } from '~/services/models/roles';
 import { ROLES } from '~/constants';
 import { useEffect, useState } from 'react';
 import { RoleProvider } from '~/context/RoleProvider';
-import { getJSONError } from '~/lib/utils/server';
+import { handleRouteError } from '~/lib/utils/server';
 import {
   BlockStack,
   Card,
@@ -43,6 +43,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       billing,
     } = await authenticate.admin(request);
 
+    // confirms that app has a subscription to Shopify's billing api
     await handleBilling(shop, sessionId, billing);
 
     const [roles, hasStripeConnectAccount, hasStripePaymentMethod] =
@@ -61,7 +62,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       hasStripePaymentMethod,
     });
   } catch (error) {
-    throw getJSONError(error, '/app');
+    throw handleRouteError(error, '/app');
   }
 };
 
@@ -112,13 +113,19 @@ export default function App() {
 // Shopify needs Remix to catch some thrown responses, so that their headers are included in the response.
 export function ErrorBoundary() {
   const error = useRouteError();
-  console.log(error);
-
+  console.error(error);
   let reason = 'Unhandled error. Please contact support.';
   let status = 500;
   if (isRouteErrorResponse(error)) {
-    if (error && 'data' in error && 'message' in error.data) {
-      reason = error.data.message;
+    console.log(error);
+
+    if (
+      error &&
+      'data' in error &&
+      'error' in error.data &&
+      'message' in error.data.error
+    ) {
+      reason = error.data.error.message;
     }
     status = error.status;
   }
@@ -149,15 +156,14 @@ export function ErrorBoundary() {
           >
             {reason}
           </Text>
-          <Text variant="bodyLg" as="p" fontWeight="bold" alignment="center">
-            Navigate back to <PolarisLink url="/app">main screen</PolarisLink>{' '}
-            or{' '}
-            <PolarisLink url="mailto:synqsell@gmail.com">
-              contact support
-            </PolarisLink>
-            .
-          </Text>
         </BlockStack>
+        <Text variant="bodyLg" as="p" fontWeight="bold" alignment="center">
+          Click on the sidebar to navigate back to the main screen or{' '}
+          <PolarisLink url="mailto:synqsell@gmail.com">
+            contact support
+          </PolarisLink>
+          .
+        </Text>
         <PaddedBox />
       </Card>
     </Page>

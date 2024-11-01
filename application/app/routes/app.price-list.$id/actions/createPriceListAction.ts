@@ -69,6 +69,7 @@ async function createPriceListAndCompleteChecklistItemAction(
     const shopifyProductIdsToAdd = products.map(
       (product) => product.shopifyProductId,
     );
+
     const newPriceList = await db.$transaction(async (tx) => {
       await updateChecklistStatusTx(
         tx,
@@ -98,7 +99,7 @@ async function createPriceListAndCompleteChecklistItemAction(
   } catch (error) {
     throw errorHandler(
       error,
-      'Failed to create price list and update checklist item in transaction.',
+      'Failed to create price list.',
       createPriceListAndCompleteChecklistItemAction,
       { data, sessionId },
     );
