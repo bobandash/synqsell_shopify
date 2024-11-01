@@ -34,9 +34,8 @@ confirm_changeset = true
 region = "us-east-2"
 s3_bucket = "synqsell-sam"
 image_repositories = []
-template_file = "infrastructure/template.yaml"
+template_file = ".aws-sam/build/template.yaml"
 parameter_overrides = "Environment=dev ApiKeySecret=dev/apiKeys AppConfigSecret=dev/appConfig"
-
 
 [prod]
 [prod.build.parameters]
@@ -52,7 +51,7 @@ capabilities = "CAPABILITY_IAM CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND"
 confirm_changeset = true
 region = "us-east-2"
 s3_bucket = "synqsell-sam-prod"
-template_file = "infrastructure/template.yaml"
+template_file = ".aws-sam/build/template.yaml"
 image_repositories = []
 parameter_overrides = "Environment=prod ApiKeySecret=prod/apiKeys AppConfigSecret=prod/appConfig"
 
