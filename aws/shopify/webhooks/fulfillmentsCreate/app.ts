@@ -55,7 +55,6 @@ export const lambdaHandler = async (event: ShopifyEvent): Promise<APIGatewayProx
             };
         }
 
-        // TODO: Not urgent; I started off with the wrong webhook, so this impl makes unnecessary fetches to tracking information and line items
         await createRetailerFulfillment(shopifyFulfillmentId, shopifyOrderId, supplierSession, client);
 
         return {

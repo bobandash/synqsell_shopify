@@ -174,10 +174,9 @@ async function addRetailerFulfillmentOnShopify(
     ); // key = supplierShopifyOrderLineItemId, value = {retailerShopifyOrderLineItemId: string}
 
     const { trackingInfo, lineItems } = supplierFulfillmentDetails;
-
     const fulfillmentCreateInput = {
         notifyCustomer: true,
-        ...(trackingInfo.length > 1 && {
+        ...(trackingInfo.length > 0 && {
             trackingInfo: trackingInfo.reduce(
                 (acc, tracking) => {
                     return {
@@ -214,7 +213,7 @@ async function addRetailerFulfillmentOnShopify(
         {
             fulfillment: fulfillmentCreateInput,
         },
-        'Failed to create fulfillment for retailer.',
+        'Failed to create fulfillment for retailer on Shopify.',
     );
 
     const retailerFulfillmentId = matchingRetailerFulfillment.fulfillmentCreateV2?.fulfillment?.id ?? '';
@@ -223,12 +222,12 @@ async function addRetailerFulfillmentOnShopify(
 
 async function getDbOrderId(supplierShopifyOrderId: string, client: PoolClient) {
     try {
-        const orderQuery = `
+        const query = `
             SELECT "id" FROM "Order"
             WHERE "supplierShopifyOrderId" = $1
             LIMIT 1        
         `;
-        const orderRes = await client.query(orderQuery, [supplierShopifyOrderId]);
+        const orderRes = await client.query(query, [supplierShopifyOrderId]);
         if (orderRes.rows.length === 0) {
             throw new Error('There is no order id for shopify supplier order id ' + supplierShopifyOrderId);
         }
