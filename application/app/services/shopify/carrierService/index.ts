@@ -14,7 +14,7 @@ import type {
   InitialCarrierServicesQuery,
   SubsequentCarrierServicesQuery,
 } from '~/types/admin.generated';
-import { CARRIER_SERVICE } from '~/constants.server';
+import { getCarrierServiceDetails } from '~/constants.server';
 
 // https://shopify.dev/docs/api/admin-graphql/2024-01/objects/DeliveryCarrierService
 // By creating a carrier service, when the customer goes to the checkout screen, we can put custom shipping rates
@@ -60,8 +60,9 @@ export async function getCarrierService(sessionId: string, graphql: GraphQL) {
   // retrieve all the carrier services
   try {
     const carrierServices = await getAllCarrierServices(graphql);
+    const carrierServiceDetails = getCarrierServiceDetails(sessionId);
     const filteredCarrierServices = carrierServices.filter(({ name }) => {
-      return name === CARRIER_SERVICE.name;
+      return name === carrierServiceDetails.name;
     });
 
     if (filteredCarrierServices.length === 0) {
@@ -83,11 +84,13 @@ export async function createCarrierService(
   graphql: GraphQL,
 ) {
   try {
+    const carrierServiceDetails = getCarrierServiceDetails(sessionId);
+
     const variables = {
       input: {
         active: true,
-        callbackUrl: CARRIER_SERVICE.callbackUrl,
-        name: CARRIER_SERVICE.name,
+        callbackUrl: carrierServiceDetails.callbackUrl,
+        name: carrierServiceDetails.name,
         supportsServiceDiscovery: false,
       },
     };

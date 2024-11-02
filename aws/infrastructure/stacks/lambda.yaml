@@ -218,6 +218,7 @@ Resources:
       Runtime: nodejs20.x
       Architectures:
         - x86_64
+      Role: !GetAtt PrivateFunctionRole.Arn
     Metadata:
       BuildMethod: esbuild
       BuildProperties:

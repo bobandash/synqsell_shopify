@@ -1,4 +1,4 @@
-// constants that depend on the environment
+// constants that depend on env variables
 const getServiceName = (env: string) => {
   switch (env) {
     case 'development':
@@ -12,7 +12,17 @@ const getServiceName = (env: string) => {
   }
 };
 
-export const CARRIER_SERVICE = {
-  name: getServiceName(process.env.NODE_ENV),
-  callbackUrl: process.env.CARRIER_SERVICE_CALLBACK_URL,
+const getCarrierServiceCallbackUrl = (sessionId: string) => {
+  const callbackUrl = process.env.CARRIER_SERVICE_CALLBACK_URL;
+  if (!callbackUrl) {
+    throw new Error('Callback url is not defined in environment variables.');
+  }
+  return `${callbackUrl}?sessionId=${sessionId}`;
+};
+
+export const getCarrierServiceDetails = (sessionId: string) => {
+  return {
+    name: getServiceName(process.env.NODE_ENV),
+    callbackUrl: getCarrierServiceCallbackUrl(sessionId),
+  };
 };

@@ -129,6 +129,7 @@ async function getAllShippingRates(
             })),
         },
     };
+
     // TODO: implement retry logic
     const response = await fetch(carrierServiceCallbackUrl, {
         method: 'POST',
@@ -139,9 +140,11 @@ async function getAllShippingRates(
     });
 
     if (!response.ok) {
-        throw new Error(
-            `Failed to get all shipping rates for fulfillment order id ${fulfillmentOrder.fulfillmentOrderId}.`,
-        );
+        console.error('Delivery service callback url failed to execute properly. Please check logs.');
+        // even if carrier service fails, order should still execute
+        return {
+            rates: [],
+        };
     }
     const data: ShippingRateResponse = await response.json();
     return data;
@@ -155,6 +158,14 @@ async function getSupplierShippingRate(
     retailerSession: Session,
     client: PoolClient,
 ) {
+    let shippingRate: ShippingRate = {
+        priceWithCurrency: {
+            amount: 0,
+            currencyCode: 'USD',
+        },
+        title: 'Economy',
+    };
+
     try {
         const shopifyCarrierServiceId = await getShopifyCarrierServiceId(retailerSession.id, client);
         const carrierServiceCallbackUrl = await getCarrierServiceCallbackUrl(retailerSession, shopifyCarrierServiceId);
@@ -163,6 +174,7 @@ async function getSupplierShippingRate(
             customerShippingDetails,
             carrierServiceCallbackUrl,
         );
+
         // please reference deliveryCarrierService lambda function for more details on the impl,
         // but the fulfillment order's service code is what shipping method the customer chose
         // custom = international shipping or standard_shipping (supplier and retailer can be in different countries)
@@ -174,7 +186,8 @@ async function getSupplierShippingRate(
                 return shippingRate.service_code === serviceCode;
             }
         });
-        const shippingRate: ShippingRate = {
+
+        shippingRate = {
             priceWithCurrency: {
                 amount: parseFloat(shippingRateOfInterest?.[0]?.total_price ?? '0'),
                 currencyCode: shippingRateOfInterest?.[0]?.currency ?? 'USD',
@@ -275,59 +288,64 @@ async function completeDraftOrder(draftOrderId: string, supplierSession: Session
 // START: ADD ORDERS TO DATABASE LOGIC
 // ==============================================================================================================
 async function getOrderDetails(shopifyOrderId: string, session: Session) {
-    let hasMore = true;
-    let endCursor = null;
+    try {
+        let hasMore = true;
+        let endCursor = null;
 
-    const initialOrderDetails = await fetchAndValidateGraphQLData<InitialOrderDetailsQuery>(
-        session.shop,
-        session.accessToken,
-        GET_INITIAL_ORDER_DETAILS_DATABASE,
-        {
-            id: shopifyOrderId,
-        },
-    );
+        const initialOrderDetails = await fetchAndValidateGraphQLData<InitialOrderDetailsQuery>(
+            session.shop,
+            session.accessToken,
+            GET_INITIAL_ORDER_DETAILS_DATABASE,
+            {
+                id: shopifyOrderId,
+            },
+        );
 
-    const orderDetails = initialOrderDetails.order;
-    const orderDetailsForDatabase: OrderDetailForDatabase = {
-        shopifyOrderId: shopifyOrderId,
-        currency: orderDetails?.presentmentCurrencyCode ?? null,
-        shippingCost: orderDetails?.shippingLine?.originalPriceSet.presentmentMoney.amount ?? 0,
-        lineItems:
-            orderDetails?.lineItems.edges.map(({ node }) => ({
-                shopifyLineItemId: node.id,
-                shopifyVariantId: node.variant?.id ?? null, // this will not be null, just graphql semantics
-                quantity: node.quantity,
-            })) ?? [],
-    };
+        const orderDetails = initialOrderDetails.order;
+        const orderDetailsForDatabase: OrderDetailForDatabase = {
+            shopifyOrderId: shopifyOrderId,
+            currency: orderDetails?.presentmentCurrencyCode ?? null,
+            shippingCost: orderDetails?.shippingLine?.originalPriceSet.presentmentMoney.amount ?? 0,
+            lineItems:
+                orderDetails?.lineItems.edges.map(({ node }) => ({
+                    shopifyLineItemId: node.id,
+                    shopifyVariantId: node.variant?.id ?? null, // this will not be null, just graphql semantics
+                    quantity: node.quantity,
+                })) ?? [],
+        };
 
-    hasMore = initialOrderDetails.order?.lineItems.pageInfo.hasNextPage ?? false;
-    endCursor = initialOrderDetails.order?.lineItems.pageInfo.endCursor ?? null;
-    while (hasMore && endCursor) {
-        const subsequentOrderLineItemDetails: SubsequentOrderDetailsQuery =
-            await fetchAndValidateGraphQLData<SubsequentOrderDetailsQuery>(
-                session.shop,
-                session.accessToken,
-                GET_SUBSEQUENT_ORDER_DETAILS_DATABASE,
-                {
-                    id: shopifyOrderId,
-                    after: endCursor,
-                },
-            );
+        hasMore = initialOrderDetails.order?.lineItems.pageInfo.hasNextPage ?? false;
+        endCursor = initialOrderDetails.order?.lineItems.pageInfo.endCursor ?? null;
+        while (hasMore && endCursor) {
+            const subsequentOrderLineItemDetails: SubsequentOrderDetailsQuery =
+                await fetchAndValidateGraphQLData<SubsequentOrderDetailsQuery>(
+                    session.shop,
+                    session.accessToken,
+                    GET_SUBSEQUENT_ORDER_DETAILS_DATABASE,
+                    {
+                        id: shopifyOrderId,
+                        after: endCursor,
+                    },
+                );
 
-        const prevLineItems = orderDetailsForDatabase?.lineItems;
-        const newLineItems =
-            subsequentOrderLineItemDetails.order?.lineItems.edges.map(({ node }) => ({
-                shopifyLineItemId: node.id,
-                shopifyVariantId: node.variant?.id ?? null, // this will not be null, just graphql semantics
-                quantity: node.quantity,
-            })) ?? [];
-        const lineItems = [...prevLineItems, ...newLineItems];
-        orderDetailsForDatabase.lineItems = lineItems;
-        hasMore = subsequentOrderLineItemDetails.order?.lineItems.pageInfo.hasNextPage ?? false;
-        endCursor = subsequentOrderLineItemDetails.order?.lineItems.pageInfo.endCursor ?? null;
+            const prevLineItems = orderDetailsForDatabase?.lineItems;
+            const newLineItems =
+                subsequentOrderLineItemDetails.order?.lineItems.edges.map(({ node }) => ({
+                    shopifyLineItemId: node.id,
+                    shopifyVariantId: node.variant?.id ?? null, // this will not be null, just graphql semantics
+                    quantity: node.quantity,
+                })) ?? [];
+            const lineItems = [...prevLineItems, ...newLineItems];
+            orderDetailsForDatabase.lineItems = lineItems;
+            hasMore = subsequentOrderLineItemDetails.order?.lineItems.pageInfo.hasNextPage ?? false;
+            endCursor = subsequentOrderLineItemDetails.order?.lineItems.pageInfo.endCursor ?? null;
+        }
+
+        return orderDetailsForDatabase;
+    } catch (error) {
+        console.error(error);
+        throw new Error(`Failed to get order details for Shopify order ${shopifyOrderId}`);
     }
-
-    return orderDetailsForDatabase;
 }
 
 async function addOrderToDatabase(

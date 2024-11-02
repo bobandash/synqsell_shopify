@@ -29,9 +29,9 @@ Here are a list of common commands used for development.
   sam logs -n <FunctionName> --stack-name SynqSell -t
   ```
   - `<FunctionName>` - this is found in your CloudFormation template
-- When you want to sync your local changes into the deployed cloudformation stack without running sam build + sam deploy everytime
+- When you want to sync your local changes into the deployed cloudformation stack without running sam build + sam deploy everytime (cd into aws/infrastructure)
   ```sh
-  sam sync --stack-name SynqSell --resource-id <FunctionName>
+  sam sync --stack-name  Synqsell-Dev --watch
   ```
   - `<FunctionName>` - this is found in your CloudFormation template
 

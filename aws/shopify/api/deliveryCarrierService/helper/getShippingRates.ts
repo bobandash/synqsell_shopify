@@ -197,14 +197,10 @@ async function getSupplierShippingRate(
             // mock cart has the disadvantage that the item has to have at least one stock, but it shouldn't matter because the supplier's order is not created until after the delivery carrier service api is called
             const userErrors = dataItem?.data?.cartCreate?.userErrors;
             if (userErrors && userErrors.length > 0) {
-                console.log(dataItem);
-                console.log(userErrors);
-
                 throw new Error(userErrors);
             } else if (dataItem.incremental?.[0]?.data?.deliveryGroups?.edges) {
                 dataItem.incremental.forEach((incremental: SubsequentCartCreateIncremental) => {
                     const deliveryGroups = incremental.data.deliveryGroups.edges;
-                    console.log(deliveryGroups);
                     deliveryGroups.forEach(({ node }) => {
                         const deliveryOptions = node.deliveryOptions;
                         deliveryOptions.forEach((option) => {
