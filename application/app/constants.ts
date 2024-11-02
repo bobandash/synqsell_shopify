@@ -2,7 +2,7 @@ export const ROLES = {
   RETAILER: 'retailer',
   SUPPLIER: 'supplier',
   ADMIN: 'admin',
-};
+} as const;
 
 export const PLANS = {
   BASIC_PLAN: 'Basic Plan',
@@ -66,8 +66,6 @@ export const ORDER_PAYMENT_STATUS = {
   PARTIALLY_PAID: 'PARTIALLY_PAID',
   PAID: 'PAID',
 } as const;
-
-export const CARRIER_SERVICE_NAME = 'SynqSell';
 
 export type PlanOptions = (typeof PLANS)[keyof typeof PLANS];
 
