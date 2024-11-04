@@ -152,6 +152,6 @@ button.green > p {
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
-  min-height: calc(1.2em * 2);
-  max-height: calc(1.2em * 2);
+  min-height: calc(1.45em * 2);
+  max-height: calc(1.45em * 2);
 }
