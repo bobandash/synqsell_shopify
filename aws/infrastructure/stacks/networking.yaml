@@ -169,9 +169,7 @@ Outputs:
     Value: !Ref PrivateSubnetOne
 
   PublicSubnetTwo:
-    Condition: isProd
     Value: !Ref PublicSubnetTwo
 
   PrivateSubnetTwo:
-    Condition: isProd
     Value: !Ref PrivateSubnetTwo

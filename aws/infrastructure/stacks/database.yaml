@@ -1,6 +1,8 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >
   Database and Bastion Host to access database For application
+# TODO: research if I can just use VPN for local development, and bastion host for prod, so I don't have an extra EC2 running
+# TODO: Add mapping for AMI
 
 Parameters:
   Environment:
@@ -17,8 +19,16 @@ Parameters:
   DatabaseSecurityGroup:
     Type: String
 
-# TODO: research if I can just use VPN for local development, and bastion host for prod, so I don't have an extra EC2 running
-# TODO: Add mapping for AMI
+Conditions:
+  isDev: !Equals
+    - !Ref Environment
+    - dev
+  isStaging: !Equals
+    - !Ref Environment
+    - staging
+  isDevOrStaging: !Or
+    - !Condition isDev
+    - !Condition isStaging
 
 Resources:
   # https://aws.amazon.com/blogs/security/how-to-securely-provide-database-credentials-to-lambda-functions-by-using-aws-secrets-manager/#:~:text=Dynamic%20references%20provide%20a%20compact%2C%20powerful%20way%20for,the%20resolved%20value%2C%20keeping%20the%20database%20password%20safe.
@@ -38,8 +48,8 @@ Resources:
   # TODO: add rotation of db / create a lambda function and use AWS::SecretsManager::RotationSchedule resource
   DatabaseUserCredentialSecret:
     Type: AWS::SecretsManager::Secret
-    DeletionPolicy: Delete
-    UpdateReplacePolicy: Delete
+    DeletionPolicy: !If [isDevOrStaging, Delete, Retain]
+    UpdateReplacePolicy: !If [isDevOrStaging, Delete, Retain]
     Properties:
       Name: !Sub "${Environment}/databaseUserCredentials"
       Description: RDS Master User Credentials
@@ -60,8 +70,8 @@ Resources:
   # TODO: add RDS snapshot in prod and change the data and updateReplace policy
   DatabaseRDS:
     Type: AWS::RDS::DBInstance
-    DeletionPolicy: Delete
-    UpdateReplacePolicy: Delete
+    DeletionPolicy: !If [isDevOrStaging, Delete, Retain]
+    UpdateReplacePolicy: !If [isDevOrStaging, Delete, Retain]
     Properties:
       DBName: !Sub "{{resolve:secretsmanager:${AppConfigSecret}:SecretString:dbName}}"
       Engine: "postgres"

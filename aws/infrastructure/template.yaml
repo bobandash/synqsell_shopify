@@ -1,16 +1,9 @@
-# Helpful Links
-# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/pseudo-parameter-reference.html
-
-# Common Commands
-# sam build
-# sam validate --template-file <name> --lint
-# sam deploy --config-env dev
-# sam deploy --config-env prod
-
 # TODO: Add lambda layers for shared functions
 # TODO: Create a CD pipeline to automatically build and push the docker image onto ECR, and pull/run the docker image from ECR to EC2
 # TODO: eventually add mapping for different regions and resource types
-# TODO: Learn how to create a script that runs sam validate for all the stacks at once
+# TODO: Create a script that runs sam validate for all the stacks at once
+
+# sam validate --template-file infrastructure/stacks/api.yaml --lint
 AWSTemplateFormatVersion: "2010-09-09"
 Transform:
   - AWS::LanguageExtensions
@@ -18,26 +11,39 @@ Transform:
 Description: >
   SAM Template For all infrastructure for SynqSell
 
-Conditions:
-  isProd: !Equals
-    - !Ref Environment
-    - prod
-
-# We do not need staging branch for now, until you have users --> create a private app on shopify for them to test features
 Parameters:
   Environment:
     Type: String
     Default: dev
     AllowedValues:
       - dev
+      - staging
       - prod
-    Description: The environment of the deployment
   AppConfigSecret:
     Type: String
     Description: The secret manager name for the app configuration
   ApiKeySecret:
     Type: String
     Description: The secret manager name for the api keys the application uses
+  AppHostedZoneId:
+    Type: String
+    Default: ""
+    Description: Route 53 Hosted Zone Id
+  AppDomainName:
+    Type: String
+    Default: ""
+    Description: Domain name to deploy application # TODO: secrets manager cannot resolve certain resources like DNS record, see if there's a better way besides passing in parameters
+
+Conditions:
+  isProd: !Equals
+    - !Ref Environment
+    - prod
+  isStaging: !Equals
+    - !Ref Environment
+    - staging
+  isProdOrStaging: !Or
+    - !Condition: isProd
+    - !Condition: isStaging
 
 Resources:
   NetworkingStack:
@@ -118,16 +124,18 @@ Resources:
         PublicSubnets: !GetAtt NetworkingStack.Outputs.PublicSubnets
         ALBSecurityGroup:
           !If [
-            isProd,
+            isProdOrStaging,
             !GetAtt SecurityStack.Outputs.ALBSecurityGroup,
             AWS::NoValue,
           ]
         RemixAppSecurityGroup:
           !If [
-            isProd,
+            isProdOrStaging,
             !GetAtt SecurityStack.Outputs.ALBSecurityGroup,
             AWS::NoValue,
           ]
+        AppHostedZoneId: !Ref AppHostedZoneId
+        AppDomainName: !Ref AppDomainName
       Tags:
         - Key: Environment
           Value: !Ref Environment
@@ -160,6 +168,6 @@ Outputs:
       - https://${ApiId}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/stripe/webhooks
       - ApiId: !GetAtt ApiStack.Outputs.ApiGatewayId
   AlbDNSName:
-    Condition: isProd
+    Condition: isProdOrStaging
     Description: The application url to set SynqSell
     Value: !GetAtt ApplicationStack.Outputs.DNSName

@@ -15,10 +15,18 @@ Conditions:
     - !Ref Environment
     - prod
 
+  isStaging: !Equals
+    - !Ref Environment
+    - staging
+
+  isProdOrStaging: !Or
+    - !Condition isProd
+    - !Condition isStaging
+
 Resources:
   ALBSecurityGroup:
     Type: "AWS::EC2::SecurityGroup"
-    Condition: isProd
+    Condition: isProdOrStaging
     Properties:
       GroupDescription: "Security group for ALB"
       VpcId: !Ref VpcId
@@ -34,7 +42,7 @@ Resources:
 
   RemixAppSecurityGroup:
     Type: AWS::EC2::SecurityGroup
-    Condition: isProd
+    Condition: isProdOrStaging
     Properties:
       GroupDescription: Security group for Remix Application on EC2
       VpcId: !Ref VpcId
@@ -86,10 +94,10 @@ Resources:
 
 Outputs:
   ALBSecurityGroup:
-    Condition: isProd
+    Condition: isProdOrStaging
     Value: !Ref ALBSecurityGroup
   RemixAppSecurityGroup:
-    Condition: isProd
+    Condition: isProdOrStaging
     Value: !Ref RemixAppSecurityGroup
   BastionHostSecurityGroup:
     Value: !Ref BastionHostSecurityGroup

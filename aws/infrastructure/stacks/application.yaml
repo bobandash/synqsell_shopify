@@ -17,12 +17,24 @@ Parameters:
     Type: String
   RemixAppSecurityGroup:
     Type: String
+  AppHostedZoneId:
+    Type: String
+  AppDomainName:
+    Type: String
+
 Conditions:
   isProd: !Equals
     - !Ref Environment
     - prod
+  isStaging: !Equals
+    - !Ref Environment
+    - prod
+  isProdOrStaging: !Or
+    - !Condition isProd
+    - !Condition isStaging
 
 Resources:
+  # TODO: add clean up bucket for dev and staging --> delete
   ImageHostingS3:
     Type: AWS::S3::Bucket
     Properties:
@@ -52,7 +64,7 @@ Resources:
   # Note: we only need an ALB and EC2 for staging and prod
   ApplicationLoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
-    Condition: isProd
+    Condition: isProdOrStaging
     Properties:
       Name: !Sub "${Environment}-alb"
       Scheme: "internet-facing"
@@ -62,29 +74,29 @@ Resources:
         - !Ref ALBSecurityGroup
       IpAddressType: "ipv4"
 
-  # DNSRecord:
-  #   Type: AWS::Route53::RecordSet
-  #   Condition: isProd
-  #   Properties:
-  #     HostedZoneId: !Sub "{{resolve:secretsmanager:${AppConfigSecret}:SecretString:appHostedZoneId}}"
-  #     Name: !Sub "{{resolve:secretsmanager:${AppConfigSecret}:SecretString:appDomainName}}."
-  #     Type: A
-  #     AliasTarget:
-  #       DNSName: !GetAtt ApplicationLoadBalancer.DNSName
-  #       HostedZoneId: !GetAtt ApplicationLoadBalancer.CanonicalHostedZoneID
-  #       EvaluateTargetHealth: true
+  DNSRecord:
+    Type: AWS::Route53::RecordSet
+    Condition: isProdOrStaging
+    Properties:
+      HostedZoneId: !Ref AppHostedZoneId
+      Name: !Ref AppDomainName
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt ApplicationLoadBalancer.DNSName
+        HostedZoneId: !GetAtt ApplicationLoadBalancer.CanonicalHostedZoneID
+        EvaluateTargetHealth: true
 
   ALBCertificate:
     Type: AWS::CertificateManager::Certificate
-    Condition: isProd
+    Condition: isProdOrStaging
     Properties:
       ValidationMethod: DNS
-      DomainName: !Sub "{{resolve:secretsmanager:${AppConfigSecret}:SecretString:appDomainName}}"
+      DomainName: !Ref AppDomainName
 
   # listener basically listens to requests and passes it securely to load balancer
   HTTPListener:
     Type: "AWS::ElasticLoadBalancingV2::Listener"
-    Condition: isProd
+    Condition: isProdOrStaging
     Properties:
       LoadBalancerArn: !Ref ApplicationLoadBalancer
       Port: 80
@@ -102,7 +114,7 @@ Resources:
 
   HTTPSListener:
     Type: "AWS::ElasticLoadBalancingV2::Listener"
-    Condition: isProd
+    Condition: isProdOrStaging
     Properties:
       Certificates:
         - !Ref ALBCertificate
@@ -117,7 +129,7 @@ Resources:
 
   TargetGroupOne:
     Type: "AWS::ElasticLoadBalancingV2::TargetGroup"
-    Condition: isProd
+    Condition: isProdOrStaging
     Properties:
       Port: 80
       Protocol: "HTTP"
@@ -127,7 +139,7 @@ Resources:
 
   ECR:
     Type: AWS::ECR::Repository
-    Condition: isProd
+    Condition: isProdOrStaging
     Properties:
       EmptyOnDelete: True
       ImageScanningConfiguration:
@@ -136,7 +148,7 @@ Resources:
 
   RemixAppInstanceRole:
     Type: AWS::IAM::Role
-    Condition: isProd
+    Condition: isProdOrStaging
     Properties:
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
@@ -163,7 +175,7 @@ Resources:
   # You must have a profile to attach a role to an EC2
   RemixAppInstanceProfile:
     Type: AWS::IAM::InstanceProfile
-    Condition: isProd
+    Condition: isProdOrStaging
     Properties:
       InstanceProfileName: !Sub ${Environment}-remix-app-ec2-instance-profile
       Path: /
@@ -172,7 +184,7 @@ Resources:
 
   RemixAppInstance:
     Type: AWS::EC2::Instance
-    Condition: isProd
+    Condition: isProdOrStaging
     Properties:
       ImageId: ami-037774efca2da0726
       InstanceType: t2.micro
@@ -189,5 +201,5 @@ Outputs:
   ImageHostingS3BucketName:
     Value: !Ref ImageHostingS3
   AlbDNSName:
-    Condition: isProd
+    Condition: isProdOrStaging
     Value: !GetAtt ApplicationLoadBalancer.DNSName
