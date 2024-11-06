@@ -42,8 +42,8 @@ Conditions:
     - !Ref Environment
     - staging
   isProdOrStaging: !Or
-    - !Condition: isProd
-    - !Condition: isStaging
+    - !Condition isProd
+    - !Condition isStaging
 
 Resources:
   NetworkingStack:
