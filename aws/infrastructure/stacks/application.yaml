@@ -28,7 +28,7 @@ Conditions:
     - prod
   isStaging: !Equals
     - !Ref Environment
-    - prod
+    - staging
   isProdOrStaging: !Or
     - !Condition isProd
     - !Condition isStaging
