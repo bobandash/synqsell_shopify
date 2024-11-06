@@ -70,14 +70,15 @@ Status: Final stages. Preparing for submission on Shopify's App Store.
 10/13/2024
 Here are a list of features that are still needed before the application can be submitted for review
 
+<!-- TODO: INSERT SCREENSHOT OF PENDING APPROVAL STATUS ONCE SUBMITTED -->
+
 - (DONE) - Subscribe to Shopify's Privacy Webhook Topics
 - (DONE) - Add sales generated section for price list index table
 - (DONE) - Use Stripe's webhook topics to ensure that the database is synced properly to stripe statuses
 - (DONE) Handle the app/uninstalled webhook for suppliers and retailers
 - (DONE) Create all relevant assets and bullet points for the Shopify app store
 - (DONE) Add ALB and EC2 to deploy web/application server
-- Create a CD Pipeline for adding the new application code to the ecr
-- One final check to verify all API endpoints, webhooks, and application code work as intended
+- (DONE) One final check to verify all API endpoints, webhooks, and application code work as intended
 - Update readme: https://shopify.dev/docs/apps/launch/protected-customer-data, https://partners.shopify.com/3776451/apps/{app_number}/customer_data, instructions to update shopify.app.toml w/ eventbridge url and running shopify app deploy --config shopify.app.toml
 
 Here are the nice to have features / should be done after deployment:
@@ -91,9 +92,7 @@ Here are the nice to have features / should be done after deployment:
 - Refactor the Lambda functions to use layers for shared functions (DRY principle)
 - Talk to users: need to see whether or not suppliers would want methods of increasing sales that the retailers can use (e.g. injecting Shopify liquid to theme to do a countdown for product launches)
 - Refactor basic model queries and mutations (most of it was written when I initially started the project, so a lot needs to be refactored)
-- Change error handling strategy (I don't believe that printing out the function name in the log files is worth it to be honest; it has so much room for error)
-
-<!-- TODO: INSERT SCREENSHOT OF PENDING APPROVAL STATUS ONCE SUBMITTED -->
+- Create a CD Pipeline for adding the new application code to the ecr
 
 ### Features At A Glance
 

@@ -17,7 +17,8 @@ function getErrorFormat(message: string, statusCode: number) {
   );
 }
 
-function handleRouteError(error: unknown, route: string) {
+function handleRouteError(error: any, route: string) {
+  logger.error(error);
   logger.error(`An error occurred at ${route}.`);
   if (error instanceof Response) {
     return error;
@@ -31,6 +32,10 @@ function handleRouteError(error: unknown, route: string) {
 
   if (error instanceof createHttpError.HttpError) {
     return getErrorFormat(error.message, error.statusCode);
+  }
+
+  if (error && 'message' in error) {
+    logger.error(error.message);
   }
 
   if (error instanceof Error) {

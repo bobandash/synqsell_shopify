@@ -3,12 +3,12 @@
 client_id = "da71c0d94fe799dfdcfd69923c0e5741"
 name = "SynqSell-Dev"
 handle = "synqsell-dev"
-application_url = "https://text-wy-tumor-incorporate.trycloudflare.com"
+application_url = "https://boulder-clothing-testimony-types.trycloudflare.com"
 embedded = true
 
 [build]
 automatically_update_urls_on_dev = true
-dev_store_url = "store2-d7f07654-24d4-42de-926b-62afb996f82b.myshopify.com"
+dev_store_url = "store4-random.myshopify.com"
 include_config_on_deploy = true
 
 [access_scopes]
@@ -17,9 +17,9 @@ scopes = "read_assigned_fulfillment_orders,read_customers,read_inventory,read_lo
 
 [auth]
 redirect_urls = [
-  "https://text-wy-tumor-incorporate.trycloudflare.com/auth/callback",
-  "https://text-wy-tumor-incorporate.trycloudflare.com/auth/shopify/callback",
-  "https://text-wy-tumor-incorporate.trycloudflare.com/api/auth/callback"
+  "https://boulder-clothing-testimony-types.trycloudflare.com/auth/callback",
+  "https://boulder-clothing-testimony-types.trycloudflare.com/auth/shopify/callback",
+  "https://boulder-clothing-testimony-types.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]

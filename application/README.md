@@ -8,7 +8,10 @@ To reference how to set up the project, please click <a href="https://github.com
 
 Here are a list of common commands used for development.
 
-- To run the application
+- To run the application in development mode
+  ```sh
+  npm run config:use dev
+  ```
   ```sh
   npm run dev
   ```
@@ -20,3 +23,8 @@ Here are a list of common commands used for development.
   ```sh
   npm run graphql-codegen -- --watch
   ```
+- For deployment
+  ```sh
+  docker build -t synqsell:v1.0 .
+  ```
+  `https://docs.aws.amazon.com/AmazonECR/latest/userguide/docker-push-ecr-image.html
