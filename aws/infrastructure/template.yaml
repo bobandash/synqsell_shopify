@@ -170,4 +170,4 @@ Outputs:
   AlbDNSName:
     Condition: isProdOrStaging
     Description: The application url to set SynqSell
-    Value: !GetAtt ApplicationStack.Outputs.DNSName
+    Value: !GetAtt ApplicationStack.Outputs.AlbDNSName
