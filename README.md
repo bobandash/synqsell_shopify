@@ -59,6 +59,8 @@ When I worked in the eCommerce space selling anime merchandise, I had some key o
 
 These observations led me to a crucial question: could I create a risk-free method for wholesale customers to test out manufacturers' promising but underperforming products, and potentially trigger the positive feedback loop of successful products? That was my motivation for building SynqSell, a Shopify app that allows cross-store product imports between suppliers and retailers, and automatic synchronization of prices, orders, and payments.
 
+Just a disclaimer: I may be completely wrong in understanding Shopify merchants' needs. This project showcased to me that software is a continuous process of iteration.
+
 ### Deployment Status
 - Submitted to Shopify App Store for Review
 - Video Demo: https://www.youtube.com/watch?v=D-RJJmcRiks&feature=youtu.be
@@ -137,10 +139,10 @@ To get a local copy up and running follow these steps:
 
 For AWS:
 
-1. In the samconfig.toml, change the s3_bucket in the dev.deploy.parameters to a value other than "synqsell-sam"; bucket names are fully unique on AWS.
+1. Create a bucket on `<aws.amazon.com>`(https://aws.amazon.com/). In the samconfig.toml, change the `<s3_bucket>` in the dev.deploy.parameters to the bucket name that you created.
 2. Change the working directory to aws
    ```sh
-      cd aws
+   cd aws
    ```
 3. Build the IaC for deployment
    ```sh
