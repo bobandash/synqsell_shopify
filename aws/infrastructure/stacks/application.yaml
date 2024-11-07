@@ -127,6 +127,7 @@ Resources:
           TargetGroupArn: !Ref TargetGroupOne
           Type: "forward"
 
+  # Direct to ECS
   TargetGroupOne:
     Type: "AWS::ElasticLoadBalancingV2::TargetGroup"
     Condition: isProdOrStaging
@@ -146,56 +147,66 @@ Resources:
         ScanOnPush: true
       ImageTagMutability: IMMUTABLE
 
-  RemixAppInstanceRole:
-    Type: AWS::IAM::Role
-    Condition: isProdOrStaging
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: ec2.amazonaws.com
-            Action: sts:AssumeRole
-      Policies:
-        - PolicyName: ECRAccess
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action: ecr:GetAuthorizationToken
-                Resource: "*"
-              - Effect: Allow
-                Action:
-                  - ecr:BatchGetImage
-                  - ecr:GetDownloadUrlForLayer
-                  - ecr:BatchCheckLayerAvailability
-                Resource: !GetAtt ECR.Arn
+  EcsCluster:
+    Type: "AWS::ECS::Cluster"
+    CapacityProviders:
+      - FARGATE
 
-  # You must have a profile to attach a role to an EC2
-  RemixAppInstanceProfile:
-    Type: AWS::IAM::InstanceProfile
-    Condition: isProdOrStaging
-    Properties:
-      InstanceProfileName: !Sub ${Environment}-remix-app-ec2-instance-profile
-      Path: /
-      Roles:
-        - !Ref RemixAppInstanceRole
+  ECS:
+    Type: "AWS::ECS::Service"
+    LaunchType: FARGATE
+    DesiredCount: 1
 
-  RemixAppInstance:
-    Type: AWS::EC2::Instance
-    Condition: isProdOrStaging
-    Properties:
-      ImageId: ami-037774efca2da0726
-      InstanceType: t2.micro
-      NetworkInterfaces:
-        - AssociatePublicIpAddress: "true"
-          DeviceIndex: "0"
-          GroupSet:
-            - !Ref RemixAppSecurityGroup
-          SubnetId: !Ref PrivateSubnetOne
-      KeyName: !Sub "{{resolve:secretsmanager:${AppConfigSecret}:SecretString:webAppKeyPair}}"
-      IamInstanceProfile: !Ref RemixAppInstanceProfile
+  # RemixAppInstanceRole:
+  #   Type: AWS::IAM::Role
+  #   Condition: isProdOrStaging
+  #   Properties:
+  #     AssumeRolePolicyDocument:
+  #       Version: "2012-10-17"
+  #       Statement:
+  #         - Effect: Allow
+  #           Principal:
+  #             Service: ec2.amazonaws.com
+  #           Action: sts:AssumeRole
+  #     Policies:
+  #       - PolicyName: ECRAccess
+  #         PolicyDocument:
+  #           Version: "2012-10-17"
+  #           Statement:
+  #             - Effect: Allow
+  #               Action: ecr:GetAuthorizationToken
+  #               Resource: "*"
+  #             - Effect: Allow
+  #               Action:
+  #                 - ecr:BatchGetImage
+  #                 - ecr:GetDownloadUrlForLayer
+  #                 - ecr:BatchCheckLayerAvailability
+  #               Resource: !GetAtt ECR.Arn
+
+  # # You must have a profile to attach a role to an EC2
+  # RemixAppInstanceProfile:
+  #   Type: AWS::IAM::InstanceProfile
+  #   Condition: isProdOrStaging
+  #   Properties:
+  #     InstanceProfileName: !Sub ${Environment}-remix-app-ec2-instance-profile
+  #     Path: /
+  #     Roles:
+  #       - !Ref RemixAppInstanceRole
+
+  # RemixAppInstance:
+  #   Type: AWS::EC2::Instance
+  #   Condition: isProdOrStaging
+  #   Properties:
+  #     ImageId: ami-037774efca2da0726
+  #     InstanceType: t2.micro
+  #     NetworkInterfaces:
+  #       - AssociatePublicIpAddress: "true"
+  #         DeviceIndex: "0"
+  #         GroupSet:
+  #           - !Ref RemixAppSecurityGroup
+  #         SubnetId: !Ref PrivateSubnetOne
+  #     KeyName: !Sub "{{resolve:secretsmanager:${AppConfigSecret}:SecretString:webAppKeyPair}}"
+  #     IamInstanceProfile: !Ref RemixAppInstanceProfile
 
 Outputs:
   ImageHostingS3BucketName:
