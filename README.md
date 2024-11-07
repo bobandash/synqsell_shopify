@@ -170,7 +170,7 @@ For the Shopify Application:
    ```sh
    npm install
    ```
-6. Edit the shopify.app.dev.toml file to match your Shopify partners account configuration. Navigate to your app in the [partners dashboard](https://partners.shopify.com/)
+6. Edit the shopify.app.dev.toml file to match your Shopify partners account configuration. Navigate to your app in the [partners dashboard](https://partners.shopify.com/) and update the following values:
 
    - `<client_id>` - At the "Overview" tab, it's the "Client Id" in the "Client Credentials" box
    - `<name>`, `<handle>` - At the "Configuration" tab, it's the box with the "App name" and "App handle"
