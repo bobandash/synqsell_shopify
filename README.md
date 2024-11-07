@@ -60,11 +60,10 @@ When I worked in the eCommerce space selling anime merchandise, I had some key o
 These observations led me to a crucial question: could I create a risk-free method for wholesale customers to test out manufacturers' promising but underperforming products, and potentially trigger the positive feedback loop of successful products? That was my motivation for building SynqSell, a Shopify app that allows cross-store product imports between suppliers and retailers, and automatic synchronization of prices, orders, and payments.
 
 ### Deployment Status
-
-Submitted to Shopify App Store for Review
-Video Demo: https://www.youtube.com/watch?v=D-RJJmcRiks&feature=youtu.be
-Main Features (Text): https://aback-thistle-ade.notion.site/Features-At-A-Glance-8be5cba5a5254a67bb59845c5b1c738a
-Basic Information Site: https://www.synqsell.com/
+- Submitted to Shopify App Store for Review
+- Video Demo: https://www.youtube.com/watch?v=D-RJJmcRiks&feature=youtu.be
+- Main Features (Text): https://aback-thistle-ade.notion.site/Features-At-A-Glance-8be5cba5a5254a67bb59845c5b1c738a
+- Basic Information Site: https://www.synqsell.com/
 
 ### Built With
 
@@ -175,7 +174,7 @@ For the Shopify Application:
 
    - `<client_id>` - At the "Overview" tab, it's the "Client Id" in the "Client Credentials" box
    - `<name>`, `<handle>` - At the "Configuration" tab, it's the box with the "App name" and "App handle"
-   - `<dev_store_url>` - At the "Overview" tab, there's a "Test your app" box. Click "Select Store" and create a development store and get the url in the format (STORENAME.myshopify.com)
+   - `<dev_store_url>` - At the "Overview" tab, there's a "Test your app" box. Click "Select Store" and create a development store and get the url in the format (`<STORE_NAME>`.myshopify.com)
    - `<uri>` - This is the uri of the EventBridge source
 
 7. Install all the dependencies
@@ -195,7 +194,7 @@ For the Shopify Application:
     - `<DATABASE_URL>` - postgresql://postgres:<DB_PASSWORD>@localhost:8886/postgres, with the DB_PASSWORD being the password you obtained in step 5
     - `<AWS_ACCESS_KEY_ID>` and `<AWS_SECRET_ACCESS_KEY>` - Generated and stored in Prerequisites
     - `<STRIPE_SECRET_API_KEY>` and `<REACT_APP_STRIPE_PUBLISHABLE_KEY>` - Generated and stored in Prerequisites
-    - `<ADMIN_SESSION_ID>` - This is the same value as the dev*store_url you configured in shopify.app.dev.toml with offline* prefixed to it (e.g. offline_STORENAME.myshopify.com)
+    - `<ADMIN_SESSION_ID>` - This is the same value as the dev*store_url you configured in shopify.app.dev.toml with offline* prefixed to it (e.g. offline_`<STORE_NAME>`.myshopify.com)
     - `<NODE_ENV>`: Set it to "development"
     - `<CARRIER_SERVICE_CALLBACK_URL>`, `<AWS_REGION>`, `<S3_BUCKET>` - found in SAM outputs after deployment
 11. Run the following command to start the application.
