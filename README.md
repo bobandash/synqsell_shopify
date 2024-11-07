@@ -196,7 +196,7 @@ For the Shopify Application:
     - `<DATABASE_URL>` - postgresql://postgres:<DB_PASSWORD>@localhost:8886/postgres, with the DB_PASSWORD being the password you obtained in step 5
     - `<AWS_ACCESS_KEY_ID>` and `<AWS_SECRET_ACCESS_KEY>` - Generated and stored in Prerequisites
     - `<STRIPE_SECRET_API_KEY>` and `<REACT_APP_STRIPE_PUBLISHABLE_KEY>` - Generated and stored in Prerequisites
-    - `<ADMIN_SESSION_ID>` - This is the same value as the dev*store_url you configured in shopify.app.dev.toml with offline* prefixed to it (e.g. offline_`<STORE_NAME>`.myshopify.com)
+    - `<ADMIN_SESSION_ID>` - This is the same value as the dev*store_url you configured in shopify.app.dev.toml with offline_ prefixed to it (e.g. offline_`<STORE_NAME>`.myshopify.com)
     - `<NODE_ENV>`: Set it to "development"
     - `<CARRIER_SERVICE_CALLBACK_URL>`, `<AWS_REGION>`, `<S3_BUCKET>` - found in SAM outputs after deployment
 11. Run the following command to start the application.
