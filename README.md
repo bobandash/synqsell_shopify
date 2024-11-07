@@ -203,7 +203,7 @@ For the Shopify Application:
     ```sh
     npm run dev
     ```
-12. Your database migrations should start running. AFter the migrations are finished, click on the preview URL that was generated in the terminal.
+12. Your database migrations should start running. After the migrations are finished, click on the preview URL that was generated in the terminal.
 13. Run the following command:
     ```sh
     npx prisma db seed
