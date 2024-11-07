@@ -139,7 +139,7 @@ To get a local copy up and running follow these steps:
 
 For AWS:
 
-1. Create a bucket on `<aws.amazon.com>`(https://aws.amazon.com/). In the samconfig.toml, change the `<s3_bucket>` in the dev.deploy.parameters to the bucket name that you created.
+1. Create a bucket on [AWS](https://aws.amazon.com/). In the samconfig.toml, change the `<s3_bucket>` in the dev.deploy.parameters to the bucket name that you created.
 2. Change the working directory to aws
    ```sh
    cd aws
