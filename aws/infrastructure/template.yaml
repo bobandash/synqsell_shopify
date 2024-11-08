@@ -36,7 +36,7 @@ Parameters:
     Description: Domain name to deploy application # TODO: secrets manager cannot resolve certain resources like DNS record, see if there's a better way besides passing in parameters
   IsInitialDeploy:
     Type: String
-    Default: "false"
+    Default: "True"
     AllowedValues:
       - "True"
       - "False"

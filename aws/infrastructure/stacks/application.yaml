@@ -38,7 +38,7 @@ Conditions:
     - !Condition isStaging
   isInitialDeployCondition: !Equals
     - !Ref IsInitialDeploy
-    - "true"
+    - "True"
 
 Resources:
   # TODO: add clean up bucket for dev and staging --> delete
@@ -178,6 +178,12 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
 
+  EcsLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/ecs/${AWS::StackName}"
+      RetentionInDays: 14
+
   # When using services, by specifying a health check
   # if the container is unhealthy, then it will be replaced by a healthy container in the service
   EcsTaskDefinition:
@@ -190,7 +196,7 @@ Resources:
           LogConfiguration:
             LogDriver: awslogs
             Options:
-              awslogs-group: !Ref AWS::StackName
+              awslogs-group: !Ref EcsLogGroup
               awslogs-region: !Ref AWS::Region
               awslogs-stream-prefix: synqsell
           PortMappings:
