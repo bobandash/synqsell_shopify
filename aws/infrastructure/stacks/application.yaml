@@ -5,23 +5,27 @@ Description: >
 Parameters:
   Environment:
     Type: String
-  AppConfigSecret:
-    Type: String
   VpcId:
     Type: String
   PrivateSubnetOne:
     Type: String
+  PrivateSubnets:
+    Type: String
   PublicSubnets:
     Type: String
-  ALBSecurityGroup:
+  AlbSecurityGroup:
     Type: String
-  RemixAppSecurityGroup:
+  EcsServiceSecurityGroup:
     Type: String
   AppHostedZoneId:
     Type: String
   AppDomainName:
     Type: String
-
+  IsInitialDeploy:
+    Type: String
+    AllowedValues:
+      - "True"
+      - "False"
 Conditions:
   isProd: !Equals
     - !Ref Environment
@@ -32,6 +36,9 @@ Conditions:
   isProdOrStaging: !Or
     - !Condition isProd
     - !Condition isStaging
+  isInitialDeployCondition: !Equals
+    - !Ref IsInitialDeploy
+    - "true"
 
 Resources:
   # TODO: add clean up bucket for dev and staging --> delete
@@ -71,7 +78,7 @@ Resources:
       Type: "application"
       Subnets: !Split [",", !Ref PublicSubnets]
       SecurityGroups:
-        - !Ref ALBSecurityGroup
+        - !Ref AlbSecurityGroup
       IpAddressType: "ipv4"
 
   DNSRecord:
@@ -117,7 +124,7 @@ Resources:
     Condition: isProdOrStaging
     Properties:
       Certificates:
-        - !Ref ALBCertificate
+        - CertificateArn: !Ref ALBCertificate
       LoadBalancerArn: !Ref ApplicationLoadBalancer
       Port: 443
       Protocol: "HTTPS"
@@ -127,86 +134,107 @@ Resources:
           TargetGroupArn: !Ref TargetGroupOne
           Type: "forward"
 
-  # Direct to ECS
+  # Fargate target = ip
   TargetGroupOne:
     Type: "AWS::ElasticLoadBalancingV2::TargetGroup"
     Condition: isProdOrStaging
     Properties:
-      Port: 80
-      Protocol: "HTTP"
+      TargetType: ip
+      Port: 3000
+      Protocol: HTTP
       VpcId: !Ref VpcId
-      Targets:
-        - Id: !Ref RemixAppInstance
 
-  ECR:
+  # TODO: for simplicity, set image tag to mutable
+  # Prod should have versioning for image tags to allow for rollbacks in application in future
+  Ecr:
     Type: AWS::ECR::Repository
     Condition: isProdOrStaging
     Properties:
       EmptyOnDelete: True
       ImageScanningConfiguration:
         ScanOnPush: true
-      ImageTagMutability: IMMUTABLE
+      ImageTagMutability: MUTABLE
 
   EcsCluster:
     Type: "AWS::ECS::Cluster"
-    CapacityProviders:
-      - FARGATE
+    Condition: isProdOrStaging
+    Properties:
+      CapacityProviders:
+        - FARGATE
 
-  ECS:
+  # need access to pull container image from ecr and send container logs
+  # TODO: look into Task Roles (https://towardsthecloud.com/amazon-ecs-task-role-vs-execution-role); may not need to pass AWS Creds in .env
+  EcsExecutionRole:
+    Type: "AWS::IAM::Role"
+    Condition: isProdOrStaging
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+  # When using services, by specifying a health check
+  # if the container is unhealthy, then it will be replaced by a healthy container in the service
+  EcsTaskDefinition:
+    Type: "AWS::ECS::TaskDefinition"
+    Condition: isProdOrStaging
+    Properties:
+      ContainerDefinitions:
+        - Name: synqsell-app
+          Image: !Join [":", [!GetAtt Ecr.RepositoryUri, "latest"]]
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref AWS::StackName
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: synqsell
+          PortMappings:
+            - ContainerPort: 3000
+          Command:
+            - npm
+            - run
+            - docker-start
+          WorkingDirectory: /app
+          HealthCheck:
+            Command:
+              - CMD-SHELL
+              - curl -f http://localhost:3000/ || exit 1
+      Cpu: 256
+      ExecutionRoleArn: !GetAtt EcsExecutionRole.Arn
+      Memory: 512
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      Family: !Sub ${AWS::StackName}-task # puts all revisions of task def together
+
+  EcsService:
     Type: "AWS::ECS::Service"
-    LaunchType: FARGATE
-    DesiredCount: 1
-
-  # RemixAppInstanceRole:
-  #   Type: AWS::IAM::Role
-  #   Condition: isProdOrStaging
-  #   Properties:
-  #     AssumeRolePolicyDocument:
-  #       Version: "2012-10-17"
-  #       Statement:
-  #         - Effect: Allow
-  #           Principal:
-  #             Service: ec2.amazonaws.com
-  #           Action: sts:AssumeRole
-  #     Policies:
-  #       - PolicyName: ECRAccess
-  #         PolicyDocument:
-  #           Version: "2012-10-17"
-  #           Statement:
-  #             - Effect: Allow
-  #               Action: ecr:GetAuthorizationToken
-  #               Resource: "*"
-  #             - Effect: Allow
-  #               Action:
-  #                 - ecr:BatchGetImage
-  #                 - ecr:GetDownloadUrlForLayer
-  #                 - ecr:BatchCheckLayerAvailability
-  #               Resource: !GetAtt ECR.Arn
-
-  # # You must have a profile to attach a role to an EC2
-  # RemixAppInstanceProfile:
-  #   Type: AWS::IAM::InstanceProfile
-  #   Condition: isProdOrStaging
-  #   Properties:
-  #     InstanceProfileName: !Sub ${Environment}-remix-app-ec2-instance-profile
-  #     Path: /
-  #     Roles:
-  #       - !Ref RemixAppInstanceRole
-
-  # RemixAppInstance:
-  #   Type: AWS::EC2::Instance
-  #   Condition: isProdOrStaging
-  #   Properties:
-  #     ImageId: ami-037774efca2da0726
-  #     InstanceType: t2.micro
-  #     NetworkInterfaces:
-  #       - AssociatePublicIpAddress: "true"
-  #         DeviceIndex: "0"
-  #         GroupSet:
-  #           - !Ref RemixAppSecurityGroup
-  #         SubnetId: !Ref PrivateSubnetOne
-  #     KeyName: !Sub "{{resolve:secretsmanager:${AppConfigSecret}:SecretString:webAppKeyPair}}"
-  #     IamInstanceProfile: !Ref RemixAppInstanceProfile
+    Condition: isProdOrStaging
+    Properties:
+      LaunchType: FARGATE
+      Cluster: !GetAtt EcsCluster.Arn
+      DesiredCount: !If
+        - isInitialDeployCondition
+        - 0
+        - 1
+      TaskDefinition: !Ref EcsTaskDefinition
+      LoadBalancers:
+        - ContainerName: synqsell-app
+          ContainerPort: 3000
+          TargetGroupArn: !Ref TargetGroupOne
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          Subnets: !If
+            - isStaging
+            - [!Ref PrivateSubnetOne]
+            - !Split [",", !Ref PrivateSubnets]
+          SecurityGroups:
+            - !Ref EcsServiceSecurityGroup
 
 Outputs:
   ImageHostingS3BucketName:

@@ -67,7 +67,6 @@ Resources:
       DBSubnetGroupDescription: Subnet group for RDS instance
       SubnetIds: !Split [",", !Ref PrivateSubnets]
 
-  # TODO: add RDS snapshot in prod and change the data and updateReplace policy
   DatabaseRDS:
     Type: AWS::RDS::DBInstance
     DeletionPolicy: !If [isDevOrStaging, Delete, Retain]
