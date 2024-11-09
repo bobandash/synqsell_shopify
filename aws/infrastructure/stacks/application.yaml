@@ -21,6 +21,14 @@ Parameters:
     Type: String
   AppDomainName:
     Type: String
+  DatabaseUserCredentialSecret:
+    Type: String
+  DatabaseConnectionSecret:
+    Type: String
+  ApiId:
+    Type: String
+  SecretsAccessPolicy:
+    Type: String
   IsInitialDeploy:
     Type: String
     AllowedValues:
@@ -177,6 +185,7 @@ Resources:
             Action: sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+        - !Ref SecretsAccessPolicy
 
   EcsLogGroup:
     Type: AWS::Logs::LogGroup
@@ -184,8 +193,28 @@ Resources:
       LogGroupName: !Sub "/aws/ecs/${AWS::StackName}"
       RetentionInDays: 14
 
+  # Parameter option for ENV Variables in Application, only needed in Staging and Prod for now
+  ParameterNodeEnv:
+    Condition: isProdOrStaging
+    Type: AWS::SSM::Parameter
+    Properties:
+      DataType: text
+      Name: !Sub /${Environment}/env/NODE_ENV
+      Type: String
+      Value: !If [isProd, Production, Staging]
+
+  ParameterLogLevel:
+    Condition: isProdOrStaging
+    Type: AWS::SSM::Parameter
+    Properties:
+      DataType: text
+      Name: !Sub /${Environment}/env/LOG_LEVEL
+      Type: String
+      Value: !If [isProd, Production, Staging]
+
   # When using services, by specifying a health check
   # if the container is unhealthy, then it will be replaced by a healthy container in the service
+  # TODO: look into task role, if I specify task role, I shouldn't need to specify the AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY
   EcsTaskDefinition:
     Type: "AWS::ECS::TaskDefinition"
     Condition: isProdOrStaging
@@ -210,6 +239,42 @@ Resources:
             Command:
               - CMD-SHELL
               - curl -f http://localhost:3000/ || exit 1
+          Environment:
+            - Name: NODE_ENV
+              Value: !GetAtt ParameterNodeEnv.Value
+            - Name: LOG_LEVEL
+              Value: !GetAtt ParameterLogLevel.Value
+            - Name: S3_BUCKET
+              Value: !Ref ImageHostingS3
+            - Name: CARRIER_SERVICE_CALLBACK_URL
+              Value: !Sub https://${ApiId}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/stripe/webhooks
+            - Name: AWS_REGION
+              Value: !Ref AWS::Region
+          Secrets:
+            - Name: DATABASE
+              ValueFrom: !Sub "${DatabaseConnectionSecret}:database::"
+            - Name: HOST
+              ValueFrom: !Sub "${DatabaseConnectionSecret}:host::"
+            - Name: PORT
+              ValueFrom: !Sub "${DatabaseConnectionSecret}:port::"
+            - Name: PASSWORD
+              ValueFrom: !Sub "${DatabaseUserCredentialSecret}:password::"
+            - Name: USERNAME
+              ValueFrom: !Sub "${DatabaseUserCredentialSecret}:username::"
+            - Name: AWS_ACCESS_KEY_ID
+              ValueFrom: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${Environment}/env/AWS_ACCESS_KEY_ID
+            - Name: AWS_SECRET_ACCESS_KEY
+              ValueFrom: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${Environment}/env/AWS_SECRET_ACCESS_KEY
+            - Name: STRIPE_SECRET_API_KEY
+              ValueFrom: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${Environment}/env/STRIPE_SECRET_API_KEY
+            - Name: REACT_APP_STRIPE_PUBLISHABLE_KEY
+              ValueFrom: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${Environment}/env/REACT_APP_STRIPE_PUBLISHABLE_KEY
+            - Name: SCOPES
+              ValueFrom: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${Environment}/env/SCOPES
+            - Name: SHOPIFY_API_KEY
+              ValueFrom: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${Environment}/env/SHOPIFY_API_KEY
+            - Name: SHOPIFY_API_SECRET
+              ValueFrom: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${Environment}/env/SHOPIFY_API_SECRET
       Cpu: 256
       ExecutionRoleArn: !GetAtt EcsExecutionRole.Arn
       Memory: 512

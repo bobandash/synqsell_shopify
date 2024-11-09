@@ -75,6 +75,34 @@ Resources:
         - Key: Environment
           Value: !Ref Environment
 
+  DatabaseStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: stacks/database.yaml
+      Parameters:
+        Environment: !Ref Environment
+        AppConfigSecret: !Ref AppConfigSecret
+        PrivateSubnets: !GetAtt NetworkingStack.Outputs.PrivateSubnets
+        PublicSubnetOne: !GetAtt NetworkingStack.Outputs.PublicSubnetOne
+        BastionHostSecurityGroup: !GetAtt SecurityStack.Outputs.BastionHostSecurityGroup
+        DatabaseSecurityGroup: !GetAtt SecurityStack.Outputs.DatabaseSecurityGroup
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+
+  ManagedPolicyStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: stacks/policy.yaml
+      Parameters:
+        Environment: !Ref Environment
+        ApiKeySecret: !Ref ApiKeySecret
+        DatabaseUserCredentialSecret: !GetAtt DatabaseStack.Outputs.DatabaseUserCredentialSecret
+        DatabaseConnectionSecret: !GetAtt DatabaseStack.Outputs.DatabaseConnectionSecret
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+
   LambdaFunctionStack:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -88,6 +116,7 @@ Resources:
         DatabaseUserCredentialSecret: !GetAtt DatabaseStack.Outputs.DatabaseUserCredentialSecret
         DatabaseConnectionSecret: !GetAtt DatabaseStack.Outputs.DatabaseConnectionSecret
         LambdaSecurityGroup: !GetAtt SecurityStack.Outputs.LambdaSecurityGroup
+        SecretsAccessPolicy: !GetAtt ManagedPolicyStack.Outputs.SecretsAccessPolicy
       Tags:
         - Key: Environment
           Value: !Ref Environment
@@ -100,21 +129,6 @@ Resources:
         Environment: !Ref Environment
         StripeWebhookCoordinatorFunctionArn: !GetAtt LambdaFunctionStack.Outputs.StripeWebhookCoordinatorFunctionArn
         DeliveryCarrierServiceFunctionArn: !GetAtt LambdaFunctionStack.Outputs.DeliveryCarrierServiceFunctionArn
-      Tags:
-        - Key: Environment
-          Value: !Ref Environment
-
-  DatabaseStack:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: stacks/database.yaml
-      Parameters:
-        Environment: !Ref Environment
-        AppConfigSecret: !Ref AppConfigSecret
-        PrivateSubnets: !GetAtt NetworkingStack.Outputs.PrivateSubnets
-        PublicSubnetOne: !GetAtt NetworkingStack.Outputs.PublicSubnetOne
-        BastionHostSecurityGroup: !GetAtt SecurityStack.Outputs.BastionHostSecurityGroup
-        DatabaseSecurityGroup: !GetAtt SecurityStack.Outputs.DatabaseSecurityGroup
       Tags:
         - Key: Environment
           Value: !Ref Environment
@@ -133,6 +147,10 @@ Resources:
         EcsServiceSecurityGroup: !GetAtt SecurityStack.Outputs.EcsServiceSecurityGroup
         AppHostedZoneId: !Ref AppHostedZoneId
         AppDomainName: !Ref AppDomainName
+        DatabaseUserCredentialSecret: !GetAtt DatabaseStack.Outputs.DatabaseUserCredentialSecret
+        DatabaseConnectionSecret: !GetAtt DatabaseStack.Outputs.DatabaseConnectionSecret
+        ApiId: !GetAtt ApiStack.Outputs.ApiGatewayId
+        SecretsAccessPolicy: !GetAtt ManagedPolicyStack.Outputs.SecretsAccessPolicy
         IsInitialDeploy: !Ref IsInitialDeploy
       Tags:
         - Key: Environment
