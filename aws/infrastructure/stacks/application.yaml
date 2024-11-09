@@ -250,6 +250,8 @@ Resources:
               Value: !Sub https://${ApiId}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/stripe/webhooks
             - Name: AWS_REGION
               Value: !Ref AWS::Region
+            - Name: SHOPIFY_APP_URL
+              Value: !Sub https://${AppDomainName}
           Secrets:
             - Name: DATABASE
               ValueFrom: !Sub "${DatabaseConnectionSecret}:database::"
