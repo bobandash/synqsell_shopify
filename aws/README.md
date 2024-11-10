@@ -8,6 +8,8 @@ To reference how to set up the project, please click <a href="https://github.com
 
 # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/pseudo-parameter-reference.html
 
+# https://docs.aws.amazon.com/aws-managed-policy/latest/reference/AmazonECSTaskExecutionRolePolicy.html
+
 ## Common Commands
 
 Here are a list of common commands used for development.

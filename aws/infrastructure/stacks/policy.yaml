@@ -1,0 +1,50 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Shared managed policies created after application and database
+
+Parameters:
+  Environment:
+    Type: String
+  ApiKeySecret:
+    Type: String
+  DatabaseUserCredentialSecret:
+    Type: String
+  DatabaseConnectionSecret:
+    Type: String
+
+Resources:
+  SecretsAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "Policy for accessing secrets manager secrets"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - "secretsmanager:GetSecretValue"
+            Resource:
+              - !Sub
+                - "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${SecretId}-*"
+                - SecretId: !Ref ApiKeySecret
+              - !Ref DatabaseConnectionSecret
+              - !Ref DatabaseUserCredentialSecret
+          - Effect: Allow
+            Action:
+              - ssm:GetParameter
+              - ssm:GetParameters
+              - ssm:GetParametersByPath
+            Resource:
+              - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${Environment}/env/*"
+          - Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource:
+              - !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/*"
+            Condition:
+              StringLike:
+                kms:ViaService: !Sub "ssm.${AWS::Region}.amazonaws.com"
+
+Outputs:
+  SecretsAccessPolicy:
+    Value: !Ref SecretsAccessPolicy

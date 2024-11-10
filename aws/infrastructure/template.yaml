@@ -1,7 +1,8 @@
 # TODO: Add lambda layers for shared functions
-# TODO: Create a CD pipeline to automatically build and push the docker image onto ECR, and pull/run the docker image from ECR to EC2
+# TODO: Create a CI pipeline to automatically build and push the docker image onto ECR, and CD pipeline pull/run the docker image from ECR to EC2
 # TODO: eventually add mapping for different regions and resource types
 # TODO: Create a script that runs sam validate for all the stacks at once
+# TODO: Honestly, I've been thinking that I don't need multi-AZs for prod pre-PMF
 
 # sam validate --template-file infrastructure/stacks/api.yaml --lint
 AWSTemplateFormatVersion: "2010-09-09"
@@ -33,6 +34,13 @@ Parameters:
     Type: String
     Default: ""
     Description: Domain name to deploy application # TODO: secrets manager cannot resolve certain resources like DNS record, see if there's a better way besides passing in parameters
+  IsInitialDeploy:
+    Type: String
+    Default: "True"
+    AllowedValues:
+      - "True"
+      - "False"
+    Description: Whether or not sam deploy is used to create all initial infrastructure or just update it
 
 Conditions:
   isProd: !Equals
@@ -61,38 +69,8 @@ Resources:
     Properties:
       TemplateURL: stacks/security.yaml
       Parameters:
-        Environment: !Ref Environment
         AppConfigSecret: !Ref AppConfigSecret
         VpcId: !GetAtt NetworkingStack.Outputs.VpcId
-      Tags:
-        - Key: Environment
-          Value: !Ref Environment
-
-  LambdaFunctionStack:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: stacks/lambda.yaml
-      Parameters:
-        Environment: !Ref Environment
-        ApiKeySecret: !Ref ApiKeySecret
-        AppConfigSecret: !Ref AppConfigSecret
-        VpcId: !GetAtt NetworkingStack.Outputs.VpcId
-        PrivateSubnets: !GetAtt NetworkingStack.Outputs.PrivateSubnets
-        DatabaseUserCredentialSecret: !GetAtt DatabaseStack.Outputs.DatabaseUserCredentialSecret
-        DatabaseConnectionSecret: !GetAtt DatabaseStack.Outputs.DatabaseConnectionSecret
-        LambdaSecurityGroup: !GetAtt SecurityStack.Outputs.LambdaSecurityGroup
-      Tags:
-        - Key: Environment
-          Value: !Ref Environment
-
-  ApiStack:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: stacks/api.yaml
-      Parameters:
-        Environment: !Ref Environment
-        StripeWebhookCoordinatorFunctionArn: !GetAtt LambdaFunctionStack.Outputs.StripeWebhookCoordinatorFunctionArn
-        DeliveryCarrierServiceFunctionArn: !GetAtt LambdaFunctionStack.Outputs.DeliveryCarrierServiceFunctionArn
       Tags:
         - Key: Environment
           Value: !Ref Environment
@@ -112,30 +90,68 @@ Resources:
         - Key: Environment
           Value: !Ref Environment
 
+  ManagedPolicyStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: stacks/policy.yaml
+      Parameters:
+        Environment: !Ref Environment
+        ApiKeySecret: !Ref ApiKeySecret
+        DatabaseUserCredentialSecret: !GetAtt DatabaseStack.Outputs.DatabaseUserCredentialSecret
+        DatabaseConnectionSecret: !GetAtt DatabaseStack.Outputs.DatabaseConnectionSecret
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+
+  LambdaFunctionStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: stacks/lambda.yaml
+      Parameters:
+        Environment: !Ref Environment
+        ApiKeySecret: !Ref ApiKeySecret
+        AppConfigSecret: !Ref AppConfigSecret
+        VpcId: !GetAtt NetworkingStack.Outputs.VpcId
+        PrivateSubnets: !GetAtt NetworkingStack.Outputs.PrivateSubnets
+        DatabaseUserCredentialSecret: !GetAtt DatabaseStack.Outputs.DatabaseUserCredentialSecret
+        DatabaseConnectionSecret: !GetAtt DatabaseStack.Outputs.DatabaseConnectionSecret
+        LambdaSecurityGroup: !GetAtt SecurityStack.Outputs.LambdaSecurityGroup
+        SecretsAccessPolicy: !GetAtt ManagedPolicyStack.Outputs.SecretsAccessPolicy
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+
+  ApiStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: stacks/api.yaml
+      Parameters:
+        Environment: !Ref Environment
+        StripeWebhookCoordinatorFunctionArn: !GetAtt LambdaFunctionStack.Outputs.StripeWebhookCoordinatorFunctionArn
+        DeliveryCarrierServiceFunctionArn: !GetAtt LambdaFunctionStack.Outputs.DeliveryCarrierServiceFunctionArn
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+
   ApplicationStack:
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: stacks/application.yaml
       Parameters:
         Environment: !Ref Environment
-        AppConfigSecret: !Ref AppConfigSecret
         VpcId: !GetAtt NetworkingStack.Outputs.VpcId
         PrivateSubnetOne: !GetAtt NetworkingStack.Outputs.PrivateSubnetOne
         PublicSubnets: !GetAtt NetworkingStack.Outputs.PublicSubnets
-        ALBSecurityGroup:
-          !If [
-            isProdOrStaging,
-            !GetAtt SecurityStack.Outputs.ALBSecurityGroup,
-            AWS::NoValue,
-          ]
-        RemixAppSecurityGroup:
-          !If [
-            isProdOrStaging,
-            !GetAtt SecurityStack.Outputs.ALBSecurityGroup,
-            AWS::NoValue,
-          ]
+        PrivateSubnets: !GetAtt NetworkingStack.Outputs.PrivateSubnets
+        AlbSecurityGroup: !GetAtt SecurityStack.Outputs.AlbSecurityGroup
+        EcsServiceSecurityGroup: !GetAtt SecurityStack.Outputs.EcsServiceSecurityGroup
         AppHostedZoneId: !Ref AppHostedZoneId
         AppDomainName: !Ref AppDomainName
+        DatabaseUserCredentialSecret: !GetAtt DatabaseStack.Outputs.DatabaseUserCredentialSecret
+        DatabaseConnectionSecret: !GetAtt DatabaseStack.Outputs.DatabaseConnectionSecret
+        ApiId: !GetAtt ApiStack.Outputs.ApiGatewayId
+        SecretsAccessPolicy: !GetAtt ManagedPolicyStack.Outputs.SecretsAccessPolicy
+        IsInitialDeploy: !Ref IsInitialDeploy
       Tags:
         - Key: Environment
           Value: !Ref Environment

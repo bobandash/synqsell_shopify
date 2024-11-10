@@ -5,23 +5,35 @@ Description: >
 Parameters:
   Environment:
     Type: String
-  AppConfigSecret:
-    Type: String
   VpcId:
     Type: String
   PrivateSubnetOne:
     Type: String
+  PrivateSubnets:
+    Type: String
   PublicSubnets:
     Type: String
-  ALBSecurityGroup:
+  AlbSecurityGroup:
     Type: String
-  RemixAppSecurityGroup:
+  EcsServiceSecurityGroup:
     Type: String
   AppHostedZoneId:
     Type: String
   AppDomainName:
     Type: String
-
+  DatabaseUserCredentialSecret:
+    Type: String
+  DatabaseConnectionSecret:
+    Type: String
+  ApiId:
+    Type: String
+  SecretsAccessPolicy:
+    Type: String
+  IsInitialDeploy:
+    Type: String
+    AllowedValues:
+      - "True"
+      - "False"
 Conditions:
   isProd: !Equals
     - !Ref Environment
@@ -32,6 +44,9 @@ Conditions:
   isProdOrStaging: !Or
     - !Condition isProd
     - !Condition isStaging
+  isInitialDeployCondition: !Equals
+    - !Ref IsInitialDeploy
+    - "True"
 
 Resources:
   # TODO: add clean up bucket for dev and staging --> delete
@@ -71,7 +86,7 @@ Resources:
       Type: "application"
       Subnets: !Split [",", !Ref PublicSubnets]
       SecurityGroups:
-        - !Ref ALBSecurityGroup
+        - !Ref AlbSecurityGroup
       IpAddressType: "ipv4"
 
   DNSRecord:
@@ -117,7 +132,7 @@ Resources:
     Condition: isProdOrStaging
     Properties:
       Certificates:
-        - !Ref ALBCertificate
+        - CertificateArn: !Ref ALBCertificate
       LoadBalancerArn: !Ref ApplicationLoadBalancer
       Port: 443
       Protocol: "HTTPS"
@@ -127,27 +142,39 @@ Resources:
           TargetGroupArn: !Ref TargetGroupOne
           Type: "forward"
 
+  # Fargate target = ip
   TargetGroupOne:
     Type: "AWS::ElasticLoadBalancingV2::TargetGroup"
     Condition: isProdOrStaging
     Properties:
-      Port: 80
-      Protocol: "HTTP"
+      TargetType: ip
+      Port: 3000
+      Protocol: HTTP
       VpcId: !Ref VpcId
-      Targets:
-        - Id: !Ref RemixAppInstance
+      HealthCheckPath: /health
 
-  ECR:
+  # TODO: for simplicity, set image tag to mutable
+  # Prod should have versioning for image tags to allow for rollbacks in application in future
+  Ecr:
     Type: AWS::ECR::Repository
     Condition: isProdOrStaging
     Properties:
       EmptyOnDelete: True
       ImageScanningConfiguration:
         ScanOnPush: true
-      ImageTagMutability: IMMUTABLE
+      ImageTagMutability: MUTABLE
 
-  RemixAppInstanceRole:
-    Type: AWS::IAM::Role
+  EcsCluster:
+    Type: "AWS::ECS::Cluster"
+    Condition: isProdOrStaging
+    Properties:
+      CapacityProviders:
+        - FARGATE
+
+  # need access to pull container image from ecr and send container logs
+  # TODO: look into Task Roles (https://towardsthecloud.com/amazon-ecs-task-role-vs-execution-role); may not need to pass AWS Creds in .env
+  EcsExecutionRole:
+    Type: "AWS::IAM::Role"
     Condition: isProdOrStaging
     Properties:
       AssumeRolePolicyDocument:
@@ -155,47 +182,123 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              Service: ec2.amazonaws.com
+              Service: ecs-tasks.amazonaws.com
             Action: sts:AssumeRole
-      Policies:
-        - PolicyName: ECRAccess
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action: ecr:GetAuthorizationToken
-                Resource: "*"
-              - Effect: Allow
-                Action:
-                  - ecr:BatchGetImage
-                  - ecr:GetDownloadUrlForLayer
-                  - ecr:BatchCheckLayerAvailability
-                Resource: !GetAtt ECR.Arn
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+        - !Ref SecretsAccessPolicy
 
-  # You must have a profile to attach a role to an EC2
-  RemixAppInstanceProfile:
-    Type: AWS::IAM::InstanceProfile
+  EcsLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/ecs/${AWS::StackName}"
+      RetentionInDays: 14
+
+  ParameterNodeEnv:
+    Condition: isProdOrStaging
+    Type: AWS::SSM::Parameter
+    Properties:
+      DataType: text
+      Name: !Sub /${Environment}/env/NODE_ENV
+      Type: String
+      Value: !If [isProd, production, test]
+
+  # When using services, by specifying a health check
+  # if the container is unhealthy, then it will be replaced by a healthy container in the service
+  # TODO: look into task role, if I specify task role, I shouldn't need to specify the AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY
+  EcsTaskDefinition:
+    Type: "AWS::ECS::TaskDefinition"
     Condition: isProdOrStaging
     Properties:
-      InstanceProfileName: !Sub ${Environment}-remix-app-ec2-instance-profile
-      Path: /
-      Roles:
-        - !Ref RemixAppInstanceRole
+      ContainerDefinitions:
+        - Name: synqsell-app
+          Image: !Join [":", [!GetAtt Ecr.RepositoryUri, "latest"]]
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref EcsLogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: synqsell
+          PortMappings:
+            - ContainerPort: 3000
+          Command:
+            - npm
+            - run
+            - docker-start
+          WorkingDirectory: /app
+          HealthCheck:
+            Command:
+              - CMD-SHELL
+              - curl -f http://localhost:3000/health || exit 1
+          Environment:
+            - Name: NODE_ENV
+              Value: !GetAtt ParameterNodeEnv.Value
+            - Name: S3_BUCKET
+              Value: !Ref ImageHostingS3
+            - Name: CARRIER_SERVICE_CALLBACK_URL
+              Value: !Sub https://${ApiId}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/stripe/webhooks
+            - Name: AWS_REGION
+              Value: !Ref AWS::Region
+            - Name: SHOPIFY_APP_URL
+              Value: !Sub https://${AppDomainName}
+            - Name: PORT
+              Value: 3000
+          Secrets:
+            - Name: DATABASE
+              ValueFrom: !Sub "${DatabaseConnectionSecret}:database::"
+            - Name: DB_HOST
+              ValueFrom: !Sub "${DatabaseConnectionSecret}:host::"
+            - Name: DB_PORT
+              ValueFrom: !Sub "${DatabaseConnectionSecret}:port::"
+            - Name: DB_PASSWORD
+              ValueFrom: !Sub "${DatabaseUserCredentialSecret}:password::"
+            - Name: DB_USERNAME
+              ValueFrom: !Sub "${DatabaseUserCredentialSecret}:username::"
+            - Name: AWS_ACCESS_KEY_ID
+              ValueFrom: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${Environment}/env/AWS_ACCESS_KEY_ID
+            - Name: AWS_SECRET_ACCESS_KEY
+              ValueFrom: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${Environment}/env/AWS_SECRET_ACCESS_KEY
+            - Name: STRIPE_SECRET_API_KEY
+              ValueFrom: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${Environment}/env/STRIPE_SECRET_API_KEY
+            - Name: REACT_APP_STRIPE_PUBLISHABLE_KEY
+              ValueFrom: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${Environment}/env/REACT_APP_STRIPE_PUBLISHABLE_KEY
+            - Name: SCOPES
+              ValueFrom: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${Environment}/env/SCOPES
+            - Name: SHOPIFY_API_KEY
+              ValueFrom: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${Environment}/env/SHOPIFY_API_KEY
+            - Name: SHOPIFY_API_SECRET
+              ValueFrom: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${Environment}/env/SHOPIFY_API_SECRET
+      Cpu: 256
+      ExecutionRoleArn: !GetAtt EcsExecutionRole.Arn
+      Memory: 512
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      Family: !Sub ${AWS::StackName}-task # puts all revisions of task def together
 
-  RemixAppInstance:
-    Type: AWS::EC2::Instance
+  EcsService:
+    Type: "AWS::ECS::Service"
     Condition: isProdOrStaging
     Properties:
-      ImageId: ami-037774efca2da0726
-      InstanceType: t2.micro
-      NetworkInterfaces:
-        - AssociatePublicIpAddress: "true"
-          DeviceIndex: "0"
-          GroupSet:
-            - !Ref RemixAppSecurityGroup
-          SubnetId: !Ref PrivateSubnetOne
-      KeyName: !Sub "{{resolve:secretsmanager:${AppConfigSecret}:SecretString:webAppKeyPair}}"
-      IamInstanceProfile: !Ref RemixAppInstanceProfile
+      LaunchType: FARGATE
+      Cluster: !GetAtt EcsCluster.Arn
+      DesiredCount: !If
+        - isInitialDeployCondition
+        - 0
+        - 1
+      TaskDefinition: !Ref EcsTaskDefinition
+      LoadBalancers:
+        - ContainerName: synqsell-app
+          ContainerPort: 3000
+          TargetGroupArn: !Ref TargetGroupOne
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          Subnets: !If
+            - isStaging
+            - [!Ref PrivateSubnetOne]
+            - !Split [",", !Ref PrivateSubnets]
+          SecurityGroups:
+            - !Ref EcsServiceSecurityGroup
 
 Outputs:
   ImageHostingS3BucketName:
