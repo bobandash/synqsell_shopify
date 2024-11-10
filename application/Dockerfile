@@ -1,6 +1,8 @@
 # https://docs.aws.amazon.com/AmazonECR/latest/userguide/docker-push-ecr-image.html
 FROM node:20-alpine
 
+RUN apk --no-cache add curl
+
 EXPOSE 3000
 
 WORKDIR /app

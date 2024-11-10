@@ -151,6 +151,7 @@ Resources:
       Port: 3000
       Protocol: HTTP
       VpcId: !Ref VpcId
+      HealthCheckPath: /health
 
   # TODO: for simplicity, set image tag to mutable
   # Prod should have versioning for image tags to allow for rollbacks in application in future
@@ -228,7 +229,7 @@ Resources:
           HealthCheck:
             Command:
               - CMD-SHELL
-              - curl -f http://localhost:3000/ || exit 1
+              - curl -f http://localhost:3000/health || exit 1
           Environment:
             - Name: NODE_ENV
               Value: !GetAtt ParameterNodeEnv.Value
