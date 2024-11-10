@@ -1,6 +1,6 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "2c3db0b06834a9b20de60ef4b15c8228"
+client_id = "05054543f4099a0281a2c27c88e04c11"
 name = "SynqSell-Staging"
 handle = "synqsell-staging"
 application_url = "https://app.staging.synqsell.com"
@@ -8,8 +8,8 @@ embedded = true
 
 [build]
 automatically_update_urls_on_dev = false
-include_config_on_deploy = true
 dev_store_url = "quickstart-3fe7f8c3.myshopify.com"
+include_config_on_deploy = true
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
