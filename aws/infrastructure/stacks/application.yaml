@@ -193,7 +193,6 @@ Resources:
       LogGroupName: !Sub "/aws/ecs/${AWS::StackName}"
       RetentionInDays: 14
 
-  # Parameter option for ENV Variables in Application, only needed in Staging and Prod for now
   ParameterNodeEnv:
     Condition: isProdOrStaging
     Type: AWS::SSM::Parameter
@@ -201,16 +200,7 @@ Resources:
       DataType: text
       Name: !Sub /${Environment}/env/NODE_ENV
       Type: String
-      Value: !If [isProd, Production, Staging]
-
-  ParameterLogLevel:
-    Condition: isProdOrStaging
-    Type: AWS::SSM::Parameter
-    Properties:
-      DataType: text
-      Name: !Sub /${Environment}/env/LOG_LEVEL
-      Type: String
-      Value: !If [isProd, Production, Staging]
+      Value: !If [isProd, production, test]
 
   # When using services, by specifying a health check
   # if the container is unhealthy, then it will be replaced by a healthy container in the service
@@ -242,8 +232,6 @@ Resources:
           Environment:
             - Name: NODE_ENV
               Value: !GetAtt ParameterNodeEnv.Value
-            - Name: LOG_LEVEL
-              Value: !GetAtt ParameterLogLevel.Value
             - Name: S3_BUCKET
               Value: !Ref ImageHostingS3
             - Name: CARRIER_SERVICE_CALLBACK_URL
