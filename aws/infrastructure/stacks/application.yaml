@@ -240,16 +240,18 @@ Resources:
               Value: !Ref AWS::Region
             - Name: SHOPIFY_APP_URL
               Value: !Sub https://${AppDomainName}
+            - Name: PORT
+              Value: 3000
           Secrets:
             - Name: DATABASE
               ValueFrom: !Sub "${DatabaseConnectionSecret}:database::"
-            - Name: HOST
+            - Name: DB_HOST
               ValueFrom: !Sub "${DatabaseConnectionSecret}:host::"
-            - Name: PORT
+            - Name: DB_PORT
               ValueFrom: !Sub "${DatabaseConnectionSecret}:port::"
-            - Name: PASSWORD
+            - Name: DB_PASSWORD
               ValueFrom: !Sub "${DatabaseUserCredentialSecret}:password::"
-            - Name: USERNAME
+            - Name: DB_USERNAME
               ValueFrom: !Sub "${DatabaseUserCredentialSecret}:username::"
             - Name: AWS_ACCESS_KEY_ID
               ValueFrom: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${Environment}/env/AWS_ACCESS_KEY_ID
