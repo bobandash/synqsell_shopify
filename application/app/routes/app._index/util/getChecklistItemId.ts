@@ -1,5 +1,5 @@
-import { CHECKLIST_ITEM_KEYS } from "~/constants";
-import { type TransformedChecklistTableData } from "../types";
+import { CHECKLIST_ITEM_KEYS } from '~/constants';
+import { type TransformedChecklistTableData } from '../types';
 // gets the relevant checklist status id from key
 function getChecklistItemId(
   key: string,
@@ -16,6 +16,8 @@ function getChecklistItemId(
   if (!isValidKey) {
     return null;
   }
+
+  console.log(tables);
 
   tables.forEach((table) => {
     let checklistItem = table.checklistItems.find((item) => item.key === key);

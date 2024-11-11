@@ -36,6 +36,8 @@ export type TransformedChecklistTableData = {
 
 export type LoaderResponse = {
   tables: TransformedChecklistTableData[];
+  hasStripePayments: boolean;
+  hasStripeConnect: boolean;
 };
 
 type BtnAction = null | (() => void);

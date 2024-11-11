@@ -13,7 +13,12 @@ import { BlockStack } from '@shopify/polaris';
 
 // TODO: add optimistic rendering
 function ChecklistTables() {
-  const { tables: tablesData } = useAsyncValue() as LoaderResponse;
+  const {
+    tables: tablesData,
+    hasStripeConnect,
+    hasStripePayments,
+  } = useAsyncValue() as LoaderResponse;
+
   const navigate = useNavigate();
   const shopify = useAppBridge();
   const [tables, setTables] =
@@ -38,40 +43,57 @@ function ChecklistTables() {
   });
 
   const transformedTablesData = useMemo(() => {
-    return tablesData.map((table) => {
-      const isFirstItemCompleted = table.checklistItems[0]
-        ? table.checklistItems[0].isCompleted
-        : false;
-      return {
-        ...table,
-        checklistItems: table.checklistItems.map(
-          ({ key, button, ...rest }, index) => {
-            let disabled = false;
-            // current checklist tables depend on brand being approved as a retailer and supplier
-            // so if the brand is already a retailer or supplier, the 0-index button should be disabled
-            // otherwise, if the brand is not a retailer or supplier, the remaining checklist items should be disabled
-            if (index === 0 && isFirstItemCompleted) {
-              disabled = true;
-            } else if (index > 0 && !isFirstItemCompleted) {
-              disabled = true;
-            }
-            return {
-              key,
-              ...rest,
-              button: button
-                ? {
-                    content: button.content,
-                    action: getChecklistBtnFunction(key, shopify, navigate),
-                    disabled: disabled,
-                  }
-                : undefined,
-            };
-          },
-        ),
-      };
-    });
-  }, [tablesData, shopify, navigate]);
+    const getDisabledState = (
+      index: number,
+      isFirstCompleted: boolean,
+      key: string,
+    ) => {
+      if (
+        (index === 0 && isFirstCompleted) ||
+        (index > 0 && !isFirstCompleted)
+      ) {
+        return true;
+      }
 
+      // retailer checklist
+      if (
+        !hasStripePayments &&
+        (key === CHECKLIST_ITEM_KEYS.RETAILER_REQUEST_PARTNERSHIP ||
+          key === CHECKLIST_ITEM_KEYS.RETAILER_IMPORT_PRODUCT)
+      ) {
+        return true;
+      }
+
+      // supplier checklist
+      if (
+        !hasStripeConnect &&
+        key === CHECKLIST_ITEM_KEYS.SUPPLIER_EXPLORE_NETWORK
+      ) {
+        return true;
+      }
+
+      return false;
+    };
+
+    return tablesData.map((table) => ({
+      ...table,
+      checklistItems: table.checklistItems.map(
+        ({ key, button, ...rest }, index) => ({
+          key,
+          ...rest,
+          button: button && {
+            ...button,
+            action: getChecklistBtnFunction(key, shopify, navigate),
+            disabled: getDisabledState(
+              index,
+              table.checklistItems[0].isCompleted,
+              key,
+            ),
+          },
+        }),
+      ),
+    }));
+  }, [tablesData, shopify, navigate, hasStripePayments, hasStripeConnect]);
   useEffect(() => {
     setTables(transformedTablesData);
   }, [transformedTablesData]);

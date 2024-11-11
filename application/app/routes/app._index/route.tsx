@@ -35,7 +35,11 @@ import {
   handleAppReinstalled,
 } from './loader';
 import { getOrCreateUserPreferences } from '~/services/models/userPreferences';
-import { getSession } from '~/services/models/session';
+import {
+  getSession,
+  hasStripeConnectAccount,
+  hasStripePaymentsAccount,
+} from '~/services/models/session';
 import { createJSONError, handleRouteError } from '~/lib/utils/server';
 import { StatusCodes } from 'http-status-codes';
 
@@ -62,9 +66,17 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     if (missingChecklistIds) {
       await createMissingChecklistStatuses(missingChecklistIds, sessionId);
     }
-    const tablesPromise = await getTablesAndStatuses(sessionId);
+
     return defer({
-      tables: tablesPromise,
+      loaderData: Promise.all([
+        getTablesAndStatuses(sessionId),
+        hasStripePaymentsAccount(sessionId),
+        hasStripeConnectAccount(sessionId),
+      ]).then(([tables, hasStripePayments, hasStripeConnect]) => ({
+        tables,
+        hasStripePayments,
+        hasStripeConnect,
+      })),
     });
   } catch (error) {
     throw handleRouteError(error, '/app/_index');
@@ -100,7 +112,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 function Index() {
-  const loaderData = useLoaderData<typeof loader>();
+  const { loaderData } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
 
