@@ -8,9 +8,10 @@ function getAppBaseUrl(shop: string) {
     case 'production':
       appName = 'synqsell';
       break;
+    case 'test':
+      appName = 'synqsell-staging';
     default:
-      appName = 'synqsell-dev';
-      break;
+      throw new Error('Not a valid environment.');
   }
 
   const appBaseUrl = `https://${shop}/admin/apps/${appName}/`;

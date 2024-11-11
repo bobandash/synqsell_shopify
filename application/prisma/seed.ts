@@ -2,7 +2,17 @@ import { PrismaClient } from '@prisma/client';
 import { CHECKLIST_ITEM_KEYS, ROLES } from '~/constants';
 import { addRole } from '~/services/models/roles';
 import { hasSession } from '~/services/models/session';
-const db = new PrismaClient();
+import * as dotenv from 'dotenv';
+
+dotenv.config();
+
+const db = new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL,
+    },
+  },
+});
 
 // npx prisma db push
 // npx prisma db seed - to run seed for database

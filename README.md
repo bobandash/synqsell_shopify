@@ -62,6 +62,7 @@ These observations led me to a crucial question: could I create a risk-free meth
 Just a disclaimer: I may be completely wrong in understanding Shopify merchants' needs. This project showcased to me that software is a continuous process of iteration.
 
 ### Deployment Status
+
 - Submitted to Shopify App Store for Review
 - Video Demo: https://www.youtube.com/watch?v=D-RJJmcRiks&feature=youtu.be
 - Main Features (Text): https://aback-thistle-ade.notion.site/Features-At-A-Glance-8be5cba5a5254a67bb59845c5b1c738a
@@ -129,11 +130,12 @@ To get a local copy up and running follow these steps:
        - stripeSecretApiKey - Locatable in [Stripe Connect](https://docs.stripe.com/keys#:~:text=In%20the%20Developers%20Dashboard%2C%20select,key%20value%20by%20clicking%20it.), prefixed with sk_test
        - stripeReactAppPublishableKey - Locatable in [Stripe Connect](https://docs.stripe.com/keys#:~:text=In%20the%20Developers%20Dashboard%2C%20select,key%20value%20by%20clicking%20it.), prefixed with pk_test
        - stripeWebhookSigningSecret - Locatable in [Stripe Webhooks in Toolbox](https://dashboard.stripe.com/login?redirect=%2Ftest%2Fwebhooks), prefixed with whsec
-8. Clone the repository:
+8. Install [Session Manager plugin](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html) for AWS CLI
+9. Clone the repository:
    ```sh
    git clone https://github.com/bobandash/synqsell_shopify.git
    ```
-9. <strong>(Windows Only)</strong> OpenSSH may not be installed by default for windows. Install [OpenSSH](https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse?tabs=gui&pivots=windows-server-2025).
+10. <strong>(Windows Only)</strong> OpenSSH may not be installed by default for windows. Install [OpenSSH](https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse?tabs=gui&pivots=windows-server-2025).
 
 ### Installation
 
@@ -193,10 +195,10 @@ For the Shopify Application:
    ```
    - `<DB_SECRETS_ARN>` - Found in the CloudFormation/SAM outputs after deployment.
 10. Create a .env file inside the working directory and copy and paste the values in the .sample.env
-    - `<DATABASE_URL>` - postgresql://postgres:<DB_PASSWORD>@localhost:8886/postgres, with the DB_PASSWORD being the password you obtained in step 5
+    - `<DATABASE_URL>` - postgresql://postgres:<DB_PASSWORD>@localhost:8886/postgres
     - `<AWS_ACCESS_KEY_ID>` and `<AWS_SECRET_ACCESS_KEY>` - Generated and stored in Prerequisites
     - `<STRIPE_SECRET_API_KEY>` and `<REACT_APP_STRIPE_PUBLISHABLE_KEY>` - Generated and stored in Prerequisites
-    - `<ADMIN_SESSION_ID>` - This is the same value as the dev*store_url you configured in shopify.app.dev.toml with offline_ prefixed to it (e.g. offline_`<STORE_NAME>`.myshopify.com)
+    - `<ADMIN_SESSION_ID>` - This is the same value as the dev\*store*url you configured in shopify.app.dev.toml with offline* prefixed to it (e.g. offline\_`<STORE_NAME>`.myshopify.com)
     - `<NODE_ENV>`: Set it to "development"
     - `<CARRIER_SERVICE_CALLBACK_URL>`, `<AWS_REGION>`, `<S3_BUCKET>` - found in SAM outputs after deployment
 11. Run the following command to start the application.
