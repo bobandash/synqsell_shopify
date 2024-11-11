@@ -24,7 +24,7 @@ export type PriceListWithAccess = {
 };
 
 async function getGeneralPriceListFormatted(supplierId: string) {
-  const generalPriceListExists = hasGeneralPriceList(supplierId);
+  const generalPriceListExists = await hasGeneralPriceList(supplierId);
   if (!generalPriceListExists) {
     return null;
   }

@@ -8,7 +8,10 @@ import { StatusCodes } from 'http-status-codes';
 import { authenticate } from '~/shopify.server';
 import { convertFormDataToObject, isActionDataError } from '~/lib/utils';
 import { createJSONError, handleRouteError } from '~/lib/utils/server';
-import { isValidPriceList } from '~/services/models/priceList';
+import {
+  isValidPriceList,
+  userHasPriceList,
+} from '~/services/models/priceList';
 import {
   useLoaderData,
   useSearchParams,
@@ -31,6 +34,7 @@ import { INTENTS } from './constants';
 import { getProductCardInfoFromPriceList } from './loader/getProductCardInfoForSpecificPriceList';
 import type { ProductCardJSON } from './types';
 import ProductCard from './components/ProductCard';
+import { hasStripePaymentsAccount } from '~/services/models/session';
 
 type ProductCardInfo = {
   products: ProductCardJSON[];
@@ -66,16 +70,36 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     const isReverseDirection = prev ? true : false;
     let cursor = next || prev || null;
 
-    if (!(await isValidPriceList(priceListId))) {
+    const [
+      isValidPriceListId,
+      hasAccessToPriceList,
+      isUserPriceListOwner,
+      userHasStripePayments,
+    ] = await Promise.all([
+      isValidPriceList(priceListId),
+      hasAccessToViewPriceList(priceListId, sessionId),
+      userHasPriceList(sessionId, priceListId),
+      hasStripePaymentsAccount(sessionId),
+    ]);
+
+    if (isUserPriceListOwner) {
+      throw createJSONError(
+        "User cannot view and import products in the user's own price list.",
+        StatusCodes.UNAUTHORIZED,
+      );
+    } else if (!userHasStripePayments) {
+      throw createJSONError(
+        'User does not have stripe payments set up to begin importing products.',
+        StatusCodes.UNAUTHORIZED,
+      );
+    } else if (!isValidPriceListId) {
       throw createJSONError(
         'Price list could not be found.',
         StatusCodes.NOT_FOUND,
       );
-    }
-
-    if (!(await hasAccessToViewPriceList(priceListId, sessionId))) {
+    } else if (!hasAccessToPriceList) {
       throw createJSONError(
-        'You do not have access to view products in this price list.',
+        'User does not have access to view products in this price list.',
         StatusCodes.UNAUTHORIZED,
       );
     }
