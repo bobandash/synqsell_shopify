@@ -61,7 +61,10 @@ async function addBillingToDatabase(
 }
 
 async function handleBilling(shop: string, sessionId: string, billing: any) {
-  const isTest = process.env.NODE_ENV === 'development' ? true : false;
+  let isTest = true;
+  if (process.env.NODE_ENV === 'production') {
+    isTest = false;
+  }
   await requireBilling(shop, isTest, billing);
   await addBillingToDatabase(shop, sessionId, isTest, billing);
 }
