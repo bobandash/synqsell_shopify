@@ -104,3 +104,5 @@ Outputs:
     Value: !Ref DatabaseConnectionSecret
   BastionHostPublicIp:
     Value: !GetAtt BastionHost.PublicIp
+  DbEndpointAddress:
+    Value: !GetAtt DatabaseRDS.Endpoint.Address

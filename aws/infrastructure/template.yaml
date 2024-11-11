@@ -156,7 +156,7 @@ Resources:
         - Key: Environment
           Value: !Ref Environment
 
-# These outputs are to create the environment variables
+# TODO: add db output
 Outputs:
   ImageHostingS3BucketName:
     Description: S3 bucket name for storing all the merchants' logos
@@ -170,6 +170,9 @@ Outputs:
   DbConnectionSecretArn:
     Description: Secrets Manager for Database Connection
     Value: !GetAtt DatabaseStack.Outputs.DatabaseConnectionSecret
+  DbEndpointAddress:
+    Description: Endpoint of the RDS
+    Value: !GetAtt DatabaseStack.Outputs.DbEndpointAddress
   BastionHostPublicIp:
     Description: Public IP of your bastion host
     Value: !GetAtt DatabaseStack.Outputs.BastionHostPublicIp
