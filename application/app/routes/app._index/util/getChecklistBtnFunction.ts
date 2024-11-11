@@ -26,7 +26,7 @@ function getChecklistBtnFunction(
       btnFunction = () => navigate('/app/supplier-network');
       break;
     case CHECKLIST_ITEM_KEYS.RETAILER_IMPORT_PRODUCT:
-      btnFunction = () => navigate('/app/products');
+      btnFunction = () => navigate('/app/supplier-network');
       break;
     case CHECKLIST_ITEM_KEYS.SUPPLIER_GET_STARTED:
       btnFunction = () => openModal(shopify, MODALS.BECOME_SUPPLIER);
