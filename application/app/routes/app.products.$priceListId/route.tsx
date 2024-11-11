@@ -34,7 +34,7 @@ import { INTENTS } from './constants';
 import { getProductCardInfoFromPriceList } from './loader/getProductCardInfoForSpecificPriceList';
 import type { ProductCardJSON } from './types';
 import ProductCard from './components/ProductCard';
-import { hasStripePaymentsAccount } from '~/services/models/session';
+import { userHasStripePaymentMethod } from '~/services/models/stripeCustomerAccount';
 
 type ProductCardInfo = {
   products: ProductCardJSON[];
@@ -79,7 +79,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
       isValidPriceList(priceListId),
       hasAccessToViewPriceList(priceListId, sessionId),
       userHasPriceList(sessionId, priceListId),
-      hasStripePaymentsAccount(sessionId),
+      userHasStripePaymentMethod(sessionId),
     ]);
 
     if (isUserPriceListOwner) {

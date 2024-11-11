@@ -35,13 +35,11 @@ import {
   handleAppReinstalled,
 } from './loader';
 import { getOrCreateUserPreferences } from '~/services/models/userPreferences';
-import {
-  getSession,
-  hasStripeConnectAccount,
-  hasStripePaymentsAccount,
-} from '~/services/models/session';
+import { getSession } from '~/services/models/session';
 import { createJSONError, handleRouteError } from '~/lib/utils/server';
 import { StatusCodes } from 'http-status-codes';
+import { userHasStripePaymentMethod } from '~/services/models/stripeCustomerAccount';
+import { userHasStripeConnectAccount } from '~/services/models/stripeConnectAccount';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
@@ -70,12 +68,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     return defer({
       loaderData: Promise.all([
         getTablesAndStatuses(sessionId),
-        hasStripePaymentsAccount(sessionId),
-        hasStripeConnectAccount(sessionId),
-      ]).then(([tables, hasStripePayments, hasStripeConnect]) => ({
+        userHasStripePaymentMethod(sessionId),
+        userHasStripeConnectAccount(sessionId),
+      ]).then(([tables, hasStripePaymentMethod, hasStripeConnectAccount]) => ({
         tables,
-        hasStripePayments,
-        hasStripeConnect,
+        hasStripePaymentMethod,
+        hasStripeConnectAccount,
       })),
     });
   } catch (error) {

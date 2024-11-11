@@ -163,6 +163,8 @@ export async function hasStripeConnectAccount(sessionId: string) {
   }
 }
 
+// TODO: Consider whether or not to remove this
+// even if a stripe customer account exists doesn't mean that there is a payment method set
 export async function hasStripePaymentsAccount(sessionId: string) {
   try {
     const res = await db.session.findFirstOrThrow({

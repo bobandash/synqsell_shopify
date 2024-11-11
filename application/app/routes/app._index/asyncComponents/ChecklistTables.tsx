@@ -15,8 +15,8 @@ import { BlockStack } from '@shopify/polaris';
 function ChecklistTables() {
   const {
     tables: tablesData,
-    hasStripeConnect,
-    hasStripePayments,
+    hasStripeConnectAccount,
+    hasStripePaymentMethod,
   } = useAsyncValue() as LoaderResponse;
 
   const navigate = useNavigate();
@@ -57,7 +57,7 @@ function ChecklistTables() {
 
       // retailer checklist
       if (
-        !hasStripePayments &&
+        !hasStripePaymentMethod &&
         (key === CHECKLIST_ITEM_KEYS.RETAILER_REQUEST_PARTNERSHIP ||
           key === CHECKLIST_ITEM_KEYS.RETAILER_IMPORT_PRODUCT)
       ) {
@@ -66,7 +66,7 @@ function ChecklistTables() {
 
       // supplier checklist
       if (
-        !hasStripeConnect &&
+        !hasStripeConnectAccount &&
         key === CHECKLIST_ITEM_KEYS.SUPPLIER_EXPLORE_NETWORK
       ) {
         return true;
@@ -93,7 +93,13 @@ function ChecklistTables() {
         }),
       ),
     }));
-  }, [tablesData, shopify, navigate, hasStripePayments, hasStripeConnect]);
+  }, [
+    tablesData,
+    shopify,
+    navigate,
+    hasStripePaymentMethod,
+    hasStripeConnectAccount,
+  ]);
   useEffect(() => {
     setTables(transformedTablesData);
   }, [transformedTablesData]);

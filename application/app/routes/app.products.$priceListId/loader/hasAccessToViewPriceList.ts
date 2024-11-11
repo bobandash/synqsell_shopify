@@ -6,11 +6,9 @@ import {
 } from '~/services/models/priceList';
 import { object } from 'yup';
 import { priceListIdSchema, sessionIdSchema } from '~/schemas/models';
-import {
-  hasStripeConnectAccount,
-  hasStripePaymentsAccount,
-  isAppUninstalled,
-} from '~/services/models/session';
+import { isAppUninstalled } from '~/services/models/session';
+import { userHasStripeConnectAccount } from '~/services/models/stripeConnectAccount';
+import { userHasStripePaymentMethod } from '~/services/models/stripeCustomerAccount';
 
 const hasAccessToViewPriceListSchema = object({
   priceListId: priceListIdSchema,
@@ -20,8 +18,8 @@ const hasAccessToViewPriceListSchema = object({
 async function hasStripeIntegrations(retailerId: string, supplierId: string) {
   const [supplierHasStripeConnectAccount, retailerHasStripePaymentsAccount] =
     await Promise.all([
-      hasStripeConnectAccount(supplierId),
-      hasStripePaymentsAccount(retailerId),
+      userHasStripeConnectAccount(supplierId),
+      userHasStripePaymentMethod(retailerId),
     ]);
 
   if (!supplierHasStripeConnectAccount || !retailerHasStripePaymentsAccount) {
