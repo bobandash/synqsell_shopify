@@ -13,11 +13,7 @@ import {
   type LoaderFunctionArgs,
 } from '@remix-run/node';
 import { StatusCodes } from 'http-status-codes';
-import {
-  createJSONError,
-  createJSONSuccess,
-  handleRouteError,
-} from '~/lib/utils/server';
+import { createJSONError, handleRouteError } from '~/lib/utils/server';
 import {
   convertFormDataToObject,
   isActionDataError,
@@ -66,14 +62,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }
 
     if (!isRetailer) {
-      throw createJSONSuccess(
+      throw createJSONError(
         'Unauthorized. User is not a retailer',
         StatusCodes.UNAUTHORIZED,
       );
     }
 
     if (!hasStripePaymentMethod) {
-      throw createJSONSuccess(
+      throw createJSONError(
         'Unauthorized. User is does not have a payment method',
         StatusCodes.UNAUTHORIZED,
       );
