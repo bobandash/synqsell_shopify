@@ -10,6 +10,7 @@ function getAppBaseUrl(shop: string) {
       break;
     case 'test':
       appName = 'synqsell-staging';
+      break;
     default:
       throw new Error('Not a valid environment.');
   }
