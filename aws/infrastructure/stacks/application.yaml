@@ -171,6 +171,24 @@ Resources:
       CapacityProviders:
         - FARGATE
 
+  # https://www.ernestchiang.com/en/posts/2021/using-amazon-ecs-exec/
+  EcsAllowExecuteCommandPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Condition: isProdOrStaging
+    Properties:
+      Description: "Policy for granting ECS access to use ECS Exec feature (for seeding db)"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - "ssmmessages:CreateControlChannel"
+              - "ssmmessages:CreateDataChannel"
+              - "ssmmessages:OpenControlChannel"
+              - "ssmmessages:OpenDataChannel"
+            Resource:
+              - "*"
+
   # need access to pull container image from ecr and send container logs
   # TODO: look into Task Roles (https://towardsthecloud.com/amazon-ecs-task-role-vs-execution-role); may not need to pass AWS Creds in .env
   EcsExecutionRole:
@@ -187,6 +205,21 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
         - !Ref SecretsAccessPolicy
+
+  # TODO: look into task role, if I specify task role, I shouldn't need to specify the AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY
+  EcsTaskRole:
+    Type: "AWS::IAM::Role"
+    Condition: isProdOrStaging
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Ref EcsAllowExecuteCommandPolicy
 
   EcsLogGroup:
     Type: AWS::Logs::LogGroup
@@ -205,7 +238,6 @@ Resources:
 
   # When using services, by specifying a health check
   # if the container is unhealthy, then it will be replaced by a healthy container in the service
-  # TODO: look into task role, if I specify task role, I shouldn't need to specify the AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY
   EcsTaskDefinition:
     Type: "AWS::ECS::TaskDefinition"
     Condition: isProdOrStaging
@@ -269,7 +301,8 @@ Resources:
             - Name: SHOPIFY_API_SECRET
               ValueFrom: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${Environment}/env/SHOPIFY_API_SECRET
       Cpu: 256
-      ExecutionRoleArn: !GetAtt EcsExecutionRole.Arn
+      ExecutionRoleArn: !GetAtt EcsExecutionRole.Arn # what ecs can do
+      TaskRoleArn: !GetAtt EcsTaskRole.Arn # what container can do
       Memory: 512
       NetworkMode: awsvpc
       RequiresCompatibilities:
@@ -286,7 +319,9 @@ Resources:
         - isInitialDeployCondition
         - 0
         - 1
+      HealthCheckGracePeriodSeconds: 120
       TaskDefinition: !Ref EcsTaskDefinition
+      EnableExecuteCommand: true
       LoadBalancers:
         - ContainerName: synqsell-app
           ContainerPort: 3000
