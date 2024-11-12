@@ -94,13 +94,6 @@ Resources:
       SubnetId: !Ref PrivateSubnetOne
       RouteTableId: !Ref PrivateRouteTable
 
-  # for high availability
-  PrivateRouteTableTwo:
-    Type: AWS::EC2::RouteTable
-    Condition: isProd
-    Properties:
-      VpcId: !Ref Vpc
-
   PrivateSubnetTwo:
     Type: AWS::EC2::Subnet
     Properties:
@@ -117,40 +110,47 @@ Resources:
       MapPublicIpOnLaunch: true
       AvailabilityZone: !Select [1, !GetAZs ""]
 
-  PublicSubnetTwoTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Condition: isProd
-    Properties:
-      SubnetId: !Ref PublicSubnetTwo
-      RouteTableId: !Ref PublicRouteTable
+  # for high availability, NAT Gateway = $30/month; no point in setting up high availability until more load
+  # PrivateRouteTableTwo:
+  #   Type: AWS::EC2::RouteTable
+  #   Condition: isProd
+  #   Properties:
+  #     VpcId: !Ref Vpc
 
-  PrivateSubnetTwoTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Condition: isProd
-    Properties:
-      SubnetId: !Ref PrivateSubnetTwo
-      RouteTableId: !Ref PrivateRouteTableTwo
+  # PublicSubnetTwoTableAssociation:
+  #   Type: AWS::EC2::SubnetRouteTableAssociation
+  #   Condition: isProd
+  #   Properties:
+  #     SubnetId: !Ref PublicSubnetTwo
+  #     RouteTableId: !Ref PublicRouteTable
 
-  NATGatewayTwoEIP:
-    Type: AWS::EC2::EIP
-    Condition: isProd
-    Properties:
-      Domain: vpc
+  # PrivateSubnetTwoTableAssociation:
+  #   Type: AWS::EC2::SubnetRouteTableAssociation
+  #   Condition: isProd
+  #   Properties:
+  #     SubnetId: !Ref PrivateSubnetTwo
+  #     RouteTableId: !Ref PrivateRouteTableTwo
 
-  NATGatewayTwo:
-    Type: AWS::EC2::NatGateway
-    Condition: isProd
-    Properties:
-      AllocationId: !GetAtt NATGatewayTwoEIP.AllocationId
-      SubnetId: !Ref PublicSubnetTwo
+  # NATGatewayTwoEIP:
+  #   Type: AWS::EC2::EIP
+  #   Condition: isProd
+  #   Properties:
+  #     Domain: vpc
 
-  PrivateRouteTwo:
-    Type: AWS::EC2::Route
-    Condition: isProd
-    Properties:
-      RouteTableId: !Ref PrivateRouteTableTwo
-      DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId: !Ref NATGatewayTwo
+  # NATGatewayTwo:
+  #   Type: AWS::EC2::NatGateway
+  #   Condition: isProd
+  #   Properties:
+  #     AllocationId: !GetAtt NATGatewayTwoEIP.AllocationId
+  #     SubnetId: !Ref PublicSubnetTwo
+
+  # PrivateRouteTwo:
+  #   Type: AWS::EC2::Route
+  #   Condition: isProd
+  #   Properties:
+  #     RouteTableId: !Ref PrivateRouteTableTwo
+  #     DestinationCidrBlock: 0.0.0.0/0
+  #     NatGatewayId: !Ref NATGatewayTwo
 
 Outputs:
   VpcId:
