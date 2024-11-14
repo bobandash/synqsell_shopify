@@ -309,9 +309,13 @@ Resources:
         - FARGATE
       Family: !Sub ${AWS::StackName}-task # puts all revisions of task def together
 
+  # service will fail unless alb is created first because it will not route properly to target gorup
   EcsService:
     Type: "AWS::ECS::Service"
     Condition: isProdOrStaging
+    DependsOn:
+      - ApplicationLoadBalancer
+      - HTTPSListener
     Properties:
       LaunchType: FARGATE
       Cluster: !GetAtt EcsCluster.Arn
@@ -328,10 +332,7 @@ Resources:
           TargetGroupArn: !Ref TargetGroupOne
       NetworkConfiguration:
         AwsvpcConfiguration:
-          Subnets: !If
-            - isStaging
-            - [!Ref PrivateSubnetOne]
-            - !Split [",", !Ref PrivateSubnets]
+          Subnets: [!Ref PrivateSubnetOne] # TODO: should be all private subnets when double route table is set up
           SecurityGroups:
             - !Ref EcsServiceSecurityGroup
 
