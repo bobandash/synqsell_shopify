@@ -4,7 +4,6 @@ import {
   DELETE_FULFILLMENT_SERVICE,
   GET_ALL_FULFILLMENT_SERVICES,
 } from './graphql';
-import { errorHandler } from '~/lib/utils/server';
 import { FULFILLMENT_SERVICE } from '~/constants';
 import {
   mutateInternalStoreAdminAPI,
@@ -16,104 +15,61 @@ import type {
   FulfillmentServiceDeleteMutation,
 } from '~/types/admin.generated';
 
-export async function getFulfillmentService(
-  sessionId: string,
-  graphql: GraphQL,
-) {
-  try {
-    const data = await queryInternalStoreAdminAPI<AllFulfillmentServicesQuery>(
-      graphql,
-      GET_ALL_FULFILLMENT_SERVICES,
-      {},
-    );
-    const fulfillmentServices = data.shop.fulfillmentServices;
-    const applicationFulfillmentService = fulfillmentServices.filter(
-      (service) => service.serviceName === FULFILLMENT_SERVICE.name,
-    );
-    if (applicationFulfillmentService.length === 0) {
-      return null;
-    }
-    return applicationFulfillmentService[0];
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to retrieve fulfillment service from shopify.',
-      getFulfillmentService,
-      { sessionId },
-    );
+export async function getFulfillmentService(graphql: GraphQL) {
+  const data = await queryInternalStoreAdminAPI<AllFulfillmentServicesQuery>(
+    graphql,
+    GET_ALL_FULFILLMENT_SERVICES,
+    {},
+  );
+  const fulfillmentServices = data.shop.fulfillmentServices;
+  const applicationFulfillmentService = fulfillmentServices.filter(
+    (service) => service.serviceName === FULFILLMENT_SERVICE.name,
+  );
+  if (applicationFulfillmentService.length === 0) {
+    return null;
   }
+  return applicationFulfillmentService[0];
 }
 
 export async function deleteFulfillmentService(id: string, graphql: GraphQL) {
-  try {
-    const data =
-      await mutateInternalStoreAdminAPI<FulfillmentServiceDeleteMutation>(
-        graphql,
-        DELETE_FULFILLMENT_SERVICE,
-        { id },
-        'Failed to delete fulfillment service in Shopify.',
-      );
-    return data.fulfillmentServiceDelete?.deletedId ?? '';
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to delete fulfillment service in Shopify.',
-      deleteFulfillmentService,
+  const data =
+    await mutateInternalStoreAdminAPI<FulfillmentServiceDeleteMutation>(
+      graphql,
+      DELETE_FULFILLMENT_SERVICE,
       { id },
+      'Failed to delete fulfillment service in Shopify.',
     );
-  }
+  return data.fulfillmentServiceDelete?.deletedId ?? '';
 }
 
-export async function createFulfillmentService(
-  sessionId: string,
-  graphql: GraphQL,
-) {
-  try {
-    const data =
-      await mutateInternalStoreAdminAPI<FulfillmentServiceCreateMutation>(
-        graphql,
-        CREATE_FULFILLMENT_SERVICE,
-        {
-          name: FULFILLMENT_SERVICE.name,
-          callbackUrl: FULFILLMENT_SERVICE.callbackUrl,
-          trackingSupport: true,
-        },
-        'Failed to create fulfillment service in Shopify.',
-      );
-
-    const fulfillmentService =
-      data.fulfillmentServiceCreate?.fulfillmentService;
-    if (!fulfillmentService) {
-      throw new Error('Failed to create fulfillment service on Shopify.');
-    }
-    return fulfillmentService;
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to create fulfillment service on shopify.',
-      createFulfillmentService,
-      { sessionId },
+export async function createFulfillmentService(graphql: GraphQL) {
+  const data =
+    await mutateInternalStoreAdminAPI<FulfillmentServiceCreateMutation>(
+      graphql,
+      CREATE_FULFILLMENT_SERVICE,
+      {
+        name: FULFILLMENT_SERVICE.name,
+        callbackUrl: FULFILLMENT_SERVICE.callbackUrl,
+        trackingSupport: true,
+      },
+      'Failed to create fulfillment service in Shopify.',
     );
+
+  const fulfillmentService = data.fulfillmentServiceCreate?.fulfillmentService;
+  if (!fulfillmentService) {
+    throw new Error('Failed to create fulfillment service on Shopify.');
   }
+  return fulfillmentService;
 }
 
 export async function getOrCreateFulfillmentService(
   sessionId: string,
   graphql: GraphQL,
 ) {
-  try {
-    let fulfillmentService = await getFulfillmentService(sessionId, graphql);
-    if (fulfillmentService) {
-      return fulfillmentService;
-    }
-    fulfillmentService = await createFulfillmentService(sessionId, graphql);
+  let fulfillmentService = await getFulfillmentService(graphql);
+  if (fulfillmentService) {
     return fulfillmentService;
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to create or retrieve fulfillment service on shopify.',
-      getOrCreateFulfillmentService,
-      { sessionId },
-    );
   }
+  fulfillmentService = await createFulfillmentService(graphql);
+  return fulfillmentService;
 }

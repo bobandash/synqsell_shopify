@@ -1,12 +1,15 @@
 import db from '~/db.server';
-import { addProductsTx, deleteProductsTx } from '~/services/models/product';
+import {
+  addProductsTx,
+  deleteProductsTx,
+} from '~/services/models/product.server';
 import type { Prisma } from '@prisma/client';
 import {
   addVariantsTx,
   deleteVariantsTx,
   getShopifyVariantIdsInPriceListTx,
   updateVariantsTx,
-} from '~/services/models/variants';
+} from '~/services/models/variants.server';
 import type {
   PriceListActionData,
   PriceListSettings,
@@ -18,52 +21,34 @@ import {
 } from './util/schemas';
 import { updatePartnershipsInPriceListTx } from './util';
 import { StatusCodes } from 'http-status-codes';
-import { createJSONSuccess, errorHandler } from '~/lib/utils/server';
+import { createJSONSuccess, getRouteError, logError } from '~/lib/utils/server';
 
 // TODO: Refactor this entire file, the code is verbose
-
 export async function updatePriceListSettings(
   sessionId: string,
   priceListId: string,
   settings: PriceListSettings,
 ) {
-  try {
-    const {
-      margin,
-      requiresApprovalToImport,
+  const { margin, requiresApprovalToImport, name, isGeneral, pricingStrategy } =
+    settings;
+  const updatedPriceList = await db.priceList.update({
+    where: {
+      id: priceListId,
+    },
+    data: {
       name,
       isGeneral,
+      ...(requiresApprovalToImport !== undefined && {
+        requiresApprovalToImport,
+      }),
       pricingStrategy,
-    } = settings;
-    const updatedPriceList = await db.priceList.update({
-      where: {
-        id: priceListId,
-      },
-      data: {
-        name,
-        isGeneral,
-        ...(requiresApprovalToImport !== undefined && {
-          requiresApprovalToImport,
-        }),
-        pricingStrategy,
-        ...(margin !== undefined && {
-          margin,
-        }),
-        supplierId: sessionId,
-      },
-    });
-    return updatedPriceList;
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to update price list.',
-      updatePriceListSettings,
-      {
-        priceListId,
-        settings,
-      },
-    );
-  }
+      ...(margin !== undefined && {
+        margin,
+      }),
+      supplierId: sessionId,
+    },
+  });
+  return updatedPriceList;
 }
 
 export async function updatePriceListSettingsTx(
@@ -72,44 +57,27 @@ export async function updatePriceListSettingsTx(
   priceListId: string,
   settings: PriceListSettings,
 ) {
-  try {
-    const {
-      margin,
-      requiresApprovalToImport,
+  const { margin, requiresApprovalToImport, name, isGeneral, pricingStrategy } =
+    settings;
+  const updatedPriceList = await tx.priceList.update({
+    where: {
+      id: priceListId,
+    },
+    data: {
       name,
       isGeneral,
+      ...(requiresApprovalToImport !== undefined && {
+        requiresApprovalToImport,
+      }),
       pricingStrategy,
-    } = settings;
-    const updatedPriceList = await tx.priceList.update({
-      where: {
-        id: priceListId,
-      },
-      data: {
-        name,
-        isGeneral,
-        ...(requiresApprovalToImport !== undefined && {
-          requiresApprovalToImport,
-        }),
-        pricingStrategy,
-        ...(margin !== undefined && {
-          margin,
-        }),
-        supplierId: sessionId,
-      },
-    });
+      ...(margin !== undefined && {
+        margin,
+      }),
+      supplierId: sessionId,
+    },
+  });
 
-    return updatedPriceList;
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to update price list in transaction.',
-      updatePriceListSettingsTx,
-      {
-        priceListId,
-        settings,
-      },
-    );
-  }
+  return updatedPriceList;
 }
 
 // gets products to add and remove from price list
@@ -117,40 +85,28 @@ async function getProductStatus(
   priceListId: string,
   shopifyProductIds: string[],
 ) {
-  try {
-    const originalProducts = await db.product.findMany({
-      where: {
-        priceListId,
-      },
-      select: {
-        id: true,
-        shopifyProductId: true,
-      },
-    });
-    const originalProductShopifyIds = originalProducts.map(
-      ({ shopifyProductId }) => shopifyProductId,
-    );
-    const originalProductShopifyIdsSet = new Set(originalProductShopifyIds);
-    const newProductsSet = new Set(shopifyProductIds);
+  const originalProducts = await db.product.findMany({
+    where: {
+      priceListId,
+    },
+    select: {
+      id: true,
+      shopifyProductId: true,
+    },
+  });
+  const originalProductShopifyIds = originalProducts.map(
+    ({ shopifyProductId }) => shopifyProductId,
+  );
+  const originalProductShopifyIdsSet = new Set(originalProductShopifyIds);
+  const newProductsSet = new Set(shopifyProductIds);
 
-    const shopifyProductIdsToAdd = shopifyProductIds.filter(
-      (shopifyProductId) => !originalProductShopifyIdsSet.has(shopifyProductId),
-    );
-    const prismaProductIdsToRemove = originalProducts
-      .filter(({ shopifyProductId }) => !newProductsSet.has(shopifyProductId))
-      .map(({ id }) => id);
-    return { shopifyProductIdsToAdd, prismaProductIdsToRemove };
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to get product statuses of products that will be removed and added from price list.',
-      getProductStatus,
-      {
-        priceListId,
-        shopifyProductIds,
-      },
-    );
-  }
+  const shopifyProductIdsToAdd = shopifyProductIds.filter(
+    (shopifyProductId) => !originalProductShopifyIdsSet.has(shopifyProductId),
+  );
+  const prismaProductIdsToRemove = originalProducts
+    .filter(({ shopifyProductId }) => !newProductsSet.has(shopifyProductId))
+    .map(({ id }) => id);
+  return { shopifyProductIdsToAdd, prismaProductIdsToRemove };
 }
 
 export async function getMapShopifyProductIdToPrismaIdTx(
@@ -181,95 +137,84 @@ export async function getMapShopifyProductIdToPrismaIdTx(
 // returns the data of the variants to add, remove, and update
 // the problem with variants is that when a product is deleted, it should cascade delete the variants as well
 // so that's why you have to use the transaction instead and call this when products are already deleted
+// TODO: refactor this to be modularized
 async function getVariantStatusTx(
   tx: Prisma.TransactionClient,
   priceListId: string,
   products: ProductCoreData[],
 ) {
-  try {
-    const shopifyProductIds = products.map(
-      ({ shopifyProductId }) => shopifyProductId,
-    );
-    const shopifyProductIdToPrismaId = await getMapShopifyProductIdToPrismaIdTx(
-      tx,
-      shopifyProductIds,
-      priceListId,
-    );
+  const shopifyProductIds = products.map(
+    ({ shopifyProductId }) => shopifyProductId,
+  );
+  const shopifyProductIdToPrismaId = await getMapShopifyProductIdToPrismaIdTx(
+    tx,
+    shopifyProductIds,
+    priceListId,
+  );
 
-    const variantsWithPrismaProductId = products.flatMap((product) =>
-      product.variants.map((variant) => {
-        const productId = shopifyProductIdToPrismaId.get(
-          product.shopifyProductId,
+  const variantsWithPrismaProductId = products.flatMap((product) =>
+    product.variants.map((variant) => {
+      const productId = shopifyProductIdToPrismaId.get(
+        product.shopifyProductId,
+      );
+      if (!productId) {
+        throw new Error(
+          'Product must be created before any variants are created.',
         );
-        if (!productId) {
-          throw new Error(
-            'Product must be created before any variants are created.',
-          );
-        }
-        return {
-          ...variant,
-          productId,
-        };
-      }),
-    );
+      }
+      return {
+        ...variant,
+        productId,
+      };
+    }),
+  );
 
-    const idsInOldPriceList = await getShopifyVariantIdsInPriceListTx(
-      tx,
-      priceListId,
-    );
-    const variantIdToPrismaIdInOldPriceListMap = new Map<string, string>();
-    idsInOldPriceList.forEach((item) => {
-      variantIdToPrismaIdInOldPriceListMap.set(item.shopifyVariantId, item.id);
-    });
+  const idsInOldPriceList = await getShopifyVariantIdsInPriceListTx(
+    tx,
+    priceListId,
+  );
+  const variantIdToPrismaIdInOldPriceListMap = new Map<string, string>();
+  idsInOldPriceList.forEach((item) => {
+    variantIdToPrismaIdInOldPriceListMap.set(item.shopifyVariantId, item.id);
+  });
 
-    const shopifyVariantIdsInOldPriceList = idsInOldPriceList.map(
-      ({ shopifyVariantId }) => shopifyVariantId,
-    );
-    const shopifyVariantIdsInOldPriceListSet = new Set(
-      shopifyVariantIdsInOldPriceList,
-    );
-    const variantIdsInNewPriceListSet = new Set(
-      products.flatMap((product) =>
-        product.variants.map((variant) => variant.shopifyVariantId),
-      ),
-    );
+  const shopifyVariantIdsInOldPriceList = idsInOldPriceList.map(
+    ({ shopifyVariantId }) => shopifyVariantId,
+  );
+  const shopifyVariantIdsInOldPriceListSet = new Set(
+    shopifyVariantIdsInOldPriceList,
+  );
+  const variantIdsInNewPriceListSet = new Set(
+    products.flatMap((product) =>
+      product.variants.map((variant) => variant.shopifyVariantId),
+    ),
+  );
 
-    // variantsToRemove has to be an array of ids in the database
-    const prismaIdsToRemoveInVariant = idsInOldPriceList
-      .filter((ids) => !variantIdsInNewPriceListSet.has(ids.shopifyVariantId))
-      .map(({ id }) => id);
-    const variantsToAdd = variantsWithPrismaProductId.filter(
-      ({ shopifyVariantId: id }) => !shopifyVariantIdsInOldPriceListSet.has(id),
-    );
-    const variantsToUpdate = variantsWithPrismaProductId.filter(
-      ({ shopifyVariantId: id }) => shopifyVariantIdsInOldPriceListSet.has(id),
-    );
-    const variantsToUpdateWithPrismaId = variantsToUpdate.map(
-      ({ inventoryItem, shopifyVariantId, ...rest }) => {
-        return {
-          ...rest,
-          shopifyVariantId,
-          id: variantIdToPrismaIdInOldPriceListMap.get(shopifyVariantId) ?? '',
-        };
-      },
-    );
+  // variantsToRemove has to be an array of ids in the database
+  const prismaIdsToRemoveInVariant = idsInOldPriceList
+    .filter((ids) => !variantIdsInNewPriceListSet.has(ids.shopifyVariantId))
+    .map(({ id }) => id);
+  const variantsToAdd = variantsWithPrismaProductId.filter(
+    ({ shopifyVariantId: id }) => !shopifyVariantIdsInOldPriceListSet.has(id),
+  );
+  const variantsToUpdate = variantsWithPrismaProductId.filter(
+    ({ shopifyVariantId: id }) => shopifyVariantIdsInOldPriceListSet.has(id),
+  );
+  const variantsToUpdateWithPrismaId = variantsToUpdate.map(
+    ({ inventoryItem, shopifyVariantId, ...rest }) => {
+      return {
+        ...rest,
+        shopifyVariantId,
+        id: variantIdToPrismaIdInOldPriceListMap.get(shopifyVariantId) ?? '',
+      };
+    },
+  );
 
-    return {
-      variantsToUpdate: variantsToUpdateWithPrismaId,
-      variantsToAdd,
-      prismaIdsToRemoveInVariant,
-    };
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to get product statuses of variants that will be removed, updated, and added to price list.',
-      getProductStatus,
-      {
-        priceListId,
-        products,
-      },
-    );
-  }
+  return {
+    variantsToUpdate: variantsToUpdateWithPrismaId,
+    variantsToAdd,
+    prismaIdsToRemoveInVariant,
+  };
 }
 
 async function updateAllPriceListInformationAction(
@@ -294,7 +239,7 @@ async function updateAllPriceListInformationAction(
     await db.$transaction(
       async (tx) => {
         await Promise.all([
-          addProductsTx(tx, sessionId, priceListId, shopifyProductIdsToAdd),
+          addProductsTx(tx, priceListId, shopifyProductIdsToAdd),
           deleteProductsTx(tx, priceListId, prismaProductIdsToRemove),
         ]);
 
@@ -311,7 +256,7 @@ async function updateAllPriceListInformationAction(
         ]);
       },
       {
-        maxWait: 20000, // TODO: this function takes too long when ec2 is small, refactor if possible
+        maxWait: 20000, // TODO: refactor this transaction
         timeout: 100000,
       },
     );
@@ -321,14 +266,8 @@ async function updateAllPriceListInformationAction(
       StatusCodes.OK,
     );
   } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to update price list.',
-      updateAllPriceListInformationAction,
-      {
-        sessionId,
-      },
-    );
+    logError(error, 'Action: Update price list information');
+    return getRouteError('Failed to update price list.', error);
   }
 }
 

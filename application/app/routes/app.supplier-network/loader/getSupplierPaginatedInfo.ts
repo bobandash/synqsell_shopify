@@ -1,4 +1,3 @@
-import { errorHandler } from '~/lib/utils/server';
 import db from '~/db.server';
 import {
   PARTNERSHIP_REQUEST_STATUS,
@@ -6,7 +5,7 @@ import {
   ROLES,
 } from '~/constants';
 import { boolean, object, string } from 'yup';
-import { hasSession } from '~/services/models/session';
+import { hasSession } from '~/services/models/session.server';
 import type { Prisma } from '@prisma/client';
 import logger from '~/logger';
 import createHttpError from 'http-errors';
@@ -14,8 +13,8 @@ import { APPROVAL_STATUS, type ApprovalStatusProps } from '../constants';
 import {
   getPartnershipRequest,
   hasPartnershipRequest,
-} from '~/services/models/partnershipRequest';
-import { isRetailerInPartnershipPriceList } from '~/services/models/partnership';
+} from '~/services/models/partnershipRequest.server';
+import { isRetailerInPartnershipPriceList } from '~/services/models/partnership.server';
 
 export type SupplierPaginatedInfoProps = {
   nextCursor: string | null;
@@ -113,84 +112,70 @@ async function getPrismaUnformattedSupplierInfo({
   take,
   cursor,
 }: GetPrismaUnformattedSupplierInfo) {
-  try {
-    const data = await db.session.findMany({
-      take: isReverseDirection ? -1 * take : take + 1,
-      ...(cursor && { cursor: { id: cursor } }),
-      ...(cursor && { skip: 1 }),
-      where: {
-        id: {
-          not: sessionId,
+  const data = await db.session.findMany({
+    take: isReverseDirection ? -1 * take : take + 1,
+    ...(cursor && { cursor: { id: cursor } }),
+    ...(cursor && { skip: 1 }),
+    where: {
+      id: {
+        not: sessionId,
+      },
+      stripeConnectAccount: {
+        stripeAccountId: {
+          not: undefined,
         },
-        stripeConnectAccount: {
-          stripeAccountId: {
-            not: undefined,
-          },
+      },
+      isAppUninstalled: {
+        not: true,
+      },
+      roles: {
+        some: {
+          name: ROLES.SUPPLIER,
+          isVisibleInNetwork: true,
         },
-        isAppUninstalled: {
-          not: true,
-        },
-        roles: {
-          some: {
-            name: ROLES.SUPPLIER,
-            isVisibleInNetwork: true,
-          },
-        },
-        userProfile: {
+      },
+      userProfile: {
+        NOT: undefined,
+        socialMediaLink: {
           NOT: undefined,
-          socialMediaLink: {
-            NOT: undefined,
-          },
         },
-        priceLists: {
-          some: {
-            isGeneral: true,
-            products: {
-              some: {},
-            },
+      },
+      priceLists: {
+        some: {
+          isGeneral: true,
+          products: {
+            some: {},
           },
         },
       },
-      orderBy: {
-        userProfile: {
-          name: 'asc',
+    },
+    orderBy: {
+      userProfile: {
+        name: 'asc',
+      },
+    },
+    select: {
+      id: true,
+      userProfile: {
+        include: {
+          socialMediaLink: true,
         },
       },
-      select: {
-        id: true,
-        userProfile: {
-          include: {
-            socialMediaLink: true,
-          },
-        },
-        priceLists: {
-          select: {
-            id: true,
-            isGeneral: true,
-            requiresApprovalToImport: true,
-          },
+      priceLists: {
+        select: {
+          id: true,
+          isGeneral: true,
+          requiresApprovalToImport: true,
         },
       },
-    });
-    const hasMore = data.length > take || isReverseDirection;
-    if (isReverseDirection || !hasMore) {
-      return { data, hasMore };
-    }
-    const dataWithoutExtraTake = hasMore ? data.slice(0, -1) : data;
-    return { data: dataWithoutExtraTake, hasMore };
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to retrieve supplier data from database.',
-      getPrismaUnformattedSupplierInfo,
-      {
-        isReverseDirection,
-        sessionId,
-        take,
-        cursor,
-      },
-    );
+    },
+  });
+  const hasMore = data.length > take || isReverseDirection;
+  if (isReverseDirection || !hasMore) {
+    return { data, hasMore };
   }
+  const dataWithoutExtraTake = hasMore ? data.slice(0, -1) : data;
+  return { data: dataWithoutExtraTake, hasMore };
 }
 
 async function getApprovalStatus(
@@ -198,45 +183,32 @@ async function getApprovalStatus(
   priceListId: string,
   requiresApprovalToImport: boolean,
 ) {
-  try {
-    const [isApprovedRetailer, partnershipRequestExists] = await Promise.all([
-      isRetailerInPartnershipPriceList(sessionId, priceListId),
-      hasPartnershipRequest(
-        priceListId,
-        sessionId,
-        PARTNERSHIP_REQUEST_TYPE.RETAILER,
-      ),
-    ]);
-    if (isApprovedRetailer) {
-      return APPROVAL_STATUS.HAS_ACCESS;
-    }
-    if (!requiresApprovalToImport) {
-      return APPROVAL_STATUS.NO_ACCESS_REQUIRED;
-    }
-
-    if (partnershipRequestExists) {
-      const partnershipRequest = await getPartnershipRequest(
-        priceListId,
-        sessionId,
-        PARTNERSHIP_REQUEST_TYPE.RETAILER,
-      );
-      if (partnershipRequest.status === PARTNERSHIP_REQUEST_STATUS.PENDING) {
-        return APPROVAL_STATUS.REQUESTED_ACCESS;
-      }
-    }
-    return APPROVAL_STATUS.NO_ACCESS;
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to get approval status of retailer request to price list.',
-      getApprovalStatus,
-      {
-        sessionId,
-        priceListId,
-        requiresApprovalToImport,
-      },
-    );
+  const [isApprovedRetailer, partnershipRequestExists] = await Promise.all([
+    isRetailerInPartnershipPriceList(sessionId, priceListId),
+    hasPartnershipRequest(
+      priceListId,
+      sessionId,
+      PARTNERSHIP_REQUEST_TYPE.RETAILER,
+    ),
+  ]);
+  if (isApprovedRetailer) {
+    return APPROVAL_STATUS.HAS_ACCESS;
   }
+  if (!requiresApprovalToImport) {
+    return APPROVAL_STATUS.NO_ACCESS_REQUIRED;
+  }
+
+  if (partnershipRequestExists) {
+    const partnershipRequest = await getPartnershipRequest(
+      priceListId,
+      sessionId,
+      PARTNERSHIP_REQUEST_TYPE.RETAILER,
+    );
+    if (partnershipRequest.status === PARTNERSHIP_REQUEST_STATUS.PENDING) {
+      return APPROVAL_STATUS.REQUESTED_ACCESS;
+    }
+  }
+  return APPROVAL_STATUS.NO_ACCESS;
 }
 
 async function cleanUpSupplierPrismaData(
@@ -244,56 +216,45 @@ async function cleanUpSupplierPrismaData(
   sessionId: string,
 ) {
   // cleans up supplier data and adds approval status to the prisma data
-  try {
-    const suppliers = await Promise.all(
-      suppliersRawData.map(async (supplier) => {
-        const { userProfile } = supplier;
-        if (!userProfile) {
-          logger.error('User profile does not exist in session.');
-          throw new createHttpError.InternalServerError(
-            `A supplier's user profile does not exist.`,
-          );
-        }
-        const { socialMediaLink, ...profileRest } = userProfile;
-        if (!socialMediaLink) {
-          logger.error('Social media links does not exist in session.');
-          throw new createHttpError.InternalServerError(
-            `A supplier's socials does not exist.`,
-          );
-        }
-        const generalPriceList = supplier.priceLists.filter(
-          (priceList) => priceList.isGeneral === true,
-        )[0];
-        // default schema validation: requiresApprovalToImport will always have a value for the general price list
-        const approvalStatus = await getApprovalStatus(
-          sessionId,
-          generalPriceList.id,
-          generalPriceList.requiresApprovalToImport ?? false,
+  const suppliers = await Promise.all(
+    suppliersRawData.map(async (supplier) => {
+      const { userProfile } = supplier;
+      if (!userProfile) {
+        logger.error('User profile does not exist in session.');
+        throw new createHttpError.InternalServerError(
+          `A supplier's user profile does not exist.`,
         );
-        return {
-          id: supplier.id,
-          profile: {
-            ...profileRest,
-            socialMediaLink: { ...socialMediaLink },
-          },
-          priceList: {
-            id: generalPriceList.id,
-            approvalStatus,
-          },
-        };
-      }),
-    );
-    return suppliers;
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to clean up supplier prisma data and add approval status.',
-      cleanUpSupplierPrismaData,
-      {
-        suppliersRawData,
-      },
-    );
-  }
+      }
+      const { socialMediaLink, ...profileRest } = userProfile;
+      if (!socialMediaLink) {
+        logger.error('Social media links does not exist in session.');
+        throw new createHttpError.InternalServerError(
+          `A supplier's socials does not exist.`,
+        );
+      }
+      const generalPriceList = supplier.priceLists.filter(
+        (priceList) => priceList.isGeneral === true,
+      )[0];
+      // default schema validation: requiresApprovalToImport will always have a value for the general price list
+      const approvalStatus = await getApprovalStatus(
+        sessionId,
+        generalPriceList.id,
+        generalPriceList.requiresApprovalToImport ?? false,
+      );
+      return {
+        id: supplier.id,
+        profile: {
+          ...profileRest,
+          socialMediaLink: { ...socialMediaLink },
+        },
+        priceList: {
+          id: generalPriceList.id,
+          approvalStatus,
+        },
+      };
+    }),
+  );
+  return suppliers;
 }
 
 export async function getSupplierPaginatedInfo({
@@ -301,61 +262,52 @@ export async function getSupplierPaginatedInfo({
   sessionId,
   cursor,
 }: GetSupplierPaginatedInfoProps) {
-  try {
-    await getSupplierInfoSchema.validate({
-      isReverseDirection,
-      cursor,
-      sessionId,
-    });
+  await getSupplierInfoSchema.validate({
+    isReverseDirection,
+    cursor,
+    sessionId,
+  });
 
-    const take = 8;
-    const [firstSupplier, { data: suppliersRawData, hasMore }] =
-      await Promise.all([
-        getPrismaUnformattedSupplierInfo({
-          isReverseDirection: false,
-          sessionId,
-          take: 1,
-          cursor: null,
-        }),
-        getPrismaUnformattedSupplierInfo({
-          isReverseDirection,
-          sessionId,
-          take,
-          cursor,
-        }),
-      ]);
+  const take = 8;
+  const [firstSupplier, { data: suppliersRawData, hasMore }] =
+    await Promise.all([
+      getPrismaUnformattedSupplierInfo({
+        isReverseDirection: false,
+        sessionId,
+        take: 1,
+        cursor: null,
+      }),
+      getPrismaUnformattedSupplierInfo({
+        isReverseDirection,
+        sessionId,
+        take,
+        cursor,
+      }),
+    ]);
 
-    const firstSupplierId =
-      firstSupplier.data.length > 0 ? firstSupplier.data[0].id : null;
-    const suppliers = await cleanUpSupplierPrismaData(
-      suppliersRawData,
-      sessionId,
-    );
+  const firstSupplierId =
+    firstSupplier.data.length > 0 ? firstSupplier.data[0].id : null;
+  const suppliers = await cleanUpSupplierPrismaData(
+    suppliersRawData,
+    sessionId,
+  );
 
-    // case: there is no data in the network
-    if (suppliers.length === 0) {
-      return {
-        nextCursor: null,
-        prevCursor: null,
-        suppliers: [],
-      };
-    }
-
-    const isFirstPage =
-      suppliers[0] && suppliers[0].id === firstSupplierId ? true : false;
-    const prevCursor = isFirstPage ? null : suppliers[0].id;
-    const nextCursor = hasMore ? suppliers[take - 1].id : null;
+  // case: there is no data in the network
+  if (suppliers.length === 0) {
     return {
-      nextCursor,
-      prevCursor,
-      suppliers,
+      nextCursor: null,
+      prevCursor: null,
+      suppliers: [],
     };
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to get supplier information.',
-      getSupplierPaginatedInfo,
-      { cursor },
-    );
   }
+
+  const isFirstPage =
+    suppliers[0] && suppliers[0].id === firstSupplierId ? true : false;
+  const prevCursor = isFirstPage ? null : suppliers[0].id;
+  const nextCursor = hasMore ? suppliers[take - 1].id : null;
+  return {
+    nextCursor,
+    prevCursor,
+    suppliers,
+  };
 }

@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { CHECKLIST_ITEM_KEYS, ROLES } from '~/constants';
-import { addRole } from '~/services/models/roles';
-import { hasSession } from '~/services/models/session';
+import { addRole } from '~/services/models/roles.server';
+import { hasSession } from '~/services/models/session.server';
 import * as dotenv from 'dotenv';
 
 dotenv.config();

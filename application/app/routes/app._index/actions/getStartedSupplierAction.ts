@@ -3,13 +3,13 @@ import { object, string, type InferType } from 'yup';
 import {
   getOrCreateSupplierAccessRequest,
   hasSupplierAccessRequest,
-} from '~/services/models/supplierAccessRequest';
+} from '~/services/models/supplierAccessRequest.server';
 import { StatusCodes } from 'http-status-codes';
-import { getChecklistStatus } from '~/services/models/checklistStatus';
+import { getChecklistStatus } from '~/services/models/checklistStatus.server';
 import { INTENTS } from '../constants';
-import { checklistItemIdMatchesKey } from '~/services/models/checklistItem';
+import { checklistItemIdMatchesKey } from '~/services/models/checklistItem.server';
 import { CHECKLIST_ITEM_KEYS } from '~/constants';
-import { createJSONSuccess } from '~/lib/utils/server';
+import { createJSONSuccess, getRouteError, logError } from '~/lib/utils/server';
 
 export type GetStartedSupplierActionData = {
   supplierAccessRequest: {
@@ -44,15 +44,26 @@ export async function getStartedSupplierAction(
   formDataObject: FormDataObject,
   sessionId: string,
 ) {
-  await getStartedSupplierSchema.validate(formDataObject);
-  const { checklistItemId } =
-    formDataObject as unknown as getStartedSupplierData;
-  const checklistStatus = await getChecklistStatus(sessionId, checklistItemId);
-  const supplierAccessRequestExists = await hasSupplierAccessRequest(sessionId);
-  await getOrCreateSupplierAccessRequest(sessionId, checklistStatus.id);
-
-  return createJSONSuccess(
-    'Your request to become a supplier has been submitted successfully. Please wait for the app owner to review your request.',
-    supplierAccessRequestExists ? StatusCodes.OK : StatusCodes.CREATED,
-  );
+  try {
+    await getStartedSupplierSchema.validate(formDataObject);
+    const { checklistItemId } =
+      formDataObject as unknown as getStartedSupplierData;
+    const checklistStatus = await getChecklistStatus(
+      sessionId,
+      checklistItemId,
+    );
+    const supplierAccessRequestExists =
+      await hasSupplierAccessRequest(sessionId);
+    await getOrCreateSupplierAccessRequest(sessionId, checklistStatus.id);
+    return createJSONSuccess(
+      'Your request to become a supplier has been submitted successfully. Please wait for the app owner to review your request.',
+      supplierAccessRequestExists ? StatusCodes.OK : StatusCodes.CREATED,
+    );
+  } catch (error) {
+    logError(error, 'Action: getStartedSupplierAction');
+    return getRouteError(
+      'Failed to process request to become a supplier.',
+      error,
+    );
+  }
 }

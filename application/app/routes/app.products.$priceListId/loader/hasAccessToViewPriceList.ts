@@ -1,14 +1,13 @@
-import { errorHandler } from '~/lib/utils/server';
 import {
   getPriceList,
   getRetailerIds,
   getSupplierId,
-} from '~/services/models/priceList';
+} from '~/services/models/priceList.server';
 import { object } from 'yup';
 import { priceListIdSchema, sessionIdSchema } from '~/schemas/models';
-import { isAppUninstalled } from '~/services/models/session';
-import { userHasStripeConnectAccount } from '~/services/models/stripeConnectAccount';
-import { userHasStripePaymentMethod } from '~/services/models/stripeCustomerAccount';
+import { isAppUninstalled } from '~/services/models/session.server';
+import { userHasStripeConnectAccount } from '~/services/models/stripeConnectAccount.server';
+import { userHasStripePaymentMethod } from '~/services/models/stripeCustomerAccount.server';
 
 const hasAccessToViewPriceListSchema = object({
   priceListId: priceListIdSchema,
@@ -46,36 +45,24 @@ async function hasAccessToViewPriceList(
   priceListId: string,
   retailerId: string,
 ) {
-  try {
-    await hasAccessToViewPriceListSchema.validate({ priceListId, retailerId });
-    const supplierId = await getSupplierId(priceListId);
-    const [
-      isSupplierAppUninstalled,
-      stripeIntegrationsExist,
-      hasViewPermission,
-    ] = await Promise.all([
+  await hasAccessToViewPriceListSchema.validate({ priceListId, retailerId });
+  const supplierId = await getSupplierId(priceListId);
+  const [isSupplierAppUninstalled, stripeIntegrationsExist, hasViewPermission] =
+    await Promise.all([
       isAppUninstalled(supplierId),
       hasStripeIntegrations(retailerId, supplierId),
       hasPermissionFromSupplierToView(priceListId, retailerId),
     ]);
 
-    if (!stripeIntegrationsExist || isSupplierAppUninstalled) {
-      return false;
-    }
-
-    if (hasViewPermission) {
-      return true;
-    }
-
+  if (!stripeIntegrationsExist || isSupplierAppUninstalled) {
     return false;
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to check if user has access to view price list.',
-      hasAccessToViewPriceList,
-      { priceListId, retailerId },
-    );
   }
+
+  if (hasViewPermission) {
+    return true;
+  }
+
+  return false;
 }
 
 export default hasAccessToViewPriceList;

@@ -1,13 +1,11 @@
-// TODO: refactor any type, cannot find Shopify's app config type to put in BillingContext<Config>
-
 import { PLANS } from '~/constants';
-import { errorHandler } from '~/lib/utils/server';
-import { addBilling, userHasBilling } from '~/services/models/billing';
+import { getAppBaseUrl } from '~/lib/utils/server';
+import { addBilling, userHasBilling } from '~/services/models/billing.server';
 
 // https://shopify.dev/docs/api/shopify-app-remix/v2/apis/billing
 async function requireBilling(shop: string, isTest: boolean, billing: any) {
   // pops up a screen if there's no billing on Shopify
-  const appBaseUrl = `https://${shop}/admin/apps/synqsell/`;
+  const appBaseUrl = getAppBaseUrl(shop);
   await billing.require({
     plans: [PLANS.BASIC_PLAN],
     isTest,
@@ -26,37 +24,26 @@ async function addBillingToDatabase(
   isTest: boolean,
   billing: any,
 ) {
-  try {
-    const billingPlans = await billing.check({
-      plans: [PLANS.BASIC_PLAN],
-      isTest,
-    });
-    const { appSubscriptions } = billingPlans;
-    if (
-      appSubscriptions.length === 0 ||
-      !appSubscriptions[0].lineItems ||
-      appSubscriptions[0].lineItems.length === 0
-    ) {
-      throw new Error(
-        `Shopify store ${shop} does not have any usage billing plans.`,
-      );
-    }
-
-    // record billing api to call in webhooks
-    const hasBillingInDb = userHasBilling(sessionId);
-    if (!hasBillingInDb) {
-      const { id } = appSubscriptions[0].lineItems[0];
-      addBilling(sessionId, id, PLANS.BASIC_PLAN);
-    }
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to add Shopify billing details to database.',
-      addBillingToDatabase,
-      {
-        shop,
-      },
+  const billingPlans = await billing.check({
+    plans: [PLANS.BASIC_PLAN],
+    isTest,
+  });
+  const { appSubscriptions } = billingPlans;
+  if (
+    appSubscriptions.length === 0 ||
+    !appSubscriptions[0].lineItems ||
+    appSubscriptions[0].lineItems.length === 0
+  ) {
+    throw new Error(
+      `Shopify store ${shop} does not have any usage billing plans.`,
     );
+  }
+
+  // record billing api to call in webhooks
+  const hasBillingInDb = userHasBilling(sessionId);
+  if (!hasBillingInDb) {
+    const { id } = appSubscriptions[0].lineItems[0];
+    addBilling(sessionId, id, PLANS.BASIC_PLAN);
   }
 }
 

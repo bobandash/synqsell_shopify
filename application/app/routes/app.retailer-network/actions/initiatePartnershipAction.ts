@@ -1,7 +1,7 @@
 import { array, object, string } from 'yup';
-import { createJSONSuccess } from '~/lib/utils/server';
+import { createJSONSuccess, getRouteError, logError } from '~/lib/utils/server';
 import { INTENTS } from '../constants';
-import { isValidPriceList } from '~/services/models/priceList';
+import { isValidPriceList } from '~/services/models/priceList.server';
 import {
   CHECKLIST_ITEM_KEYS,
   PARTNERSHIP_REQUEST_STATUS,
@@ -9,8 +9,8 @@ import {
 } from '~/constants';
 import { StatusCodes } from 'http-status-codes';
 import db from '~/db.server';
-import { updateChecklistStatusTx } from '~/services/models/checklistStatus';
-import { createOrUpdatePartnershipRequestTx } from '~/services/models/partnershipRequest';
+import { updateChecklistStatusTx } from '~/services/models/checklistStatus.server';
+import { createOrUpdatePartnershipRequestTx } from '~/services/models/partnershipRequest.server';
 import { sessionIdSchema } from '~/schemas/models';
 
 type InitiatePartnershipActionProps = {
@@ -53,32 +53,37 @@ const initiatePartnershipActionSchema = object({
 async function initiatePartnershipAction(
   props: InitiatePartnershipActionProps,
 ) {
-  await initiatePartnershipActionSchema.validate(props);
-  const { retailerId, message, supplierId, priceListIds } = props;
-  await db.$transaction(async (tx) => {
-    await Promise.all([
-      updateChecklistStatusTx(
-        tx,
-        supplierId,
-        CHECKLIST_ITEM_KEYS.SUPPLIER_EXPLORE_NETWORK,
-        true,
-      ),
-      createOrUpdatePartnershipRequestTx({
-        tx,
-        priceListIds,
-        recipientId: retailerId,
-        senderId: supplierId,
-        message: message,
-        type: PARTNERSHIP_REQUEST_TYPE.SUPPLIER,
-        status: PARTNERSHIP_REQUEST_STATUS.PENDING,
-      }),
-    ]);
-  });
+  try {
+    await initiatePartnershipActionSchema.validate(props);
+    const { retailerId, message, supplierId, priceListIds } = props;
+    await db.$transaction(async (tx) => {
+      await Promise.all([
+        updateChecklistStatusTx(
+          tx,
+          supplierId,
+          CHECKLIST_ITEM_KEYS.SUPPLIER_EXPLORE_NETWORK,
+          true,
+        ),
+        createOrUpdatePartnershipRequestTx({
+          tx,
+          priceListIds,
+          recipientId: retailerId,
+          senderId: supplierId,
+          message: message,
+          type: PARTNERSHIP_REQUEST_TYPE.SUPPLIER,
+          status: PARTNERSHIP_REQUEST_STATUS.PENDING,
+        }),
+      ]);
+    });
 
-  return createJSONSuccess(
-    'Successfully sent partnership request to retailer.',
-    StatusCodes.CREATED,
-  );
+    return createJSONSuccess(
+      'Successfully sent partnership request to retailer.',
+      StatusCodes.CREATED,
+    );
+  } catch (error) {
+    logError(error, 'Action: Initiate Partnership');
+    return getRouteError('Failed to initiate partnership request.', error);
+  }
 }
 
 export default initiatePartnershipAction;

@@ -1,4 +1,3 @@
-import { json } from '@remix-run/node';
 import { object, string, type InferType } from 'yup';
 import type { FormDataObject, GraphQL } from '~/types';
 import { StatusCodes } from 'http-status-codes';
@@ -6,37 +5,34 @@ import {
   getChecklistStatus,
   isChecklistStatusCompleted,
   markCheckListStatus,
-} from '~/services/models/checklistStatus';
-import type { ChecklistStatusProps } from '~/services/models/checklistStatus';
+} from '~/services/models/checklistStatus.server';
+import type { ChecklistStatusProps } from '~/services/models/checklistStatus.server';
 import {
   addRole,
-  getRole,
   hasRole,
   type RoleProps,
-} from '~/services/models/roles';
+} from '~/services/models/roles.server';
 import { CHECKLIST_ITEM_KEYS, ROLES } from '~/constants';
 import { createRoleAndCompleteChecklistItem } from '~/services/transactions';
-import {
-  userGetFulfillmentService,
-  type FulfillmentServiceDBProps,
-} from '~/services/models/fulfillmentService';
+import { type FulfillmentServiceDBProps } from '~/services/models/fulfillmentService.server';
 import {
   getOrCreateFulfillmentService,
   hasFulfillmentService,
 } from '~/services/helper/fulfillmentService';
 import { INTENTS } from '../constants';
-import { checklistItemIdMatchesKey } from '~/services/models/checklistItem';
-import { errorHandler, createJSONSuccess } from '~/lib/utils/server';
+import { checklistItemIdMatchesKey } from '~/services/models/checklistItem.server';
+import { createJSONSuccess, getRouteError, logError } from '~/lib/utils/server';
 
 const getStartedRetailerSchema = object({
   intent: string().oneOf([INTENTS.RETAILER_GET_STARTED]),
   checklistItemId: string()
     .required()
     .test('check-item-id', 'Invalid checklist item ID', async (value) => {
-      return checklistItemIdMatchesKey(
+      const isValid = await checklistItemIdMatchesKey(
         value,
         CHECKLIST_ITEM_KEYS.RETAILER_GET_STARTED,
       );
+      return isValid;
     }),
 });
 
@@ -49,164 +45,73 @@ export type GetStartedRetailerActionData = {
   role: RoleProps;
 };
 
-// TODO: Refactor this file after MVP is deployed
-// Guard check for fetcher data
+// Either all these fields should be created or none should be created
+async function createMissingFields(
+  fulfillmentServiceExists: boolean,
+  checklistStatusCompleted: boolean,
+  hasRetailerRole: boolean,
+  graphql: GraphQL,
+  sessionId: string,
+  checklistItemId: string,
+) {
+  if (!fulfillmentServiceExists) {
+    await getOrCreateFulfillmentService(sessionId, graphql);
+  }
+  const checklistStatusId = (
+    await getChecklistStatus(sessionId, checklistItemId)
+  ).id;
+  if (!checklistStatusCompleted && !hasRetailerRole) {
+    await createRoleAndCompleteChecklistItem(
+      sessionId,
+      ROLES.RETAILER,
+      checklistStatusId,
+    );
+  } else if (!checklistStatusCompleted) {
+    await markCheckListStatus(checklistStatusId, true);
+  } else if (!hasRetailerRole) {
+    await addRole(sessionId, ROLES.RETAILER);
+  }
+}
+
+// NOTE: it's okay to not rollback the fulfillment service in a transaction if the action fails
+// because at the worst case, the retailer will still have to click on the checklist status (which will not be completed)
 export async function getStartedRetailerAction(
   graphql: GraphQL,
   formDataObject: FormDataObject,
   sessionId: string,
 ) {
-  await getStartedRetailerSchema.validate(formDataObject);
-  const { checklistItemId } = formDataObject as RetailerData;
-  const [checklistStatusCompleted, fulfillmentServiceExists, hasRetailerRole] =
-    await Promise.all([
+  try {
+    await getStartedRetailerSchema.validate(formDataObject);
+    const { checklistItemId } = formDataObject as RetailerData;
+    const [
+      checklistStatusCompleted,
+      fulfillmentServiceExists,
+      hasRetailerRole,
+    ] = await Promise.all([
       isChecklistStatusCompleted(sessionId, checklistItemId),
       hasFulfillmentService(sessionId, graphql),
       hasRole(sessionId, ROLES.RETAILER),
     ]);
 
-  if (checklistStatusCompleted && fulfillmentServiceExists && hasRetailerRole) {
-    const completedFields = await handleCompleted(sessionId, checklistItemId);
-    return completedFields;
-  }
-
-  await createOrGetFields(
-    checklistStatusCompleted,
-    fulfillmentServiceExists,
-    hasRetailerRole,
-    graphql,
-    sessionId,
-    checklistItemId,
-  );
-
-  return createJSONSuccess(
-    'You have successfully became a retailer.',
-    StatusCodes.OK,
-  );
-}
-
-// Just return all the relevant fields, fulfillmentService, checklistStatus, and role if the item is already completed
-async function handleCompleted(sessionId: string, checklistItemId: string) {
-  try {
-    const [fulfillmentService, checklistStatus, role] = await Promise.all([
-      userGetFulfillmentService(sessionId),
-      getChecklistStatus(sessionId, checklistItemId),
-      getRole(sessionId, ROLES.RETAILER),
-    ]);
-    return json(
-      { fulfillmentService, checklistStatus, role },
-      {
-        status: StatusCodes.OK,
-      },
-    );
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to get fulfillment service, checklist status, or retailer role.',
-      handleCompleted,
-      { sessionId, checklistItemId },
-    );
-  }
-}
-
-async function getExistingFieldsOrUndefined(
-  checklistStatusCompleted: boolean,
-  fulfillmentServiceExists: boolean,
-  hasRetailerRole: boolean,
-  sessionId: string,
-  checklistItemId: string,
-) {
-  try {
-    const fulfillmentService = fulfillmentServiceExists
-      ? await userGetFulfillmentService(sessionId)
-      : undefined;
-    const checklistStatus = checklistStatusCompleted
-      ? await getChecklistStatus(sessionId, checklistItemId)
-      : undefined;
-    const retailerRole = hasRetailerRole
-      ? await getRole(sessionId, ROLES.RETAILER)
-      : undefined;
-    return {
-      fulfillmentService,
-      checklistStatus,
-      retailerRole,
-    };
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to get fulfillment service, checklist status, or retailer role.',
-      getExistingFieldsOrUndefined,
-      {
-        checklistStatusCompleted,
-        fulfillmentServiceExists,
-        hasRetailerRole,
-        sessionId,
-        checklistItemId,
-      },
-    );
-  }
-}
-
-// Either all these fields should be created or none should be created
-async function createOrGetFields(
-  checklistStatusCompleted: boolean,
-  fulfillmentServiceExists: boolean,
-  hasRetailerRole: boolean,
-  graphql: GraphQL,
-  sessionId: string,
-  checklistItemId: string,
-) {
-  let fulfillmentService;
-  let checklistStatus;
-  let retailerRole;
-
-  const fields = await getExistingFieldsOrUndefined(
-    checklistStatusCompleted,
-    fulfillmentServiceExists,
-    hasRetailerRole,
-    sessionId,
-    checklistItemId,
-  );
-  fulfillmentService = fields.fulfillmentService;
-  checklistStatus = fields.checklistStatus;
-  retailerRole = fields.retailerRole;
-
-  const checklistStatusId = (
-    await getChecklistStatus(sessionId, checklistItemId)
-  ).id;
-
-  // this must be created first because it's created in the db and shopify admin api
-  if (!fulfillmentService) {
-    fulfillmentService = await getOrCreateFulfillmentService(
-      sessionId,
+    const isRetailer =
+      checklistStatusCompleted && fulfillmentServiceExists && hasRetailerRole;
+    if (isRetailer) {
+      return createJSONSuccess('User is already a retailer.', StatusCodes.OK);
+    }
+    await createMissingFields(
+      fulfillmentServiceExists,
+      checklistStatusCompleted,
+      hasRetailerRole,
       graphql,
-    );
-  }
-  if (!checklistStatus && !retailerRole) {
-    const newRoleAndChecklistStatus = await createRoleAndCompleteChecklistItem(
       sessionId,
-      ROLES.RETAILER,
-      checklistStatusId,
+      checklistItemId,
     );
-    retailerRole = newRoleAndChecklistStatus.role;
-    checklistStatus = newRoleAndChecklistStatus.checklistStatus;
+    return createJSONSuccess(
+      'You have successfully became a retailer.',
+      StatusCodes.OK,
+    );
+  } catch (error) {
+    logError(error, 'Action: getStartedRetailerAction');
+    return getRouteError('Failed to become a retailer.', error);
   }
-
-  if (!checklistStatus) {
-    checklistStatus = await markCheckListStatus(checklistStatusId, true);
-  }
-  if (!retailerRole) {
-    retailerRole = await addRole(sessionId, ROLES.RETAILER);
-  }
-
-  return json(
-    {
-      fulfillmentService,
-      checklistStatus,
-      role: retailerRole,
-    },
-    {
-      status: StatusCodes.CREATED,
-    },
-  );
 }

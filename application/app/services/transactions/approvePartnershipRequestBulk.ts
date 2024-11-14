@@ -1,11 +1,10 @@
-import { errorHandler } from '~/lib/utils/server';
 import db from '../../db.server';
-import { deletePartnershipRequestsTx } from '../models/partnershipRequest';
+import { deletePartnershipRequestsTx } from '../models/partnershipRequest.server';
 import {
   PARTNERSHIP_REQUEST_TYPE,
   type PartnershipRequestTypeOptions,
 } from '~/constants';
-import { createPartnershipsTx } from '../models/partnership';
+import { createPartnershipsTx } from '../models/partnership.server';
 import type { Prisma } from '@prisma/client';
 
 type PartnershipRequest = Prisma.PartnershipRequestGetPayload<{
@@ -23,96 +22,78 @@ async function getOppositeSidePartnershipRequestIds(
   // delete the request from the side that did not approve the partnership. For now, the default behavior is
   // to remove the request from the opposite side if one request has been approved. This approach is used
   // because we don't have a strategy for cases where the requested or granted permissions differ.
-  try {
-    const oppositeSidePartnershipRequestData = partnershipRequests.map(
-      (request) => {
-        return {
-          recipientId: request.senderId,
-          senderId: request.recipientId,
-          type:
-            type === PARTNERSHIP_REQUEST_TYPE.RETAILER
-              ? PARTNERSHIP_REQUEST_TYPE.SUPPLIER
-              : PARTNERSHIP_REQUEST_TYPE.RETAILER,
-        };
-      },
-    );
-    const oppositeSidePartnershipRequestIdsToDelete = (
-      await Promise.all(
-        oppositeSidePartnershipRequestData.map((request) =>
-          db.partnershipRequest.findFirst({
-            where: {
-              ...request,
-            },
-          }),
-        ),
-      )
+  const oppositeSidePartnershipRequestData = partnershipRequests.map(
+    (request) => {
+      return {
+        recipientId: request.senderId,
+        senderId: request.recipientId,
+        type:
+          type === PARTNERSHIP_REQUEST_TYPE.RETAILER
+            ? PARTNERSHIP_REQUEST_TYPE.SUPPLIER
+            : PARTNERSHIP_REQUEST_TYPE.RETAILER,
+      };
+    },
+  );
+  const oppositeSidePartnershipRequestIdsToDelete = (
+    await Promise.all(
+      oppositeSidePartnershipRequestData.map((request) =>
+        db.partnershipRequest.findFirst({
+          where: {
+            ...request,
+          },
+        }),
+      ),
     )
-      .filter((value) => value !== null)
-      .map(({ id }) => id);
+  )
+    .filter((value) => value !== null)
+    .map(({ id }) => id);
 
-    return oppositeSidePartnershipRequestIdsToDelete;
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to retrieve the opposite side of partnership requests (if exists).',
-      approvePartnershipRequestBulk,
-      { getOppositeSidePartnershipRequestIds },
-    );
-  }
+  return oppositeSidePartnershipRequestIdsToDelete;
 }
 
 async function approvePartnershipRequestBulk(
   partnershipRequestIds: string[],
   type: PartnershipRequestTypeOptions,
 ) {
-  try {
-    const partnershipRequests = await db.partnershipRequest.findMany({
-      where: {
-        id: {
-          in: partnershipRequestIds,
-        },
+  const partnershipRequests = await db.partnershipRequest.findMany({
+    where: {
+      id: {
+        in: partnershipRequestIds,
       },
-      include: {
-        priceLists: true,
-      },
-    });
-    const oppositeSidePartnershipRequestIds =
-      await getOppositeSidePartnershipRequestIds(partnershipRequests, type);
+    },
+    include: {
+      priceLists: true,
+    },
+  });
+  const oppositeSidePartnershipRequestIds =
+    await getOppositeSidePartnershipRequestIds(partnershipRequests, type);
 
-    const data = partnershipRequests.map((request) => {
-      // partnership request type === retailer means that the retailer (sender) sent a request to partner with a supplier (recipient)
-      const retailerId =
-        type === PARTNERSHIP_REQUEST_TYPE.RETAILER
-          ? request.recipientId
-          : request.senderId;
-      const supplierId =
-        type === PARTNERSHIP_REQUEST_TYPE.RETAILER
-          ? request.senderId
-          : request.recipientId;
+  const data = partnershipRequests.map((request) => {
+    // partnership request type === retailer means that the retailer (sender) sent a request to partner with a supplier (recipient)
+    const retailerId =
+      type === PARTNERSHIP_REQUEST_TYPE.RETAILER
+        ? request.recipientId
+        : request.senderId;
+    const supplierId =
+      type === PARTNERSHIP_REQUEST_TYPE.RETAILER
+        ? request.senderId
+        : request.recipientId;
 
-      return {
-        retailerId,
-        supplierId,
-        message: request.message,
-        priceListIds: request.priceLists.map(({ id }) => id),
-      };
-    });
+    return {
+      retailerId,
+      supplierId,
+      message: request.message,
+      priceListIds: request.priceLists.map(({ id }) => id),
+    };
+  });
 
-    const newPartnerships = await db.$transaction(async (tx) => {
-      await deletePartnershipRequestsTx(tx, partnershipRequestIds);
-      await deletePartnershipRequestsTx(tx, oppositeSidePartnershipRequestIds);
-      const newPartnerships = await createPartnershipsTx(tx, data);
-      return newPartnerships;
-    });
+  const newPartnerships = await db.$transaction(async (tx) => {
+    await deletePartnershipRequestsTx(tx, partnershipRequestIds);
+    await deletePartnershipRequestsTx(tx, oppositeSidePartnershipRequestIds);
+    const newPartnerships = await createPartnershipsTx(tx, data);
     return newPartnerships;
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to approve partnership requests in bulk.',
-      approvePartnershipRequestBulk,
-      { partnershipRequestIds },
-    );
-  }
+  });
+  return newPartnerships;
 }
 
 export default approvePartnershipRequestBulk;

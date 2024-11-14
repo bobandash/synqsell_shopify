@@ -12,11 +12,10 @@ import { AppProvider } from '@shopify/shopify-app-remix/react';
 import { NavMenu } from '@shopify/app-bridge-react';
 import polarisStyles from '@shopify/polaris/build/esm/styles.css?url';
 import { authenticate } from '../../shopify.server';
-import { getRoles } from '~/services/models/roles';
+import { getRoles } from '~/services/models/roles.server';
 import { ROLES } from '~/constants';
 import { useEffect, useState } from 'react';
 import { RoleProvider } from '~/context/RoleProvider';
-import { handleRouteError } from '~/lib/utils/server';
 import {
   BlockStack,
   Card,
@@ -29,10 +28,11 @@ import {
 import { PaddedBox } from '~/components';
 import { getReasonPhrase } from 'http-status-codes';
 import { WarningIcon } from '~/assets';
-import { userHasStripeConnectAccount } from '~/services/models/stripeConnectAccount';
-import { userHasStripePaymentMethod } from '~/services/models/stripeCustomerAccount';
+import { userHasStripeConnectAccount } from '~/services/models/stripeConnectAccount.server';
+import { userHasStripePaymentMethod } from '~/services/models/stripeCustomerAccount.server';
 import sharedStyles from '~/shared.module.css';
 import { handleBilling } from './loader';
+import { getRouteError, logError } from '~/lib/utils/server';
 
 export const links = () => [{ rel: 'stylesheet', href: polarisStyles }];
 
@@ -62,7 +62,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       hasStripePaymentMethod,
     });
   } catch (error) {
-    throw handleRouteError(error, '/app');
+    logError(error, 'Loader: initialize application');
+    throw getRouteError('Failed to initialize application.', error);
   }
 };
 
@@ -117,8 +118,6 @@ export function ErrorBoundary() {
   let reason = 'Unhandled error. Please contact support.';
   let status = 500;
   if (isRouteErrorResponse(error)) {
-    console.log(error);
-
     if (
       error &&
       'data' in error &&

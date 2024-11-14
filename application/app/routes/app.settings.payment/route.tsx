@@ -8,7 +8,8 @@ import { convertFormDataToObject } from '~/lib/utils';
 import {
   createJSONError,
   getAppBaseUrl,
-  handleRouteError,
+  getRouteError,
+  logError,
 } from '~/lib/utils/server';
 import { INTENTS } from './constants';
 import {
@@ -21,7 +22,7 @@ import { authenticate } from '~/shopify.server';
 import { useRoleContext } from '~/context/RoleProvider';
 import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
-import { hasRole } from '~/services/models/roles';
+import { hasRole } from '~/services/models/roles.server';
 import { ROLES } from '~/constants';
 import { handleStripeCustomerAccount } from './loader';
 import type { BannerState } from './types';
@@ -31,7 +32,7 @@ import {
   StripeConnectOnboarding,
   TermsOfService,
 } from './components';
-import { userHasStripeConnectAccount } from '~/services/models/stripeConnectAccount';
+import { userHasStripeConnectAccount } from '~/services/models/stripeConnectAccount.server';
 
 type LoaderData = {
   userCurrency: string;
@@ -78,7 +79,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       hasPaymentMethod,
     });
   } catch (error) {
-    throw handleRouteError(error, '/app/settings/payment');
+    logError(error, 'Loader: Payment Settings');
+    throw getRouteError('Failed to load payment settings.', error);
   }
 };
 
@@ -107,14 +109,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         );
       case INTENTS.FINISH_STRIPE_CUSTOMER_ONBOARDING:
         return await finishStripeCustomerOnboarding(sessionId);
-      default:
-        return createJSONError(
-          `Intent ${intent} is not valid`,
-          StatusCodes.NOT_IMPLEMENTED,
-        );
     }
+
+    return createJSONError(
+      `Intent ${intent} is not valid`,
+      StatusCodes.NOT_IMPLEMENTED,
+    );
   } catch (error) {
-    return handleRouteError(error, '/app/settings/payment');
+    logError(error, 'Action: Payment Settings');
+    return getRouteError('Failed to process request.', error);
   }
 };
 

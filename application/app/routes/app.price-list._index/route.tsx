@@ -21,7 +21,7 @@ import {
   type LoaderFunctionArgs,
 } from '@remix-run/node';
 import { convertFormDataToObject } from '~/lib/utils';
-import { createJSONError, handleRouteError } from '~/lib/utils/server';
+import { createJSONError, getRouteError, logError } from '~/lib/utils/server';
 import { authenticate } from '~/shopify.server';
 import { StatusCodes } from 'http-status-codes';
 import { useEffect, useState } from 'react';
@@ -40,7 +40,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const priceListTableInfo = await getPriceListTableInfo(sessionId);
     return json(priceListTableInfo, { status: StatusCodes.OK });
   } catch (error) {
-    throw handleRouteError(error, '/app/price-list/index');
+    logError(error, 'Loader: Price List');
+    throw getRouteError('Failed to load price list table.', error);
   }
 };
 
@@ -54,14 +55,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     switch (intent) {
       case INTENTS.DELETE_PRICE_LIST:
         return await deletePriceListAction(formDataObject, sessionId);
-      default:
-        return createJSONError(
-          `Intent ${intent} is not valid`,
-          StatusCodes.NOT_IMPLEMENTED,
-        );
     }
+    return createJSONError(
+      `Intent ${intent} is not implemented.`,
+      StatusCodes.NOT_IMPLEMENTED,
+    );
   } catch (error) {
-    return handleRouteError(error, '/app/price-list/index');
+    logError(error, 'Action: Price List Table.');
+    return getRouteError('Failed to process request.', error);
   }
 };
 

@@ -2,7 +2,7 @@ import {
   addInitialStripeCustomerAccount as addInitialStripeCustomerAccountDb,
   getStripeCustomerAccount,
   userHasStripeCustomerAccount,
-} from '~/services/models/stripeCustomerAccount';
+} from '~/services/models/stripeCustomerAccount.server';
 import {
   createCustomer,
   getClientSecret,

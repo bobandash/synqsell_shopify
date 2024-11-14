@@ -1,10 +1,10 @@
 import type { LoaderFunctionArgs } from '@remix-run/node';
 import { useLoaderData } from '@remix-run/react';
-import { StatusCodes } from 'http-status-codes';
 import { ROLES } from '~/constants';
-import { hasRole } from '~/services/models/roles';
+import { hasRole } from '~/services/models/roles.server';
 import { authenticate } from '~/shopify.server';
-import { createJSONError, handleRouteError } from '~/lib/utils/server';
+import { getRouteError, logError } from '~/lib/utils/server';
+import createHttpError from 'http-errors';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
@@ -20,12 +20,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     } else if (isSupplier) {
       return redirect('/app/partnerships/retailer');
     }
-    throw createJSONError(
+    throw new createHttpError.Unauthorized(
       'User is not retailer or supplier. Unauthorized to view partnership information.',
-      StatusCodes.UNAUTHORIZED,
     );
   } catch (error) {
-    throw handleRouteError(error, '/partnerships/_index');
+    logError(error, 'Loader: Partnerships');
+    throw getRouteError('Failed to load partnerships route.', error);
   }
 };
 

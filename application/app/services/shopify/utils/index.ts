@@ -1,8 +1,8 @@
 export {
   queryExternalStoreAdminAPI,
   mutateExternalStoreAdminAPI,
-} from './shopifyExternalStoreAPI';
+} from './shopifyExternalStoreAPI.server';
 export {
   queryInternalStoreAdminAPI,
   mutateInternalStoreAdminAPI,
-} from './shopifyInternalStoreAPI';
+} from './shopifyInternalStoreAPI.server';

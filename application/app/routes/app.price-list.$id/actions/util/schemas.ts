@@ -5,32 +5,22 @@ import {
   getGeneralPriceList,
   hasGeneralPriceList,
   isValidPriceList,
-} from '~/services/models/priceList';
-import { hasRole } from '~/services/models/roles';
-import { errorHandler } from '~/lib/utils/server';
-import { isImportedProduct } from '~/services/models/importedProduct';
+} from '~/services/models/priceList.server';
+import { hasRole } from '~/services/models/roles.server';
+import { isImportedProduct } from '~/services/models/importedProduct.server';
 
 // if so, this should fail the update / creation
 async function hasImportedProducts(shopifyProductIds: string[]) {
-  try {
-    const res = await Promise.all(
-      shopifyProductIds.map((shopifyProductId) =>
-        isImportedProduct(shopifyProductId),
-      ),
-    );
+  const res = await Promise.all(
+    shopifyProductIds.map((shopifyProductId) =>
+      isImportedProduct(shopifyProductId),
+    ),
+  );
 
-    if (res.includes(true)) {
-      return true;
-    }
-    return false;
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to check if list of shopify product ids has imported product',
-      hasImportedProducts,
-      { shopifyProductIds },
-    );
+  if (res.includes(true)) {
+    return true;
   }
+  return false;
 }
 
 export default hasImportedProducts;

@@ -1,7 +1,7 @@
-// !!! TODO: SHOPIFY UPDATED THEIR METHOD OF PRODUCT QUERY AND MUTATION FOR THEIR LATEST API VERSION 10-10,
-// !!! BECAUSE OF THIS, FOR SOME REASON, USING GRAPHQL-CODEGEN DOES NOT WORK ONLY FOR EXPORTING PRODUCT QUERY AND MUTATIONS
-// !!! AS A RESULT, UNTIL I UPDATE THIS APPLICATION TO API VERSION 10-10 OR UNTIL SHOPIFY FIXES THIS ISSUE,
-// !! I HAVE TO PUT ONLY THE PRODUCT QUERY AND MUTATIONS INLINE INSTEAD OF USING CONST OR USE CREATE THE TYPES MANUALLY
+// !!! TODO: Shopify updated their method of product query and mutation for their latest API version 10-10.
+// Because of this, using graphql-codegen does not work for exporting product query and mutations.
+// As a result, until I update this application to API version 10-10 or until Shopify fixes this issue,
+// I have to put the product query and mutations inline instead of using const or manually create the types.
 
 /* eslint-disable */
 import type * as AdminTypes from '../../../types/admin.types';

@@ -63,7 +63,7 @@ Just a disclaimer: I may be completely wrong in understanding Shopify merchants'
 
 ### Deployment Status
 
-- Submitted to Shopify App Store for Review
+- Submitting to Shopify App Store for Review
 - Video Demo: https://www.youtube.com/watch?v=D-RJJmcRiks&feature=youtu.be
 - Main Features (Text): https://aback-thistle-ade.notion.site/Features-At-A-Glance-8be5cba5a5254a67bb59845c5b1c738a
 - Basic Information Site: https://www.synqsell.com/

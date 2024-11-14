@@ -27,13 +27,13 @@ import {
   type SocialMediaDataProps,
   type ProfileProps,
   getProfile,
-} from '~/services/models/userProfile';
+} from '~/services/models/userProfile.server';
 import {
   convertFormDataToObject,
   isActionDataError,
   isActionDataSuccess,
 } from '~/lib/utils';
-import { createJSONSuccess, handleRouteError } from '~/lib/utils/server';
+import { createJSONSuccess, getRouteError, logError } from '~/lib/utils/server';
 import {
   useActionData,
   useLoaderData,
@@ -45,7 +45,7 @@ import {
 import { isEmail } from './util/customValidation';
 import styles from '~/shared.module.css';
 import { useAppBridge } from '@shopify/app-bridge-react';
-import { getRoles, type RolePropsJSON } from '~/services/models/roles';
+import { getRoles, type RolePropsJSON } from '~/services/models/roles.server';
 import { useCallback, useEffect, useState } from 'react';
 import { updateSettings } from '~/services/transactions';
 import {
@@ -100,7 +100,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       },
     );
   } catch (error) {
-    throw handleRouteError(error, 'settings');
+    logError(error, 'Loader: User settings');
+    throw getRouteError('Failed to load user settings.', error);
   }
 };
 // TODO: Refactor social social media model to be more flexible so you don't have to destructure props in future
@@ -161,7 +162,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       StatusCodes.OK,
     );
   } catch (error) {
-    throw handleRouteError(error, '/app/settings/user');
+    logError(error, 'Action: Update user settings');
+    return getRouteError('Failed to update user settings.', error);
   }
 };
 

@@ -1,11 +1,11 @@
-import { hasSession } from '~/services/models/session';
+import { hasSession } from '~/services/models/session.server';
 import { createIdListSchema, createIdSchema } from './schemaUtils';
-import { isValidPriceList } from '~/services/models/priceList';
-import { isValidPartnershipRequest } from '~/services/models/partnershipRequest';
-import { hasPartnership } from '~/services/models/partnership';
-import { hasProduct } from '~/services/models/product';
-import { hasFulfillmentService } from '~/services/models/fulfillmentService';
-import { isValidChecklistStatusId } from '~/services/models/checklistStatus';
+import { isValidPriceList } from '~/services/models/priceList.server';
+import { isValidPartnershipRequest } from '~/services/models/partnershipRequest.server';
+import { hasPartnership } from '~/services/models/partnership.server';
+import { hasProduct } from '~/services/models/product.server';
+import { hasFulfillmentService } from '~/services/models/fulfillmentService.server';
+import { isValidChecklistStatusId } from '~/services/models/checklistStatus.server';
 
 // for individual id
 export const sessionIdSchema = createIdSchema('session', hasSession);

@@ -21,11 +21,11 @@ import type { NonEmptyArray } from '@shopify/polaris/build/ts/src/types';
 import { StatusCodes } from 'http-status-codes';
 import { type FC, useCallback, useEffect, useMemo, useState } from 'react';
 import { ACCESS_REQUEST_STATUS, ROLES } from '~/constants';
-import { hasRole } from '~/services/models/roles';
+import { hasRole } from '~/services/models/roles.server';
 import {
   getAllSupplierAccessRequests,
   type GetSupplierAccessRequestJSONProps,
-} from '~/services/models/supplierAccessRequest';
+} from '~/services/models/supplierAccessRequest.server';
 import { authenticate } from '~/shopify.server';
 import { type BulkActionsProps } from '@shopify/polaris/build/ts/src/components/BulkActions';
 import { useAppBridge } from '@shopify/app-bridge-react';
@@ -33,13 +33,14 @@ import {
   updateSupplierAccessAction,
   type SupplierAccessRequestInfo,
 } from './actions';
-import { createJSONError, handleRouteError } from '~/lib/utils/server';
+import { createJSONError, getRouteError, logError } from '~/lib/utils/server';
 import {
   convertFormDataToObject,
   convertToDate,
   isActionDataError,
   isActionDataSuccess,
 } from '~/lib/utils';
+import createHttpError from 'http-errors';
 
 type RowMarkupProps = {
   data: GetSupplierAccessRequestJSONProps;
@@ -63,15 +64,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const { id: sessionId } = session;
     const isAdmin = await hasRole(sessionId, ROLES.ADMIN);
     if (!isAdmin) {
-      throw createJSONError(
+      throw new createHttpError.Unauthorized(
         'Unauthorized. User is not an administrator.',
-        StatusCodes.UNAUTHORIZED,
       );
     }
     const supplierAccessRequests = await getAllSupplierAccessRequests();
     return json(supplierAccessRequests, StatusCodes.OK);
   } catch (error) {
-    throw handleRouteError(error, '/app/admin');
+    logError(error, 'Loader: Admin Route');
+    throw getRouteError('Failed to load admin route.', error);
   }
 };
 
@@ -86,7 +87,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         StatusCodes.BAD_REQUEST,
       );
     }
-
     switch (intent) {
       case INTENTS.APPROVE:
         return await updateSupplierAccessAction(
@@ -105,7 +105,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         );
     }
   } catch (error) {
-    return handleRouteError(error, '/app/admin');
+    logError(error, 'Action: Admin Route');
+    return getRouteError('Failed to process request.', error);
   }
 };
 

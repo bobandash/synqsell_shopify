@@ -16,7 +16,7 @@ export async function createStorefrontAccessToken(graphql: GraphQL) {
       'Failed to create a storefront access token in Shopify.',
     );
 
-  return (
-    data.storefrontAccessTokenCreate?.storefrontAccessToken?.accessToken ?? ''
-  );
+  const accessToken =
+    data.storefrontAccessTokenCreate?.storefrontAccessToken?.accessToken ?? '';
+  return accessToken;
 }

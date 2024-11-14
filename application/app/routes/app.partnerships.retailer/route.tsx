@@ -24,18 +24,14 @@ import { StatusCodes } from 'http-status-codes';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ROLES } from '~/constants';
 import { useRoleContext } from '~/context/RoleProvider';
-import { hasRole } from '~/services/models/roles';
+import { hasRole } from '~/services/models/roles.server';
 import { authenticate } from '~/shopify.server';
 import {
   convertFormDataToObject,
   isActionDataError,
   isActionDataSuccess,
 } from '~/lib/utils';
-import {
-  createJSONError,
-  createJSONSuccess,
-  handleRouteError,
-} from '~/lib/utils/server';
+import { createJSONError, getRouteError, logError } from '~/lib/utils/server';
 import { INTENTS, MODALS, RETAILER_ACCESS_REQUEST_STATUS } from './constants';
 import {
   approveRetailersAction,
@@ -55,8 +51,9 @@ import type { NonEmptyArray } from '@shopify/polaris/build/ts/src/types';
 import type { BulkActionsProps } from '@shopify/polaris/build/ts/src/components/BulkActions';
 import type { IndexTableHeading } from '@shopify/polaris/build/ts/src/components/IndexTable';
 import { ChangePermissionModal, MessageModal } from './components/Modals';
-import { getAllPriceLists } from '~/services/models/priceList';
+import { getAllPriceLists } from '~/services/models/priceList.server';
 import { getSupplierPartnershipInfo } from './loader';
+import createHttpError from 'http-errors';
 
 type LoaderData = {
   partnershipInfo: RowData[];
@@ -70,9 +67,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     } = await authenticate.admin(request);
     const isSupplier = await hasRole(sessionId, ROLES.SUPPLIER);
     if (!isSupplier) {
-      throw createJSONError(
+      throw new createHttpError.Unauthorized(
         'User is not a supplier. Unauthorized to view retailer partnership requests.',
-        StatusCodes.UNAUTHORIZED,
       );
     }
     const [partnershipInfo, priceLists] = await Promise.all([
@@ -81,7 +77,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     ]);
     return json({ partnershipInfo, priceLists }, { status: StatusCodes.OK });
   } catch (error) {
-    throw handleRouteError(error, '/app/partnerships/retailer');
+    logError(error, 'Loader: Retailer Partnerships');
+    throw getRouteError('Failed to load retailer partnerships.', error);
   }
 };
 
@@ -104,9 +101,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           data as ChangePermissionsRetailersAction,
         );
     }
-    return createJSONSuccess('Not Implemented.', StatusCodes.NOT_IMPLEMENTED);
+    return createJSONError(
+      'Action not implemented. Please contact support.',
+      StatusCodes.NOT_IMPLEMENTED,
+    );
   } catch (error) {
-    throw handleRouteError(error, 'admin network');
+    logError(error, 'Action: Retailer Partnerships');
+    return getRouteError('Failed to process request.', error);
   }
 };
 

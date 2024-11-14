@@ -1,7 +1,6 @@
 import { nodesFromEdges } from '@shopify/admin-graphql-api-utilities';
 import { type GraphQL } from '~/types';
 import getQueryStr from '../utils/getQueryStr';
-import { errorHandler } from '~/lib/utils/server';
 import {
   CREATE_PRODUCT_MUTATION,
   GET_PRODUCT_URL,
@@ -63,43 +62,32 @@ export type BasicProductDetails = {
 
 export async function getIdMappedToStoreUrl(
   graphql: GraphQL,
-  sessionId: string,
   productIds: string[],
 ) {
   if (productIds.length === 0) {
     return {};
   }
+  const numProducts = productIds.length;
+  const queryStr = getQueryStr(productIds);
+  const data = await queryInternalStoreAdminAPI<ProductUrlQuery>(
+    graphql,
+    GET_PRODUCT_URL,
+    {
+      first: numProducts,
+      query: queryStr,
+    },
+  );
+  const edges = data.products.edges;
+  const nodes = nodesFromEdges(edges);
+  const idToStoreUrl = nodes.reduce((acc, node) => {
+    const { id, onlineStoreUrl } = node;
+    return {
+      ...acc,
+      [id]: onlineStoreUrl,
+    };
+  }, {});
 
-  try {
-    const numProducts = productIds.length;
-    const queryStr = getQueryStr(productIds);
-    const data = await queryInternalStoreAdminAPI<ProductUrlQuery>(
-      graphql,
-      GET_PRODUCT_URL,
-      {
-        first: numProducts,
-        query: queryStr,
-      },
-    );
-    const edges = data.products.edges;
-    const nodes = nodesFromEdges(edges);
-    const idToStoreUrl = nodes.reduce((acc, node) => {
-      const { id, onlineStoreUrl } = node;
-      return {
-        ...acc,
-        [id]: onlineStoreUrl,
-      };
-    }, {});
-
-    return idToStoreUrl;
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to retrieve product urls from product ids.',
-      getIdMappedToStoreUrl,
-      { productIds, sessionId },
-    );
-  }
+  return idToStoreUrl;
 }
 
 // helper function for getBasicProductDetails
@@ -125,23 +113,14 @@ export async function getBasicProductDetails(
   take: number,
   graphql: GraphQL,
 ): Promise<BasicProductDetails[]> {
-  try {
-    const queryStr = getQueryStr(shopifyProductIds);
-    const data = await queryInternalStoreAdminAPI<ProductBasicInfoQuery>(
-      graphql,
-      PRODUCT_BASIC_INFO_QUERY,
-      { query: queryStr, first: take },
-    );
-    const flattenedData = flattenBasicProductInfo(data);
-    return flattenedData;
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to retrieve basic product details.',
-      getBasicProductDetails,
-      { shopifyProductIds, take },
-    );
-  }
+  const queryStr = getQueryStr(shopifyProductIds);
+  const data = await queryInternalStoreAdminAPI<ProductBasicInfoQuery>(
+    graphql,
+    PRODUCT_BASIC_INFO_QUERY,
+    { query: queryStr, first: take },
+  );
+  const flattenedData = flattenBasicProductInfo(data);
+  return flattenedData;
 }
 
 export async function getBasicProductDetailsWithAccessToken(
@@ -150,28 +129,19 @@ export async function getBasicProductDetailsWithAccessToken(
   shop: string,
   accessToken: string,
 ) {
-  try {
-    const queryStr = getQueryStr(shopifyProductIds);
-    const variables = {
-      query: queryStr,
-      first: take,
-    };
-    const data = await queryExternalStoreAdminAPI<ProductBasicInfoQuery>(
-      shop,
-      accessToken,
-      PRODUCT_BASIC_INFO_QUERY,
-      variables,
-    );
-    const flattenedData = flattenBasicProductInfo(data);
-    return flattenedData;
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to retrieve basic product details.',
-      getBasicProductDetailsWithAccessToken,
-      { shopifyProductIds, take },
-    );
-  }
+  const queryStr = getQueryStr(shopifyProductIds);
+  const variables = {
+    query: queryStr,
+    first: take,
+  };
+  const data = await queryExternalStoreAdminAPI<ProductBasicInfoQuery>(
+    shop,
+    accessToken,
+    PRODUCT_BASIC_INFO_QUERY,
+    variables,
+  );
+  const flattenedData = flattenBasicProductInfo(data);
+  return flattenedData;
 }
 
 export async function getProductAndMediaCreationInputWithAccessToken(
@@ -180,44 +150,34 @@ export async function getProductAndMediaCreationInputWithAccessToken(
   accessToken: string,
   supplierName: string,
 ) {
-  try {
-    const productCreationInfoMinusMediaData: ProductCreationInformationQuery =
-      await queryExternalStoreAdminAPI(
-        shop,
-        accessToken,
-        PRODUCT_CREATION_DETAILS_WITHOUT_MEDIA_QUERY,
-        { id: shopifyProductId },
-      );
-
-    const productInputFields = getProductCreationInputFields(
-      productCreationInfoMinusMediaData,
-      supplierName,
+  const productCreationInfoMinusMediaData: ProductCreationInformationQuery =
+    await queryExternalStoreAdminAPI(
+      shop,
+      accessToken,
+      PRODUCT_CREATION_DETAILS_WITHOUT_MEDIA_QUERY,
+      { id: shopifyProductId },
     );
 
-    // get product media input fields
-    let mediaInputFields = null;
-    const mediaCount =
-      productCreationInfoMinusMediaData.product?.mediaCount?.count ?? 0;
-    if (mediaCount > 0) {
-      const mediaData = await queryExternalStoreAdminAPI<ProductMediaQuery>(
-        shop,
-        accessToken,
-        PRODUCT_GET_MEDIA,
-        { id: shopifyProductId, first: 1 },
-      );
-      mediaInputFields = getProductMediaCreationInputFields(mediaData);
-    }
+  const productInputFields = getProductCreationInputFields(
+    productCreationInfoMinusMediaData,
+    supplierName,
+  );
 
-    return { productInputFields, mediaInputFields };
-    // format it to match the productCreate input mutation
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to retrieve product details for creating products in another store.',
-      getProductAndMediaCreationInputWithAccessToken,
-      { shopifyProductId, shop },
+  // get product media input fields
+  let mediaInputFields = null;
+  const mediaCount =
+    productCreationInfoMinusMediaData.product?.mediaCount?.count ?? 0;
+  if (mediaCount > 0) {
+    const mediaData = await queryExternalStoreAdminAPI<ProductMediaQuery>(
+      shop,
+      accessToken,
+      PRODUCT_GET_MEDIA,
+      { id: shopifyProductId, first: 1 },
     );
+    mediaInputFields = getProductMediaCreationInputFields(mediaData);
   }
+
+  return { productInputFields, mediaInputFields };
 }
 
 // helper functions for getProductCreationInputWithAccessToken
@@ -301,25 +261,16 @@ export async function createProduct(
   mediaInput: CreateMediaInput[] | null,
   graphql: GraphQL,
 ) {
-  try {
-    const data = await mutateInternalStoreAdminAPI<ProductCreateMutation>(
-      graphql,
-      CREATE_PRODUCT_MUTATION,
-      {
-        input: productInput,
-        ...(mediaInput && { media: mediaInput }),
-      },
-      'Failed to create product on Shopify',
-    );
+  const data = await mutateInternalStoreAdminAPI<ProductCreateMutation>(
+    graphql,
+    CREATE_PRODUCT_MUTATION,
+    {
+      input: productInput,
+      ...(mediaInput && { media: mediaInput }),
+    },
+    'Failed to create product on Shopify',
+  );
 
-    const newShopifyProductId = data.productCreate?.product?.id ?? '';
-    return newShopifyProductId;
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to create product on shopify.',
-      createProduct,
-      { productInput },
-    );
-  }
+  const newShopifyProductId = data.productCreate?.product?.id ?? '';
+  return newShopifyProductId;
 }

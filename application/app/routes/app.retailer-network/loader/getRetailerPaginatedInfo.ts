@@ -1,4 +1,3 @@
-import { errorHandler } from '~/lib/utils/server';
 import db from '~/db.server';
 import {
   PARTNERSHIP_REQUEST_STATUS,
@@ -6,17 +5,16 @@ import {
   ROLES,
 } from '~/constants';
 import { boolean, object, string } from 'yup';
-import { hasSession } from '~/services/models/session';
+import { hasSession } from '~/services/models/session.server';
 import type { Prisma } from '@prisma/client';
-import logger from '~/logger';
 import createHttpError from 'http-errors';
 import {
   getPartnershipRequestMultiplePriceLists,
   hasPartnershipRequestMultiplePriceLists,
-} from '~/services/models/partnershipRequest';
-import { getAllPriceLists } from '~/services/models/priceList';
+} from '~/services/models/partnershipRequest.server';
+import { getAllPriceLists } from '~/services/models/priceList.server';
 import { PARTNERSHIP_STATUS, type PartnershipStatusProps } from '../constants';
-import { isSupplierRetailerPartnered } from '~/services/models/partnership';
+import { isSupplierRetailerPartnered } from '~/services/models/partnership.server';
 
 export type RetailerPaginatedInfoProps = {
   retailerPaginatedInfo: {
@@ -113,69 +111,55 @@ async function getPrismaUnformattedRetailerInfo({
   take,
   cursor,
 }: GetPrismaUnformattedRetailerInfo) {
-  try {
-    // the only suppliers that should show up are suppliers with a general price list and at least one product in the price list
-    // NOTE: this takes one more than usual in order to check if has more
-    const data = await db.session.findMany({
-      take: isReverseDirection ? -1 * take : take + 1,
-      ...(cursor && { cursor: { id: cursor } }),
-      ...(cursor && { skip: 1 }),
-      where: {
-        id: {
-          not: sessionId,
+  // the only suppliers that should show up are suppliers with a general price list and at least one product in the price list
+  // NOTE: this takes one more than usual in order to check if has more
+  const data = await db.session.findMany({
+    take: isReverseDirection ? -1 * take : take + 1,
+    ...(cursor && { cursor: { id: cursor } }),
+    ...(cursor && { skip: 1 }),
+    where: {
+      id: {
+        not: sessionId,
+      },
+      isAppUninstalled: {
+        not: true,
+      },
+      stripeCustomerAccount: {
+        hasPaymentMethod: true,
+      },
+      roles: {
+        some: {
+          name: ROLES.RETAILER,
+          isVisibleInNetwork: true,
         },
-        isAppUninstalled: {
-          not: true,
-        },
-        stripeCustomerAccount: {
-          hasPaymentMethod: true,
-        },
-        roles: {
-          some: {
-            name: ROLES.RETAILER,
-            isVisibleInNetwork: true,
-          },
-        },
-        userProfile: {
+      },
+      userProfile: {
+        NOT: undefined,
+        socialMediaLink: {
           NOT: undefined,
-          socialMediaLink: {
-            NOT: undefined,
-          },
         },
       },
-      orderBy: {
-        userProfile: {
-          name: 'asc',
+    },
+    orderBy: {
+      userProfile: {
+        name: 'asc',
+      },
+    },
+    select: {
+      id: true,
+      userProfile: {
+        include: {
+          socialMediaLink: true,
         },
       },
-      select: {
-        id: true,
-        userProfile: {
-          include: {
-            socialMediaLink: true,
-          },
-        },
-      },
-    });
-    const hasMore = data.length > take || isReverseDirection;
-    if (isReverseDirection || !hasMore) {
-      return { data, hasMore };
-    }
-    const dataWithoutExtraTake = hasMore ? data.slice(0, -1) : data;
-    return { data: dataWithoutExtraTake, hasMore };
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to retrieve supplier data from database.',
-      getPrismaUnformattedRetailerInfo,
-      {
-        isReverseDirection,
-        sessionId,
-        take,
-        cursor,
-      },
-    );
+    },
+  });
+  const hasMore = data.length > take || isReverseDirection;
+  if (isReverseDirection || !hasMore) {
+    return { data, hasMore };
   }
+  const dataWithoutExtraTake = hasMore ? data.slice(0, -1) : data;
+  return { data: dataWithoutExtraTake, hasMore };
 }
 
 // retrieves whether the supplier is partnered, sent a request to partner, or never initiated a partnership
@@ -184,44 +168,28 @@ async function getPartnershipStatus(
   retailerId: string,
   priceListIds: string[],
 ): Promise<PartnershipStatusProps> {
-  try {
-    const isPartnered = await isSupplierRetailerPartnered(
-      retailerId,
-      supplierId,
-    );
-    if (isPartnered) {
-      return PARTNERSHIP_STATUS.PARTNERED;
-    }
-    const partnershipRequestExists =
-      await hasPartnershipRequestMultiplePriceLists(
-        priceListIds,
-        supplierId,
-        PARTNERSHIP_REQUEST_TYPE.SUPPLIER,
-      );
-
-    if (partnershipRequestExists) {
-      const partnershipRequest = await getPartnershipRequestMultiplePriceLists(
-        priceListIds,
-        supplierId,
-        PARTNERSHIP_REQUEST_TYPE.SUPPLIER,
-      );
-      if (partnershipRequest.status === PARTNERSHIP_REQUEST_STATUS.PENDING) {
-        return PARTNERSHIP_STATUS.REQUESTED_PARTNERSHIP;
-      }
-    }
-    return PARTNERSHIP_STATUS.NO_PARTNERSHIP;
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to get approval status of retailer request to price list.',
-      getPartnershipStatus,
-      {
-        supplierId,
-        retailerId,
-        priceListIds,
-      },
-    );
+  const isPartnered = await isSupplierRetailerPartnered(retailerId, supplierId);
+  if (isPartnered) {
+    return PARTNERSHIP_STATUS.PARTNERED;
   }
+  const partnershipRequestExists =
+    await hasPartnershipRequestMultiplePriceLists(
+      priceListIds,
+      supplierId,
+      PARTNERSHIP_REQUEST_TYPE.SUPPLIER,
+    );
+
+  if (partnershipRequestExists) {
+    const partnershipRequest = await getPartnershipRequestMultiplePriceLists(
+      priceListIds,
+      supplierId,
+      PARTNERSHIP_REQUEST_TYPE.SUPPLIER,
+    );
+    if (partnershipRequest.status === PARTNERSHIP_REQUEST_STATUS.PENDING) {
+      return PARTNERSHIP_STATUS.REQUESTED_PARTNERSHIP;
+    }
+  }
+  return PARTNERSHIP_STATUS.NO_PARTNERSHIP;
 }
 
 async function cleanUpRetailerPrismaData(
@@ -229,53 +197,39 @@ async function cleanUpRetailerPrismaData(
   sessionId: string,
 ) {
   // cleans up retailer data and adds approval status to the prisma data
-  try {
-    const priceLists = await getAllPriceLists(sessionId);
-    const priceListIds = priceLists.map((priceList) => priceList.id);
-    const retailers = await Promise.all(
-      retailerRawData.map(async (retailer) => {
-        const { userProfile } = retailer;
-        if (!userProfile) {
-          logger.error('User profile does not exist in session.');
-          throw new createHttpError.InternalServerError(
-            `A retailer's profile does not exist.`,
-          );
-        }
-        const { socialMediaLink, ...profileRest } = userProfile;
-        if (!socialMediaLink) {
-          logger.error('Social media links does not exist in session.');
-          throw new createHttpError.InternalServerError(
-            `A retailer's socials do not exist.`,
-          );
-        }
-        const partnershipStatus = await getPartnershipStatus(
-          sessionId,
-          retailer.id,
-          priceListIds,
+  const priceLists = await getAllPriceLists(sessionId);
+  const priceListIds = priceLists.map((priceList) => priceList.id);
+  const retailers = await Promise.all(
+    retailerRawData.map(async (retailer) => {
+      const { userProfile } = retailer;
+      if (!userProfile) {
+        throw new createHttpError.InternalServerError(
+          `A retailer's profile does not exist.`,
         );
-
-        return {
-          id: retailer.id,
-          partnershipStatus,
-          profile: {
-            ...profileRest,
-            socialMediaLink: { ...socialMediaLink },
-          },
-        };
-      }),
-    );
-    return retailers;
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to clean up retailer prisma data and add partnership status.',
-      cleanUpRetailerPrismaData,
-      {
-        retailerRawData,
+      }
+      const { socialMediaLink, ...profileRest } = userProfile;
+      if (!socialMediaLink) {
+        throw new createHttpError.InternalServerError(
+          `A retailer's socials do not exist.`,
+        );
+      }
+      const partnershipStatus = await getPartnershipStatus(
         sessionId,
-      },
-    );
-  }
+        retailer.id,
+        priceListIds,
+      );
+
+      return {
+        id: retailer.id,
+        partnershipStatus,
+        profile: {
+          ...profileRest,
+          socialMediaLink: { ...socialMediaLink },
+        },
+      };
+    }),
+  );
+  return retailers;
 }
 
 // TODO: implement stripe webhook and change
@@ -284,60 +238,49 @@ export async function getRetailerPaginatedInfo({
   sessionId,
   cursor,
 }: GetRetailerPaginatedInfoProps) {
-  try {
-    await getRetailerPaginatedInfoSchema.validate({
-      isReverseDirection,
-      cursor,
-      sessionId,
-    });
+  await getRetailerPaginatedInfoSchema.validate({
+    isReverseDirection,
+    cursor,
+    sessionId,
+  });
 
-    const take = 8;
-    const [firstRetailer, { data: retailerRawData, hasMore }] =
-      await Promise.all([
-        getPrismaUnformattedRetailerInfo({
-          isReverseDirection: false,
-          sessionId,
-          take: 1,
-          cursor: null,
-        }),
-        getPrismaUnformattedRetailerInfo({
-          isReverseDirection,
-          sessionId,
-          take,
-          cursor,
-        }),
-      ]);
+  const take = 8;
+  const [firstRetailer, { data: retailerRawData, hasMore }] = await Promise.all(
+    [
+      getPrismaUnformattedRetailerInfo({
+        isReverseDirection: false,
+        sessionId,
+        take: 1,
+        cursor: null,
+      }),
+      getPrismaUnformattedRetailerInfo({
+        isReverseDirection,
+        sessionId,
+        take,
+        cursor,
+      }),
+    ],
+  );
 
-    const firstRetailerId =
-      firstRetailer.data.length > 0 ? firstRetailer.data[0].id : null;
-    const retailers = await cleanUpRetailerPrismaData(
-      retailerRawData,
-      sessionId,
-    );
-    // case: there is no data in the network
-    if (retailers.length === 0) {
-      return {
-        nextCursor: null,
-        prevCursor: null,
-        retailers: [],
-      };
-    }
-
-    const isFirstPage =
-      retailers[0] && retailers[0].id === firstRetailerId ? true : false;
-    const prevCursor = isFirstPage ? null : retailers[0].id;
-    const nextCursor = hasMore ? retailers[take - 1].id : null;
+  const firstRetailerId =
+    firstRetailer.data.length > 0 ? firstRetailer.data[0].id : null;
+  const retailers = await cleanUpRetailerPrismaData(retailerRawData, sessionId);
+  // case: there is no data in the network
+  if (retailers.length === 0) {
     return {
-      nextCursor,
-      prevCursor,
-      retailers,
+      nextCursor: null,
+      prevCursor: null,
+      retailers: [],
     };
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to get retailer information.',
-      getRetailerPaginatedInfo,
-      { cursor },
-    );
   }
+
+  const isFirstPage =
+    retailers[0] && retailers[0].id === firstRetailerId ? true : false;
+  const prevCursor = isFirstPage ? null : retailers[0].id;
+  const nextCursor = hasMore ? retailers[take - 1].id : null;
+  return {
+    nextCursor,
+    prevCursor,
+    retailers,
+  };
 }

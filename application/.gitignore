@@ -11,7 +11,9 @@ node_modules
 database.sqlite
 
 .env
-
+.env.prod
+.env.dev
+.env.staging
 
 
 /extensions/*/dist

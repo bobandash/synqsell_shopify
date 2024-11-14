@@ -7,11 +7,11 @@ import { Button, InlineGrid, InlineStack, Page } from '@shopify/polaris';
 import { StatusCodes } from 'http-status-codes';
 import { authenticate } from '~/shopify.server';
 import { convertFormDataToObject, isActionDataError } from '~/lib/utils';
-import { createJSONError, handleRouteError } from '~/lib/utils/server';
+import { createJSONError, getRouteError, logError } from '~/lib/utils/server';
 import {
   isValidPriceList,
   userHasPriceList,
-} from '~/services/models/priceList';
+} from '~/services/models/priceList.server';
 import {
   useLoaderData,
   useSearchParams,
@@ -34,7 +34,8 @@ import { INTENTS } from './constants';
 import { getProductCardInfoFromPriceList } from './loader/getProductCardInfoForSpecificPriceList';
 import type { ProductCardJSON } from './types';
 import ProductCard from './components/ProductCard';
-import { userHasStripePaymentMethod } from '~/services/models/stripeCustomerAccount';
+import { userHasStripePaymentMethod } from '~/services/models/stripeCustomerAccount.server';
+import createHttpError from 'http-errors';
 
 type ProductCardInfo = {
   products: ProductCardJSON[];
@@ -83,25 +84,17 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     ]);
 
     if (isUserPriceListOwner) {
-      throw createJSONError(
+      throw new createHttpError.Unauthorized(
         "User cannot view and import products in the user's own price list.",
-        StatusCodes.UNAUTHORIZED,
       );
     } else if (!userHasStripePayments) {
-      throw createJSONError(
+      throw new createHttpError.Unauthorized(
         'User does not have stripe payments set up to begin importing products.',
-        StatusCodes.UNAUTHORIZED,
       );
     } else if (!isValidPriceListId) {
-      throw createJSONError(
-        'Price list could not be found.',
-        StatusCodes.NOT_FOUND,
-      );
+      throw new createHttpError.NotFound('Price list could not be found.');
     } else if (!hasAccessToPriceList) {
-      throw createJSONError(
-        'User does not have access to view products in this price list.',
-        StatusCodes.UNAUTHORIZED,
-      );
+      throw new createHttpError.Unauthorized('Price list could not be found.');
     }
 
     const productCardInfo = await getProductCardInfoFromPriceList({
@@ -114,7 +107,8 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
       await getPriceListsWithAccessForSpecificSupplier(priceListId, sessionId);
     return json({ productCardInfo, priceListsWithAccess }, StatusCodes.OK);
   } catch (error) {
-    throw handleRouteError(error, '/products/priceListId');
+    logError(error, 'Loader: Products in Price List');
+    throw getRouteError('Failed to load products in price list.', error);
   }
 };
 
@@ -138,7 +132,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         );
     }
   } catch (error) {
-    return handleRouteError(error, '/products/priceListId');
+    logError(error, 'Action: Admin Route');
+    return getRouteError('Failed to process request.', error);
   }
 };
 

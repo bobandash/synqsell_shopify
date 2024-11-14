@@ -17,9 +17,9 @@ import {
   isActionDataError,
   isActionDataSuccess,
 } from '~/lib/utils';
-import { createJSONError, handleRouteError } from '~/lib/utils/server';
+import { createJSONError, getRouteError, logError } from '~/lib/utils/server';
 import { authenticate } from '~/shopify.server';
-import { hasRole } from '~/services/models/roles';
+import { hasRole } from '~/services/models/roles.server';
 import { ROLES } from '~/constants';
 import {
   useActionData,
@@ -37,9 +37,10 @@ import type {
   RetailerPaginatedInfoProps,
 } from './loader/getRetailerPaginatedInfo';
 import { InitiatePartnershipModal, RetailerCard } from './components';
-import { getAllPriceLists } from '~/services/models/priceList';
+import { getAllPriceLists } from '~/services/models/priceList.server';
 import { initiatePartnershipAction } from './actions';
-import { userHasStripeConnectAccount } from '~/services/models/stripeConnectAccount';
+import { userHasStripeConnectAccount } from '~/services/models/stripeConnectAccount.server';
+import createHttpError from 'http-errors';
 
 type InitiatePartnershipData = {
   intent: string;
@@ -70,16 +71,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }
 
     if (!isSupplier) {
-      throw createJSONError('User is not supplier.', StatusCodes.UNAUTHORIZED);
-    }
-
-    if (!hasStripeConnectAccount) {
-      throw createJSONError(
+      throw new createHttpError.Unauthorized('User is not supplier.');
+    } else if (!hasStripeConnectAccount) {
+      throw new createHttpError.Unauthorized(
         'Supplier did not integrate with Stripe Connect.',
-        StatusCodes.UNAUTHORIZED,
       );
     }
-
     const retailerPaginatedInfo = await getRetailerPaginatedInfo({
       isReverseDirection,
       sessionId,
@@ -89,7 +86,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
     return json({ retailerPaginatedInfo, priceLists }, StatusCodes.OK);
   } catch (error) {
-    throw handleRouteError(error, '/app/retailer-network');
+    logError(error, 'Loader: Retailer Network');
+    throw getRouteError('Failed to load retailer network.', error);
   }
 };
 
@@ -106,14 +104,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           supplierId: sessionId,
           ...(formDataObject as InitiatePartnershipData),
         });
-      default:
-        return createJSONError(
-          `Intent ${intent} is not valid`,
-          StatusCodes.NOT_IMPLEMENTED,
-        );
     }
+    return createJSONError(
+      `Intent ${intent} is not valid`,
+      StatusCodes.NOT_IMPLEMENTED,
+    );
   } catch (error) {
-    return handleRouteError(error, '/app/retailer-network');
+    logError(error, 'Action: Retailer Network');
+    return getRouteError('Failed to process request.', error);
   }
 };
 

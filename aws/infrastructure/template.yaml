@@ -156,7 +156,6 @@ Resources:
         - Key: Environment
           Value: !Ref Environment
 
-# TODO: add db output
 Outputs:
   ImageHostingS3BucketName:
     Description: S3 bucket name for storing all the merchants' logos

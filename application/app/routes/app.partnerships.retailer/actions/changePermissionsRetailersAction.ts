@@ -8,7 +8,7 @@ import {
 import type { Prisma } from '@prisma/client';
 import db from '~/db.server';
 import { StatusCodes } from 'http-status-codes';
-import { createJSONSuccess, errorHandler } from '~/lib/utils/server';
+import { createJSONSuccess, getRouteError, logError } from '~/lib/utils/server';
 
 export type ChangePermissionsRetailersAction = {
   intent: IntentsProps;
@@ -40,33 +40,24 @@ async function updatePartnershipsPriceListPermissionsTx(
   partnershipIds: string[],
   priceListIds: string[],
 ) {
-  try {
-    const priceListIdData = priceListIds.map((id) => ({ id }));
-    await updatePartnershipsPriceListPermissionsTxSchema.validate({
-      partnershipIds,
-      priceListIds,
-    });
-    const newPartnerships = await Promise.all(
-      partnershipIds.map((id) =>
-        tx.partnership.update({
-          where: { id },
-          data: {
-            priceLists: {
-              set: priceListIdData,
-            },
+  const priceListIdData = priceListIds.map((id) => ({ id }));
+  await updatePartnershipsPriceListPermissionsTxSchema.validate({
+    partnershipIds,
+    priceListIds,
+  });
+  const newPartnerships = await Promise.all(
+    partnershipIds.map((id) =>
+      tx.partnership.update({
+        where: { id },
+        data: {
+          priceLists: {
+            set: priceListIdData,
           },
-        }),
-      ),
-    );
-    return newPartnerships;
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to update price list permissions for partnerships in transaction.',
-      updatePartnershipsPriceListPermissionsTx,
-      { partnershipIds, priceListIds },
-    );
-  }
+        },
+      }),
+    ),
+  );
+  return newPartnerships;
 }
 
 async function updatePartnershipRequestsPriceListPermissionsTx(
@@ -74,57 +65,54 @@ async function updatePartnershipRequestsPriceListPermissionsTx(
   partnershipRequestIds: string[],
   priceListIds: string[],
 ) {
-  try {
-    const priceListIdData = priceListIds.map((id) => ({ id }));
+  const priceListIdData = priceListIds.map((id) => ({ id }));
 
-    await updatePartnershipRequestsPriceListPermissionsTxSchema.validate({
-      partnershipRequestIds,
-      priceListIds,
-    });
-    const newPartnershipRequests = await Promise.all(
-      partnershipRequestIds.map((id) =>
-        tx.partnership.update({
-          where: { id },
-          data: {
-            priceLists: {
-              set: priceListIdData,
-            },
+  await updatePartnershipRequestsPriceListPermissionsTxSchema.validate({
+    partnershipRequestIds,
+    priceListIds,
+  });
+  const newPartnershipRequests = await Promise.all(
+    partnershipRequestIds.map((id) =>
+      tx.partnership.update({
+        where: { id },
+        data: {
+          priceLists: {
+            set: priceListIdData,
           },
-        }),
-      ),
-    );
-    return newPartnershipRequests;
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to update price list permissions for partnerships in transaction.',
-      updatePartnershipsPriceListPermissionsTx,
-      { partnershipRequestIds, priceListIds },
-    );
-  }
+        },
+      }),
+    ),
+  );
+  return newPartnershipRequests;
 }
 
 export async function changePermissionRetailersAction(
   data: ChangePermissionsRetailersAction,
 ) {
-  await changePermissionRetailersActionSchema.validate(data);
-  const { partnershipIds, partnershipRequestIds, selectedPriceListIds } = data;
-  await db.$transaction(async (tx) => {
-    await Promise.all([
-      updatePartnershipsPriceListPermissionsTx(
-        tx,
-        partnershipIds,
-        selectedPriceListIds,
-      ),
-      updatePartnershipRequestsPriceListPermissionsTx(
-        tx,
-        partnershipRequestIds,
-        selectedPriceListIds,
-      ),
-    ]);
-  });
-  return createJSONSuccess(
-    'Successfully updated price list permissions.',
-    StatusCodes.OK,
-  );
+  try {
+    await changePermissionRetailersActionSchema.validate(data);
+    const { partnershipIds, partnershipRequestIds, selectedPriceListIds } =
+      data;
+    await db.$transaction(async (tx) => {
+      await Promise.all([
+        updatePartnershipsPriceListPermissionsTx(
+          tx,
+          partnershipIds,
+          selectedPriceListIds,
+        ),
+        updatePartnershipRequestsPriceListPermissionsTx(
+          tx,
+          partnershipRequestIds,
+          selectedPriceListIds,
+        ),
+      ]);
+    });
+    return createJSONSuccess(
+      'Successfully updated price list permissions.',
+      StatusCodes.OK,
+    );
+  } catch (error) {
+    logError(error, 'Action: Change Retailer Permissions');
+    return getRouteError('Failed to change retailer permissions.', error);
+  }
 }

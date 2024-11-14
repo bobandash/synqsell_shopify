@@ -45,7 +45,7 @@ import {
 } from '~/constants';
 
 import { authenticate } from '~/shopify.server';
-import { createJSONError, handleRouteError } from '~/lib/utils/server';
+import { createJSONError, getRouteError, logError } from '~/lib/utils/server';
 import { convertFormDataToObject } from '~/lib/utils';
 import {
   categoryChoices,
@@ -74,7 +74,7 @@ import type {
 import ProductTableRow from './components/ProductTableRow';
 import { type BulkActionsProps } from '@shopify/polaris/build/ts/src/components/BulkActions';
 import styles from '~/shared.module.css';
-import { userHasPriceList } from '~/services/models/priceList';
+import { userHasPriceList } from '~/services/models/priceList.server';
 import { getExistingPriceListData } from './loader/getExistingPriceListData';
 import { getNewPriceListData } from './loader/getNewPriceListData';
 import type { PartnershipRowData } from './loader/getPartnershipData';
@@ -83,6 +83,7 @@ import {
   isActionDataError,
   isActionDataSuccess,
 } from '~/lib/utils/actionDataUtils';
+import createHttpError from 'http-errors';
 
 type LoaderDataProps = {
   settingsData: Settings;
@@ -102,17 +103,13 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     let data = null;
 
     if (!priceListId) {
-      throw createJSONError(
-        'There is no price list id.',
-        StatusCodes.BAD_REQUEST,
-      );
+      throw new createHttpError.BadRequest('No price list was provided.');
     }
 
     const hasPriceList = await userHasPriceList(sessionId, priceListId);
     if (!isNew && !hasPriceList) {
-      throw createJSONError(
-        'User does not own this price list.',
-        StatusCodes.UNAUTHORIZED,
+      throw new createHttpError.Unauthorized(
+        'User is not the owner of this price list.',
       );
     }
 
@@ -123,7 +120,8 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     }
     return json(data, StatusCodes.OK);
   } catch (error) {
-    throw handleRouteError(error, '/app/price-list/$id');
+    logError(error, 'Loader: Price list');
+    throw getRouteError('Failed to load price list.', error);
   }
 };
 
@@ -153,7 +151,8 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       sessionId,
     );
   } catch (error) {
-    return handleRouteError(error, '/app/price-list/$id');
+    logError(error, 'Action: Price List');
+    return getRouteError('Failed to process request.', error);
   }
 };
 

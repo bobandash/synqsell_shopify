@@ -1,4 +1,3 @@
-import { errorHandler } from '~/lib/utils/server';
 import type { GraphQL } from '~/types';
 import {
   CREATE_CARRIER_SERVICE,
@@ -58,61 +57,40 @@ async function getAllCarrierServices(graphql: GraphQL) {
 
 export async function getCarrierService(sessionId: string, graphql: GraphQL) {
   // retrieve all the carrier services
-  try {
-    const carrierServices = await getAllCarrierServices(graphql);
-    const carrierServiceDetails = getCarrierServiceDetails(sessionId);
-    const filteredCarrierServices = carrierServices.filter(({ name }) => {
-      return name === carrierServiceDetails.name;
-    });
+  const carrierServices = await getAllCarrierServices(graphql);
+  const carrierServiceDetails = getCarrierServiceDetails(sessionId);
+  const filteredCarrierServices = carrierServices.filter(({ name }) => {
+    return name === carrierServiceDetails.name;
+  });
 
-    if (filteredCarrierServices.length === 0) {
-      return null;
-    }
-    return filteredCarrierServices[0];
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to get carrier service from shopify.',
-      getCarrierService,
-      { sessionId },
-    );
+  if (filteredCarrierServices.length === 0) {
+    return null;
   }
+  return filteredCarrierServices[0];
 }
 
 export async function createCarrierService(
   sessionId: string,
   graphql: GraphQL,
 ) {
-  try {
-    const carrierServiceDetails = getCarrierServiceDetails(sessionId);
-
-    const variables = {
-      input: {
-        active: true,
-        callbackUrl: carrierServiceDetails.callbackUrl,
-        name: carrierServiceDetails.name,
-        supportsServiceDiscovery: false,
-      },
-    };
-
-    const data =
-      await mutateInternalStoreAdminAPI<CarrierServiceCreateMutation>(
-        graphql,
-        CREATE_CARRIER_SERVICE,
-        variables,
-        'Failed to create carrier service.',
-      );
-    const carrierServiceCreate = data.carrierServiceCreate;
-    return {
-      id: carrierServiceCreate?.carrierService?.id ?? '',
-      name: carrierServiceCreate?.carrierService?.name ?? '',
-    };
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to create carrier service in shopify.',
-      createCarrierService,
-      { sessionId },
-    );
-  }
+  const carrierServiceDetails = getCarrierServiceDetails(sessionId);
+  const variables = {
+    input: {
+      active: true,
+      callbackUrl: carrierServiceDetails.callbackUrl,
+      name: carrierServiceDetails.name,
+      supportsServiceDiscovery: false,
+    },
+  };
+  const data = await mutateInternalStoreAdminAPI<CarrierServiceCreateMutation>(
+    graphql,
+    CREATE_CARRIER_SERVICE,
+    variables,
+    'Failed to create carrier service.',
+  );
+  const carrierServiceCreate = data.carrierServiceCreate;
+  return {
+    id: carrierServiceCreate?.carrierService?.id ?? '',
+    name: carrierServiceCreate?.carrierService?.name ?? '',
+  };
 }

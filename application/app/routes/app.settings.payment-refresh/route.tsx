@@ -1,14 +1,10 @@
 import { json, type LoaderFunctionArgs } from '@remix-run/node';
 import { useLoaderData } from '@remix-run/react';
-import { StatusCodes } from 'http-status-codes';
 import { useEffect } from 'react';
 import createAccountLink from '~/services/stripe/stripeConnect';
 import { authenticate } from '~/shopify.server';
-import {
-  createJSONError,
-  getAppBaseUrl,
-  handleRouteError,
-} from '~/lib/utils/server';
+import { getAppBaseUrl, getRouteError, logError } from '~/lib/utils/server';
+import createHttpError from 'http-errors';
 
 type LoaderData = {
   onboardingUrl: string;
@@ -24,15 +20,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const appBaseUrl = getAppBaseUrl(shop);
     const accountId = searchParams.get('accountId');
     if (!accountId) {
-      throw createJSONError(
-        'No account id was provided.',
-        StatusCodes.BAD_REQUEST,
-      );
+      throw new createHttpError.BadRequest('No account id was provided.');
     }
     const accountLink = await createAccountLink(accountId, appBaseUrl);
     return json({ onboardingUrl: accountLink.url });
   } catch (error) {
-    throw handleRouteError(error, '/app/settings/payment-refresh');
+    logError(error, 'Loader: Payment Refresh');
+    throw getRouteError('Failed to load payment refresh.', error);
   }
 };
 

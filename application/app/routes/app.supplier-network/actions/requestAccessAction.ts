@@ -1,11 +1,11 @@
 import { object, string } from 'yup';
 import { INTENTS, type IntentsProps } from '../constants';
-import { hasSession } from '~/services/models/session';
-import { createOrUpdatePartnershipRequestTx } from '~/services/models/partnershipRequest';
+import { hasSession } from '~/services/models/session.server';
+import { createOrUpdatePartnershipRequestTx } from '~/services/models/partnershipRequest.server';
 import {
   getGeneralPriceList,
   hasGeneralPriceList,
-} from '~/services/models/priceList';
+} from '~/services/models/priceList.server';
 import {
   CHECKLIST_ITEM_KEYS,
   PARTNERSHIP_REQUEST_STATUS,
@@ -13,9 +13,9 @@ import {
 } from '~/constants';
 import { StatusCodes } from 'http-status-codes';
 import db from '~/db.server';
-import { updateChecklistStatusTx } from '~/services/models/checklistStatus';
+import { updateChecklistStatusTx } from '~/services/models/checklistStatus.server';
 import { sessionIdSchema } from '~/schemas/models';
-import { createJSONSuccess } from '~/lib/utils/server';
+import { createJSONSuccess, getRouteError, logError } from '~/lib/utils/server';
 
 export type RequestAccessFormData = {
   intent: IntentsProps;
@@ -50,36 +50,41 @@ export async function requestAccessAction(
   formDataObject: RequestAccessFormData,
   sessionId: string,
 ) {
-  await Promise.all([
-    formDataObjectSchema.validate(formDataObject),
-    sessionIdSchema.validate(sessionId),
-  ]);
-  const { priceListSupplierId, message } = formDataObject;
-  const generalPriceListId = (await getGeneralPriceList(sessionId)).id;
-  await db.$transaction(async (tx) => {
+  try {
     await Promise.all([
-      updateChecklistStatusTx(
-        tx,
-        sessionId,
-        CHECKLIST_ITEM_KEYS.RETAILER_REQUEST_PARTNERSHIP,
-        true,
-      ),
-      createOrUpdatePartnershipRequestTx({
-        tx,
-        priceListIds: [generalPriceListId],
-        recipientId: priceListSupplierId,
-        senderId: sessionId,
-        message: message,
-        type: PARTNERSHIP_REQUEST_TYPE.RETAILER,
-        status: PARTNERSHIP_REQUEST_STATUS.PENDING,
-      }),
+      formDataObjectSchema.validate(formDataObject),
+      sessionIdSchema.validate(sessionId),
     ]);
-  });
+    const { priceListSupplierId, message } = formDataObject;
+    const generalPriceListId = (await getGeneralPriceList(sessionId)).id;
+    await db.$transaction(async (tx) => {
+      await Promise.all([
+        updateChecklistStatusTx(
+          tx,
+          sessionId,
+          CHECKLIST_ITEM_KEYS.RETAILER_REQUEST_PARTNERSHIP,
+          true,
+        ),
+        createOrUpdatePartnershipRequestTx({
+          tx,
+          priceListIds: [generalPriceListId],
+          recipientId: priceListSupplierId,
+          senderId: sessionId,
+          message: message,
+          type: PARTNERSHIP_REQUEST_TYPE.RETAILER,
+          status: PARTNERSHIP_REQUEST_STATUS.PENDING,
+        }),
+      ]);
+    });
 
-  return createJSONSuccess(
-    'Successfully created partnership request.',
-    StatusCodes.CREATED,
-  );
+    return createJSONSuccess(
+      'Successfully created partnership request.',
+      StatusCodes.CREATED,
+    );
+  } catch (error) {
+    logError(error, 'Action: Request Supplier Access.');
+    return getRouteError('Failed to request supplier access.', error);
+  }
 }
 
 export default requestAccessAction;

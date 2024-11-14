@@ -1,5 +1,4 @@
 import db from '~/db.server';
-import { errorHandler } from '~/lib/utils/server';
 import type { Prisma } from '@prisma/client';
 
 export type PartnershipRowData = {
@@ -23,67 +22,49 @@ async function getPartnershipsInPriceList(
   supplierId: string,
   priceListId: string,
 ) {
-  try {
-    const partnerships = await db.partnership.findMany({
-      where: {
-        supplierId: supplierId,
-        priceLists: {
-          some: {
-            id: priceListId,
-          },
+  const partnerships = await db.partnership.findMany({
+    where: {
+      supplierId: supplierId,
+      priceLists: {
+        some: {
+          id: priceListId,
         },
       },
-      select: {
-        id: true,
-        retailer: {
-          select: {
-            userProfile: true,
-          },
+    },
+    select: {
+      id: true,
+      retailer: {
+        select: {
+          userProfile: true,
         },
       },
-    });
-    return partnerships;
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to retrieve current partnerships in price list',
-      getPartnershipsInPriceList,
-      { supplierId, priceListId },
-    );
-  }
+    },
+  });
+  return partnerships;
 }
 
 async function getAllAvailablePartnershipsNotSelected(
   supplierId: string,
   existingPartnerships: PartnershipRowData[],
 ) {
-  try {
-    const partnershipIdsToExclude = existingPartnerships.map(({ id }) => id);
-    const partnerships = await db.partnership.findMany({
-      where: {
-        supplierId: supplierId,
-        id: {
-          notIn: partnershipIdsToExclude,
+  const partnershipIdsToExclude = existingPartnerships.map(({ id }) => id);
+  const partnerships = await db.partnership.findMany({
+    where: {
+      supplierId: supplierId,
+      id: {
+        notIn: partnershipIdsToExclude,
+      },
+    },
+    select: {
+      id: true,
+      retailer: {
+        select: {
+          userProfile: true,
         },
       },
-      select: {
-        id: true,
-        retailer: {
-          select: {
-            userProfile: true,
-          },
-        },
-      },
-    });
-    return partnerships;
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to get available partnerships not selected',
-      getAllAvailablePartnershipsNotSelected,
-      { existingPartnerships },
-    );
-  }
+    },
+  });
+  return partnerships;
 }
 
 function formatPartnershipRawData(

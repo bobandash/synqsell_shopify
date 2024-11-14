@@ -5,7 +5,7 @@ import {
   createMissingChecklistStatuses,
   getMissingChecklistIds,
   getTablesAndStatuses,
-} from '~/services/models/checklistTable';
+} from '~/services/models/checklistTable.server';
 import {
   Await,
   defer,
@@ -34,12 +34,12 @@ import {
   getOrCreateProfile,
   handleAppReinstalled,
 } from './loader';
-import { getOrCreateUserPreferences } from '~/services/models/userPreferences';
-import { getSession } from '~/services/models/session';
-import { createJSONError, handleRouteError } from '~/lib/utils/server';
+import { getOrCreateUserPreferences } from '~/services/models/userPreferences.server';
+import { getSession } from '~/services/models/session.server';
+import { createJSONError, getRouteError, logError } from '~/lib/utils/server';
 import { StatusCodes } from 'http-status-codes';
-import { userHasStripePaymentMethod } from '~/services/models/stripeCustomerAccount';
-import { userHasStripeConnectAccount } from '~/services/models/stripeConnectAccount';
+import { userHasStripePaymentMethod } from '~/services/models/stripeCustomerAccount.server';
+import { userHasStripeConnectAccount } from '~/services/models/stripeConnectAccount.server';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
@@ -77,7 +77,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       })),
     });
   } catch (error) {
-    throw handleRouteError(error, '/app/_index');
+    logError(error, 'Loader: app._index');
+    throw getRouteError('Failed to initialize application data.', error);
   }
 };
 
@@ -105,7 +106,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         );
     }
   } catch (error) {
-    return handleRouteError(error, '/app/_index');
+    logError(error, 'Action: app._index');
+    throw getRouteError('Failed to process request.', error);
   }
 };
 

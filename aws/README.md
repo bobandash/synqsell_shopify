@@ -40,6 +40,7 @@ Here are a list of common commands used for development.
   sam sync --stack-name  Synqsell-Dev --watch
   ```
   - `<FunctionName>` - this is found in your CloudFormation template
+- For deploying to staging or prod, go to ACM -> Create records in Route 53 after you run deploy
 
 # Common Commands
 

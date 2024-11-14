@@ -4,7 +4,7 @@ import { approvePartnershipRequestBulk } from '~/services/transactions';
 import { PARTNERSHIP_REQUEST_TYPE } from '~/constants';
 import { StatusCodes } from 'http-status-codes';
 import { partnershipRequestIdListSchema } from '~/schemas/models';
-import { createJSONSuccess } from '~/lib/utils/server';
+import { createJSONSuccess, getRouteError, logError } from '~/lib/utils/server';
 
 export type ApproveSuppliersActionProps = {
   intent: IntentsProps;
@@ -19,15 +19,20 @@ const approveSuppliersActionSchema = object({
 export async function approveSuppliersAction(
   data: ApproveSuppliersActionProps,
 ) {
-  await approveSuppliersActionSchema.validate(data);
-  const { partnershipRequestIds } = data;
-  await approvePartnershipRequestBulk(
-    partnershipRequestIds,
-    PARTNERSHIP_REQUEST_TYPE.RETAILER,
-  );
+  try {
+    await approveSuppliersActionSchema.validate(data);
+    const { partnershipRequestIds } = data;
+    await approvePartnershipRequestBulk(
+      partnershipRequestIds,
+      PARTNERSHIP_REQUEST_TYPE.RETAILER,
+    );
 
-  return createJSONSuccess(
-    'Successfully approved partnerships.',
-    StatusCodes.CREATED,
-  );
+    return createJSONSuccess(
+      'Successfully approved partnerships.',
+      StatusCodes.CREATED,
+    );
+  } catch (error) {
+    logError(error, 'Action: approve suppliers');
+    return getRouteError('Failed to approve suppliers.', error);
+  }
 }

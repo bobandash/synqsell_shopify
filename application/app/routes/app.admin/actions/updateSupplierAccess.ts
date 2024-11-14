@@ -8,9 +8,9 @@ import {
 } from '~/constants';
 import db from '~/db.server';
 import { type Prisma } from '@prisma/client';
-import { getRoleBatch } from '~/services/models/roles';
-import { updateChecklistStatusBatchTx } from '~/services/models/checklistStatus';
-import { createJSONSuccess, errorHandler } from '~/lib/utils/server';
+import { getRoleBatch } from '~/services/models/roles.server';
+import { updateChecklistStatusBatchTx } from '~/services/models/checklistStatus.server';
+import { createJSONSuccess, getRouteError, logError } from '~/lib/utils/server';
 
 export type SupplierAccessRequestInfo = {
   supplierAccessRequestId: string;
@@ -22,29 +22,18 @@ async function updateSupplierAccessRequestBatchTx(
   supplierAccessRequestIds: string[],
   status: string,
 ) {
-  try {
-    const newSupplierAccessRequests = await tx.supplierAccessRequest.updateMany(
-      {
-        where: {
-          id: {
-            in: supplierAccessRequestIds,
-          },
-        },
-        data: {
-          status: status,
-          updatedAt: new Date(),
-        },
+  const newSupplierAccessRequests = await tx.supplierAccessRequest.updateMany({
+    where: {
+      id: {
+        in: supplierAccessRequestIds,
       },
-    );
-    return newSupplierAccessRequests;
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to update supplier access requests in bulk.',
-      updateSupplierAccessRequestBatchTx,
-      { supplierAccessRequestIds, status },
-    );
-  }
+    },
+    data: {
+      status: status,
+      updatedAt: new Date(),
+    },
+  });
+  return newSupplierAccessRequests;
 }
 
 // helper functions to approve / reject supplier access
@@ -52,50 +41,32 @@ async function createSupplierRolesTx(
   tx: Prisma.TransactionClient,
   sessionIds: string[],
 ) {
-  try {
-    const newRoleData = sessionIds.map((sessionId) => ({
-      name: ROLES.SUPPLIER,
-      sessionId,
-      isVisibleInNetwork: true,
-    }));
-    const newRoles = await tx.role.createMany({
-      data: newRoleData,
-    });
-    return newRoles;
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to create supplier roles in bulk.',
-      createSupplierRolesTx,
-      { sessionIds },
-    );
-  }
+  const newRoleData = sessionIds.map((sessionId) => ({
+    name: ROLES.SUPPLIER,
+    sessionId,
+    isVisibleInNetwork: true,
+  }));
+  const newRoles = await tx.role.createMany({
+    data: newRoleData,
+  });
+  return newRoles;
 }
 
 async function deleteSupplierRolesBatchTx(
   tx: Prisma.TransactionClient,
   sessionIds: string[],
 ) {
-  try {
-    const rolesDeleted = await tx.role.deleteMany({
-      where: {
-        sessionId: {
-          in: sessionIds,
-        },
-        name: {
-          equals: ROLES.SUPPLIER,
-        },
+  const rolesDeleted = await tx.role.deleteMany({
+    where: {
+      sessionId: {
+        in: sessionIds,
       },
-    });
-    return rolesDeleted;
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to delete supplier roles in bulk.',
-      deleteSupplierRolesBatchTx,
-      { sessionIds },
-    );
-  }
+      name: {
+        equals: ROLES.SUPPLIER,
+      },
+    },
+  });
+  return rolesDeleted;
 }
 
 async function getSessionIdsWithoutRole(
@@ -150,12 +121,8 @@ export async function approveSuppliers(
       StatusCodes.OK,
     );
   } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to approve all suppliers in bulk.',
-      approveSuppliers,
-      { supplierAccessRequestInfo },
-    );
+    logError(error, 'Action: Approve Supplier Requests');
+    return getRouteError('Failed to approve supplier requests.', error);
   }
 }
 
@@ -189,16 +156,11 @@ async function rejectSuppliers(
       StatusCodes.OK,
     );
   } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to reject all suppliers in bulk.',
-      rejectSuppliers,
-      { supplierAccessRequestInfo },
-    );
+    logError(error, 'Action: Reject Supplier Requests');
+    return getRouteError('Failed to reject supplier requests.', error);
   }
 }
 
-// TODO: add Yup Validation
 export async function updateSupplierAccessAction(
   supplierAccessRequestInfo: SupplierAccessRequestInfo[],
   status: AccessRequestStatusOptions,

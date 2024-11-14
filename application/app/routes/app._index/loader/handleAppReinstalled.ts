@@ -1,7 +1,7 @@
-import { updateStoreStatus } from '~/services/models/product';
+import { updateStoreStatus } from '~/services/models/product.server';
 import db from '~/db.server';
-import { getSession, type Session } from '~/services/models/session';
-import { hasRole } from '~/services/models/roles';
+import { getSession, type Session } from '~/services/models/session.server';
+import { hasRole } from '~/services/models/roles.server';
 import { ROLES } from '~/constants';
 import {
   GET_PRODUCT_STATUS,
@@ -13,7 +13,6 @@ import {
   queryExternalStoreAdminAPI,
 } from '~/services/shopify/utils';
 import { createMapIdToRestObj } from '~/lib/utils';
-import { errorHandler } from '~/lib/utils/server';
 
 // for changing all retailers that imported a supplier's product
 type SupplierImportedProductDetail = {
@@ -175,48 +174,37 @@ async function handleReinstateAllRetailerProductsForSupplier(
 // START: FUNCTIONS TO REACTIVATE ALL MERCHANT'S IMPORTED PRODUCTS
 // ==============================================================================================================
 async function fetchAllRetailerImportedProducts(retailerSession: Session) {
-  try {
-    const importedProductDetails = await db.importedProduct.findMany({
-      where: {
-        retailerId: retailerSession.id,
-      },
-      select: {
-        shopifyProductId: true,
-        prismaProduct: {
-          select: {
-            shopifyProductId: true,
-            priceList: {
-              select: {
-                supplierId: true,
-              },
+  const importedProductDetails = await db.importedProduct.findMany({
+    where: {
+      retailerId: retailerSession.id,
+    },
+    select: {
+      shopifyProductId: true,
+      prismaProduct: {
+        select: {
+          shopifyProductId: true,
+          priceList: {
+            select: {
+              supplierId: true,
             },
           },
         },
       },
-    });
+    },
+  });
 
-    const importedProductDetailsFmt = importedProductDetails.map(
-      (importedProduct) => {
-        return {
-          supplierId: importedProduct.prismaProduct.priceList.supplierId,
-          supplierShopifyProductId:
-            importedProduct.prismaProduct.shopifyProductId,
-          retailerShopifyProductId: importedProduct.shopifyProductId,
-        };
-      },
-    );
+  const importedProductDetailsFmt = importedProductDetails.map(
+    (importedProduct) => {
+      return {
+        supplierId: importedProduct.prismaProduct.priceList.supplierId,
+        supplierShopifyProductId:
+          importedProduct.prismaProduct.shopifyProductId,
+        retailerShopifyProductId: importedProduct.shopifyProductId,
+      };
+    },
+  );
 
-    return importedProductDetailsFmt;
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to get all retailer imported products',
-      fetchAllRetailerImportedProducts,
-      {
-        sessionId: retailerSession.id,
-      },
-    );
-  }
+  return importedProductDetailsFmt;
 }
 
 function groupBySupplier(
@@ -241,45 +229,31 @@ function groupBySupplier(
 async function handleReinstateImportedProductsForRetailer(
   retailerSession: Session,
 ) {
-  try {
-    const retailerImportedProductDetails =
-      await fetchAllRetailerImportedProducts(retailerSession);
-    const importedProductDetailsBySupplier = groupBySupplier(
-      retailerImportedProductDetails,
-    );
-    const supplierIds = Array.from(importedProductDetailsBySupplier.keys());
-    await Promise.all(
-      supplierIds.map(async (supplierId) => {
-        const supplierSession = await getSession(supplierId);
-        const productDetails =
-          importedProductDetailsBySupplier.get(supplierId) ?? [];
-        const importedProductDetailWithStatus =
-          await addSupplierShopifyProductStatus(
-            productDetails,
-            supplierSession,
-          );
+  const retailerImportedProductDetails =
+    await fetchAllRetailerImportedProducts(retailerSession);
+  const importedProductDetailsBySupplier = groupBySupplier(
+    retailerImportedProductDetails,
+  );
+  const supplierIds = Array.from(importedProductDetailsBySupplier.keys());
+  await Promise.all(
+    supplierIds.map(async (supplierId) => {
+      const supplierSession = await getSession(supplierId);
+      const productDetails =
+        importedProductDetailsBySupplier.get(supplierId) ?? [];
+      const importedProductDetailWithStatus =
+        await addSupplierShopifyProductStatus(productDetails, supplierSession);
 
-        const updateStatusPromises = importedProductDetailWithStatus.map(
-          (detail) =>
-            updateRetailerProductStatus(
-              retailerSession.id,
-              detail.retailerShopifyProductId,
-              detail.supplierProductStatus,
-            ),
-        );
-        await Promise.all(updateStatusPromises);
-      }),
-    );
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to reinstate all imported products for the retailer.',
-      handleReinstateImportedProductsForRetailer,
-      {
-        retailerId: retailerSession.id,
-      },
-    );
-  }
+      const updateStatusPromises = importedProductDetailWithStatus.map(
+        (detail) =>
+          updateRetailerProductStatus(
+            retailerSession.id,
+            detail.retailerShopifyProductId,
+            detail.supplierProductStatus,
+          ),
+      );
+      await Promise.all(updateStatusPromises);
+    }),
+  );
 }
 
 // Shopify's app/uninstalled webhook runs immediately after uninstallation
@@ -289,29 +263,18 @@ async function handleReinstateImportedProductsForRetailer(
 // so if the merchant is a supplier, then we need to reactivate all the retailers' imported products to active
 // and if the merchant is a retailer, then we need to reactivate all the merchant's imported products to active
 export async function handleAppReinstalled(sessionId: string) {
-  try {
-    const [isRetailer, isSupplier, session] = await Promise.all([
-      hasRole(sessionId, ROLES.RETAILER),
-      hasRole(sessionId, ROLES.SUPPLIER),
-      getSession(sessionId),
-    ]);
+  const [isRetailer, isSupplier, session] = await Promise.all([
+    hasRole(sessionId, ROLES.RETAILER),
+    hasRole(sessionId, ROLES.SUPPLIER),
+    getSession(sessionId),
+  ]);
 
-    if (isRetailer) {
-      await handleReinstateImportedProductsForRetailer(session);
-    }
-    if (isSupplier) {
-      await handleReinstateAllRetailerProductsForSupplier(session);
-    }
-    // handle this last in db to denote operation was successful
-    await updateStoreStatus(sessionId, true);
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to reinstate the imported products for retailer/supplier.',
-      handleAppReinstalled,
-      {
-        sessionId,
-      },
-    );
+  if (isRetailer) {
+    await handleReinstateImportedProductsForRetailer(session);
   }
+  if (isSupplier) {
+    await handleReinstateAllRetailerProductsForSupplier(session);
+  }
+  // handle this last in db to denote operation was successful
+  await updateStoreStatus(sessionId, true);
 }

@@ -3,13 +3,12 @@ import { priceListIdSchema, sessionIdSchema } from '~/schemas/models';
 import {
   getSupplierRetailerPartnership,
   isSupplierRetailerPartnered,
-} from '~/services/models/partnership';
+} from '~/services/models/partnership.server';
 import {
   getGeneralPriceList,
   getPriceList,
   hasGeneralPriceList,
-} from '~/services/models/priceList';
-import { errorHandler } from '~/lib/utils/server';
+} from '~/services/models/priceList.server';
 import db from '~/db.server';
 
 const getPriceListsWithAccessSchema = object({
@@ -71,27 +70,18 @@ export async function getPriceListsWithAccessForSpecificSupplier(
   priceListId: string,
   retailerId: string,
 ) {
-  try {
-    await getPriceListsWithAccessSchema.validate({ priceListId, retailerId });
-    const supplierId = (await getPriceList(priceListId)).supplierId;
-    const priceListsWithAccess: PriceListWithAccess[] = [];
+  await getPriceListsWithAccessSchema.validate({ priceListId, retailerId });
+  const supplierId = (await getPriceList(priceListId)).supplierId;
+  const priceListsWithAccess: PriceListWithAccess[] = [];
 
-    const [generalPriceList, privatePriceLists] = await Promise.all([
-      getGeneralPriceListFormatted(supplierId),
-      getPrivatePriceListsWithAccessFormatted(retailerId, supplierId),
-    ]);
+  const [generalPriceList, privatePriceLists] = await Promise.all([
+    getGeneralPriceListFormatted(supplierId),
+    getPrivatePriceListsWithAccessFormatted(retailerId, supplierId),
+  ]);
 
-    if (generalPriceList) {
-      priceListsWithAccess.push(generalPriceList);
-    }
-
-    return priceListsWithAccess.concat(privatePriceLists);
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to get price lists with access for specific supplier.',
-      getPriceListsWithAccessForSpecificSupplier,
-      { priceListId, retailerId },
-    );
+  if (generalPriceList) {
+    priceListsWithAccess.push(generalPriceList);
   }
+
+  return priceListsWithAccess.concat(privatePriceLists);
 }

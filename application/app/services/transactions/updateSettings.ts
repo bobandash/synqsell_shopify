@@ -1,12 +1,10 @@
 import db from '~/db.server';
-import { hasRole, updateRoleVisibilityTx } from '../models/roles';
+import { hasRole, updateRoleVisibilityTx } from '../models/roles.server';
 import { CHECKLIST_ITEM_KEYS, ROLES } from '~/constants';
 import type { ChecklistItemKeysOptions } from '~/constants';
-import { updateUserProfileTx } from '../models/userProfile';
-import { updateChecklistStatusTx } from '../models/checklistStatus';
+import { updateUserProfileTx } from '../models/userProfile.server';
+import { updateChecklistStatusTx } from '../models/checklistStatus.server';
 import type { Prisma } from '@prisma/client';
-import { errorHandler } from '~/lib/utils/server';
-
 type ProfileDataProps = {
   name: string;
   email: string;
@@ -35,19 +33,10 @@ async function updateRoleAndChecklistItemTx(
   isVisibleInNetwork: boolean,
   checklistItemKey: ChecklistItemKeysOptions,
 ) {
-  try {
-    await Promise.all([
-      updateRoleVisibilityTx(tx, sessionId, role, isVisibleInNetwork),
-      updateChecklistStatusTx(tx, sessionId, checklistItemKey, true),
-    ]);
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to update user settings.',
-      updateRoleAndChecklistItemTx,
-      { sessionId, role, isVisibleInNetwork, checklistItemKey },
-    );
-  }
+  await Promise.all([
+    updateRoleVisibilityTx(tx, sessionId, role, isVisibleInNetwork),
+    updateChecklistStatusTx(tx, sessionId, checklistItemKey, true),
+  ]);
 }
 
 export default async function updateSettings(
@@ -58,38 +47,28 @@ export default async function updateSettings(
 ) {
   const { isVisibleRetailerNetwork, isVisibleSupplierNetwork } = visibilityData;
 
-  try {
-    const isRetailer = await hasRole(sessionId, ROLES.RETAILER);
-    const isSupplier = await hasRole(sessionId, ROLES.SUPPLIER);
+  const isRetailer = await hasRole(sessionId, ROLES.RETAILER);
+  const isSupplier = await hasRole(sessionId, ROLES.SUPPLIER);
 
-    await db.$transaction(async (tx) => {
-      if (isRetailer) {
-        await updateRoleAndChecklistItemTx(
-          tx,
-          sessionId,
-          ROLES.RETAILER,
-          isVisibleRetailerNetwork,
-          CHECKLIST_ITEM_KEYS.RETAILER_CUSTOMIZE_PROFILE,
-        );
-      }
-      if (isSupplier) {
-        await updateRoleAndChecklistItemTx(
-          tx,
-          sessionId,
-          ROLES.SUPPLIER,
-          isVisibleSupplierNetwork,
-          CHECKLIST_ITEM_KEYS.SUPPLIER_CUSTOMIZE_PROFILE,
-        );
-      }
-      await updateUserProfileTx(tx, sessionId, profileData, socialMediaData);
-    });
-  } catch (error) {
-    console.error(error);
-    throw errorHandler(
-      error,
-      'Failed to update user settings.',
-      updateSettings,
-      { sessionId, profileData, socialMediaData, visibilityData },
-    );
-  }
+  await db.$transaction(async (tx) => {
+    if (isRetailer) {
+      await updateRoleAndChecklistItemTx(
+        tx,
+        sessionId,
+        ROLES.RETAILER,
+        isVisibleRetailerNetwork,
+        CHECKLIST_ITEM_KEYS.RETAILER_CUSTOMIZE_PROFILE,
+      );
+    }
+    if (isSupplier) {
+      await updateRoleAndChecklistItemTx(
+        tx,
+        sessionId,
+        ROLES.SUPPLIER,
+        isVisibleSupplierNetwork,
+        CHECKLIST_ITEM_KEYS.SUPPLIER_CUSTOMIZE_PROFILE,
+      );
+    }
+    await updateUserProfileTx(tx, sessionId, profileData, socialMediaData);
+  });
 }

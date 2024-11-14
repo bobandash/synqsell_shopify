@@ -2,12 +2,11 @@ import type { GraphQL } from '~/types';
 import {
   getOrCreateFulfillmentService as prismaGetOrCreateFulfillmentService,
   userHasFulfillmentService as prismaUserHasFulfillmentService,
-} from '../models/fulfillmentService';
+} from '../models/fulfillmentService.server';
 import {
   getOrCreateFulfillmentService as shopifyGetOrCreateFulfillmentService,
   getFulfillmentService as shopifyGetFulfillmentService,
 } from '../shopify/fulfillmentService';
-import { errorHandler } from '~/lib/utils/server';
 
 // this is the coordinator for creating a fulfillment service on Shopify and for the prisma db
 export async function getOrCreateFulfillmentService(
@@ -15,47 +14,26 @@ export async function getOrCreateFulfillmentService(
   graphql: GraphQL,
 ) {
   let shopifyFulfillmentService;
-  try {
-    shopifyFulfillmentService = await shopifyGetOrCreateFulfillmentService(
-      sessionId,
-      graphql,
-    );
-    const prismaFulfillmentService = await prismaGetOrCreateFulfillmentService(
-      sessionId,
-      shopifyFulfillmentService,
-    );
-    return prismaFulfillmentService;
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to create fulfillment service in shopify or database',
-      getOrCreateFulfillmentService,
-      { sessionId },
-    );
-  }
+  shopifyFulfillmentService = await shopifyGetOrCreateFulfillmentService(
+    sessionId,
+    graphql,
+  );
+  const prismaFulfillmentService = await prismaGetOrCreateFulfillmentService(
+    sessionId,
+    shopifyFulfillmentService,
+  );
+  return prismaFulfillmentService;
 }
 
 export async function hasFulfillmentService(
   sessionId: string,
   graphql: GraphQL,
 ) {
-  try {
-    const fulfillmentServiceId = await shopifyGetFulfillmentService(
-      sessionId,
-      graphql,
-    );
-    const hasFulfillmentServiceInDb =
-      await prismaUserHasFulfillmentService(sessionId);
-    if (!fulfillmentServiceId || !hasFulfillmentServiceInDb) {
-      return false;
-    }
-    return true;
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to check whether fulfillment service exists in both Shopify and Database.',
-      hasFulfillmentService,
-      { sessionId },
-    );
+  const fulfillmentServiceId = await shopifyGetFulfillmentService(graphql);
+  const hasFulfillmentServiceInDb =
+    await prismaUserHasFulfillmentService(sessionId);
+  if (!fulfillmentServiceId || !hasFulfillmentServiceInDb) {
+    return false;
   }
+  return true;
 }

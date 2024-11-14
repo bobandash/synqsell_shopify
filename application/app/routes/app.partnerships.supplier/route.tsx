@@ -22,11 +22,11 @@ import {
   isActionDataError,
   isActionDataSuccess,
 } from '~/lib/utils';
-import { createJSONError, handleRouteError } from '~/lib/utils/server';
+import { createJSONError, getRouteError, logError } from '~/lib/utils/server';
 import { authenticate } from '~/shopify.server';
 import { StatusCodes } from 'http-status-codes';
 import type { ActionFunctionArgs, LoaderFunctionArgs } from '@remix-run/node';
-import { hasRole } from '~/services/models/roles';
+import { hasRole } from '~/services/models/roles.server';
 import { ROLES } from '~/constants';
 import { INTENTS, SUPPLIER_ACCESS_REQUEST_STATUS } from './constants';
 import type { NonEmptyArray } from '@shopify/polaris/build/ts/src/types';
@@ -43,6 +43,7 @@ import type {
   ApproveSuppliersActionProps,
   RejectRemoveSuppliersActionProps,
 } from './action';
+import createHttpError from 'http-errors';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
@@ -51,15 +52,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     } = await authenticate.admin(request);
     const isRetailer = await hasRole(sessionId, ROLES.RETAILER);
     if (!isRetailer) {
-      throw createJSONError(
+      throw new createHttpError.Unauthorized(
         'User is not retailer. Unauthorized to view supplier partnership requests.',
-        StatusCodes.NOT_IMPLEMENTED,
       );
     }
     const supplierPartnershipInfo = await getSupplierPartnershipInfo(sessionId);
     return json(supplierPartnershipInfo, StatusCodes.OK);
   } catch (error) {
-    throw handleRouteError(error, 'supplier partnerships');
+    logError(error, 'Loader: Supplier Partnerships');
+    throw getRouteError('Failed to load supplier partnerships.', error);
   }
 };
 
@@ -84,7 +85,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         );
     }
   } catch (error) {
-    return handleRouteError(error, '/app/partnerships/supplier');
+    logError(error, 'Action: Supplier Partnerships');
+    return getRouteError('Failed to process request.', error);
   }
 };
 

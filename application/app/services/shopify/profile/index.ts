@@ -1,6 +1,5 @@
 import type { GraphQL } from '~/types';
 import type { ShopAddress } from '~/types/admin.types';
-import { errorHandler } from '~/lib/utils/server';
 import { GET_PROFILE_DEFAULTS } from './graphql';
 import { queryInternalStoreAdminAPI } from '../utils';
 import type { ProfileDefaultsQuery } from '~/types/admin.generated';
@@ -33,40 +32,30 @@ function getBillingAddressStringFmt(
 
 // retrieves the default profile details from shopify
 export async function getProfileDefaults(
-  sessionId: string,
   graphql: GraphQL,
 ): Promise<ProfileDefaults> {
-  try {
-    const {
-      shop: {
-        name,
-        contactEmail: email,
-        description: biography,
-        url: website,
-        billingAddress,
-        currencyCode,
-      },
-    } = await queryInternalStoreAdminAPI<ProfileDefaultsQuery>(
-      graphql,
-      GET_PROFILE_DEFAULTS,
-      {},
-    );
-    const address = getBillingAddressStringFmt(billingAddress);
-
-    return {
+  const {
+    shop: {
       name,
-      email,
-      biography: biography ?? '',
-      website,
-      address,
+      contactEmail: email,
+      description: biography,
+      url: website,
+      billingAddress,
       currencyCode,
-    };
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to retrieve default profile values from shopify.',
-      getProfileDefaults,
-      { sessionId },
-    );
-  }
+    },
+  } = await queryInternalStoreAdminAPI<ProfileDefaultsQuery>(
+    graphql,
+    GET_PROFILE_DEFAULTS,
+    {},
+  );
+  const address = getBillingAddressStringFmt(billingAddress);
+
+  return {
+    name,
+    email,
+    biography: biography ?? '',
+    website,
+    address,
+    currencyCode,
+  };
 }

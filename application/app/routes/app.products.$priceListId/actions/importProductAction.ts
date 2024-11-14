@@ -8,15 +8,15 @@ import {
   getAllProductDetails,
   type AllProductDetails,
   type ProductWithVariants,
-} from '~/services/models/product';
+} from '~/services/models/product.server';
 import {
   createProduct,
   getProductAndMediaCreationInputWithAccessToken,
 } from '~/services/shopify/products';
-import { getSession, type Session } from '~/services/models/session';
-import { getPriceList } from '~/services/models/priceList';
-import { userGetFulfillmentService } from '~/services/models/fulfillmentService';
-import { getProfile } from '~/services/models/userProfile';
+import { getSession, type Session } from '~/services/models/session.server';
+import { getPriceList } from '~/services/models/priceList.server';
+import { userGetFulfillmentService } from '~/services/models/fulfillmentService.server';
+import { getProfile } from '~/services/models/userProfile.server';
 import { createVariants } from '~/services/shopify/variants';
 import type {
   ProductVariantsBulkCreateMutation,
@@ -29,20 +29,20 @@ import {
   createPartnershipsTx,
   getSupplierRetailerPartnership,
   isSupplierRetailerPartnered,
-} from '~/services/models/partnership';
+} from '~/services/models/partnership.server';
 import {
   deletePartnershipRequestTx,
   getPartnershipRequest,
   hasPartnershipRequest,
-} from '~/services/models/partnershipRequest';
+} from '~/services/models/partnershipRequest.server';
 import { CHECKLIST_ITEM_KEYS, PARTNERSHIP_REQUEST_TYPE } from '~/constants';
 import getQueryStr from '~/services/shopify/utils/getQueryStr';
 import { queryExternalStoreAdminAPI } from '~/services/shopify/utils';
 import { VARIANT_CREATION_DETAILS_BULK_QUERY } from '~/services/shopify/variants/graphql';
 import { v4 as uuid } from 'uuid';
 import { createMapIdToRestObj } from '~/lib/utils';
-import { errorHandler, handleRouteError } from '~/lib/utils/server';
-import { updateChecklistStatus } from '~/services/models/checklistStatus';
+import { getRouteError, logError } from '~/lib/utils/server';
+import { updateChecklistStatus } from '~/services/models/checklistStatus.server';
 
 export type ImportProductFormData = InferType<typeof formDataObjectSchema>;
 
@@ -62,52 +62,37 @@ export async function addImportedProductToDatabaseTx(
   parentProduct: ProductWithVariants,
   retailerId: string,
 ) {
-  try {
-    const productVariantsBulkCreate = importedProduct.productVariantsBulkCreate;
-    const shopifyImportedProduct = productVariantsBulkCreate?.product;
-    const shopifyImportedVariants = productVariantsBulkCreate?.productVariants;
+  const productVariantsBulkCreate = importedProduct.productVariantsBulkCreate;
+  const shopifyImportedProduct = productVariantsBulkCreate?.product;
+  const shopifyImportedVariants = productVariantsBulkCreate?.productVariants;
 
-    const prismaData = {
-      prismaProductId: parentProduct.id,
-      shopifyProductId: shopifyImportedProduct!.id,
-      retailerId,
-      importedVariants: {
-        create: shopifyImportedVariants?.map(
-          (shopifyImportedVariant, index) => {
-            const prismaVariantId = parentProduct.variants[index].id;
-            const prismaInventoryItemId =
-              parentProduct.variants[index].inventoryItem!.id;
-            return {
-              prismaVariantId,
-              shopifyVariantId: shopifyImportedVariant.id,
-              importedInventoryItem: {
-                create: {
-                  prismaInventoryItemId,
-                  shopifyInventoryItemId:
-                    shopifyImportedVariant.inventoryItem.id,
-                },
-              },
-            };
+  const prismaData = {
+    prismaProductId: parentProduct.id,
+    shopifyProductId: shopifyImportedProduct!.id,
+    retailerId,
+    importedVariants: {
+      create: shopifyImportedVariants?.map((shopifyImportedVariant, index) => {
+        const prismaVariantId = parentProduct.variants[index].id;
+        const prismaInventoryItemId =
+          parentProduct.variants[index].inventoryItem!.id;
+        return {
+          prismaVariantId,
+          shopifyVariantId: shopifyImportedVariant.id,
+          importedInventoryItem: {
+            create: {
+              prismaInventoryItemId,
+              shopifyInventoryItemId: shopifyImportedVariant.inventoryItem.id,
+            },
           },
-        ),
-      },
-    };
+        };
+      }),
+    },
+  };
 
-    const newImportedProduct = await tx.importedProduct.create({
-      data: prismaData,
-    });
-    return newImportedProduct;
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to add imported product to database',
-      addImportedProductToDatabaseTx,
-      {
-        importedProduct,
-        parentProduct,
-      },
-    );
-  }
+  const newImportedProduct = await tx.importedProduct.create({
+    data: prismaData,
+  });
+  return newImportedProduct;
 }
 
 async function handlePartnership(
@@ -201,74 +186,64 @@ async function getRetailerVariantCreationINput(
   supplierName: string,
   shopifyLocationId: string,
 ) {
-  try {
-    const shopifyVariantIds = supplierVariants.map(
-      ({ shopifyVariantId }) => shopifyVariantId,
-    );
-    const supplierShopifyVariantDetails =
-      await getSupplierShopifyVariantDetails(
-        shopifyVariantIds,
-        supplierSession,
-      );
+  const shopifyVariantIds = supplierVariants.map(
+    ({ shopifyVariantId }) => shopifyVariantId,
+  );
+  const supplierShopifyVariantDetails = await getSupplierShopifyVariantDetails(
+    shopifyVariantIds,
+    supplierSession,
+  );
 
-    const shopifyVariantIdToPrismaData = createMapIdToRestObj(
-      supplierVariants,
-      'shopifyVariantId',
-    );
-    // sometimes the query field doesn't match the mutation field,
-    // so there are some fields that have to be mapped manually
-    const variantsBulkInput =
-      supplierShopifyVariantDetails.productVariants.edges.map(
-        ({ node: variant }) => {
-          const prismaData = shopifyVariantIdToPrismaData.get(variant.id);
-          if (!prismaData) {
-            throw new Error(
-              'Variant exists in shopify but not in prisma database.',
-            );
-          }
-          const {
-            inventoryItem,
-            inventoryQuantity,
-            selectedOptions,
-            id,
-            ...rest
-          } = variant;
-          // for some reason, sku is a required field for variants even though documentation says otherwise
-          const sku = inventoryItem.sku
-            ? `SynqSell ${supplierName} ${inventoryItem.sku}`
-            : `SynqSell ${supplierName} ${uuid()}`;
+  const shopifyVariantIdToPrismaData = createMapIdToRestObj(
+    supplierVariants,
+    'shopifyVariantId',
+  );
+  // sometimes the query field doesn't match the mutation field,
+  // so there are some fields that have to be mapped manually
+  const variantsBulkInput =
+    supplierShopifyVariantDetails.productVariants.edges.map(
+      ({ node: variant }) => {
+        const prismaData = shopifyVariantIdToPrismaData.get(variant.id);
+        if (!prismaData) {
+          throw new Error(
+            'Variant exists in shopify but not in prisma database.',
+          );
+        }
+        const {
+          inventoryItem,
+          inventoryQuantity,
+          selectedOptions,
+          id,
+          ...rest
+        } = variant;
+        // for some reason, sku is a required field for variants even though documentation says otherwise
+        const sku = inventoryItem.sku
+          ? `SynqSell ${supplierName} ${inventoryItem.sku}`
+          : `SynqSell ${supplierName} ${uuid()}`;
 
-          return {
-            ...rest,
-            inventoryItem: {
-              ...inventoryItem,
-              cost: prismaData.supplierProfit,
-              sku: sku,
+        return {
+          ...rest,
+          inventoryItem: {
+            ...inventoryItem,
+            cost: prismaData.supplierProfit,
+            sku: sku,
+          },
+          inventoryQuantities: [
+            {
+              availableQuantity: inventoryQuantity ?? 0,
+              locationId: shopifyLocationId,
             },
-            inventoryQuantities: [
-              {
-                availableQuantity: inventoryQuantity ?? 0,
-                locationId: shopifyLocationId,
-              },
-            ],
-            optionValues: selectedOptions.map((option) => ({
-              name: option.value,
-              optionName: option.name,
-            })),
-            price: prismaData.retailPrice,
-          };
-        },
-      );
-
-    return variantsBulkInput;
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to get relevant variant information from variant ids.',
-      getRetailerVariantCreationINput,
-      { supplierVariants },
+          ],
+          optionValues: selectedOptions.map((option) => ({
+            name: option.value,
+            optionName: option.name,
+          })),
+          price: prismaData.retailPrice,
+        };
+      },
     );
-  }
+
+  return variantsBulkInput;
 }
 
 async function createShopifyVariants(
@@ -359,6 +334,7 @@ export async function importProductAction(
       { status: StatusCodes.OK },
     );
   } catch (error) {
-    throw handleRouteError(error, 'Price List');
+    logError(error, 'Action: Import Product');
+    return getRouteError('Failed to import product.', error);
   }
 }

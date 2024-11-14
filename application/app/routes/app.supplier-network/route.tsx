@@ -13,14 +13,14 @@ import {
   type LoaderFunctionArgs,
 } from '@remix-run/node';
 import { StatusCodes } from 'http-status-codes';
-import { createJSONError, handleRouteError } from '~/lib/utils/server';
+import { createJSONError, getRouteError, logError } from '~/lib/utils/server';
 import {
   convertFormDataToObject,
   isActionDataError,
   isActionDataSuccess,
 } from '~/lib/utils';
 import { authenticate } from '~/shopify.server';
-import { hasRole } from '~/services/models/roles';
+import { hasRole } from '~/services/models/roles.server';
 import { ROLES } from '~/constants';
 import {
   useActionData,
@@ -40,7 +40,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { INTENTS, MODALS } from './constants';
 import { requestAccessAction } from './actions';
 import type { RequestAccessFormData } from './actions/requestAccessAction';
-import { userHasStripePaymentMethod } from '~/services/models/stripeCustomerAccount';
+import { userHasStripePaymentMethod } from '~/services/models/stripeCustomerAccount.server';
+import createHttpError from 'http-errors';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
@@ -62,19 +63,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }
 
     if (!isRetailer) {
-      throw createJSONError(
+      throw new createHttpError.Unauthorized(
         'Unauthorized. User is not a retailer',
-        StatusCodes.UNAUTHORIZED,
       );
-    }
-
-    if (!hasStripePaymentMethod) {
-      throw createJSONError(
+    } else if (!hasStripePaymentMethod) {
+      throw new createHttpError.Unauthorized(
         'Unauthorized. User is does not have a payment method',
-        StatusCodes.UNAUTHORIZED,
       );
     }
-
     const supplierInfo = await getSupplierPaginatedInfo({
       isReverseDirection,
       sessionId,
@@ -82,7 +78,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     });
     return json(supplierInfo, StatusCodes.OK);
   } catch (error) {
-    throw handleRouteError(error, '/app/supplier-network');
+    logError(error, 'Loader: supplier network.');
+    throw getRouteError('Failed to load supplier network.', error);
   }
 };
 
@@ -99,14 +96,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           formDataObject as RequestAccessFormData,
           sessionId,
         );
-      default:
-        return createJSONError(
-          `Intent ${intent} is not valid`,
-          StatusCodes.NOT_IMPLEMENTED,
-        );
     }
+    return createJSONError(
+      `Intent ${intent} is not valid`,
+      StatusCodes.NOT_IMPLEMENTED,
+    );
   } catch (error) {
-    return handleRouteError(error, '/app/supplier-network');
+    logError(error, 'Action: Supplier Network');
+    return getRouteError('Failed to process request.', error);
   }
 };
 

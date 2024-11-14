@@ -1,8 +1,8 @@
 import db from '~/db.server';
-import { updateChecklistStatusTx } from '~/services/models/checklistStatus';
+import { updateChecklistStatusTx } from '~/services/models/checklistStatus.server';
 import { CHECKLIST_ITEM_KEYS } from '~/constants';
-import { errorHandler } from '~/lib/utils/server';
-import { addProductsTx } from '~/services/models/product';
+import { getRouteError, logError } from '~/lib/utils/server';
+import { addProductsTx } from '~/services/models/product.server';
 import type { PriceListActionData } from '../types';
 import type { Prisma } from '@prisma/client';
 import {
@@ -10,7 +10,7 @@ import {
   priceListDataSchema,
 } from './util/schemas';
 import { updatePartnershipsInPriceListTx } from './util';
-import { addVariantsTx } from '~/services/models/variants';
+import { addVariantsTx } from '~/services/models/variants.server';
 import type { RedirectFunction } from 'node_modules/@shopify/shopify-app-remix/dist/ts/server/authenticate/admin/helpers/redirect';
 
 export async function createPriceListTx(
@@ -18,44 +18,30 @@ export async function createPriceListTx(
   data: PriceListActionData,
   sessionId: string,
 ) {
-  try {
-    await noMoreThanOneGeneralPriceListSchema.validate({
-      sessionId,
-      isGeneral: data.settings.isGeneral,
-    });
-    const { settings } = data;
-    const {
-      margin,
-      requiresApprovalToImport,
+  await noMoreThanOneGeneralPriceListSchema.validate({
+    sessionId,
+    isGeneral: data.settings.isGeneral,
+  });
+  const { settings } = data;
+  const { margin, requiresApprovalToImport, name, isGeneral, pricingStrategy } =
+    settings;
+
+  const newPriceList = await tx.priceList.create({
+    data: {
       name,
       isGeneral,
+      ...(requiresApprovalToImport !== undefined && {
+        requiresApprovalToImport,
+      }),
       pricingStrategy,
-    } = settings;
+      ...(margin !== undefined && {
+        margin,
+      }),
+      supplierId: sessionId,
+    },
+  });
 
-    const newPriceList = await tx.priceList.create({
-      data: {
-        name,
-        isGeneral,
-        ...(requiresApprovalToImport !== undefined && {
-          requiresApprovalToImport,
-        }),
-        pricingStrategy,
-        ...(margin !== undefined && {
-          margin,
-        }),
-        supplierId: sessionId,
-      },
-    });
-
-    return newPriceList;
-  } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to create price list in transaction.',
-      createPriceListTx,
-      { data, sessionId },
-    );
-  }
+  return newPriceList;
 }
 
 async function createPriceListAndCompleteChecklistItemAction(
@@ -82,7 +68,6 @@ async function createPriceListAndCompleteChecklistItemAction(
       await updatePartnershipsInPriceListTx(tx, priceListId, partnerships);
       const newProducts = await addProductsTx(
         tx,
-        sessionId,
         priceListId,
         shopifyProductIdsToAdd,
       );
@@ -97,12 +82,8 @@ async function createPriceListAndCompleteChecklistItemAction(
     });
     return redirect(`/app/price-list/${newPriceList.id}?referrer=new`);
   } catch (error) {
-    throw errorHandler(
-      error,
-      'Failed to create price list.',
-      createPriceListAndCompleteChecklistItemAction,
-      { data, sessionId },
-    );
+    logError(error, 'Action: Create Price List');
+    return getRouteError('Failed to create list.', error);
   }
 }
 
