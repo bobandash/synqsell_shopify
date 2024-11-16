@@ -5,7 +5,12 @@ import {
   getChecklistStatus,
   markCheckListStatus,
 } from '~/services/models/checklistStatus.server';
-import { createJSONSuccess, getRouteError, logError } from '~/lib/utils/server';
+import {
+  createJSONError,
+  createJSONSuccess,
+  getRouteError,
+  logError,
+} from '~/lib/utils/server';
 import { isAccountOnboarded } from '~/services/stripe/stripeConnect';
 import { addStripeConnectAccountDb } from '~/services/models/stripeConnectAccount.server';
 
@@ -20,9 +25,9 @@ async function finishStripeConnectOnboarding(
   try {
     const isStripeAccountOnboarded = await isAccountOnboarded(accountId);
     if (!isStripeAccountOnboarded) {
-      return createJSONSuccess(
+      return createJSONError(
         'Failed to fully onboard Stripe Connect Account.',
-        StatusCodes.OK, // TODO: check if this is the correct status code
+        StatusCodes.BAD_REQUEST,
       );
     }
     const checklistItemId = (
