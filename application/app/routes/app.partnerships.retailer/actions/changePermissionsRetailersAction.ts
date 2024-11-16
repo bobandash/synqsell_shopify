@@ -17,17 +17,6 @@ export type ChangePermissionsRetailersAction = {
   selectedPriceListIds: string[];
 };
 
-// schemas
-const updatePartnershipsPriceListPermissionsTxSchema = object({
-  partnershipIds: partnershipIdListSchema,
-  priceListIds: priceListIdListSchema,
-});
-
-const updatePartnershipRequestsPriceListPermissionsTxSchema = object({
-  partnershipRequestIds: partnershipRequestIdListSchema,
-  priceListIds: priceListIdListSchema,
-});
-
 const changePermissionRetailersActionSchema = object({
   intent: string().required().oneOf([INTENTS.CHANGE_PERMISSIONS]),
   partnershipIds: partnershipIdListSchema,
@@ -41,10 +30,6 @@ async function updatePartnershipsPriceListPermissionsTx(
   priceListIds: string[],
 ) {
   const priceListIdData = priceListIds.map((id) => ({ id }));
-  await updatePartnershipsPriceListPermissionsTxSchema.validate({
-    partnershipIds,
-    priceListIds,
-  });
   const newPartnerships = await Promise.all(
     partnershipIds.map((id) =>
       tx.partnership.update({
@@ -66,11 +51,6 @@ async function updatePartnershipRequestsPriceListPermissionsTx(
   priceListIds: string[],
 ) {
   const priceListIdData = priceListIds.map((id) => ({ id }));
-
-  await updatePartnershipRequestsPriceListPermissionsTxSchema.validate({
-    partnershipRequestIds,
-    priceListIds,
-  });
   const newPartnershipRequests = await Promise.all(
     partnershipRequestIds.map((id) =>
       tx.partnership.update({
