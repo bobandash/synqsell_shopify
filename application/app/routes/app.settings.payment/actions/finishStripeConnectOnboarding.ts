@@ -14,9 +14,15 @@ import {
 import { isAccountOnboarded } from '~/services/stripe/stripeConnect';
 import { addStripeConnectAccountDb } from '~/services/models/stripeConnectAccount.server';
 
-type FinishStripeConnectOnboardingData = {
-  message: string;
-};
+type FinishStripeConnectOnboardingData =
+  | {
+      message: string;
+    }
+  | {
+      error: {
+        message: string;
+      };
+    };
 
 async function finishStripeConnectOnboarding(
   accountId: string,

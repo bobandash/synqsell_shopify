@@ -32,25 +32,28 @@ const StripeConnectOnboarding = ({
   const [hasSubmittedConnect, setHasSubmittedConnect] =
     useState<boolean>(false);
 
-  // handle stripe connect onboarding premature exit or finish workflow
-  // prev impl was using loader to check if the account was onboarded successfully and adding it, but this method will not revalidate the route on success to get navigation visible
-
   useEffect(() => {
     const accountId = searchParams.get('accountId');
     if (!accountId) {
       return;
     }
-    const data = finishStripeConnectOnboardingFetcher.data;
+    const data =
+      finishStripeConnectOnboardingFetcher.data as FinishStripeConnectOnboardingData;
     if (data) {
-      const formattedData = data as FinishStripeConnectOnboardingData;
-      const isSuccess = formattedData.message.startsWith('Success');
+      const isSuccess = data && 'message' in data;
+      const isFailure = data && 'error' in data && 'message' in data.error;
       if (isSuccess && finishStripeConnectOnboardingFetcher.state === 'idle') {
         setSearchParams(new URLSearchParams());
+        setSupplierPaymentBanner({
+          text: data.message,
+          tone: 'warning',
+        });
+      } else if (isFailure) {
+        setSupplierPaymentBanner({
+          text: data.error.message,
+          tone: 'warning',
+        });
       }
-      setSupplierPaymentBanner({
-        text: formattedData.message,
-        tone: isSuccess ? 'success' : 'warning',
-      });
     } else if (!hasSubmittedConnect) {
       setHasSubmittedConnect(true);
       finishStripeConnectOnboardingFetcher.submit(
