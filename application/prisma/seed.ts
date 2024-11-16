@@ -57,7 +57,7 @@ async function main() {
                 header: 'Customize your brand profile',
                 subheader:
                   'Showcase the information you would like to display in the retailer network for suppliers to see.',
-                buttonText: 'Edit brand profile',
+                buttonText: 'Edit Brand Profile',
               },
               {
                 key: CHECKLIST_ITEM_KEYS.RETAILER_ADD_PAYMENT_METHOD,
@@ -101,7 +101,7 @@ async function main() {
                 header: 'Request access to become a supplier',
                 subheader:
                   'Have a proven sales record and sell products that are allowed to be distributed.',
-                buttonText: 'Request approval',
+                buttonText: 'Request Approval',
               },
               {
                 key: CHECKLIST_ITEM_KEYS.SUPPLIER_CUSTOMIZE_PROFILE,
@@ -109,7 +109,7 @@ async function main() {
                 header: 'Customize your brand profile',
                 subheader:
                   'Showcase the information you would like to display in the supplier network for retailers to see.',
-                buttonText: 'Edit brand profile',
+                buttonText: 'Edit Brand Profile',
               },
               {
                 key: CHECKLIST_ITEM_KEYS.SUPPLIER_ADD_PAYMENT_METHOD,
@@ -125,7 +125,7 @@ async function main() {
                 header: 'Create a price list',
                 subheader:
                   'Create a price list, which will be shown in your brand profile. A private price list will only be shown to retailers you invite.',
-                buttonText: 'Create price list',
+                buttonText: 'Create Price List',
               },
               {
                 key: CHECKLIST_ITEM_KEYS.SUPPLIER_EXPLORE_NETWORK,
@@ -133,7 +133,7 @@ async function main() {
                 header: 'Request a partnership with a retailer',
                 subheader:
                   'Connect with interested retailers or reach out to those in our network to explore partnership opportunities.',
-                buttonText: 'Explore retailer network',
+                buttonText: 'Explore Retailer Network',
               },
             ],
           },
