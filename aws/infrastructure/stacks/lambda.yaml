@@ -3,6 +3,8 @@ Transform: AWS::Serverless-2016-10-31
 Description: >
   Contains Lambda functions (shopify webhooks, stripe webhooks)
 
+# TODO: For CD pipeline, need to make sure to only retain lambda logs for 14 days instead of the never expire
+
 Parameters:
   Environment:
     Type: String
@@ -39,6 +41,8 @@ Globals:
         NODE_ENV: !Ref Environment
     LoggingConfig:
       LogFormat: JSON
+      ApplicationLogLevel: !If [isProd, WARN, TRACE]
+      SystemLogLevel: !If [isProd, WARN, DEBUG]
     VpcConfig:
       SecurityGroupIds:
         - !Ref LambdaSecurityGroup
@@ -50,6 +54,7 @@ Globals:
 Resources:
   # IAM Roles for Lambda functions
   # TODO: Change to POLP by only being able to invoke shopify or only being able to invoke stripe
+  # TODO: Add DLQ to all lambda functions that handle webhook topics
   LambdaInvokePolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
@@ -62,6 +67,7 @@ Resources:
               - "lambda:InvokeFunction"
             Resource: "*"
 
+  # TODO: see if you want to change this into POLP, so can only send failed webhooks to specific queues instead of all
   PrivateFunctionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -76,6 +82,15 @@ Resources:
         - !Ref SecretsAccessPolicy
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
         - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole
+      Policies:
+        - PolicyName: SqsDlqSendMessage
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: sqs:SendMessage
+                Resource: "*"
 
   StripeCoordinatorFunctionRole:
     Type: AWS::IAM::Role
@@ -130,7 +145,7 @@ Resources:
   WebhookSQS:
     Type: AWS::SQS::Queue
     Properties:
-      QueueName: !Join ["_", [!Sub "${Environment}", "webhook_queue.fifo"]]
+      QueueName: !Join ["_", [!Ref Environment, "webhook_queue.fifo"]]
       FifoQueue: true
       ContentBasedDeduplication: true
       RedrivePolicy:
@@ -140,7 +155,7 @@ Resources:
   ShopifyWebhookRule:
     Type: AWS::Events::Rule
     Properties:
-      Name: !Join ["_", [!Sub "${Environment}", shopify_sqs_rule]]
+      Name: !Join ["_", [!Ref Environment, shopify_sqs_rule]]
       EventPattern:
         detail-type:
           - "shopifyWebhook"
@@ -180,7 +195,7 @@ Resources:
     Type: AWS::SQS::Queue
     Properties:
       QueueName:
-        !Join ["_", [!Sub "${Environment}", "webhook_dead_letter_queue.fifo"]]
+        !Join ["_", [!Ref Environment, "webhook_dead_letter_queue.fifo"]]
       FifoQueue: true
       ContentBasedDeduplication: true
 
@@ -195,8 +210,7 @@ Resources:
   DeliveryCarrierServiceFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName:
-        !Join ["_", [!Sub "${Environment}", delivery_carrier_service]]
+      FunctionName: !Join ["_", [!Ref Environment, delivery_carrier_service]]
       CodeUri: ../../shopify/api/deliveryCarrierService/
       Handler: app.lambdaHandler
       MemorySize: 1028
@@ -218,7 +232,7 @@ Resources:
   ShopifyCoordinatorFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Join ["_", [!Sub "${Environment}", webhooks_coordinator]]
+      FunctionName: !Join ["_", [!Ref Environment, webhooks_coordinator]]
       CodeUri: ../../shopify/webhooks/webhooksCoordinator/
       Handler: app.lambdaHandler
       MemorySize: 1028
@@ -239,7 +253,7 @@ Resources:
   DeleteProductsFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Join ["_", [!Sub "${Environment}", "products_delete"]]
+      FunctionName: !Join ["_", [!Ref Environment, "products_delete"]]
       CodeUri: ../../shopify/webhooks/deleteProducts/
       Handler: app.lambdaHandler
       MemorySize: 1028
@@ -260,7 +274,7 @@ Resources:
   ProductsUpdateFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Join ["_", [!Sub "${Environment}", "products_update"]]
+      FunctionName: !Join ["_", [!Ref Environment, "products_update"]]
       CodeUri: ../../shopify/webhooks/productsUpdate/
       Handler: app.lambdaHandler
       MemorySize: 1028
@@ -278,11 +292,21 @@ Resources:
         EntryPoints:
           - app.ts
 
+  # TODO: Add a way to automatically poll and receive the failed webhook / create support ticket
+  FulfillmentOrderRoutingCompleteDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName:
+        !Join [
+          "_",
+          [!Ref Environment, "fulfillment_order_routing_complete_dlq"],
+        ]
+      MessageRetentionPeriod: 345600
+
   FulfillmentOrderRoutingCompleteFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName:
-        !Join ["_", [!Sub "${Environment}", "order_routing_complete"]]
+      FunctionName: !Join ["_", [!Ref Environment, "order_routing_complete"]]
       CodeUri: ../../shopify/webhooks/fulfillmentOrdersOrderRoutingComplete/
       Handler: app.lambdaHandler
       MemorySize: 1028
@@ -291,6 +315,9 @@ Resources:
       Architectures:
         - x86_64
       Role: !GetAtt PrivateFunctionRole.Arn
+      DeadLetterQueue:
+        Type: SQS
+        TargetArn: !GetAtt FulfillmentOrderRoutingCompleteDLQ.Arn
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -303,7 +330,7 @@ Resources:
   FulfillmentsCreateFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Join ["_", [!Sub "${Environment}", "fulfillments_create"]]
+      FunctionName: !Join ["_", [!Ref Environment, "fulfillments_create"]]
       CodeUri: ../../shopify/webhooks/fulfillmentsCreate/
       Handler: app.lambdaHandler
       MemorySize: 1028
@@ -324,7 +351,7 @@ Resources:
   OrdersCancelledFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Join ["_", [!Sub "${Environment}", "orders_cancelled"]]
+      FunctionName: !Join ["_", [!Ref Environment, "orders_cancelled"]]
       CodeUri: ../../shopify/webhooks/ordersCancelled/
       Handler: app.lambdaHandler
       MemorySize: 1028
@@ -345,7 +372,7 @@ Resources:
   FulfillmentsUpdateFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Join ["_", [!Sub "${Environment}", "fulfillments_update"]]
+      FunctionName: !Join ["_", [!Ref Environment, "fulfillments_update"]]
       CodeUri: ../../shopify/webhooks/fulfillmentsUpdate/
       Handler: app.lambdaHandler
       MemorySize: 1028
@@ -366,7 +393,7 @@ Resources:
   AppUninstalledFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Join ["_", [!Sub "${Environment}", "app_uninstalled"]]
+      FunctionName: !Join ["_", [!Ref Environment, "app_uninstalled"]]
       CodeUri: ../../shopify/webhooks/appUninstalled/
       Handler: app.lambdaHandler
       MemorySize: 1028
@@ -387,7 +414,7 @@ Resources:
   ShopRedactFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Join ["_", [!Sub "${Environment}", "shop_redact"]]
+      FunctionName: !Join ["_", [!Ref Environment, "shop_redact"]]
       CodeUri: ../../shopify/webhooks/shopRedact/
       Handler: app.lambdaHandler
       MemorySize: 1028
@@ -409,8 +436,7 @@ Resources:
   CustomersDataRequestFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName:
-        !Join ["_", [!Sub "${Environment}", "customers_data_request"]]
+      FunctionName: !Join ["_", [!Ref Environment, "customers_data_request"]]
       CodeUri: ../../shopify/webhooks/customersDataRequest/
       Handler: app.lambdaHandler
       MemorySize: 1028
@@ -431,7 +457,7 @@ Resources:
   CustomersRedactFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Join ["_", [!Sub "${Environment}", "customers_redact"]]
+      FunctionName: !Join ["_", [!Ref Environment, "customers_redact"]]
       CodeUri: ../../shopify/webhooks/customersRedact/
       Handler: app.lambdaHandler
       MemorySize: 1028
@@ -453,8 +479,7 @@ Resources:
   StripeWebhookCoordinatorFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName:
-        !Join ["_", [!Sub "${Environment}", stripe_webhook_coordinator]]
+      FunctionName: !Join ["_", [!Ref Environment, stripe_webhook_coordinator]]
       CodeUri: ../../stripe/webhooks/webhooksCoordinator/
       Handler: app.lambdaHandler
       MemorySize: 1028
@@ -478,7 +503,7 @@ Resources:
       FunctionName:
         !Join [
           "_",
-          [!Sub "${Environment}", "stripe_account_application_deauthorized"],
+          [!Ref Environment, "stripe_account_application_deauthorized"],
         ]
       CodeUri: ../../stripe/webhooks/accountApplicationDeauthorized/
       Handler: app.lambdaHandler
@@ -501,7 +526,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName:
-        !Join ["_", [!Sub "${Environment}", "stripe_payment_method_detached"]]
+        !Join ["_", [!Ref Environment, "stripe_payment_method_detached"]]
       CodeUri: ../../stripe/webhooks/paymentMethodDetached/
       Handler: app.lambdaHandler
       MemorySize: 1028
