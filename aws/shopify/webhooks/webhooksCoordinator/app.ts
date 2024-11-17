@@ -9,14 +9,11 @@ async function invokeLambda(functionName: string, payload: any) {
         InvocationType: 'Event',
         Payload: JSON.stringify(payload),
     };
-
     try {
         await lambda.invoke(params).promise();
-        console.log(`Successfully invoked ${functionName}`);
     } catch (error) {
-        console.error(error);
-        console.error(payload);
         console.error(`Error invoking ${functionName}.`);
+        throw error;
     }
 }
 // serves as coordinator from sqs to this function to invoke other lambda functions
@@ -56,5 +53,6 @@ export const lambdaHandler = async (event: Event) => {
         await Promise.all(invocations);
     } catch (error) {
         console.error(error);
+        throw error;    // Throw error for it to go to DLQ and retries
     }
 };
