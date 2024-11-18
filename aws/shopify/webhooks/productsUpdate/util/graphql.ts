@@ -1,5 +1,3 @@
-import { parseGid } from '@shopify/admin-graphql-api-utilities';
-
 /* eslint-disable @typescript-eslint/no-explicit-any */
 async function fetchAndValidateGraphQLData<T>(
     shop: string,
@@ -16,6 +14,21 @@ async function fetchAndValidateGraphQLData<T>(
         },
         body: JSON.stringify({ query, variables }),
     });
+
+    if (!response.ok) {
+        // this is extremely infrequent; often related to network communications, your account, or an issue with Shopify’s services.
+        const errorData = await response.json();
+        const statusCode = response.status;
+        const errors = errorData.errors;
+        let errorMessage = '';
+        if ('query' in errors) {
+            errorMessage = errors.query;
+        } else {
+            errorMessage = errors;
+        }
+        throw new Error(`Shopify Query API error ${statusCode}: ${errorMessage}.`);
+    }
+
     const { data } = await response.json();
     if (!data) {
         throw new Error('No data returned from GraphQL query');
@@ -39,11 +52,22 @@ async function mutateAndValidateGraphQLData<T>(
         },
         body: JSON.stringify({ query: mutation, variables }),
     });
+    if (!response.ok) {
+        // this is extremely infrequent; often related to network communications, your account, or an issue with Shopify’s services.
+        const errorData = await response.json();
+        const statusCode = response.status;
+        const errors = errorData.errors;
+        let errorMessage = '';
+        if ('query' in errors) {
+            errorMessage = errors.query;
+        } else {
+            errorMessage = errors;
+        }
+        throw new Error(`Shopify Mutation API error ${statusCode}: ${errorMessage}.`);
+    }
     const { data } = await response.json();
     if (!data) {
-        console.error(shop);
-        console.error(variables);
-        throw new Error(defaultErrorMessage);
+        throw new Error(`Shopify Mutation Error ${defaultErrorMessage}`);
     }
     const mutationName = Object.keys(data)[0];
     const mutationData = data[mutationName];
@@ -52,11 +76,4 @@ async function mutateAndValidateGraphQLData<T>(
     }
     return data as T;
 }
-
-function getQueryStr(shopifyIdList: string[]) {
-    const productIdsQueryFmt = shopifyIdList.map((id) => `id:${parseGid(id)}`);
-    const queryStr = `${productIdsQueryFmt.join(' OR ')}`;
-    return queryStr;
-}
-
-export { fetchAndValidateGraphQLData, mutateAndValidateGraphQLData, getQueryStr };
+export { fetchAndValidateGraphQLData, mutateAndValidateGraphQLData };
