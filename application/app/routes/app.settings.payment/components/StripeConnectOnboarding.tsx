@@ -8,6 +8,7 @@ import type {
   FinishStripeConnectOnboardingData,
 } from '../actions';
 import type { BannerState } from '../types';
+import { isActionDataError, isActionDataSuccess } from '~/lib/utils';
 
 type Props = {
   hasStripeConnectAccount: boolean;
@@ -39,16 +40,14 @@ const StripeConnectOnboarding = ({
     }
     const data =
       finishStripeConnectOnboardingFetcher.data as FinishStripeConnectOnboardingData;
-    if (data) {
-      const isSuccess = data && 'message' in data;
-      const isFailure = data && 'error' in data && 'message' in data.error;
-      if (isSuccess && finishStripeConnectOnboardingFetcher.state === 'idle') {
+    if (data && finishStripeConnectOnboardingFetcher.state === 'idle') {
+      if (isActionDataSuccess(data)) {
         setSearchParams(new URLSearchParams());
         setSupplierPaymentBanner({
           text: data.message,
-          tone: 'warning',
+          tone: 'success',
         });
-      } else if (isFailure) {
+      } else if (isActionDataError(data)) {
         setSupplierPaymentBanner({
           text: data.error.message,
           tone: 'warning',

@@ -118,6 +118,7 @@ To get a local copy up and running follow these steps:
    - Using the AWS website, navigate to EC2
      - Create a key-pair at the "Network & Security" > "Key Pairs" tab (choose the .PEM file extension option)
      - Securely store both the key pair name and the generated .PEM file
+     - For the generated .PEM files, [edit the permissions](https://superuser.com/questions/1296024/windows-ssh-permissions-for-private-key-are-too-open) so that only the admin has permission
    - Using the AWS website or CLI, navigate to AWS Secrets Manager
      - Create a secrets manager with the name `<dev/appConfig>`, and store the following values:
        - `<bastionHostKeyPair>` - this was created in the EC2 step with the key pair name

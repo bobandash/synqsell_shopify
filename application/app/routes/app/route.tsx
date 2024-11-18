@@ -114,7 +114,6 @@ export default function App() {
 // Shopify needs Remix to catch some thrown responses, so that their headers are included in the response.
 export function ErrorBoundary() {
   const error = useRouteError();
-  console.error(error);
   let reason = 'Unhandled error. Please contact support.';
   let status = 500;
   if (isRouteErrorResponse(error)) {

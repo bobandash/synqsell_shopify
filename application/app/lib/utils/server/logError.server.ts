@@ -80,18 +80,11 @@ function logError(error: unknown, context: string) {
     return;
   }
 
-  let errorMessage = '';
-  try {
-    errorMessage = String(error);
-  } catch {
-    errorMessage = 'Uncaught Error';
-  }
-
   logger.error({
     referenceId,
     context,
     name: 'UnhandledError',
-    message: errorMessage,
+    message: error,
   });
 }
 

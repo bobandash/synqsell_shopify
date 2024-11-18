@@ -13,7 +13,6 @@ export async function createCustomer(sessionId: string) {
   return customer;
 }
 
-// TODO: add support for different currency options
 // for options and recurring payment, apparently you have to pass client secret instead of bare options
 export async function getClientSecret(customerId: string) {
   const intent = await stripe.setupIntents.create({
