@@ -21,10 +21,10 @@ type Props = {
 
 const ProductCard: FC<Props> = ({ product, isSubmitting }) => {
   const { brandName, title, variants } = product;
-  const primaryImage =
-    product.mediaImageUrl && product.mediaAlt !== null
-      ? { url: product.mediaImageUrl, alt: product.mediaAlt }
-      : null;
+
+  const primaryImage = product.mediaImageUrl
+    ? { url: product.mediaImageUrl, alt: product.mediaAlt ?? `${title} image` }
+    : null;
   const priceListUrl = `/app/products/${product.priceListId}`;
   const numVariants = variants.length;
   const productName = `${title}${numVariants > 1 ? ` (${numVariants} variants)` : ''}`;
