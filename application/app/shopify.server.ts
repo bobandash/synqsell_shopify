@@ -9,7 +9,8 @@ import { BillingInterval } from '@shopify/shopify-api';
 import { restResources } from '@shopify/shopify-api/rest/admin/2024-07';
 import prisma from './db.server';
 import { PLANS } from './constants';
-
+import { hasSession } from './services/models/session.server';
+import reinstallApp from './reinstallApp';
 // https://shopify.dev/docs/api/shopify-app-remix/v2/apis/billing
 // https://github.com/Shopify/shopify-api-js/blob/main/packages/shopify-api/docs/guides/billing.md#configuring-billing
 const shopify = shopifyApp({
@@ -39,13 +40,16 @@ const shopify = shopifyApp({
   },
   hooks: {
     afterAuth: async ({ session }) => {
-      const register_result = await shopify.registerWebhooks({ session });
-      console.log('AFTER REGISTER WEBHOOKS', register_result);
+      await shopify.registerWebhooks({ session });
+      const isUninstalled = await hasSession(session.id);
+      if (isUninstalled) {
+        await reinstallApp(session);
+      }
     },
+    ...(process.env.SHOP_CUSTOM_DOMAIN
+      ? { customShopDomains: [process.env.SHOP_CUSTOM_DOMAIN] }
+      : {}),
   },
-  ...(process.env.SHOP_CUSTOM_DOMAIN
-    ? { customShopDomains: [process.env.SHOP_CUSTOM_DOMAIN] }
-    : {}),
 });
 
 export default shopify;

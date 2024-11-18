@@ -29,13 +29,8 @@ import { ChecklistTables } from './asyncComponents';
 import { TableSkeleton } from './components/Skeleton';
 import { PaddedBox } from '~/components';
 import { getOrCreateStorefrontAccessToken } from './loader/storefrontAccessToken';
-import {
-  getOrCreateCarrierService,
-  getOrCreateProfile,
-  handleAppReinstalled,
-} from './loader';
+import { getOrCreateCarrierService, getOrCreateProfile } from './loader';
 import { getOrCreateUserPreferences } from '~/services/models/userPreferences.server';
-import { getSession } from '~/services/models/session.server';
 import { createJSONError, getRouteError, logError } from '~/lib/utils/server';
 import { StatusCodes } from 'http-status-codes';
 import { userHasStripePaymentMethod } from '~/services/models/stripeCustomerAccount.server';
@@ -48,11 +43,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       admin: { graphql },
     } = await authenticate.admin(request);
     // for initializing the application with required data to run the app
-    const session = await getSession(sessionId);
-    if (session.isAppUninstalled) {
-      await handleAppReinstalled(sessionId);
-    }
-
     await Promise.all([
       getOrCreateCarrierService(sessionId, graphql),
       getOrCreateStorefrontAccessToken(sessionId, graphql),

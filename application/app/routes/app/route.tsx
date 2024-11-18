@@ -31,21 +31,22 @@ import { WarningIcon } from '~/assets';
 import { userHasStripeConnectAccount } from '~/services/models/stripeConnectAccount.server';
 import { userHasStripePaymentMethod } from '~/services/models/stripeCustomerAccount.server';
 import sharedStyles from '~/shared.module.css';
-import { handleBilling } from './loader';
+import { requireBilling, addBillingToDatabaseIfNotExists } from './loader';
 import { getRouteError, logError } from '~/lib/utils/server';
 
 export const links = () => [{ rel: 'stylesheet', href: polarisStyles }];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const {
+    session: { id: sessionId, shop },
+    billing,
+  } = await authenticate.admin(request);
+  let isTest = process.env.NODE_ENV === 'production' ? false : true;
+  // this has to be outside cause the onFailure will be wrapped by the try catch
+  await requireBilling(shop, isTest, billing);
+
   try {
-    const {
-      session: { id: sessionId, shop },
-      billing,
-    } = await authenticate.admin(request);
-
-    // confirms that app has a subscription to Shopify's billing api
-    await handleBilling(shop, sessionId, billing);
-
+    await addBillingToDatabaseIfNotExists(shop, sessionId, isTest, billing);
     const [roles, hasStripeConnectAccount, hasStripePaymentMethod] =
       await Promise.all([
         getRoles(sessionId),

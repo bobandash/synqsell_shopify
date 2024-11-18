@@ -3,10 +3,14 @@ import { getAppBaseUrl } from '~/lib/utils/server';
 import { addBilling, userHasBilling } from '~/services/models/billing.server';
 
 // https://shopify.dev/docs/api/shopify-app-remix/v2/apis/billing
-async function requireBilling(shop: string, isTest: boolean, billing: any) {
+export async function requireBilling(
+  shop: string,
+  isTest: boolean,
+  billing: any,
+) {
   // pops up a screen if there's no billing on Shopify
   const appBaseUrl = getAppBaseUrl(shop);
-  await billing.require({
+  return await billing.require({
     plans: [PLANS.BASIC_PLAN],
     isTest,
     onFailure: async () =>
@@ -18,7 +22,7 @@ async function requireBilling(shop: string, isTest: boolean, billing: any) {
   });
 }
 
-async function addBillingToDatabase(
+export async function addBillingToDatabaseIfNotExists(
   shop: string,
   sessionId: string,
   isTest: boolean,
@@ -29,6 +33,7 @@ async function addBillingToDatabase(
     isTest,
   });
   const { appSubscriptions } = billingPlans;
+
   if (
     appSubscriptions.length === 0 ||
     !appSubscriptions[0].lineItems ||
@@ -40,20 +45,9 @@ async function addBillingToDatabase(
   }
 
   // record billing api to call in webhooks
-  const hasBillingInDb = userHasBilling(sessionId);
+  const hasBillingInDb = await userHasBilling(sessionId);
   if (!hasBillingInDb) {
     const { id } = appSubscriptions[0].lineItems[0];
     addBilling(sessionId, id, PLANS.BASIC_PLAN);
   }
 }
-
-async function handleBilling(shop: string, sessionId: string, billing: any) {
-  let isTest = true;
-  if (process.env.NODE_ENV === 'production') {
-    isTest = false;
-  }
-  await requireBilling(shop, isTest, billing);
-  await addBillingToDatabase(shop, sessionId, isTest, billing);
-}
-
-export default handleBilling;

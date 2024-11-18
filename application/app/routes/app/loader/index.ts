@@ -1,1 +1,4 @@
-export { default as handleBilling } from './handleBilling';
+export {
+  requireBilling,
+  addBillingToDatabaseIfNotExists,
+} from './handleBilling';

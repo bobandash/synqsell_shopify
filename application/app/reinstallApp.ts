@@ -1,4 +1,3 @@
-import { updateStoreStatus } from '~/services/models/product.server';
 import db from '~/db.server';
 import { getSession, type Session } from '~/services/models/session.server';
 import { hasRole } from '~/services/models/roles.server';
@@ -13,6 +12,8 @@ import {
   queryExternalStoreAdminAPI,
 } from '~/services/shopify/utils';
 import { createMapIdToRestObj } from '~/lib/utils';
+import { logError } from './lib/utils/server';
+import type { ShopifySession } from './types';
 
 // for changing all retailers that imported a supplier's product
 type SupplierImportedProductDetail = {
@@ -256,25 +257,45 @@ async function handleReinstateImportedProductsForRetailer(
   );
 }
 
+async function updateSessionDb(session: ShopifySession) {
+  console.log(session);
+  await db.session.update({
+    where: {
+      id: session.id,
+    },
+    data: {
+      ...session,
+      isAppUninstalled: false,
+    },
+  });
+}
+
 // Shopify's app/uninstalled webhook runs immediately after uninstallation
 // however, there are mandatory webhooks that the app has to subscribe to
 // one of the webhook topics is shop/redact, where after 48 hours of uninstallation, Shopify tells you to delete the data
 // So, if the merchant reinstalls the app w/in 48 hours, we need to reactivate all the data
 // so if the merchant is a supplier, then we need to reactivate all the retailers' imported products to active
 // and if the merchant is a retailer, then we need to reactivate all the merchant's imported products to active
-export async function handleAppReinstalled(sessionId: string) {
-  const [isRetailer, isSupplier, session] = await Promise.all([
-    hasRole(sessionId, ROLES.RETAILER),
-    hasRole(sessionId, ROLES.SUPPLIER),
-    getSession(sessionId),
-  ]);
+async function reinstallApp(shopifySession: ShopifySession) {
+  try {
+    await updateSessionDb(shopifySession);
 
-  if (isRetailer) {
-    await handleReinstateImportedProductsForRetailer(session);
+    const session = await getSession(shopifySession.id);
+    const [isRetailer, isSupplier] = await Promise.all([
+      hasRole(session.id, ROLES.RETAILER),
+      hasRole(session.id, ROLES.SUPPLIER),
+    ]);
+
+    if (isRetailer) {
+      await handleReinstateImportedProductsForRetailer(session);
+    }
+    if (isSupplier) {
+      await handleReinstateAllRetailerProductsForSupplier(session);
+    }
+  } catch (error) {
+    logError(error, 'Action: Reinstall application');
+    throw error;
   }
-  if (isSupplier) {
-    await handleReinstateAllRetailerProductsForSupplier(session);
-  }
-  // handle this last in db to denote operation was successful
-  await updateStoreStatus(sessionId, true);
 }
+
+export default reinstallApp;
