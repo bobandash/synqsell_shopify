@@ -1,21 +1,22 @@
+// merchants redirect to app standalone url on staging / prod and embedded url on dev
 function getAppBaseUrl(shop: string) {
-  let appName = '';
   const environment = process.env.NODE_ENV;
+  let appBaseUrl = '';
   switch (environment) {
     case 'development':
-      appName = 'synqsell-dev';
+      const appName = 'synqsell-dev';
+      appBaseUrl = `https://${shop}/admin/apps/${appName}/`;
       break;
     case 'production':
-      appName = 'synqsell';
+      appBaseUrl = `https://app.staging.synqsell.com/admin/apps/${process.env.SHOPIFY_API_KEY}`;
       break;
     case 'test':
-      appName = 'synqsell-staging';
+      appBaseUrl = `https://app.prod.synqsell.com/admin/apps/${process.env.SHOPIFY_API_KEY}`;
       break;
     default:
-      throw new Error('Not a valid environment.');
+      throw new Error(`${environment} is not a valid environment.`);
   }
 
-  const appBaseUrl = `https://${shop}/admin/apps/${appName}/`;
   return appBaseUrl;
 }
 
