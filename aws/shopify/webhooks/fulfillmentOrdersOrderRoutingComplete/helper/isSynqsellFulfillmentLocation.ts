@@ -4,7 +4,7 @@ import { FulfillmentOrderLocationQuery } from '../types/admin.generated';
 import { Session } from '../types';
 import { GET_FULFILLMENT_ORDER_LOCATION } from '../graphql';
 
-async function isSynqsellFulfillmentLocation(retailerSession: Session, fulfillmentOrderId: string, client: PoolClient) {
+async function isSynqSellFulfillmentLocation(retailerSession: Session, fulfillmentOrderId: string, client: PoolClient) {
     const locationQuery = await fetchAndValidateGraphQLData<FulfillmentOrderLocationQuery>(
         retailerSession.shop,
         retailerSession.accessToken,
@@ -33,4 +33,4 @@ async function isSynqsellFulfillmentLocation(retailerSession: Session, fulfillme
     return false;
 }
 
-export default isSynqsellFulfillmentLocation;
+export default isSynqSellFulfillmentLocation;

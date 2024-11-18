@@ -1,26 +1,20 @@
-import { APIGatewayProxyResult } from 'aws-lambda';
 import { PoolClient } from 'pg';
 import { initializePool } from './db';
 import { Session, ShopifyEvent } from './types';
-import { createSupplierOrders, isSynqsellFulfillmentLocation, splitFulfillmentOrderBySupplier } from './helper';
-import { RESPONSE, SERVICE_CODE, ServiceCodeProps } from './constants';
+import { createSupplierOrders, isSynqSellFulfillmentLocation, splitFulfillmentOrderBySupplier } from './helper';
+import { SERVICE_CODE, ServiceCodeProps } from './constants';
 import { fetchAndValidateGraphQLData } from './util';
 import { FulfillmentOrderDeliveryMethodQuery } from './types/admin.generated';
 import { GET_FULFILLMENT_ORDER_DELIVERY_SERVICE_CODE } from './graphql';
 
 async function getSession(shop: string, client: PoolClient) {
-    try {
-        const query = `SELECT * FROM "Session" WHERE shop = $1 LIMIT 1`;
-        const sessionData = await client.query(query, [shop]);
-        if (sessionData.rows.length === 0) {
-            throw new Error('Shop data is invalid.');
-        }
-        const session = sessionData.rows[0];
-        return session as Session;
-    } catch (error) {
-        console.error(error);
-        throw new Error(`Failed to retrieve session from shop ${shop}.`);
+    const query = `SELECT * FROM "Session" WHERE shop = $1 LIMIT 1`;
+    const sessionData = await client.query(query, [shop]);
+    if (sessionData.rows.length === 0) {
+        throw new Error('Shop data is invalid.');
     }
+    const session = sessionData.rows[0];
+    return session as Session;
 }
 
 // The service code gives the delivery method the customer chose, please refer to deliveryCarrierService for full explanation
@@ -34,14 +28,11 @@ async function getDeliveryMethodServiceCode(retailerSession: Session, shopifyFul
             id: shopifyFulfillmentOrderId,
         },
     );
-
     const serviceCode = res.fulfillmentOrder?.deliveryMethod?.serviceCode ?? SERVICE_CODE.STANDARD;
     return serviceCode as ServiceCodeProps;
 }
 
-// Fulfillment orders are routed by location
-// However, there is a case where the same fulfillment orders has different suppliers, and it would have to be split up further
-export const lambdaHandler = async (event: ShopifyEvent): Promise<APIGatewayProxyResult> => {
+export const lambdaHandler = async (event: ShopifyEvent) => {
     let client: null | PoolClient = null;
     try {
         const pool = await initializePool();
@@ -49,9 +40,10 @@ export const lambdaHandler = async (event: ShopifyEvent): Promise<APIGatewayProx
         const shop = event.detail.metadata['X-Shopify-Shop-Domain'];
         const shopifyFulfillmentOrderId = event.detail.payload.fulfillment_order.id;
         const retailerSession = await getSession(shop, client);
-        const isSynqsellOrder = await isSynqsellFulfillmentLocation(retailerSession, shopifyFulfillmentOrderId, client);
-        if (!isSynqsellOrder) {
-            return RESPONSE.NOT_SYNQSELL_ORDER;
+        const isSynqSellOrder = await isSynqSellFulfillmentLocation(retailerSession, shopifyFulfillmentOrderId, client);
+        if (!isSynqSellOrder) {
+            console.log('This fulfillment order is not a SynqSell order.');
+            return;
         }
         const serviceCode = await getDeliveryMethodServiceCode(retailerSession, shopifyFulfillmentOrderId);
         const fulfillmentOrdersBySupplier = await splitFulfillmentOrderBySupplier(
@@ -60,7 +52,6 @@ export const lambdaHandler = async (event: ShopifyEvent): Promise<APIGatewayProx
             retailerSession.accessToken,
             client,
         );
-
         await createSupplierOrders(
             fulfillmentOrdersBySupplier,
             shopifyFulfillmentOrderId,
@@ -68,10 +59,11 @@ export const lambdaHandler = async (event: ShopifyEvent): Promise<APIGatewayProx
             retailerSession,
             client,
         );
-        return RESPONSE.SUCCESS;
-    } catch (err) {
-        console.error(err);
-        return RESPONSE.FAILURE;
+        console.log('Successfully created order for suppliers.');
+        return;
+    } catch (error) {
+        console.error(error); // TODO: add better error handling, deal with prisma errors differently
+        throw error;
     } finally {
         if (client) {
             client.release();

@@ -3,10 +3,11 @@ import { Lambda } from 'aws-sdk';
 
 const lambda = new Lambda();
 
+
 async function invokeLambda(functionName: string, payload: any) {
     const params = {
         FunctionName: functionName,
-        InvocationType: 'Event',
+        InvocationType: 'Event',    
         Payload: JSON.stringify(payload),
     };
     try {

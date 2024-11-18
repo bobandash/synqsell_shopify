@@ -66,20 +66,15 @@ type ShippingRate = {
 // START: ADD EQUIVALENT ORDER FROM FULFILLMENT ORDER ON SUPPLIER'S SHOPIFY STORE LOGIC
 // ==============================================================================================================
 async function getShopifyCarrierServiceId(sessionId: string, client: PoolClient) {
-    try {
-        const query = `
-            SELECT "shopifyCarrierServiceId" FROM "CarrierService"
-            WHERE "retailerId" = $1
-        `;
-        const res = await client.query(query, [sessionId]);
-        if (res.rows.length === 0) {
-            throw new Error(`No shopify carrier service exists for sessionId ${sessionId}.`);
-        }
-        return res.rows[0].shopifyCarrierServiceId as string;
-    } catch (error) {
-        console.error(error);
-        throw new Error(`Failed to get Shopify carrier service id from sessionId ${sessionId}.`);
+    const query = `
+        SELECT "shopifyCarrierServiceId" FROM "CarrierService"
+        WHERE "retailerId" = $1
+    `;
+    const res = await client.query(query, [sessionId]);
+    if (res.rows.length === 0) {
+        throw new Error(`No shopify carrier service exists for sessionId ${sessionId}.`);
     }
+    return res.rows[0].shopifyCarrierServiceId as string;
 }
 
 async function getCarrierServiceCallbackUrl(session: Session, shopifyCarrierServiceId: string) {
@@ -131,23 +126,34 @@ async function getAllShippingRates(
     };
 
     // TODO: implement retry logic
-    const response = await fetch(carrierServiceCallbackUrl, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-    });
+    // the impl of callback url is that it should automatically fail
+    try {
+        const response = await fetch(carrierServiceCallbackUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody),
+        });
 
-    if (!response.ok) {
-        console.error('Delivery service callback url failed to execute properly. Please check logs.');
-        // even if carrier service fails, order should still execute
-        return {
-            rates: [],
-        };
+        if (!response.ok) {
+            console.warn('Delivery carrier service returned 4XX error', requestBody);
+            return {
+                rates: [],
+            };
+        }
+
+        const data: ShippingRateResponse = await response.json();
+        return data;
+    } catch (error) {
+        console.error('Failed to get all shipping rates from supplier.', {
+            error: error instanceof Error ? error.message : error,
+            carrierService: carrierServiceCallbackUrl,
+            destination: requestBody.rate.destination.country,
+            itemCount: requestBody.rate.items.length,
+        });
+        throw error;
     }
-    const data: ShippingRateResponse = await response.json();
-    return data;
 }
 
 // end helper functions for getSupplierShippingRate
@@ -166,41 +172,34 @@ async function getSupplierShippingRate(
         title: 'Economy',
     };
 
-    try {
-        const shopifyCarrierServiceId = await getShopifyCarrierServiceId(retailerSession.id, client);
-        const carrierServiceCallbackUrl = await getCarrierServiceCallbackUrl(retailerSession, shopifyCarrierServiceId);
-        const shippingRates = await getAllShippingRates(
-            fulfillmentOrder,
-            customerShippingDetails,
-            carrierServiceCallbackUrl,
-        );
+    const shopifyCarrierServiceId = await getShopifyCarrierServiceId(retailerSession.id, client);
+    const carrierServiceCallbackUrl = await getCarrierServiceCallbackUrl(retailerSession, shopifyCarrierServiceId);
+    const shippingRates = await getAllShippingRates(
+        fulfillmentOrder,
+        customerShippingDetails,
+        carrierServiceCallbackUrl,
+    );
 
-        // please reference deliveryCarrierService lambda function for more details on the impl,
-        // but the fulfillment order's service code is what shipping method the customer chose
-        // custom = international shipping or standard_shipping (supplier and retailer can be in different countries)
-        // international_shipping = international_shipping, expedited_mail = expedited mail
-        const shippingRateOfInterest = shippingRates.rates.filter((shippingRate) => {
-            if (serviceCode === SERVICE_CODE.CUSTOM) {
-                return shippingRate.service_code === SERVICE_CODE.STANDARD || SERVICE_CODE.ECONOMY_INTERNATIONAL;
-            } else {
-                return shippingRate.service_code === serviceCode;
-            }
-        });
+    // please reference deliveryCarrierService lambda function for more details on the impl,
+    // but the fulfillment order's service code is what shipping method the customer chose
+    // custom = international shipping or standard_shipping (supplier and retailer can be in different countries)
+    // international_shipping = international_shipping, expedited_mail = expedited mail
+    const shippingRateOfInterest = shippingRates.rates.filter((shippingRate) => {
+        if (serviceCode === SERVICE_CODE.CUSTOM) {
+            return shippingRate.service_code === SERVICE_CODE.STANDARD || SERVICE_CODE.ECONOMY_INTERNATIONAL;
+        } else {
+            return shippingRate.service_code === serviceCode;
+        }
+    });
 
-        shippingRate = {
-            priceWithCurrency: {
-                amount: parseFloat(shippingRateOfInterest?.[0]?.total_price ?? '0'),
-                currencyCode: shippingRateOfInterest?.[0]?.currency ?? 'USD',
-            },
-            title: shippingRateOfInterest?.[0]?.service_name ?? 'Standard',
-        };
-        return shippingRate;
-    } catch (error) {
-        console.error(error);
-        throw new Error(
-            `Failed to get supplier shipping rate for retailerId ${retailerSession.id} and fulfillmentOrderId ${fulfillmentOrder.fulfillmentOrderId}.`,
-        );
-    }
+    shippingRate = {
+        priceWithCurrency: {
+            amount: parseFloat(shippingRateOfInterest?.[0]?.total_price ?? '0'),
+            currencyCode: shippingRateOfInterest?.[0]?.currency ?? 'USD',
+        },
+        title: shippingRateOfInterest?.[0]?.service_name ?? 'Standard',
+    };
+    return shippingRate;
 }
 
 // ==============================================================================================================
@@ -288,64 +287,59 @@ async function completeDraftOrder(draftOrderId: string, supplierSession: Session
 // START: ADD ORDERS TO DATABASE LOGIC
 // ==============================================================================================================
 async function getOrderDetails(shopifyOrderId: string, session: Session) {
-    try {
-        let hasMore = true;
-        let endCursor = null;
+    let hasMore = true;
+    let endCursor = null;
 
-        const initialOrderDetails = await fetchAndValidateGraphQLData<InitialOrderDetailsQuery>(
-            session.shop,
-            session.accessToken,
-            GET_INITIAL_ORDER_DETAILS_DATABASE,
-            {
-                id: shopifyOrderId,
-            },
-        );
+    const initialOrderDetails = await fetchAndValidateGraphQLData<InitialOrderDetailsQuery>(
+        session.shop,
+        session.accessToken,
+        GET_INITIAL_ORDER_DETAILS_DATABASE,
+        {
+            id: shopifyOrderId,
+        },
+    );
 
-        const orderDetails = initialOrderDetails.order;
-        const orderDetailsForDatabase: OrderDetailForDatabase = {
-            shopifyOrderId: shopifyOrderId,
-            currency: orderDetails?.presentmentCurrencyCode ?? null,
-            shippingCost: orderDetails?.shippingLine?.originalPriceSet.presentmentMoney.amount ?? 0,
-            lineItems:
-                orderDetails?.lineItems.edges.map(({ node }) => ({
-                    shopifyLineItemId: node.id,
-                    shopifyVariantId: node.variant?.id ?? null, // this will not be null, just graphql semantics
-                    quantity: node.quantity,
-                })) ?? [],
-        };
+    const orderDetails = initialOrderDetails.order;
+    const orderDetailsForDatabase: OrderDetailForDatabase = {
+        shopifyOrderId: shopifyOrderId,
+        currency: orderDetails?.presentmentCurrencyCode ?? null,
+        shippingCost: orderDetails?.shippingLine?.originalPriceSet.presentmentMoney.amount ?? 0,
+        lineItems:
+            orderDetails?.lineItems.edges.map(({ node }) => ({
+                shopifyLineItemId: node.id,
+                shopifyVariantId: node.variant?.id ?? null, // this will not be null, just graphql semantics
+                quantity: node.quantity,
+            })) ?? [],
+    };
 
-        hasMore = initialOrderDetails.order?.lineItems.pageInfo.hasNextPage ?? false;
-        endCursor = initialOrderDetails.order?.lineItems.pageInfo.endCursor ?? null;
-        while (hasMore && endCursor) {
-            const subsequentOrderLineItemDetails: SubsequentOrderDetailsQuery =
-                await fetchAndValidateGraphQLData<SubsequentOrderDetailsQuery>(
-                    session.shop,
-                    session.accessToken,
-                    GET_SUBSEQUENT_ORDER_DETAILS_DATABASE,
-                    {
-                        id: shopifyOrderId,
-                        after: endCursor,
-                    },
-                );
+    hasMore = initialOrderDetails.order?.lineItems.pageInfo.hasNextPage ?? false;
+    endCursor = initialOrderDetails.order?.lineItems.pageInfo.endCursor ?? null;
+    while (hasMore && endCursor) {
+        const subsequentOrderLineItemDetails: SubsequentOrderDetailsQuery =
+            await fetchAndValidateGraphQLData<SubsequentOrderDetailsQuery>(
+                session.shop,
+                session.accessToken,
+                GET_SUBSEQUENT_ORDER_DETAILS_DATABASE,
+                {
+                    id: shopifyOrderId,
+                    after: endCursor,
+                },
+            );
 
-            const prevLineItems = orderDetailsForDatabase?.lineItems;
-            const newLineItems =
-                subsequentOrderLineItemDetails.order?.lineItems.edges.map(({ node }) => ({
-                    shopifyLineItemId: node.id,
-                    shopifyVariantId: node.variant?.id ?? null, // this will not be null, just graphql semantics
-                    quantity: node.quantity,
-                })) ?? [];
-            const lineItems = [...prevLineItems, ...newLineItems];
-            orderDetailsForDatabase.lineItems = lineItems;
-            hasMore = subsequentOrderLineItemDetails.order?.lineItems.pageInfo.hasNextPage ?? false;
-            endCursor = subsequentOrderLineItemDetails.order?.lineItems.pageInfo.endCursor ?? null;
-        }
-
-        return orderDetailsForDatabase;
-    } catch (error) {
-        console.error(error);
-        throw new Error(`Failed to get order details for Shopify order ${shopifyOrderId}`);
+        const prevLineItems = orderDetailsForDatabase?.lineItems;
+        const newLineItems =
+            subsequentOrderLineItemDetails.order?.lineItems.edges.map(({ node }) => ({
+                shopifyLineItemId: node.id,
+                shopifyVariantId: node.variant?.id ?? null, // this will not be null, just graphql semantics
+                quantity: node.quantity,
+            })) ?? [];
+        const lineItems = [...prevLineItems, ...newLineItems];
+        orderDetailsForDatabase.lineItems = lineItems;
+        hasMore = subsequentOrderLineItemDetails.order?.lineItems.pageInfo.hasNextPage ?? false;
+        endCursor = subsequentOrderLineItemDetails.order?.lineItems.pageInfo.endCursor ?? null;
     }
+
+    return orderDetailsForDatabase;
 }
 
 async function addOrderToDatabase(
@@ -356,94 +350,82 @@ async function addOrderToDatabase(
     supplierSessionId: string,
     client: PoolClient,
 ) {
-    try {
-        const query = `
-            INSERT INTO 
-            "Order" ("id", "currency", "retailerShopifyFulfillmentOrderId", "supplierShopifyOrderId", "retailerId", "supplierId", "shippingCost", "paymentStatus", "updatedAt")
-            VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)
-            RETURNING id
-        `;
-        // TODO: Figure out how to deal with matching currencies (maybe use https://www.npmjs.com/package/currency-converter-lt)
-        // Current implementation is customers are allowed to import items only if they're from same country
-        const newOrder = await client.query(query, [
-            uuidv4(),
-            supplierShippingRate.priceWithCurrency.currencyCode,
-            retailerShopifyFulfillmentOrderId,
-            supplierShopifyOrderId,
-            retailerSessionId,
-            supplierSessionId,
-            supplierShippingRate.priceWithCurrency.amount,
-            ORDER_PAYMENT_STATUS.INCOMPLETE,
-            new Date(),
-        ]);
-        const newDbOrderId: string = newOrder.rows[0].id;
-        return newDbOrderId;
-    } catch (error) {
-        console.error(error);
-        throw new Error('Failed to add order to database.');
-    }
+    const query = `
+        INSERT INTO 
+        "Order" ("id", "currency", "retailerShopifyFulfillmentOrderId", "supplierShopifyOrderId", "retailerId", "supplierId", "shippingCost", "paymentStatus", "updatedAt")
+        VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        RETURNING id
+    `;
+    const newOrder = await client.query(query, [
+        uuidv4(),
+        supplierShippingRate.priceWithCurrency.currencyCode,
+        retailerShopifyFulfillmentOrderId,
+        supplierShopifyOrderId,
+        retailerSessionId,
+        supplierSessionId,
+        supplierShippingRate.priceWithCurrency.amount,
+        ORDER_PAYMENT_STATUS.INCOMPLETE,
+        new Date(),
+    ]);
+    const newDbOrderId: string = newOrder.rows[0].id;
+    return newDbOrderId;
 }
 
 async function addOrderLineToDatabase(props: AddOrderLineToDatabase, client: PoolClient) {
-    try {
-        const orderLineItemQuery = `
-            INSERT INTO "OrderLineItem" (
-                "id",
-                "retailerShopifyVariantId",
-                "supplierShopifyVariantId",
-                "retailPricePerUnit",
-                "retailerProfitPerUnit",
-                "supplierProfitPerUnit",
-                "retailerShopifyOrderLineItemId",
-                "supplierShopifyOrderLineItemId",
-                "quantity",
-                "orderId",
-                "priceListId"
-            )
-            VALUES (
-                $1,  -- id
-                $2,  -- retailerShopifyVariantId
-                $3,  -- supplierShopifyVariantId
-                $4,  -- retailPricePerUnit
-                $5,  -- retailerProfitPerUnit
-                $6,  -- supplierProfitPerUnit
-                $7,  -- retailerShopifyOrderLineItemId
-                $8,  -- supplierShopifyOrderLineItemId
-                $9,  -- quantity
-                $10, -- orderId
-                $11  -- priceListId
-            )
-        `;
-        const {
-            retailerShopifyVariantId,
-            supplierShopifyVariantId,
-            retailPricePerUnit,
-            retailerProfitPerUnit,
-            supplierProfitPerUnit,
-            retailerShopifyOrderLineItemId,
-            supplierShopifyOrderLineItemId,
-            quantity,
-            orderId,
-            priceListId,
-        } = props;
+    const query = `
+        INSERT INTO "OrderLineItem" (
+            "id",
+            "retailerShopifyVariantId",
+            "supplierShopifyVariantId",
+            "retailPricePerUnit",
+            "retailerProfitPerUnit",
+            "supplierProfitPerUnit",
+            "retailerShopifyOrderLineItemId",
+            "supplierShopifyOrderLineItemId",
+            "quantity",
+            "orderId",
+            "priceListId"
+        )
+        VALUES (
+            $1,  -- id
+            $2,  -- retailerShopifyVariantId
+            $3,  -- supplierShopifyVariantId
+            $4,  -- retailPricePerUnit
+            $5,  -- retailerProfitPerUnit
+            $6,  -- supplierProfitPerUnit
+            $7,  -- retailerShopifyOrderLineItemId
+            $8,  -- supplierShopifyOrderLineItemId
+            $9,  -- quantity
+            $10, -- orderId
+            $11  -- priceListId
+        )
+    `;
+    const {
+        retailerShopifyVariantId,
+        supplierShopifyVariantId,
+        retailPricePerUnit,
+        retailerProfitPerUnit,
+        supplierProfitPerUnit,
+        retailerShopifyOrderLineItemId,
+        supplierShopifyOrderLineItemId,
+        quantity,
+        orderId,
+        priceListId,
+    } = props;
 
-        await client.query(orderLineItemQuery, [
-            uuidv4(),
-            retailerShopifyVariantId,
-            supplierShopifyVariantId,
-            retailPricePerUnit,
-            retailerProfitPerUnit,
-            supplierProfitPerUnit,
-            retailerShopifyOrderLineItemId,
-            supplierShopifyOrderLineItemId,
-            quantity,
-            orderId,
-            priceListId,
-        ]);
-    } catch (error) {
-        console.error(error);
-        throw new Error('Failed to add order line to database.');
-    }
+    await client.query(query, [
+        uuidv4(),
+        retailerShopifyVariantId,
+        supplierShopifyVariantId,
+        retailPricePerUnit,
+        retailerProfitPerUnit,
+        supplierProfitPerUnit,
+        retailerShopifyOrderLineItemId,
+        supplierShopifyOrderLineItemId,
+        quantity,
+        orderId,
+        priceListId,
+    ]);
 }
 
 async function addAllOrderLineItemsToDatabase(
@@ -452,76 +434,65 @@ async function addAllOrderLineItemsToDatabase(
     newDbOrderId: string,
     client: PoolClient,
 ) {
-    try {
-        const retailerVariantIds = retailerOrderLineItems.map((lineItem) => lineItem.shopifyVariantId);
-        const retailerToSupplierVariantIdsMap = await getRetailerToSupplierVariantIdMap(retailerVariantIds, client);
-        const supplierOrderLineItemsMap = createMapIdToRestObj(supplierOrderLineItems, 'shopifyVariantId'); // key is supplier variant id
+    const retailerVariantIds = retailerOrderLineItems.map((lineItem) => lineItem.shopifyVariantId);
+    const retailerToSupplierVariantIdsMap = await getRetailerToSupplierVariantIdMap(retailerVariantIds, client);
+    const supplierOrderLineItemsMap = createMapIdToRestObj(supplierOrderLineItems, 'shopifyVariantId'); // key is supplier variant id
 
-        const createOrderLineItemPromises = retailerOrderLineItems.map(async (retailerLineItem) => {
-            const retailerShopifyVariantId = retailerLineItem.shopifyVariantId;
-            const supplierShopifyVariantId =
-                retailerToSupplierVariantIdsMap.get(retailerShopifyVariantId)?.supplierShopifyVariantId;
-            if (!supplierShopifyVariantId) {
-                throw new Error(
-                    `Retailer shopify variant id ${retailerShopifyVariantId} does not match any supplier variant id.`,
-                );
-            }
-            const supplierOrderLineItemDetails = supplierOrderLineItemsMap.get(supplierShopifyVariantId);
-            if (!supplierOrderLineItemDetails) {
-                throw new Error(`Order line does not exist for supplier shopify variant ${supplierShopifyVariantId}`);
-            }
-            const prices = await getVariantPriceDetails(supplierShopifyVariantId, retailerLineItem.priceListId, client);
-
-            return addOrderLineToDatabase(
-                {
-                    retailerShopifyVariantId,
-                    supplierShopifyVariantId,
-                    retailPricePerUnit: parseFloat(prices.retailPrice),
-                    retailerProfitPerUnit: parseFloat(prices.retailerPayment),
-                    supplierProfitPerUnit: parseFloat(prices.supplierProfit),
-                    retailerShopifyOrderLineItemId: retailerLineItem.shopifyLineItemId,
-                    supplierShopifyOrderLineItemId: supplierOrderLineItemDetails.shopifyLineItemId,
-                    quantity: retailerLineItem.quantity,
-                    orderId: newDbOrderId,
-                    priceListId: retailerLineItem.priceListId,
-                },
-                client,
+    const createOrderLineItemPromises = retailerOrderLineItems.map(async (retailerLineItem) => {
+        const retailerShopifyVariantId = retailerLineItem.shopifyVariantId;
+        const supplierShopifyVariantId =
+            retailerToSupplierVariantIdsMap.get(retailerShopifyVariantId)?.supplierShopifyVariantId;
+        if (!supplierShopifyVariantId) {
+            throw new Error(
+                `Retailer shopify variant id ${retailerShopifyVariantId} does not match any supplier variant id.`,
             );
-        });
+        }
+        const supplierOrderLineItemDetails = supplierOrderLineItemsMap.get(supplierShopifyVariantId);
+        if (!supplierOrderLineItemDetails) {
+            throw new Error(`Order line does not exist for supplier shopify variant ${supplierShopifyVariantId}`);
+        }
+        const prices = await getVariantPriceDetails(supplierShopifyVariantId, retailerLineItem.priceListId, client);
 
-        await Promise.all(createOrderLineItemPromises);
-    } catch (error) {
-        console.error(error);
-        throw new Error('Failed to all order line items to database.');
-    }
+        return addOrderLineToDatabase(
+            {
+                retailerShopifyVariantId,
+                supplierShopifyVariantId,
+                retailPricePerUnit: parseFloat(prices.retailPrice),
+                retailerProfitPerUnit: parseFloat(prices.retailerPayment),
+                supplierProfitPerUnit: parseFloat(prices.supplierProfit),
+                retailerShopifyOrderLineItemId: retailerLineItem.shopifyLineItemId,
+                supplierShopifyOrderLineItemId: supplierOrderLineItemDetails.shopifyLineItemId,
+                quantity: retailerLineItem.quantity,
+                orderId: newDbOrderId,
+                priceListId: retailerLineItem.priceListId,
+            },
+            client,
+        );
+    });
+
+    await Promise.all(createOrderLineItemPromises);
 }
 
 async function getVariantPriceDetails(supplierShopifyVariantId: string, priceListId: string, client: PoolClient) {
-    try {
-        const query = `
-            SELECT 
-                "Variant"."retailPrice",
-                "Variant"."retailerPayment",
-                "Variant"."supplierProfit"
-            FROM "Variant"
-            INNER JOIN "Product" ON "Product"."id" = "Variant"."productId"
-            WHERE
-                "Product"."priceListId" = $1 AND
-                "Variant"."shopifyVariantId" = $2
-            LIMIT 1
-        `;
-        const queryRes = await client.query(query, [priceListId, supplierShopifyVariantId]);
-        if (queryRes.rows.length === 0) {
-            throw new Error(
-                `Could not get retail price and profit from variant id ${supplierShopifyVariantId} and price list ${priceListId}.`,
-            );
-        }
-        return queryRes.rows[0] as PriceDetail;
-    } catch {
+    const query = `
+        SELECT 
+            "Variant"."retailPrice",
+            "Variant"."retailerPayment",
+            "Variant"."supplierProfit"
+        FROM "Variant"
+        INNER JOIN "Product" ON "Product"."id" = "Variant"."productId"
+        WHERE
+            "Product"."priceListId" = $1 AND
+            "Variant"."shopifyVariantId" = $2
+        LIMIT 1
+    `;
+    const queryRes = await client.query(query, [priceListId, supplierShopifyVariantId]);
+    if (queryRes.rows.length === 0) {
         throw new Error(
-            `Failed to get retail price and profit from supplier variant id ${supplierShopifyVariantId} and price list id ${priceListId}`,
+            `Could not retrieve retail price and profit from variant id ${supplierShopifyVariantId} and price list ${priceListId}.`,
         );
     }
+    return queryRes.rows[0] as PriceDetail;
 }
 
 async function addEntireOrderToDatabase(
