@@ -53,4 +53,4 @@ Here are a list of common commands used for development. Most of these commands 
 
 ## Roadmap
 I will add the roadmap after talking to users, but before I continue:
-- I need to fix the error handling for a lot of the lambda functions (read about best practices too late), and add DLQ to the Shopify webhook topics.
+- I need to fix the error handling for a lot of the lambda functions (read about best practices too late), make the ECR immutable for prod w/ a CI/CD pipeline to automate build and deploy, and add DLQ to the Shopify webhook topics.
