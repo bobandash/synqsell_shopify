@@ -63,10 +63,14 @@ Just a disclaimer: I may be completely wrong in understanding Shopify merchants'
 
 ### Deployment Status
 
-- Submitting to Shopify App Store for Review
+- Submitted to Shopify app store for review
+- No CI/CD pipeline set up that pushes image to ECR, and automatically redeploys the service in ECS; will set up after application is fully approved and found initial users
 - Video Demo: https://www.youtube.com/watch?v=D-RJJmcRiks&feature=youtu.be
 - Main Features (Text): https://aback-thistle-ade.notion.site/Features-At-A-Glance-8be5cba5a5254a67bb59845c5b1c738a
 - Basic Information Site: https://www.synqsell.com/
+
+![image](https://github.com/user-attachments/assets/8330a875-a78a-45c3-acf0-2996c73df7ac)
+
 
 ### Built With
 
