@@ -300,10 +300,10 @@ Resources:
               ValueFrom: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${Environment}/env/SHOPIFY_API_KEY
             - Name: SHOPIFY_API_SECRET
               ValueFrom: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${Environment}/env/SHOPIFY_API_SECRET
-      Cpu: 256
+      Cpu: 512
       ExecutionRoleArn: !GetAtt EcsExecutionRole.Arn # what ecs can do
       TaskRoleArn: !GetAtt EcsTaskRole.Arn # what container can do
-      Memory: 512
+      Memory: 1024
       NetworkMode: awsvpc
       RequiresCompatibilities:
         - FARGATE
