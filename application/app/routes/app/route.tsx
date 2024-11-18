@@ -26,7 +26,6 @@ import {
   Link as PolarisLink,
 } from '@shopify/polaris';
 import { PaddedBox } from '~/components';
-import { getReasonPhrase } from 'http-status-codes';
 import { WarningIcon } from '~/assets';
 import { userHasStripeConnectAccount } from '~/services/models/stripeConnectAccount.server';
 import { userHasStripePaymentMethod } from '~/services/models/stripeCustomerAccount.server';
@@ -116,7 +115,6 @@ export default function App() {
 export function ErrorBoundary() {
   const error = useRouteError();
   let reason = 'Unhandled error. Please contact support.';
-  let status = 500;
   if (isRouteErrorResponse(error)) {
     if (
       error &&
@@ -126,7 +124,6 @@ export function ErrorBoundary() {
     ) {
       reason = error.data.error.message;
     }
-    status = error.status;
   }
 
   return (
@@ -139,14 +136,6 @@ export function ErrorBoundary() {
               <Image source={WarningIcon} alt={'Warning Icon'} />
             </div>
           </InlineStack>
-          <Text
-            variant="heading2xl"
-            as="h1"
-            fontWeight="bold"
-            alignment="center"
-          >
-            {status} {getReasonPhrase(status)}
-          </Text>
           <Text
             variant="headingXl"
             as="h2"
