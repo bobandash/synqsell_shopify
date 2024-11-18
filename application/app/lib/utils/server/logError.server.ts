@@ -85,6 +85,13 @@ function logError(error: unknown, context: string) {
     context,
     name: 'UnhandledError',
     message: error,
+    errorType: typeof error,
+    errorDetails: {
+      isObject: error instanceof Object,
+      keys: error instanceof Object ? Object.keys(error) : null,
+      stringify: JSON.stringify(error),
+      toString: String(error),
+    },
   });
 }
 
