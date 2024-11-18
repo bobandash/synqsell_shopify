@@ -48,3 +48,15 @@ export const GET_SUBSEQUENT_CARRIER_SERVICES = `#graphql
     }
   }
 `;
+
+export const DELETE_CARRIER_SERVICE = `#graphql 
+  mutation carrierServiceDelete($id: ID!) {
+    carrierServiceDelete(id: $id) {
+      deletedId
+      userErrors {
+        field
+        message
+      }
+    }
+  }
+`;

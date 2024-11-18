@@ -7,12 +7,32 @@ import {
 import {
   getCarrierService as shopifyGetCarrierService,
   createCarrierService as shopifyCreateCarrierService,
+  deleteCarrierService as shopifyDeleteCarrierService,
 } from '~/services/shopify/carrierService';
+
+// Added this implementation because I often delete the dev branch to save on costs, and the callback url is the old callback url rather than the new one deployed
+async function removeOutdatedCarrierService(
+  sessionId: string,
+  graphql: GraphQL,
+) {
+  const shopifyCarrierService = await shopifyGetCarrierService(
+    sessionId,
+    graphql,
+  );
+  if (
+    shopifyCarrierService &&
+    shopifyCarrierService.callbackUrl !==
+      process.env.CARRIER_SERVICE_CALLBACK_URL
+  ) {
+    shopifyDeleteCarrierService(shopifyCarrierService.id, graphql);
+  }
+}
 
 export async function getOrCreateCarrierService(
   sessionId: string,
   graphql: GraphQL,
 ) {
+  await removeOutdatedCarrierService(sessionId, graphql);
   const [dbCarrierServiceExists, shopifyCarrierService] = await Promise.all([
     userHasCarrierService(sessionId),
     shopifyGetCarrierService(sessionId, graphql),

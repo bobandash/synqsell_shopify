@@ -1,6 +1,7 @@
 import type { GraphQL } from '~/types';
 import {
   CREATE_CARRIER_SERVICE,
+  DELETE_CARRIER_SERVICE,
   GET_INITIAL_CARRIER_SERVICES,
   GET_SUBSEQUENT_CARRIER_SERVICES,
 } from './graphql';
@@ -25,8 +26,7 @@ type CarrierServiceDetail = {
   callbackUrl: string;
 };
 
-// helper function for getCarrierService
-async function getAllCarrierServices(graphql: GraphQL) {
+export async function getAllCarrierServices(graphql: GraphQL) {
   const carrierServices: CarrierServiceDetail[] = [];
   let hasNextPage = true;
   let isInitialFetch = true;
@@ -93,4 +93,19 @@ export async function createCarrierService(
     id: carrierServiceCreate?.carrierService?.id ?? '',
     name: carrierServiceCreate?.carrierService?.name ?? '',
   };
+}
+
+export async function deleteCarrierService(
+  carrierServiceId: string,
+  graphql: GraphQL,
+) {
+  const variables = {
+    id: carrierServiceId,
+  };
+  await mutateInternalStoreAdminAPI<CarrierServiceCreateMutation>(
+    graphql,
+    DELETE_CARRIER_SERVICE,
+    variables,
+    'Failed to delete carrier service.',
+  );
 }
