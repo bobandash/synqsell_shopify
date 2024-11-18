@@ -14,18 +14,13 @@ type RetailerImportedProductDetail = {
 // ==============================================================================================================
 
 async function getSession(sessionId: string, client: PoolClient) {
-    try {
-        const query = `SELECT * FROM "Session" WHERE id = $1 LIMIT 1`;
-        const sessionData = await client.query(query, [sessionId]);
-        if (sessionData.rows.length === 0) {
-            throw new Error('Shop data is invalid.');
-        }
-        const session = sessionData.rows[0];
-        return session as Session;
-    } catch (error) {
-        console.error(error);
-        throw new Error(`Failed to retrieve session from sessionId ${sessionId}.`);
+    const query = `SELECT * FROM "Session" WHERE id = $1 LIMIT 1`;
+    const sessionData = await client.query(query, [sessionId]);
+    if (sessionData.rows.length === 0) {
+        throw new Error('Shop data is invalid.');
     }
+    const session = sessionData.rows[0];
+    return session as Session;
 }
 
 // ==============================================================================================================
@@ -45,24 +40,19 @@ function groupByRetailer(retailerImportedProductDetails: RetailerImportedProduct
 }
 
 async function getAllRetailerImportedProductDetails(supplierId: string, client: PoolClient) {
-    try {
-        // retrieves all imported product ids from products listed by supplier
-        const query = `
-          SELECT 
-            "ImportedProduct"."shopifyProductId" AS "retailerShopifyProductId",
-            "ImportedProduct"."retailerId"
-          FROM "ImportedProduct"
-          INNER JOIN "Product" ON "ImportedProduct"."prismaProductId" = "Product"."id"
-          INNER JOIN "PriceList" ON "PriceList"."id" = "Product"."priceListId"
-          WHERE "PriceList"."supplierId" = $1
-        `;
-        const res = await client.query(query, [supplierId]);
-        const data: RetailerImportedProductDetail[] = res.rows;
-        return data;
-    } catch (error) {
-        console.error(error);
-        throw new Error(`Failed to get all retailer imported product details from supplier ${supplierId}`);
-    }
+    // retrieves all imported product ids from products listed by supplier
+    const query = `
+        SELECT 
+        "ImportedProduct"."shopifyProductId" AS "retailerShopifyProductId",
+        "ImportedProduct"."retailerId"
+        FROM "ImportedProduct"
+        INNER JOIN "Product" ON "ImportedProduct"."prismaProductId" = "Product"."id"
+        INNER JOIN "PriceList" ON "PriceList"."id" = "Product"."priceListId"
+        WHERE "PriceList"."supplierId" = $1
+    `;
+    const res = await client.query(query, [supplierId]);
+    const data: RetailerImportedProductDetail[] = res.rows;
+    return data;
 }
 
 // ==============================================================================================================

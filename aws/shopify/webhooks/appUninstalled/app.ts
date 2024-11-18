@@ -1,39 +1,8 @@
-import { APIGatewayProxyResult } from 'aws-lambda';
 import { PoolClient } from 'pg';
 import { initializePool } from './db';
 import { RolesOptions, Session, ShopifyEvent } from './types';
-import { markRetailerProductsArchived, updateAppUninstalledStatus, deleteRetailerImportedProductsDb } from './helper';
+import { markRetailerProductsArchived, updateUninstalledDb, deleteRetailerImportedProductsDb } from './helper';
 import { ROLES } from './constants';
-
-async function getSession(shop: string, client: PoolClient) {
-    try {
-        const query = `SELECT * FROM "Session" WHERE shop = $1 LIMIT 1`;
-        const sessionData = await client.query(query, [shop]);
-        if (sessionData.rows.length === 0) {
-            throw new Error('Shop data is invalid.');
-        }
-        const session = sessionData.rows[0];
-        return session as Session;
-    } catch (error) {
-        console.error(error);
-        throw new Error(`Failed to retrieve session from shop ${shop}.`);
-    }
-}
-
-async function isRole(sessionId: string, role: RolesOptions, client: PoolClient) {
-    try {
-        const query = `
-            SELECT * FROM "Role"
-            WHERE "name" = $1 AND "sessionId" = $2
-            LIMIT 1
-        `;
-        const res = await client.query(query, [role, sessionId]);
-        return res.rows.length > 0;
-    } catch (error) {
-        console.error(error);
-        throw new Error(`Failed to check if session id ${sessionId} is a supplier.`);
-    }
-}
 
 // when the app/uninstalled webhook runs, the access token to use GraphQL's Admin API is already invalidated
 // this means that, if the user is a retailer, then there's no possible way to delete the products imported on their store already
@@ -47,7 +16,28 @@ async function isRole(sessionId: string, role: RolesOptions, client: PoolClient)
 
 // for suppliers, we will change the status of the retailer's products as archived, and the products/update will make sure the retailer cannot change the archived status in the products/update webhook
 // When 48 hours pass for the shop/redact webhook to run, the retailers' imported products will be automatically deleted from their store
-export const lambdaHandler = async (event: ShopifyEvent): Promise<APIGatewayProxyResult> => {
+
+async function getSession(shop: string, client: PoolClient) {
+    const query = `SELECT * FROM "Session" WHERE shop = $1 LIMIT 1`;
+    const sessionData = await client.query(query, [shop]);
+    if (sessionData.rows.length === 0) {
+        throw new Error('Shop data is invalid.');
+    }
+    const session = sessionData.rows[0];
+    return session as Session;
+}
+
+async function hasRole(sessionId: string, role: RolesOptions, client: PoolClient) {
+    const query = `
+        SELECT * FROM "Role"
+        WHERE "name" = $1 AND "sessionId" = $2
+        LIMIT 1
+    `;
+    const res = await client.query(query, [role, sessionId]);
+    return res.rows.length > 0;
+}
+
+export const lambdaHandler = async (event: ShopifyEvent) => {
     const shop = event.detail['metadata']['X-Shopify-Shop-Domain'];
     let client: null | PoolClient = null;
     try {
@@ -56,34 +46,18 @@ export const lambdaHandler = async (event: ShopifyEvent): Promise<APIGatewayProx
 
         const session = await getSession(shop, client);
         const [isSupplier, isRetailer] = await Promise.all([
-            isRole(session.id, ROLES.SUPPLIER, client),
-            isRole(session.id, ROLES.RETAILER, client),
+            hasRole(session.id, ROLES.SUPPLIER, client),
+            hasRole(session.id, ROLES.RETAILER, client),
         ]);
 
-        if (isSupplier) {
-            await markRetailerProductsArchived(session.id, client);
-        }
-
-        if (isRetailer) {
-            await deleteRetailerImportedProductsDb(session.id, client);
-        }
-
-        await updateAppUninstalledStatus(session.id, client);
-        return {
-            statusCode: 200,
-            body: JSON.stringify({
-                message: `Successfully handled uninstall webhook for shop ${shop}.`,
-            }),
-        };
+        await Promise.all([
+            ...(isSupplier ? [markRetailerProductsArchived(session.id, client)] : []),
+            ...(isRetailer ? [deleteRetailerImportedProductsDb(session.id, client)] : []),
+            updateUninstalledDb(session.id, client),
+        ]);
     } catch (error) {
         console.error(error);
-        return {
-            statusCode: 500,
-            body: JSON.stringify({
-                message: `Could not handle uninstall webhook for shop ${shop}.`,
-                error: (error as Error).message,
-            }),
-        };
+        throw error;
     } finally {
         if (client) {
             client.release();

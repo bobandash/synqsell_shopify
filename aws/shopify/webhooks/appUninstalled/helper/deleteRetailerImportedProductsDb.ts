@@ -6,11 +6,10 @@ async function deleteRetailerImportedProductsDb(retailerId: string, client: Pool
         DELETE FROM "ImportedProduct"
         WHERE "retailerId" = $1
       `;
-        const res = await client.query(query, [retailerId]);
-        console.log(`Deleted ${res.rows.length} imported products from retailerId ${retailerId} in database.`);
+        await client.query(query, [retailerId]);
     } catch (error) {
-        console.error(error);
-        throw new Error(`Failed to delete all retailer imported products from the database for retailer ${retailerId}`);
+        console.error(`Failed to delete all retailer imported products from the database for retailer ${retailerId}`);
+        throw error;
     }
 }
 
