@@ -2,22 +2,45 @@
 
 This section stores all the infrastructure for SynqSell (including but not limited to: all Lambda functions to handle Shopify and Stripe webhook topics, API Gateway for Carrier Service API, deployment infra on AWS (RDS, ECR, ECS, etc).
 
-To reference how to set up the project locally, please click <a href="https://github.com/bobandash/synqsell_shopify">here</a>.
+To reference how to set up the project locally, please go back to the <a href="https://github.com/bobandash/synqsell_shopify">main README</a>.
 
-# Helpful Links
+## Helpful Links
 - [CFN common pseudo parameters](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/pseudo-parameter-reference.html)
 - [List of prebuilt managed policies](https://docs.aws.amazon.com/aws-managed-policy/latest/reference/AmazonECSTaskExecutionRolePolicy.html)
 
 ## Architecture Reasoning
 
+This section aims to explain why I needed AWS, and what resources I provisioned / rationale for some of my decisions.
 
+### Why AWS?
+The primary reason I chose AWS was to reliably handle Shopify’s webhooks. SynqSell’s core functionality is to ensure real-time data synchronization between two Shopify stores. If my application server is down when a webhook event is received, I risk losing critical data. This could lead to significant issues, such as a product being deleted on the supplier's end but remaining in the retailer’s store due to the missed event. To prevent such scenarios, AWS provides the resilience and reliability I need for webhook processing, ensuring no data is lost.
 
-// There are pros and cons to my approach; this is the explanation to my coordinator function
-// My two main options are using an SQS as the EventBridge's rule, or directly using a Lambda functions and directing the event to each one
-// I chose to use an SQS because it would be able to automatically process the webhooks using FIFO, decouple the webhook application logic from the webhook delivery (so only one event is processed at once), and I could use a DLQ to reprocess the request
-// And, even from this, I have multiple options too: create multiple SQS with each Shopify webhook topic; create one SQS and a webhooks coordinator function
-// It could potentially be better to do multiple SQS for each Shopify webhook topic, but this configuration with a coordinator function is just simpler and it processes all the webhooks in order through FIFO; rather than every SQS having FIFO rules and processing at different times ACROSS topics depending on the lambda
-// And, I can use the coordinator function to invoke the Lambdas async (so I'm not waiting for the Lambdas to finish running inside the coordinator function), and just set up a DLQ on the Lambda functions handling each topic, so that I can retry the Lambda functions with the prompt in case something fails
+### Key Design Decisions & Trade-offs
+Serverless First Approach
+Given that SynqSell doesn’t yet have a user base, I opted for a serverless architecture where possible to keep costs efficient and scale based on demand:
+
+AWS Fargate over EC2: I chose Fargate for container orchestration to avoid the overhead of managing EC2 instances. Fargate’s serverless model automatically scales with my needs, which is ideal while I assess the application's load requirements. If the application usage stabilizes, I can transition to EC2 Reserved Instances for cost optimization.
+
+### Resilient Webhook Handling with EventBridge and SQS
+To ensure high availability and durability of Shopify webhooks:
+
+#### EventBridge + FIFO SQS: 
+I configured Amazon EventBridge to route all incoming Shopify webhooks to a FIFO SQS queue. This setup ensures that events are processed in order and eliminates duplicates. A Dead Letter Queue (DLQ) is attached to capture any events that fail processing, providing a fail-safe mechanism.
+
+#### Single SQS Queue with a Webhook Coordinator: 
+Instead of creating multiple SQS queues for each Shopify webhook topic, I chose a simpler design using one FIFO SQS and a coordinator function. This approach processes all events in order while reducing the complexity of managing multiple queues and their processing times. Although dedicated queues per topic could offer parallel processing, my current design ensures ordered processing across all topics, which is better for data consistency.
+
+#### Decoupled and Scalable Processing with Lambda
+The coordinator function asynchronously invokes separate Lambda functions to handle each webhook topic:
+
+Async Lambda Invocation: By invoking Lambdas asynchronously, the coordinator function doesn't wait for them to complete, which speeds up the overall processing time.
+Lambda DLQ for Error Handling: Each Lambda function should be by its own DLQ, which would allow me to retry failed webhook processing. This setup ensures robustness by isolating failures and enabling targeted retries without affecting the main event flow.
+
+#### Future Considerations
+As SynqSell gains users and traffic patterns become more predictable, I plan to revisit certain architectural decisions:
+
+Multi-AZ Deployment: Currently, I’m not leveraging multiple Availability Zones for resources like Lambda and NAT Gateways to reduce costs. If the application scales, I will have to use more resilient, multi-AZ infra setup.
+EC2 Reserved Instances: If load patterns become stable, migrating from Fargate to EC2 Reserved Instances could significantly reduce costs.
 
 ## Common Commands
 
