@@ -12,6 +12,7 @@ export async function userHasBilling(sessionId: string) {
   if (billing) {
     return true;
   }
+  return false;
 }
 
 export async function addBilling(
