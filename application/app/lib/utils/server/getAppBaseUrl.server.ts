@@ -7,10 +7,10 @@ function getAppBaseUrl(shop: string) {
       const appName = 'synqsell-dev';
       appBaseUrl = `https://${shop}/admin/apps/${appName}/`;
       break;
-    case 'production':
+    case 'test':
       appBaseUrl = `https://app.staging.synqsell.com/admin/apps/${process.env.SHOPIFY_API_KEY}`;
       break;
-    case 'test':
+    case 'production':
       appBaseUrl = `https://app.prod.synqsell.com/admin/apps/${process.env.SHOPIFY_API_KEY}`;
       break;
     default:

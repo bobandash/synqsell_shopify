@@ -1,17 +1,17 @@
 // constants that depend on env variables
-const getServiceName = (env: string) => {
-  switch (env) {
+function getServiceName() {
+  const environment = process.env.NODE_ENV;
+  switch (environment) {
     case 'development':
       return 'SynqSell-Dev';
-    case 'staging':
+    case 'test':
       return 'SynqSell-Staging';
     case 'production':
       return 'SynqSell';
     default:
       return 'SynqSell';
   }
-};
-
+}
 const getCarrierServiceCallbackUrl = (sessionId: string) => {
   const callbackUrl = process.env.CARRIER_SERVICE_CALLBACK_URL;
   if (!callbackUrl) {
@@ -22,7 +22,7 @@ const getCarrierServiceCallbackUrl = (sessionId: string) => {
 
 export const getCarrierServiceDetails = (sessionId: string) => {
   return {
-    name: getServiceName(process.env.NODE_ENV),
+    name: getServiceName(),
     callbackUrl: getCarrierServiceCallbackUrl(sessionId),
   };
 };
