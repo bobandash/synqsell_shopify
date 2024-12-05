@@ -1,4 +1,4 @@
-import winston from 'winston';
+import * as winston from 'winston';
 
 const { createLogger, format, transports } = winston;
 const { combine, json } = format;

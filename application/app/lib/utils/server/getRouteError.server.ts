@@ -1,21 +1,8 @@
 import { Prisma } from '@prisma/client';
-import { json } from '@remix-run/node';
 import * as createHttpError from 'http-errors';
 import { StatusCodes } from 'http-status-codes';
 import { ValidationError } from 'yup';
-
-function getErrorFormat(message: string, statusCode: number) {
-  return json(
-    {
-      error: {
-        message: message,
-      },
-    },
-    {
-      status: statusCode,
-    },
-  );
-}
+import createJSONError from './createJSONError.server';
 
 function getRouteError(defaultHumanReadableMessage: string, error: any) {
   const internalServerErrorMessage = !defaultHumanReadableMessage
@@ -29,17 +16,17 @@ function getRouteError(defaultHumanReadableMessage: string, error: any) {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     switch (error.code) {
       case 'P2002':
-        return getErrorFormat(
+        return createJSONError(
           defaultHumanReadableMessage,
           StatusCodes.CONFLICT,
         );
       case 'P2025':
-        return getErrorFormat(
+        return createJSONError(
           defaultHumanReadableMessage,
           StatusCodes.NOT_FOUND,
         );
       default:
-        return getErrorFormat(
+        return createJSONError(
           internalServerErrorMessage,
           StatusCodes.INTERNAL_SERVER_ERROR,
         );
@@ -48,21 +35,21 @@ function getRouteError(defaultHumanReadableMessage: string, error: any) {
 
   // override the default human readable message in these cases
   if (error instanceof ValidationError) {
-    return getErrorFormat(error.message, StatusCodes.BAD_REQUEST);
+    return createJSONError(error.message, StatusCodes.BAD_REQUEST);
   }
 
   if (error instanceof createHttpError.HttpError) {
-    return getErrorFormat(error.message, error.statusCode);
+    return createJSONError(error.message, error.statusCode);
   }
 
   if (error instanceof Error) {
-    return getErrorFormat(
+    return createJSONError(
       internalServerErrorMessage,
       StatusCodes.INTERNAL_SERVER_ERROR,
     );
   }
 
-  return getErrorFormat(
+  return createJSONError(
     'An internal server error occurred. Please contact support.',
     StatusCodes.INTERNAL_SERVER_ERROR,
   );

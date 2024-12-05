@@ -1,7 +1,16 @@
 import { json } from '@remix-run/node';
+import logError from './logError.server';
 
-// this is for explicit error messages inside the loader or action
+// This function is used to get errors for actions / loaders to pass to UI
 function createJSONError(message: string, statusCode: number) {
+  if (statusCode < 400 || statusCode >= 600) {
+    logError(
+      new Error(`Invalid statusCode input ${statusCode} for ${message}`),
+      'createJSONError',
+    );
+    statusCode = 500;
+  }
+
   return json(
     {
       error: {

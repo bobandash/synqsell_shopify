@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import logger from '~/logger';
 import { Prisma } from '@prisma/client';
-import createHttpError from 'http-errors';
+import { HttpError } from 'http-errors';
 // https://medium.com/@psdevraye/best-practices-for-exception-logging-in-spring-boot-real-time-examples-5139607103aa#:~:text=Exception%20Message%3A%20Log%20the%20exception%20message%20itself%2C%20which,the%20exact%20location%20and%20cause%20of%20the%20error.
 // ^ always log stack trace
 // http://www.blueskyline.com/ErrorPatterns/ErrorPatternsPaper.pdf
@@ -20,7 +20,7 @@ function logError(error: unknown, context: string) {
   const referenceId = getLogReferenceId();
 
   // HTTP Errors are treated as explicitly defined and business logic (e.g. unauthorized to view route; we don't have to log these)
-  if (error instanceof createHttpError.HttpError) {
+  if (error instanceof HttpError) {
     logger.info({
       referenceId,
       context,
