@@ -12,5 +12,4 @@ export type ShopifySession = {
   expires?: Date | undefined;
   accessToken?: string | undefined;
 };
-
 export type DeploymentEnv = 'development' | 'staging' | 'production';
