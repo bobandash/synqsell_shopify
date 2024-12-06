@@ -1,4 +1,4 @@
-import db from '../../db.server';
+import db from '~/db.server';
 import { type Prisma } from '@prisma/client';
 import { getChecklistItem } from './checklistItem.server';
 import type { ChecklistItemKeysOptions } from '~/constants';

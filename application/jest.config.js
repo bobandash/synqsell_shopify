@@ -1,10 +1,8 @@
 /** @type {import('ts-jest').JestConfigWithTsJest} **/
 export default {
-  testEnvironment: 'node',
-  transform: {
-    '^.+.tsx?$': ['ts-jest', {}],
-  },
-  moduleNameMapper: {
-    '^~/(.*)$': '<rootDir>/app/$1',
-  },
+  moduleFileExtensions: ['js', 'jsx', 'ts', 'tsx', 'json', 'node'],
+  projects: [
+    '<rootDir>/jest.unit.config.js',
+    '<rootDir>/jest.integration.config.js',
+  ],
 };

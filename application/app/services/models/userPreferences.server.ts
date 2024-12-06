@@ -1,4 +1,4 @@
-import db from '../../db.server';
+import db from '~/db.server';
 import createHttpError from 'http-errors';
 
 export type UserPreferenceData = {

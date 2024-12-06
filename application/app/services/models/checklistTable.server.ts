@@ -1,4 +1,4 @@
-import db from '../../db.server';
+import db from '~/db.server';
 import { getUserPreferences } from './userPreferences.server';
 
 export async function hasChecklistTable(id: string): Promise<boolean> {

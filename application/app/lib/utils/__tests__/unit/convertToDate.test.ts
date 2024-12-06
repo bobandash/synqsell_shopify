@@ -1,4 +1,4 @@
-import convertToDate from '../convertToDate';
+import convertToDate from '../../convertToDate';
 
 describe('convertToDate', () => {
   test('should not be able to convert date if empty string', () => {

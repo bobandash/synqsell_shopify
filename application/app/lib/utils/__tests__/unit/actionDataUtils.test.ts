@@ -1,4 +1,4 @@
-import { isActionDataError, isActionDataSuccess } from '../actionDataUtils';
+import { isActionDataError, isActionDataSuccess } from '../../actionDataUtils';
 
 describe('isActionDataError', () => {
   it('should return true if matches format', () => {

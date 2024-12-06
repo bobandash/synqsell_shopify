@@ -2,10 +2,10 @@ import { Prisma } from '@prisma/client';
 import { Unauthorized } from 'http-errors';
 import { StatusCodes } from 'http-status-codes';
 import { ValidationError } from 'yup';
-import getRouteError from '../getRouteError.server';
+import getRouteError from '../../getRouteError.server';
 
-jest.mock('../createJSONError.server', () => ({
-  ...jest.requireActual('../createJSONError.server'),
+jest.mock('../../createJSONError.server', () => ({
+  ...jest.requireActual('../../createJSONError.server'),
   __esModule: true,
   default: jest.fn((message, statusCode) => ({ message, statusCode })),
 }));

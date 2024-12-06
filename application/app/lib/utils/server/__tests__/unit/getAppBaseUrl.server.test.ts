@@ -1,4 +1,4 @@
-import getAppBaseUrl from '../getAppBaseUrl.server';
+import getAppBaseUrl from '../../getAppBaseUrl.server';
 
 describe('getAppBaseUrl', () => {
   const originalEnv = process.env;

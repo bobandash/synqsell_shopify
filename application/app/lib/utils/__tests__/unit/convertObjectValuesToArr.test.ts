@@ -1,4 +1,4 @@
-import convertObjectValuesToArr from '../convertObjectValuesToArr';
+import convertObjectValuesToArr from '../../convertObjectValuesToArr';
 
 describe('convertObjectValuesToArr', () => {
   test('should convert object values to array', () => {

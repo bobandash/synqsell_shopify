@@ -1,4 +1,4 @@
-import db from '../../db.server';
+import db from '~/db.server';
 import { deletePartnershipRequestsTx } from '../models/partnershipRequest.server';
 import {
   PARTNERSHIP_REQUEST_TYPE,

@@ -4,8 +4,9 @@
   "scripts": {
     "build": "remix vite:build",
     "dev": "shopify app dev",
-    "test": "cross-env NODE_ENV=test && jest",
-    "test:watch": "cross-env NODE_ENV=test jest --watch",
+    "test": "dotenv -e .env.test cross-env NODE_ENV=test && jest",
+    "test:watch": "cross-env NODE_ENV=test dotenv -e .env.test -- jest --watch",
+    "test:seed": "dotenv -e .env.test cross-env NODE_ENV=test tsx prisma/test-seed.ts",
     "config:link": "shopify app config link",
     "generate": "shopify app generate",
     "deploy": "shopify app deploy",
@@ -67,6 +68,7 @@
     "yup": "^1.4.0"
   },
   "devDependencies": {
+    "@quramy/jest-prisma": "^1.8.1",
     "@remix-run/eslint-config": "^2.7.1",
     "@shopify/api-codegen-preset": "^1.1.1",
     "@shopify/app-bridge-types": "^0.0.14",

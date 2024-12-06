@@ -1,4 +1,4 @@
-import convertFormDataToObject from '../convertFormDataToObject';
+import convertFormDataToObject from '../../convertFormDataToObject';
 
 describe('convertFormDataToObject', () => {
   let formData: FormData;

@@ -1,5 +1,5 @@
 import type { AllFulfillmentServicesQuery } from '~/types/admin.generated';
-import db from '../../db.server';
+import db from '~/db.server';
 
 export type FulfillmentServiceShopifyProps = {
   id: string;

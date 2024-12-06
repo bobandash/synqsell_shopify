@@ -1,4 +1,4 @@
-import convertToTitleCase from '../convertToTitleCase';
+import convertToTitleCase from '../../convertToTitleCase';
 
 describe('convertToTitleCase', () => {
   test('should capitalize words in a phrase with spaces', () => {

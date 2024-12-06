@@ -1,5 +1,5 @@
-import createJSONError from '../createJSONError.server';
-const logError = jest.requireActual('../logError.server');
+import createJSONError from '../../createJSONError.server';
+const logError = jest.requireActual('../../logError.server');
 
 describe('createJSONError', () => {
   const spyLogError = jest.spyOn(logError, 'default');

@@ -1,5 +1,5 @@
 import type { Prisma } from '@prisma/client';
-import db from '../../db.server';
+import db from '~/db.server';
 import { ROLES } from '~/constants';
 import { convertObjectValuesToArr } from '~/lib/utils';
 

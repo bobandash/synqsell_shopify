@@ -1,5 +1,5 @@
 import { BadRequest } from 'http-errors';
-import createJSONSuccess from '../createJSONSuccess.server';
+import createJSONSuccess from '../../createJSONSuccess.server';
 describe('createJSONSuccess', () => {
   it('should return a consistent JSON structure for a given success', async () => {
     const message = 'Successfully logged in.';

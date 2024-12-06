@@ -3,7 +3,6 @@ function convertToDate(date: string) {
   if (parsedDate === 'Invalid Date') {
     throw new Error('Invalid date format');
   }
-
   return parsedDate;
 }
 

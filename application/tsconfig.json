@@ -1,10 +1,5 @@
 {
-  "include": [
-    "env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    "app/lib/utils/server/tests/getRouteError.server.testts"
-  ],
+  "include": ["env.d.ts", "**/*.ts", "**/*.tsx", "jest.integration.config.js"],
   "compilerOptions": {
     "lib": ["DOM", "DOM.Iterable", "ES2022"],
     "strict": true,
@@ -22,8 +17,10 @@
     "target": "ES2022",
     "baseUrl": ".",
     "paths": {
-      "~/*": ["./app/*"]
+      "~/*": ["./app/*"],
+      "@fixtures/*": ["prisma/fixtures/*"],
+      "@factories/*": ["prisma/factories/*"]
     },
-    "types": ["node", "jest"]
+    "types": ["node", "jest", "@quramy/jest-prisma"]
   }
 }

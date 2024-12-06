@@ -1,4 +1,4 @@
-import createMapIdToRestObj from '../createMapIdToRestObj';
+import createMapIdToRestObj from '../../createMapIdToRestObj';
 
 describe('createMapIdToRestObj', () => {
   test(`should create a hashmap with the key's value to other object values`, () => {

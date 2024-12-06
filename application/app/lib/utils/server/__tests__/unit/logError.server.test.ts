@@ -1,5 +1,5 @@
 import { NotFound } from 'http-errors';
-import logError, { exportsForTesting } from '../logError.server';
+import logError, { exportsForTesting } from '../../logError.server';
 import { v4 as uuidv4 } from 'uuid';
 import logger from '~/logger';
 import { Prisma } from '@prisma/client';

@@ -1,5 +1,5 @@
 import type { CurrencyCode } from '~/types/admin.types';
-import getCurrencySign from '../getCurrencySign';
+import getCurrencySign from '../../getCurrencySign';
 
 describe('getCurrencySign', () => {
   test(`should convert currency code to matching currency sign.`, () => {
