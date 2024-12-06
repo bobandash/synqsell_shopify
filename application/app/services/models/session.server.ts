@@ -73,37 +73,3 @@ export async function addStorefrontAccessToken(
     },
   });
 }
-
-export async function hasStripeConnectAccount(sessionId: string) {
-  const res = await db.session.findFirstOrThrow({
-    where: {
-      id: sessionId,
-    },
-    select: {
-      stripeConnectAccount: true,
-    },
-  });
-
-  if (res.stripeConnectAccount) {
-    return true;
-  }
-  return false;
-}
-
-// TODO: Consider whether or not to remove this
-// even if a stripe customer account exists doesn't mean that there is a payment method
-export async function hasStripePaymentsAccount(sessionId: string) {
-  const res = await db.session.findFirstOrThrow({
-    where: {
-      id: sessionId,
-    },
-    select: {
-      stripeCustomerAccount: true,
-    },
-  });
-
-  if (res.stripeCustomerAccount) {
-    return true;
-  }
-  return false;
-}
