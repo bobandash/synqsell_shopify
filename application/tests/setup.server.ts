@@ -10,8 +10,17 @@ config({ path: path.join(__dirname, '../.env.test') });
 
 beforeAll(async () => {
   await promisify(exec)('npx prisma db push --accept-data-loss');
+
   await clearDatabase();
 }, 60000);
+
+beforeEach(async () => {
+  await db.$executeRaw`BEGIN`;
+});
+
+afterEach(async () => {
+  await db.$executeRaw`ROLLBACK`;
+});
 
 afterAll(async () => {
   await db.$disconnect();
