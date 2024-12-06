@@ -39,11 +39,7 @@ function logError(error: unknown, context: string) {
       context,
       name: 'PrismaError',
       code: error.code,
-      message: error.message,
-      meta: {
-        code: error.code,
-        clientVersion: error.clientVersion,
-      },
+      message: 'Failed to handle query constraint.',
     });
     return;
   }
@@ -53,7 +49,7 @@ function logError(error: unknown, context: string) {
       referenceId,
       context,
       name: 'PrismaInitializationError',
-      message: error.message,
+      message: 'Failed to reach database.',
       clientVersion: error.clientVersion,
     });
     return;
@@ -64,7 +60,7 @@ function logError(error: unknown, context: string) {
       referenceId,
       context,
       name: 'PrismaValidationError',
-      message: error.message,
+      message: 'Failed to validate database query parameters.',
     });
     return;
   }
@@ -96,3 +92,6 @@ function logError(error: unknown, context: string) {
 }
 
 export default logError;
+
+export const exportsForTesting =
+  process.env.NODE_ENV === 'test' ? { getLogReferenceId } : undefined;
