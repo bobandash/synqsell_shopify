@@ -82,11 +82,8 @@ export async function getTablesAndStatuses(sessionId: string) {
   const transformedTables = tables.map((table) => {
     // activeIndex for which checklist item to display
     let activeIndex = table.checklistItems.findIndex(
-      ({ checklistStatuses }) => {
-        return (
-          checklistStatuses.length > 0 && !checklistStatuses[0].isCompleted
-        );
-      },
+      ({ checklistStatuses }) =>
+        checklistStatuses.length > 0 && !checklistStatuses[0].isCompleted,
     );
     activeIndex = activeIndex === -1 ? 0 : activeIndex;
 

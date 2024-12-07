@@ -9,18 +9,13 @@ import { exec } from 'child_process';
 config({ path: path.join(__dirname, '../.env.test') });
 
 beforeAll(async () => {
-  await promisify(exec)('npx prisma db push --accept-data-loss');
-
   await clearDatabase();
+  await promisify(exec)('npx prisma db push --accept-data-loss');
 }, 60000);
 
-beforeEach(async () => {
-  await db.$executeRaw`BEGIN`;
-});
-
 afterEach(async () => {
-  await db.$executeRaw`ROLLBACK`;
-});
+  await clearDatabase();
+}, 60000);
 
 afterAll(async () => {
   await db.$disconnect();
