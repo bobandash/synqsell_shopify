@@ -62,10 +62,7 @@ export async function createFulfillmentService(graphql: GraphQL) {
   return fulfillmentService;
 }
 
-export async function getOrCreateFulfillmentService(
-  sessionId: string,
-  graphql: GraphQL,
-) {
+export async function getOrCreateFulfillmentService(graphql: GraphQL) {
   let fulfillmentService = await getFulfillmentService(graphql);
   if (fulfillmentService) {
     return fulfillmentService;

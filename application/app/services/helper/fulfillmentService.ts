@@ -13,11 +13,8 @@ export async function getOrCreateFulfillmentService(
   sessionId: string,
   graphql: GraphQL,
 ) {
-  let shopifyFulfillmentService;
-  shopifyFulfillmentService = await shopifyGetOrCreateFulfillmentService(
-    sessionId,
-    graphql,
-  );
+  const shopifyFulfillmentService =
+    await shopifyGetOrCreateFulfillmentService(graphql);
   const prismaFulfillmentService = await prismaGetOrCreateFulfillmentService(
     sessionId,
     shopifyFulfillmentService,

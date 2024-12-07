@@ -53,21 +53,6 @@ export async function userGetFulfillmentService(sessionId: string) {
   });
   return fulfillmentService;
 }
-
-export async function hasShopifyFulfillmentServiceId(
-  shopifyFulfillmentServiceId: string,
-) {
-  const fulfillmentService = await db.fulfillmentService.findFirst({
-    where: {
-      shopifyFulfillmentServiceId,
-    },
-  });
-  if (!fulfillmentService) {
-    return false;
-  }
-  return true;
-}
-
 // methods for deleting a fulfillment service in prisma
 export async function deleteFulfillmentService(id: string) {
   const deletedFulfillmentService = await db.fulfillmentService.delete({
@@ -82,9 +67,9 @@ export async function getOrCreateFulfillmentService(
   sessionId: string,
   shopifyFulfillmentService: AllFulfillmentServicesQuery['shop']['fulfillmentServices'][0],
 ) {
-  const fulfillmentServiceExists = await hasFulfillmentService(sessionId);
+  const fulfillmentServiceExists = await userHasFulfillmentService(sessionId);
   if (fulfillmentServiceExists) {
-    const fulfillmentService = await getFulfillmentService(sessionId);
+    const fulfillmentService = await userGetFulfillmentService(sessionId);
     return fulfillmentService;
   }
 
