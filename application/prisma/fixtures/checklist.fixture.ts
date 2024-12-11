@@ -1,5 +1,5 @@
 import { CHECKLIST_ITEM_KEYS } from '~/constants';
-import { sampleSession } from './session.fixture';
+import { simpleFaker } from '@faker-js/faker';
 
 const sampleChecklistTable = {
   id: 'checklist-table-1',
@@ -31,25 +31,25 @@ const sampleChecklistItemTwo = {
   checklistTableId: sampleChecklistTable.id,
 };
 
-const sampleChecklistStatusOne = {
-  id: 'checklist-status-1',
+const sampleChecklistStatusOne = (sessionId: string) => ({
+  id: simpleFaker.string.uuid(),
   checklistItemId: sampleChecklistItemOne.id,
   isCompleted: false,
-  sessionId: sampleSession.id,
-};
+  sessionId,
+});
 
-const sampleChecklistStatusTwo = {
-  id: 'checklist-status-2',
+const sampleChecklistStatusTwo = (sessionId: string) => ({
+  id: simpleFaker.string.uuid(),
   checklistItemId: sampleChecklistItemTwo.id,
   isCompleted: false,
-  sessionId: sampleSession.id,
-};
+  sessionId,
+});
 
-const sampleUserPreference = {
-  id: 'user-preference-1',
+const sampleUserPreference = (sessionId: string) => ({
+  id: simpleFaker.string.uuid(),
   tableIdsHidden: [sampleChecklistTable.id],
-  sessionId: sampleSession.id,
-};
+  sessionId,
+});
 
 export {
   sampleChecklistItemOne,
