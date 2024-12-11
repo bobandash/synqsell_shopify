@@ -8,17 +8,21 @@ import {
 } from '@fixtures/checklist.fixture';
 import {
   getChecklistStatus,
+  getChecklistStatusBatch,
   hasChecklistStatus,
   isChecklistStatusCompleted,
   isValidChecklistStatusId,
   markCheckListStatus,
   updateChecklistStatus,
+  updateChecklistStatusBatchTx,
   updateChecklistStatusTx,
 } from '../../checklistStatus.server';
 import db from '~/db.server';
 import { sampleSession } from '@fixtures/session.fixture';
 import { createSampleSession } from '@factories/session.factories';
 import type { ChecklistStatus } from '@prisma/client';
+import type { Session } from '../../session.server';
+import type { ChecklistItemKeysOptions } from '~/constants';
 
 describe('Checklist Status', () => {
   const nonExistentId = simpleFaker.string.uuid();
@@ -123,16 +127,6 @@ describe('Checklist Status', () => {
             isCompleted: true,
           },
         });
-
-        console.log(await db.checklistStatus.findMany({}));
-        console.log(
-          await db.checklistStatus.findFirst({
-            where: {
-              sessionId: sampleSession.id,
-              checklistItemId: sampleChecklistItemOne.id,
-            },
-          }),
-        );
         const isCompleted = await isChecklistStatusCompleted(
           sampleSession.id,
           sampleChecklistItemOne.id,
@@ -298,57 +292,140 @@ describe('Checklist Status', () => {
     });
   });
 
-  // describe('Multiple Users', () => {
-  //   let sessionOne: Session;
-  //   let sessionTwo: Session;
-  //   beforeEach(async () => {
-  //     sessionOne = await createSampleSession({
-  //       id: simpleFaker.string.uuid(),
-  //     });
-  //     sessionTwo = await createSampleSession({
-  //       id: simpleFaker.string.uuid(),
-  //     });
-  //   });
-  // });
+  describe('Multiple Users', () => {
+    const nonExistentId = simpleFaker.string.uuid();
+    let userOne: {
+      session: Session;
+      checklistStatusOne: ChecklistStatus;
+      checklistStatusTwo: ChecklistStatus;
+    };
+    let userTwo: {
+      session: Session;
+      checklistStatusOne: ChecklistStatus;
+      checklistStatusTwo: ChecklistStatus;
+    };
+
+    beforeEach(async () => {
+      await createSampleChecklistTable();
+      const [sessionOne, sessionTwo] = await Promise.all([
+        createSampleSession({
+          id: simpleFaker.string.uuid(),
+        }),
+        createSampleSession({
+          id: simpleFaker.string.uuid(),
+        }),
+      ]);
+      userOne = {
+        session: sessionOne,
+        checklistStatusOne: await db.checklistStatus.create({
+          data: sampleChecklistStatusOne(sessionOne.id),
+        }),
+        checklistStatusTwo: await db.checklistStatus.create({
+          data: sampleChecklistStatusTwo(sessionOne.id),
+        }),
+      };
+      userTwo = {
+        session: sessionTwo,
+        checklistStatusOne: await db.checklistStatus.create({
+          data: sampleChecklistStatusOne(sessionTwo.id),
+        }),
+        checklistStatusTwo: await db.checklistStatus.create({
+          data: sampleChecklistStatusTwo(sessionTwo.id),
+        }),
+      };
+    });
+
+    describe('getChecklistStatusBatch', () => {
+      it('should return all checklist statuses for all sessions that have checklistItemId', async () => {
+        const checklistStatuses = await getChecklistStatusBatch(
+          [userOne.session.id, userTwo.session.id],
+          sampleChecklistItemOne.id,
+        );
+        expect(checklistStatuses).toHaveLength(2);
+        checklistStatuses.forEach((status) => {
+          expect(status).toMatchObject({
+            checklistItemId: expect.any(String),
+            id: expect.any(String),
+            isCompleted: expect.any(Boolean),
+            sessionId: expect.any(String),
+          });
+        });
+      });
+
+      it('should return empty array if sessionId is nonexistent', async () => {
+        const checklistStatuses = await getChecklistStatusBatch(
+          [nonExistentId],
+          sampleChecklistItemOne.id,
+        );
+        expect(checklistStatuses).toHaveLength(0);
+      });
+
+      it('should return empty array if checklist item id is invalid', async () => {
+        const checklistStatuses = await getChecklistStatusBatch(
+          [userOne.session.id],
+          nonExistentId,
+        );
+        expect(checklistStatuses).toHaveLength(0);
+      });
+    });
+
+    describe('updateChecklistStatusBatchTx', () => {
+      it('should update completed status for all sessionIds provided in checklist status', async () => {
+        await db.$transaction(async (tx) => {
+          await updateChecklistStatusBatchTx(
+            tx,
+            [userOne.session.id, userTwo.session.id],
+            sampleChecklistItemOne.key,
+            true,
+          );
+        });
+        const statuses = await db.checklistStatus.findMany({
+          where: {
+            sessionId: { in: [userOne.session.id, userTwo.session.id] },
+            checklistItemId: sampleChecklistItemOne.id,
+          },
+        });
+        expect(statuses).toHaveLength(2);
+        expect(statuses.every((status) => status.isCompleted)).toBe(true);
+      });
+
+      it('should update status from completed to not completed', async () => {
+        await db.$transaction(async (tx) => {
+          await updateChecklistStatusBatchTx(
+            tx,
+            [userOne.session.id, userTwo.session.id],
+            sampleChecklistItemOne.key,
+            true,
+          );
+          await updateChecklistStatusBatchTx(
+            tx,
+            [userOne.session.id, userTwo.session.id],
+            sampleChecklistItemOne.key,
+            false,
+          );
+        });
+
+        const statuses = await db.checklistStatus.findMany({
+          where: {
+            sessionId: { in: [userOne.session.id, userTwo.session.id] },
+            checklistItemId: sampleChecklistItemOne.id,
+          },
+        });
+        expect(statuses.every((s) => !s.isCompleted)).toBe(true);
+      });
+
+      it('should throw error for invalid checklist item key', async () => {
+        await expect(
+          db.$transaction(async (tx) => {
+            await updateChecklistStatusBatchTx(
+              tx,
+              [userOne.session.id],
+              simpleFaker.string.uuid() as ChecklistItemKeysOptions,
+              true,
+            );
+          }),
+        ).rejects.toThrow();
+      });
+    });
+  });
 });
-
-// export async function getChecklistStatusBatch(
-//   sessionIds: string[],
-//   checklistItemId: string,
-// ) {
-//   const checklistStatuses = await db.checklistStatus.findMany({
-//     where: {
-//       sessionId: {
-//         in: sessionIds,
-//       },
-//       checklistItemId,
-//     },
-//   });
-//   return checklistStatuses;
-// }
-
-// // updates checklist status for numerous users
-// export async function updateChecklistStatusBatchTx(
-//   tx: Prisma.TransactionClient,
-//   sessionIds: string[],
-//   checklistItemKey: ChecklistItemKeysOptions,
-//   isCompleted: boolean,
-// ) {
-//   const checklistItem = await getChecklistItem(checklistItemKey);
-//   const checklistStatuses = await getChecklistStatusBatch(
-//     sessionIds,
-//     checklistItem.id,
-//   );
-//   const checklistStatusIds = checklistStatuses.map((status) => status.id);
-//   const updatedChecklistStatuses = await tx.checklistStatus.updateMany({
-//     where: {
-//       id: {
-//         in: checklistStatusIds,
-//       },
-//     },
-//     data: {
-//       isCompleted,
-//     },
-//   });
-//   return updatedChecklistStatuses;
-// }
