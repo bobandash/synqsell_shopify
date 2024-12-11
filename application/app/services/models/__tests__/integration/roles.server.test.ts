@@ -198,22 +198,3 @@ describe('Roles', () => {
     });
   });
 });
-
-// // should not update if role doesn't exist
-// export async function updateRoleVisibilityTx(
-//   tx: Prisma.TransactionClient,
-//   sessionId: string,
-//   role: string,
-//   isVisibleInNetwork: boolean,
-// ) {
-//   const currentRole = await getRole(sessionId, role);
-//   const { id } = currentRole;
-//   await tx.role.update({
-//     where: {
-//       id,
-//     },
-//     data: {
-//       isVisibleInNetwork,
-//     },
-//   });
-// }

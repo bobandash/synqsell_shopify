@@ -1,5 +1,4 @@
 import db from '~/db.server';
-import { v4 as uuidv4 } from 'uuid';
 import { createSampleChecklistTable } from '@factories/checklist.factories';
 import {
   sampleChecklistItemOne,
@@ -7,6 +6,7 @@ import {
   sampleChecklistStatusOne,
   sampleChecklistStatusTwo,
   sampleChecklistTable,
+  sampleUserPreference,
 } from '@fixtures/checklist.fixture';
 import {
   createMissingChecklistStatuses,
@@ -15,13 +15,19 @@ import {
   hasChecklistTable,
 } from '../../checklistTable.server';
 import { sampleSession } from '@fixtures/session.fixture';
+import { createSampleSession } from '@factories/session.factories';
+import { simpleFaker } from '@faker-js/faker';
 
 describe('Checklist Table', () => {
   beforeEach(async () => {
     await createSampleChecklistTable();
+    await createSampleSession();
+    await db.userPreference.create({
+      data: sampleUserPreference(sampleSession.id),
+    });
   });
 
-  const nonExistentId = uuidv4();
+  const nonExistentId = simpleFaker.string.uuid();
   describe('hasChecklistTable', () => {
     it('should return true when checklist table exists', async () => {
       const tableExists = await hasChecklistTable(sampleChecklistTable.id);
@@ -36,21 +42,23 @@ describe('Checklist Table', () => {
 
   describe('createMissingChecklistStatuses', () => {
     it('should create 1 checklist status if specify 1 checklist id.', async () => {
+      const oldNumChecklistStatus = await db.checklistStatus.count({});
       await createMissingChecklistStatuses(
         [sampleChecklistItemOne.id],
         sampleSession.id,
       );
       const numChecklistStatus = await db.checklistStatus.count({});
-      expect(numChecklistStatus).toBe(1);
+      expect(numChecklistStatus).toBe(oldNumChecklistStatus + 1);
     });
 
     it('should create 2 checklist status if specify 2 checklist id.', async () => {
+      const oldNumChecklistStatus = await db.checklistStatus.count({});
       await createMissingChecklistStatuses(
         [sampleChecklistItemOne.id, sampleChecklistItemTwo.id],
         sampleSession.id,
       );
       const numChecklistStatus = await db.checklistStatus.count({});
-      expect(numChecklistStatus).toBe(2);
+      expect(numChecklistStatus).toBe(oldNumChecklistStatus + 2);
     });
 
     it('should throw if session id is invalid', async () => {
@@ -100,8 +108,12 @@ describe('Checklist Table', () => {
 
   describe('getTablesAndStatuses', () => {
     beforeEach(async () => {
-      await db.checklistStatus.create({ data: sampleChecklistStatusOne });
-      await db.checklistStatus.create({ data: sampleChecklistStatusTwo });
+      await db.checklistStatus.create({
+        data: sampleChecklistStatusOne(sampleSession.id),
+      });
+      await db.checklistStatus.create({
+        data: sampleChecklistStatusTwo(sampleSession.id),
+      });
     });
 
     it('should return table status with all details for frontend', async () => {
@@ -113,9 +125,9 @@ describe('Checklist Table', () => {
                 action: null,
                 content: 'Get Access',
               },
-              checklistTableId: 'checklist-table-1',
+              checklistTableId: sampleChecklistTable.id,
               header: 'Become a retailer',
-              id: 'checklist-item-1',
+              id: sampleChecklistItemOne.id,
               isActive: true,
               isCompleted: false,
               key: 'retailer_get_started',
@@ -128,9 +140,9 @@ describe('Checklist Table', () => {
                 action: null,
                 content: 'Edit Brand Profile',
               },
-              checklistTableId: 'checklist-table-1',
+              checklistTableId: sampleChecklistTable.id,
               header: 'Customize your brand profile',
-              id: 'checklist-item-2',
+              id: sampleChecklistItemTwo.id,
               isActive: false,
               isCompleted: false,
               key: 'retailer_customize_profile',
@@ -140,7 +152,7 @@ describe('Checklist Table', () => {
             },
           ],
           header: 'Retailer Setup Guide',
-          id: 'checklist-table-1',
+          id: sampleChecklistTable.id,
           isHidden: true,
           position: 1,
           subheader:

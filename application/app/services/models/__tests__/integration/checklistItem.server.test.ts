@@ -1,4 +1,3 @@
-import { createSampleChecklistTable } from '@factories/checklist.factories';
 import {
   sampleChecklistItemOne,
   sampleChecklistItemTwo,
@@ -9,6 +8,7 @@ import {
   hasChecklistItem,
 } from '../../checklistItem.server';
 import db from '~/db.server';
+import { createSampleChecklistTable } from '@factories/checklist.factories';
 
 describe('Checklist Item', () => {
   describe('hasChecklistItem', () => {

@@ -71,7 +71,6 @@ Just a disclaimer: I may be completely wrong in understanding Shopify merchants'
 
 ![image](https://github.com/user-attachments/assets/8330a875-a78a-45c3-acf0-2996c73df7ac)
 
-
 ### Built With
 
 - [![Remix][Remix.run]][Remix-url]
@@ -237,11 +236,11 @@ Note: the architecture currently has many single points of failure. This is inte
 This section delves into the rationale behind key technical decisions when working on this project and highlights the challenges I encountered during the project's development.
 <br />
 <br />
-Regarding automated testing, I purposely chose not to write many automated tests. This was for a few reasons:
+Regarding automated testing, I only decided to write automated testing for common util functions used throughout the application and interactions with the database.
 
 <ul>
   <li><strong>Development Team Size:</strong> As the sole developer on this project, the risk of unexpected breaking changes is minimized. This allows for a more agile development process without the immediate need for extensive test coverage.</li>
-  <li><strong>Anticipated Future Changes:</strong> Given the early nature of this SaaS application, I expect significant changes and modifications to the SaaS. Investing a lot of time in automated tests could just lead to inefficient use of development resources.</li>
+  <li><strong>Anticipated Future Changes:</strong> Given the early nature of this SaaS application, I expect significant changes and modifications, especially to the actions and loaders within the application, frontend, and certain webhook handling logic. Investing a lot of time in automated tests could just result in technical debt.</li>
   <li><strong>Focus on MVP and User Feedback:</strong> My goal was to create an MVP or POC to gather real-world feedback as soon as possible. In doing so, the future development direction and user needs could be identified more rapidly.</li>
 </ul>
 <br />
