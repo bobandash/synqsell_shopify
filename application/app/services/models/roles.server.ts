@@ -1,4 +1,5 @@
 import type { Prisma } from '@prisma/client';
+import type { RolesOptions } from '~/constants';
 import db from '~/db.server';
 
 interface SharedRoleProps {
@@ -46,7 +47,7 @@ export async function getRole(sessionId: string, role: string) {
   return currentRole;
 }
 
-export async function getRoleBatch(sessionIds: string[], role: string) {
+export async function getRoleBatch(sessionIds: string[], role: RolesOptions) {
   const roles = await db.role.findMany({
     where: {
       sessionId: { in: sessionIds },
@@ -56,7 +57,7 @@ export async function getRoleBatch(sessionIds: string[], role: string) {
   return roles;
 }
 
-export async function addRole(sessionId: string, role: string) {
+export async function addRole(sessionId: string, role: RolesOptions) {
   const newRole = await db.role.create({
     data: {
       sessionId,
@@ -79,7 +80,7 @@ export async function deleteRole(id: string) {
 export async function updateRoleVisibilityTx(
   tx: Prisma.TransactionClient,
   sessionId: string,
-  role: string,
+  role: RolesOptions,
   isVisibleInNetwork: boolean,
 ) {
   const currentRole = await getRole(sessionId, role);
