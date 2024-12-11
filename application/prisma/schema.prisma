@@ -51,7 +51,7 @@ model Billing {
   shopifySubscriptionLineItemId String
   plan                          String
   sessionId                     String
-  session                       Session @relation(fields: [sessionId], references: [id])
+  session                       Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 }
 
 model FulfillmentService {
@@ -85,7 +85,7 @@ model ChecklistItem {
   header            String
   subheader         String?
   buttonText        String?
-  checklistTable    ChecklistTable    @relation(fields: [checklistTableId], references: [id])
+  checklistTable    ChecklistTable    @relation(fields: [checklistTableId], references: [id], onDelete: Cascade)
   checklistStatuses ChecklistStatus[]
 }
 
@@ -100,18 +100,18 @@ model ChecklistStatus {
 }
 
 model SupplierAccessRequest {
-  checklistStatusId       String          @unique
   hasMetSalesThreshold    Boolean
-  createdAt               DateTime        @default(now())
-  updatedAt               DateTime        @updatedAt
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
   status                  String
-  sessionId               String          @unique
+  sessionId               String           @unique
   notes                   String?
-  isEligibleForNewRequest Boolean         @default(true)
-  id                      String          @id @default(uuid())
-  num                     Int             @default(autoincrement())
-  checklistStatus         ChecklistStatus @relation(fields: [checklistStatusId], references: [id])
-  session                 Session         @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  isEligibleForNewRequest Boolean          @default(true)
+  id                      String           @id @default(uuid())
+  num                     Int              @default(autoincrement())
+  checklistStatusId       String?          @unique
+  checklistStatus         ChecklistStatus? @relation(fields: [checklistStatusId], references: [id], onDelete: SetNull)
+  session                 Session          @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 }
 
 model Role {
@@ -289,7 +289,7 @@ model OrderLineItem {
   quantityCancelled              Int        @default(0)
   orderId                        String
   priceListId                    String?
-  order                          Order      @relation(fields: [orderId], references: [id])
+  order                          Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
   priceList                      PriceList? @relation(fields: [priceListId], references: [id], onDelete: SetNull)
 }
 
@@ -298,7 +298,7 @@ model Fulfillment {
   supplierShopifyFulfillmentId String
   retailerShopifyFulfillmentId String
   orderId                      String
-  order                        Order    @relation(fields: [orderId], references: [id])
+  order                        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   payment                      Payment?
 }
 
@@ -312,8 +312,8 @@ model Payment {
   totalPaid           Decimal              @db.Decimal(10, 2)
   createdAt           DateTime             @default(now())
   fulfillmentId       String               @unique
-  order               Order                @relation(fields: [orderId], references: [id])
-  fulfillment         Fulfillment          @relation(fields: [fulfillmentId], references: [id])
+  order               Order                @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  fulfillment         Fulfillment          @relation(fields: [fulfillmentId], references: [id], onDelete: Cascade)
   billingTransactions BillingTransaction[]
 }
 
@@ -322,12 +322,12 @@ model BillingTransaction {
   id                   String   @id @default(uuid())
   createdAt            DateTime @default(now())
   paymentId            String
-  sessionId            String
   shopifyUsageRecordId String   @unique
   amountPaid           Decimal  @db.Decimal(10, 2)
   currencyCode         String
-  payment              Payment  @relation(fields: [paymentId], references: [id])
-  session              Session  @relation(fields: [sessionId], references: [id])
+  sessionId            String?
+  payment              Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  session              Session? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
 }
 
 model StripeConnectAccount {

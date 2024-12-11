@@ -1,16 +1,30 @@
 import db from '~/db.server';
-import { clearDatabase } from '../prisma/test-seed';
 import { config } from 'dotenv';
 import * as path from 'path';
-import { promisify } from 'util';
-import { exec } from 'child_process';
 
 // https://medium.com/@mrk5199/streamlining-prisma-integration-tests-with-jest-a-step-by-step-guide-f6ba53e5030c
 config({ path: path.join(__dirname, '../.env.test') });
 
+async function clearDatabase() {
+  const tablenames = await db.$queryRaw<
+    Array<{ tablename: string }>
+  >`SELECT tablename FROM pg_tables WHERE schemaname='public'`;
+
+  const tables = tablenames
+    .map(({ tablename }) => tablename)
+    .filter((name) => name !== '_prisma_migrations')
+    .map((name) => `"public"."${name}"`)
+    .join(', ');
+
+  try {
+    await db.$executeRawUnsafe(`TRUNCATE TABLE ${tables} CASCADE;`);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
 beforeAll(async () => {
   await clearDatabase();
-  await promisify(exec)('npx prisma db push --accept-data-loss');
 }, 60000);
 
 afterEach(async () => {

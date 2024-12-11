@@ -1,0 +1,21 @@
+# https://www.prisma.io/docs/orm/prisma-client/testing/integration-testing
+# TODO: Right now, integration tests will be really slow. fix this when there's more tests
+# right now, I'm using a single database and basically running it with --runInBand, so it's sequential instead of running in parallel
+# this is because every test I'm basically clearing the data and then putting data in, so I have to make sure clearData does not
+# cause any locking and breaks every single test
+# one way I can introduce some form of parallelism in the future (probs not scalable) is just by adding more dbs and choosing specific tests to run
+# TODO: I also have to fix the docker container because sometimes when I try to connect to the port, it's not ready yet (wait-for library or something)
+
+version: '3.9'
+
+services:
+  db:
+    image: postgres:13
+    restart: always
+    container_name: integration-tests-prisma
+    ports:
+      - '5433:5432'
+    environment:
+      POSTGRES_USER: prisma
+      POSTGRES_PASSWORD: prisma
+      POSTGRES_DB: tests

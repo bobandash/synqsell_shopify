@@ -1,7 +1,5 @@
 import type { Prisma } from '@prisma/client';
 import db from '~/db.server';
-import { ROLES } from '~/constants';
-import { convertObjectValuesToArr } from '~/lib/utils';
 
 interface SharedRoleProps {
   id: string;
@@ -16,14 +14,6 @@ export interface RoleProps extends SharedRoleProps {
 
 export interface RolePropsJSON extends SharedRoleProps {
   createdAt: string;
-}
-
-export async function isValidRole(role: string) {
-  const validRoles = new Set(convertObjectValuesToArr(ROLES));
-  if (!validRoles.has(role)) {
-    return false;
-  }
-  return true;
 }
 
 export async function getRoles(sessionId: string) {

@@ -15,10 +15,8 @@ export const createSampleChecklistTable = async (overrides = {}) => {
       ...overrides,
     },
   });
-
   await db.checklistItem.create({ data: sampleChecklistItemOne });
   await db.checklistItem.create({ data: sampleChecklistItemTwo });
-
   await db.userPreference.create({
     data: sampleUserPreference,
   });

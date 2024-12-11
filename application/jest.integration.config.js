@@ -2,14 +2,11 @@
 export default {
   displayName: 'integration',
   testMatch: ['**/__tests__/**/integration/**/*.[jt]s?(x)'],
-  testEnvironment: './test-environment.ts',
-  testEnvironmentOptions: {
-    customExportConditions: ['node', 'node-addons'],
-  },
+  testEnvironment: 'node',
   transform: {
     '^.+.tsx?$': ['ts-jest', {}],
   },
-  maxWorkers: 1, // may be able to increase the number of
+  maxWorkers: 1,
   setupFilesAfterEnv: ['<rootDir>/tests/setup.server.ts'],
   rootDir: '.',
   moduleNameMapper: {
