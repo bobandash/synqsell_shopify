@@ -4,6 +4,9 @@ Description: >
   Contains Lambda functions (shopify webhooks, stripe webhooks)
 
 # TODO: For CD pipeline, need to make sure to only retain lambda logs for 14 days instead of the never expire
+# TODO: Add a way to automatically poll and receive the failed webhook / create support ticket
+# TODO: Change to POLP by only being able to invoke shopify or only being able to invoke stripe
+# TODO: Add DLQ to all lambda functions that handle webhook topics
 
 Parameters:
   Environment:
@@ -55,8 +58,6 @@ Globals:
 
 Resources:
   # IAM Roles for Lambda functions
-  # TODO: Change to POLP by only being able to invoke shopify or only being able to invoke stripe
-  # TODO: Add DLQ to all lambda functions that handle webhook topics
   LambdaInvokePolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
@@ -259,6 +260,11 @@ Resources:
         EntryPoints:
           - app.ts
 
+  DeleteProductsDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 345600
+
   DeleteProductsFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -271,6 +277,9 @@ Resources:
       Architectures:
         - x86_64
       Role: !GetAtt PrivateFunctionRole.Arn
+      DeadLetterQueue:
+        Type: SQS
+        TargetArn: !GetAtt DeleteProductsDLQ.Arn
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -301,15 +310,9 @@ Resources:
         EntryPoints:
           - app.ts
 
-  # TODO: Add a way to automatically poll and receive the failed webhook / create support ticket
   FulfillmentOrderRoutingCompleteDLQ:
     Type: AWS::SQS::Queue
     Properties:
-      QueueName:
-        !Join [
-          "_",
-          [!Ref Environment, "fulfillment_order_routing_complete_dlq"],
-        ]
       MessageRetentionPeriod: 345600
 
   FulfillmentOrderRoutingCompleteFunction:
