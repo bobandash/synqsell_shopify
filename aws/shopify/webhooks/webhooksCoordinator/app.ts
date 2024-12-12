@@ -10,12 +10,7 @@ async function invokeLambda(functionName: string, payload: any) {
         InvocationType: 'Event',    
         Payload: JSON.stringify(payload),
     };
-    try {
-        await lambda.invoke(params).promise();
-    } catch (error) {
-        console.error(`Error invoking ${functionName}.`);
-        throw error;
-    }
+    await lambda.invoke(params).promise();
 }
 // serves as coordinator from sqs to this function to invoke other lambda functions
 export const lambdaHandler = async (event: Event) => {
