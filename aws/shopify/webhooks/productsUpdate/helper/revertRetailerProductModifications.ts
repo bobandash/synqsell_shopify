@@ -1,6 +1,5 @@
 import { PoolClient } from 'pg';
 import { EditedVariant, ProductStatus, Session } from '../types';
-import { createMapToRestObj, fetchAndValidateGraphQLData, mutateAndValidateGraphQLData } from '../util';
 import {
     ADJUST_INVENTORY_MUTATION,
     GET_PRODUCT_STATUS,
@@ -9,7 +8,9 @@ import {
     UPDATE_PRODUCT_MUTATION,
 } from '../graphql';
 import { ProductStatusQuery, ProductVariantInfoQuery, UpdateProductMutation } from '../types/admin.generated';
-import { PRODUCT_STATUS } from '../constants';
+import { createMapIdToRestObj, fetchAndValidateGraphQLData, mutateAndValidateGraphQLData } from '/opt/nodejs/utils';
+import { PRODUCT_STATUS } from '/opt/nodejs/constants';
+import { getFulfillmentService } from '/opt/nodejs/models/fulfillmentService';
 
 type RetailerAndSupplierVariantId = {
     retailerShopifyVariantId: string;
@@ -25,58 +26,33 @@ type SupplierVariantIdAndRetailerInventoryId = {
 // START: GENERIC HELPER FUNCTIONS
 // ==============================================================================================================
 async function getRetailerSession(retailerShopifyProductId: string, client: PoolClient) {
-    try {
-        const query = `
-            SELECT session.* 
-            FROM "ImportedProduct"
-            JOIN "Session" session ON "ImportedProduct"."retailerId" = session.id 
-            WHERE "shopifyProductId" = $1 
-        `;
-        const res = await client.query(query, [retailerShopifyProductId]);
-        if (res.rows.length === 0) {
-            throw new Error(`No retailer session exists for retailerShopifyId ${retailerShopifyProductId}.`);
-        }
-        return res.rows[0];
-    } catch (error) {
-        console.error(error);
-        throw new Error(`Failed to get retailer session from retailerShopifyProductId ${retailerShopifyProductId}.`);
+    const query = `
+        SELECT session.* 
+        FROM "ImportedProduct"
+        JOIN "Session" session ON "ImportedProduct"."retailerId" = session.id 
+        WHERE "shopifyProductId" = $1 
+    `;
+    const res = await client.query(query, [retailerShopifyProductId]);
+    if (res.rows.length === 0) {
+        throw new Error(`No retailer session exists for retailerShopifyId ${retailerShopifyProductId}.`);
     }
+    return res.rows[0];
 }
 
 async function getSupplierSession(retailerShopifyProductId: string, client: PoolClient) {
-    try {
-        const query = `
-            SELECT "Session".* 
-            FROM "ImportedProduct"
-            JOIN "Product" ON "ImportedProduct"."prismaProductId" = "Product".id
-            JOIN "PriceList" ON "Product"."priceListId" = "PriceList".id
-            JOIN "Session" ON "PriceList"."supplierId" = "Session".id
-            WHERE "ImportedProduct"."shopifyProductId" = $1 
-        `;
-        const res = await client.query(query, [retailerShopifyProductId]);
-        if (res.rows.length === 0) {
-            throw new Error(`No supplier session exists for retailerShopifyId ${retailerShopifyProductId}.`);
-        }
-        return res.rows[0];
-    } catch (error) {
-        console.error(error);
-        throw new Error(`Failed to get supplier session from retailerShopifyProductId ${retailerShopifyProductId}.`);
+    const query = `
+        SELECT "Session".* 
+        FROM "ImportedProduct"
+        JOIN "Product" ON "ImportedProduct"."prismaProductId" = "Product".id
+        JOIN "PriceList" ON "Product"."priceListId" = "PriceList".id
+        JOIN "Session" ON "PriceList"."supplierId" = "Session".id
+        WHERE "ImportedProduct"."shopifyProductId" = $1 
+    `;
+    const res = await client.query(query, [retailerShopifyProductId]);
+    if (res.rows.length === 0) {
+        throw new Error(`No supplier session exists for retailerShopifyId ${retailerShopifyProductId}.`);
     }
-}
-
-async function getFulfillmentService(sessionId: string, client: PoolClient) {
-    try {
-        const query = `SELECT * FROM "FulfillmentService" WHERE "sessionId" = $1 LIMIT 1`;
-        const res = await client.query(query, [sessionId]);
-        if (res.rows.length === 0) {
-            throw new Error(`No fulfillment service exists for sessionId ${sessionId}.`);
-        }
-        const fulfillmentService = res.rows[0];
-        return fulfillmentService;
-    } catch (error) {
-        console.error(error);
-        throw new Error(`Failed to get fulfillment service from sessionId ${sessionId}.`);
-    }
+    return res.rows[0];
 }
 
 // ==============================================================================================================
@@ -108,44 +84,34 @@ async function changeRetailerProductStatusArchived(retailerSession: Session, ret
 
 // functions to get initial data to see if revert mutation needs to be made
 async function getRetailerAndSupplierVariantIds(retailerShopifyVariantIds: string[], client: PoolClient) {
-    try {
-        const query = `
-            SELECT 
-                "ImportedVariant"."shopifyVariantId" as "retailerShopifyVariantId",
-                "Variant"."shopifyVariantId" as "supplierShopifyVariantId"
-            FROM "ImportedVariant"
-            INNER JOIN "Variant" ON "ImportedVariant"."prismaVariantId" = "Variant"."id"
-            WHERE "ImportedVariant"."shopifyVariantId" = ANY($1)  
-        `;
-        const retailerAndSupplierVariantIds: RetailerAndSupplierVariantId[] = (
-            await client.query(query, [retailerShopifyVariantIds])
-        ).rows;
-        return retailerAndSupplierVariantIds;
-    } catch (error) {
-        console.error(error);
-        throw new Error('Failed to get retailer and matching supplier shopify variant id.');
-    }
+    const query = `
+        SELECT 
+            "ImportedVariant"."shopifyVariantId" as "retailerShopifyVariantId",
+            "Variant"."shopifyVariantId" as "supplierShopifyVariantId"
+        FROM "ImportedVariant"
+        INNER JOIN "Variant" ON "ImportedVariant"."prismaVariantId" = "Variant"."id"
+        WHERE "ImportedVariant"."shopifyVariantId" = ANY($1)  
+    `;
+    const retailerAndSupplierVariantIds: RetailerAndSupplierVariantId[] = (
+        await client.query(query, [retailerShopifyVariantIds])
+    ).rows;
+    return retailerAndSupplierVariantIds;
 }
 
 async function getSupplierVariantData(supplierShopifyVariantIds: string[], supplierSession: Session) {
-    try {
-        const supplierVariantData = await Promise.all(
-            supplierShopifyVariantIds.map((shopifyVariantId) => {
-                return fetchAndValidateGraphQLData<ProductVariantInfoQuery>(
-                    supplierSession.shop,
-                    supplierSession.accessToken,
-                    PRODUCT_VARIANT_INFO,
-                    {
-                        id: shopifyVariantId,
-                    },
-                );
-            }),
-        );
-        return supplierVariantData;
-    } catch (error) {
-        console.error(error);
-        throw new Error(`Failed to fetch variant data for supplierSessionId ${supplierSession.id}.`);
-    }
+    const supplierVariantData = await Promise.all(
+        supplierShopifyVariantIds.map((shopifyVariantId) => {
+            return fetchAndValidateGraphQLData<ProductVariantInfoQuery>(
+                supplierSession.shop,
+                supplierSession.accessToken,
+                PRODUCT_VARIANT_INFO,
+                {
+                    id: shopifyVariantId,
+                },
+            );
+        }),
+    );
+    return supplierVariantData;
 }
 
 function hasImportantRetailerVariantChanges(
@@ -154,12 +120,12 @@ function hasImportantRetailerVariantChanges(
     retailerAndSupplierVariantIds: RetailerAndSupplierVariantId[],
 ) {
     let hasImportantChanges = false;
-    const supplierToRetailerVariantIdMap = createMapToRestObj(
+    const supplierToRetailerVariantIdMap = createMapIdToRestObj(
         retailerAndSupplierVariantIds,
         'supplierShopifyVariantId',
     ); // key: supplierShopifyVariantId, value: {retailerShopifyVariantId: string}
 
-    const retailerEditedVariantsMap = createMapToRestObj(retailerEditedVariants, 'shopifyVariantId'); // key: retailerShopifyVariantId, value: {...rest}
+    const retailerEditedVariantsMap = createMapIdToRestObj(retailerEditedVariants, 'shopifyVariantId'); // key: retailerShopifyVariantId, value: {...rest}
 
     supplierShopifyVariantData.forEach(({ productVariant: supplierProductVariant }) => {
         const supplierShopifyVariantId = supplierProductVariant?.id ?? '';
@@ -190,7 +156,7 @@ async function updateRetailerPrice(
     retailerSession: Session,
     importedShopifyProductId: string,
 ) {
-    const supplierToRetailerVariantIdMap = createMapToRestObj(
+    const supplierToRetailerVariantIdMap = createMapIdToRestObj(
         retailerAndSupplierVariantIds,
         'supplierShopifyVariantId',
     );
@@ -220,28 +186,23 @@ async function updateRetailerPrice(
 }
 
 async function getSupplierVariantIdToRetailerInventoryItemId(supplierVariantIds: string[], client: PoolClient) {
-    try {
-        const query = `
-            SELECT 
-                "Variant"."shopifyVariantId" AS "supplierVariantId",
-                "ImportedInventoryItem"."shopifyInventoryItemId" AS "retailerShopifyInventoryItemId"  
-            FROM "Variant" 
-            INNER JOIN "ImportedVariant" ON "ImportedVariant"."prismaVariantId" = "Variant"."id"
-            INNER JOIN "ImportedInventoryItem" ON "ImportedInventoryItem"."importedVariantId" = "ImportedVariant"."id"
-            WHERE "Variant"."shopifyVariantId" = ANY($1)  
-        `;
+    const query = `
+        SELECT 
+            "Variant"."shopifyVariantId" AS "supplierVariantId",
+            "ImportedInventoryItem"."shopifyInventoryItemId" AS "retailerShopifyInventoryItemId"  
+        FROM "Variant" 
+        INNER JOIN "ImportedVariant" ON "ImportedVariant"."prismaVariantId" = "Variant"."id"
+        INNER JOIN "ImportedInventoryItem" ON "ImportedInventoryItem"."importedVariantId" = "ImportedVariant"."id"
+        WHERE "Variant"."shopifyVariantId" = ANY($1)  
+    `;
 
-        const res = await client.query(query, [supplierVariantIds]);
-        const supplierVariantIdAndRetailerInventoryItemId: SupplierVariantIdAndRetailerInventoryId[] = res.rows;
-        const supplierVariantIdToRetailerInventoryIdMap = createMapToRestObj(
-            supplierVariantIdAndRetailerInventoryItemId,
-            'supplierVariantId',
-        );
-        return supplierVariantIdToRetailerInventoryIdMap;
-    } catch (error) {
-        console.error(error);
-        throw new Error('Failed to get supplier variant id to retailer shopify inventory ids.');
-    }
+    const res = await client.query(query, [supplierVariantIds]);
+    const supplierVariantIdAndRetailerInventoryItemId: SupplierVariantIdAndRetailerInventoryId[] = res.rows;
+    const supplierVariantIdToRetailerInventoryIdMap = createMapIdToRestObj(
+        supplierVariantIdAndRetailerInventoryItemId,
+        'supplierVariantId',
+    );
+    return supplierVariantIdToRetailerInventoryIdMap;
 }
 
 async function updateRetailerInventory(
@@ -294,20 +255,15 @@ async function mutateRetailerVariantsToMatchSupplier(
     retailerSession: Session,
     client: PoolClient,
 ) {
-    try {
-        await Promise.all([
-            updateRetailerPrice(
-                supplierShopifyVariantData,
-                retailerAndSupplierVariantIds,
-                retailerSession,
-                retailerShopifyProductId,
-            ),
-            updateRetailerInventory(supplierShopifyVariantData, retailerSession, client),
-        ]);
-    } catch (error) {
-        console.error(error);
-        throw new Error('Failed to mutate retailer shopify variants to match supplier.');
-    }
+    await Promise.all([
+        updateRetailerPrice(
+            supplierShopifyVariantData,
+            retailerAndSupplierVariantIds,
+            retailerSession,
+            retailerShopifyProductId,
+        ),
+        updateRetailerInventory(supplierShopifyVariantData, retailerSession, client),
+    ]);
 }
 
 async function revertProductVariants(
@@ -317,87 +273,68 @@ async function revertProductVariants(
     supplierSession: Session,
     client: PoolClient,
 ) {
-    try {
-        const retailerShopifyVariantIds = retailerEditedVariants.map(({ shopifyVariantId }) => shopifyVariantId);
-        const retailerAndSupplierVariantIds = await getRetailerAndSupplierVariantIds(retailerShopifyVariantIds, client);
-        const supplierShopifyVariantIds = retailerAndSupplierVariantIds.map(
-            ({ supplierShopifyVariantId }) => supplierShopifyVariantId,
-        );
-        const supplierShopifyVariantData = await getSupplierVariantData(supplierShopifyVariantIds, supplierSession);
+    const retailerShopifyVariantIds = retailerEditedVariants.map(({ shopifyVariantId }) => shopifyVariantId);
+    const retailerAndSupplierVariantIds = await getRetailerAndSupplierVariantIds(retailerShopifyVariantIds, client);
+    const supplierShopifyVariantIds = retailerAndSupplierVariantIds.map(
+        ({ supplierShopifyVariantId }) => supplierShopifyVariantId,
+    );
+    const supplierShopifyVariantData = await getSupplierVariantData(supplierShopifyVariantIds, supplierSession);
 
-        // in order to prevent the products/update webhook from triggering indefinitely by making variant mutations over and over again
-        // we have to check if we need to make a mutation in the first place
-        const needsMutation = hasImportantRetailerVariantChanges(
-            retailerEditedVariants,
-            supplierShopifyVariantData,
-            retailerAndSupplierVariantIds,
-        );
+    // in order to prevent the products/update webhook from triggering indefinitely by making variant mutations over and over again
+    // we have to check if we need to make a mutation in the first place
+    const needsMutation = hasImportantRetailerVariantChanges(
+        retailerEditedVariants,
+        supplierShopifyVariantData,
+        retailerAndSupplierVariantIds,
+    );
 
-        if (!needsMutation) {
-            return;
-        }
-
-        await mutateRetailerVariantsToMatchSupplier(
-            retailerShopifyProductId,
-            supplierShopifyVariantData,
-            retailerAndSupplierVariantIds,
-            retailerSession,
-            client,
-        );
-    } catch (error) {
-        console.error(error);
-        throw new Error('Failed to revert product variant.');
+    if (!needsMutation) {
+        return;
     }
+
+    await mutateRetailerVariantsToMatchSupplier(
+        retailerShopifyProductId,
+        supplierShopifyVariantData,
+        retailerAndSupplierVariantIds,
+        retailerSession,
+        client,
+    );
 }
 // end functions to revert product variants to supplier variant
 
 // start functions to revert product status to supplier product status
 async function getSupplierShopifyProductId(retailerShopifyProductId: string, client: PoolClient) {
-    try {
-        const query = `
-            SELECT 
-                "Product"."shopifyProductId" 
-            FROM "ImportedProduct"
-            INNER JOIN "Product" ON "Product"."id" = "ImportedProduct"."prismaProductId"
-            WHERE "ImportedProduct"."shopifyProductId" = $1
-        `;
-        const res = await client.query(query, [retailerShopifyProductId]);
-        if (res.rows.length === 0) {
-            throw new Error(
-                `No supplier shopify product id exists for retailerShopifyProductId ${retailerShopifyProductId}.`,
-            );
-        }
-        return res.rows[0].shopifyProductId as string;
-    } catch (error) {
-        console.error(error);
+    const query = `
+        SELECT 
+            "Product"."shopifyProductId" 
+        FROM "ImportedProduct"
+        INNER JOIN "Product" ON "Product"."id" = "ImportedProduct"."prismaProductId"
+        WHERE "ImportedProduct"."shopifyProductId" = $1
+    `;
+    const res = await client.query(query, [retailerShopifyProductId]);
+    if (res.rows.length === 0) {
         throw new Error(
-            `Failed to get supplier shopify product id from retailerShopifyProductId ${retailerShopifyProductId}.`,
+            `No supplier shopify product id exists for retailerShopifyProductId ${retailerShopifyProductId}.`,
         );
     }
+    return res.rows[0].shopifyProductId as string;
 }
 
 async function getSupplierProductStatus(supplierShopifyProductId: string, supplierSession: Session) {
-    try {
-        const res = await fetchAndValidateGraphQLData<ProductStatusQuery>(
-            supplierSession.shop,
-            supplierSession.accessToken,
-            GET_PRODUCT_STATUS,
-            {
-                id: supplierShopifyProductId,
-            },
-        );
+    const res = await fetchAndValidateGraphQLData<ProductStatusQuery>(
+        supplierSession.shop,
+        supplierSession.accessToken,
+        GET_PRODUCT_STATUS,
+        {
+            id: supplierShopifyProductId,
+        },
+    );
 
-        const productStatus = res.product?.status;
-        if (!productStatus) {
-            throw new Error(`Product ${supplierShopifyProductId} does not have a product status.`);
-        }
-        return productStatus;
-    } catch (error) {
-        console.error(error);
-        throw new Error(
-            `Failed to get supplier product status from supplierShopifyProductId ${supplierShopifyProductId}`,
-        );
+    const productStatus = res.product?.status;
+    if (!productStatus) {
+        throw new Error(`Product ${supplierShopifyProductId} does not have a product status.`);
     }
+    return productStatus;
 }
 
 async function mutateRetailerProductStatusShopify(
@@ -426,19 +363,12 @@ async function revertProductStatus(
     supplierSession: Session,
     client: PoolClient,
 ) {
-    try {
-        const supplierShopifyProductId = await getSupplierShopifyProductId(retailerShopifyProductId, client);
-        const supplierProductStatus = await getSupplierProductStatus(supplierShopifyProductId, supplierSession);
-        if (supplierProductStatus === retailerProductStatus) {
-            return;
-        }
-        await mutateRetailerProductStatusShopify(retailerShopifyProductId, supplierProductStatus, retailerSession);
-    } catch (error) {
-        console.error(error);
-        throw new Error(
-            `Failed to revert product status for retailerShopifyProductId ${retailerShopifyProductId} and retailerSessionId ${retailerSession.id}.`,
-        );
+    const supplierShopifyProductId = await getSupplierShopifyProductId(retailerShopifyProductId, client);
+    const supplierProductStatus = await getSupplierProductStatus(supplierShopifyProductId, supplierSession);
+    if (supplierProductStatus === retailerProductStatus) {
+        return;
     }
+    await mutateRetailerProductStatusShopify(retailerShopifyProductId, supplierProductStatus, retailerSession);
 }
 
 // end functions to revert product status to supplier product status
@@ -471,30 +401,25 @@ async function revertRetailerProductModifications(
     retailerProductStatus: ProductStatus,
     client: PoolClient,
 ) {
-    try {
-        const [supplierSession, retailerSession] = await Promise.all([
-            getSupplierSession(retailerShopifyProductId, client),
-            getRetailerSession(retailerShopifyProductId, client),
-        ]);
+    const [supplierSession, retailerSession] = await Promise.all([
+        getSupplierSession(retailerShopifyProductId, client),
+        getRetailerSession(retailerShopifyProductId, client),
+    ]);
 
-        // case: supplier uninstalled the application but product is in the retailer's shop, and retailer changed the product status
-        if (supplierSession.isAppUninstalled && retailerProductStatus !== PRODUCT_STATUS.ARCHIVED) {
-            await changeRetailerProductStatusArchived(retailerSession, retailerShopifyProductId);
-            return;
-        }
-
-        await revertRetailerProductToSupplierProduct(
-            retailerShopifyProductId,
-            retailerProductStatus,
-            retailerEditedVariants,
-            retailerSession,
-            supplierSession,
-            client,
-        );
-    } catch (error) {
-        console.error(error);
-        throw new Error("Failed to revert retailer product modifications to supplier's product details on Shopify.");
+    // case: supplier uninstalled the application but product is in the retailer's shop, and retailer changed the product status
+    if (supplierSession.isAppUninstalled && retailerProductStatus !== PRODUCT_STATUS.ARCHIVED) {
+        await changeRetailerProductStatusArchived(retailerSession, retailerShopifyProductId);
+        return;
     }
+
+    await revertRetailerProductToSupplierProduct(
+        retailerShopifyProductId,
+        retailerProductStatus,
+        retailerEditedVariants,
+        retailerSession,
+        supplierSession,
+        client,
+    );
 }
 
 export default revertRetailerProductModifications;

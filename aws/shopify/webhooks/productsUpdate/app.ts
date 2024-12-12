@@ -1,60 +1,26 @@
-import { APIGatewayProxyResult } from 'aws-lambda';
 import { PoolClient } from 'pg';
 import { initializePool } from './db';
 import { composeGid } from '@shopify/admin-graphql-api-utilities';
 import { broadcastSupplierProductModifications, revertRetailerProductModifications } from './helper';
 import { ProductStatus, ShopifyEvent } from './types';
+import { isImportedProduct } from '/opt/nodejs/models/importedProduct';
+import { isProduct } from '/opt/nodejs/models/product';
 
-// ==============================================================================================================
-// START: HELPER FUNCTIONS TO REACTIVATING PRODUCTS
-// ==============================================================================================================
-async function isRetailerProduct(shopifyProductId: string, client: PoolClient) {
-    try {
-        const productQuery = `SELECT FROM "ImportedProduct" WHERE "shopifyProductId" = $1 LIMIT 1`;
-        const res = await client.query(productQuery, [shopifyProductId]);
-        if (res.rows.length > 0) {
-            return true;
-        }
-        return false;
-    } catch (error) {
-        console.error(error);
-        throw new Error(`Failed to check if product ${shopifyProductId} is a retailer product.`);
-    }
-}
-
-async function isSupplierProduct(shopifyProductId: string, client: PoolClient) {
-    try {
-        const productQuery = `SELECT FROM "Product" WHERE "shopifyProductId" = $1 LIMIT 1`;
-        const res = await client.query(productQuery, [shopifyProductId]);
-        if (res.rows.length > 0) {
-            return true;
-        }
-        return false;
-    } catch (error) {
-        console.error(error);
-        throw new Error(`Failed to check if product ${shopifyProductId} is a supplier product.`);
-    }
-}
-
-export const lambdaHandler = async (event: ShopifyEvent): Promise<APIGatewayProxyResult> => {
+export const lambdaHandler = async (event: ShopifyEvent) => {
     let client: null | PoolClient = null;
     try {
         const pool = await initializePool();
         client = await pool.connect();
         const payload = event.detail.payload;
         const shopifyProductId = payload.admin_graphql_api_id;
-        const [isRetailerProductResult, isSupplierProductResult] = await Promise.all([
-            isRetailerProduct(shopifyProductId, client),
-            isSupplierProduct(shopifyProductId, client),
+        const [isRetailerProduct, isSupplierProduct] = await Promise.all([
+            isImportedProduct(shopifyProductId, client),
+            isProduct(shopifyProductId, client),
         ]);
 
-        if (!isSupplierProductResult && !isRetailerProductResult) {
-            return {
-                statusCode: 200,
-                body: JSON.stringify({
-                    message: 'We do not need to handle logic for products not in SynqSell.',
-                }),
-            };
+        if (!isSupplierProduct && !isRetailerProduct) {
+            console.log(`${shopifyProductId} is not a product on SynqSell`);
+            return;
         }
 
         // there is no old price, so we cannot check if the variant price has been updated
@@ -67,27 +33,18 @@ export const lambdaHandler = async (event: ShopifyEvent): Promise<APIGatewayProx
             price: variant.price,
         }));
 
-        if (isSupplierProductResult) {
+        if (isSupplierProduct) {
             await broadcastSupplierProductModifications(editedVariants, shopifyProductId, newProductStatus, client);
-        } else if (isRetailerProductResult) {
+            console.log(`Successfully broadcasted changes from ${shopifyProductId} to retailers.`);
+        } else if (isRetailerProduct) {
             await revertRetailerProductModifications(shopifyProductId, editedVariants, newProductStatus, client);
+            console.log(`Successfully reverted retailer product modifications for ${shopifyProductId}.`);
         }
 
-        return {
-            statusCode: 200,
-            body: JSON.stringify({
-                message: 'Successfully handled product update webhook.',
-            }),
-        };
+        return;
     } catch (error) {
-        console.error(error);
-        return {
-            statusCode: 500,
-            body: JSON.stringify({
-                message: 'Failed to handle product update webhook.',
-                error: (error as Error).message,
-            }),
-        };
+        console.error('Failed to handle productsUpdate webhook', error);
+        return;
     } finally {
         if (client) {
             client.release();

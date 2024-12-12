@@ -1,10 +1,9 @@
 import { PoolClient } from 'pg';
 import { EditedVariant, PriceListDetails, ProductStatus } from '../types';
-import { createMapToRestObj, mutateAndValidateGraphQLData } from '../util';
 import { ADJUST_INVENTORY_MUTATION, PRODUCT_VARIANT_BULK_UPDATE_PRICE, UPDATE_PRODUCT_MUTATION } from '../graphql';
 import { InventorySetQuantitiesMutation, UpdateProductMutation } from '../types/admin.generated';
 import { getPricingDetails } from './util';
-
+import { createMapIdToRestObj, mutateAndValidateGraphQLData } from '/opt/nodejs/utils';
 type ImportedRetailerData = {
     retailerShopifyProductId: string;
     retailerAccessToken: string;
@@ -48,13 +47,10 @@ async function updateVariantPricesDatabase(
     if (res.rows.length === 0) {
         throw new Error('No price list found.');
     }
-    const variantsFormatted = editedVariants.map((variant) => {
-        return {
-            shopifyVariantId: variant.shopifyVariantId,
-            retailPrice: variant.price,
-        };
-    });
-
+    const variantsFormatted = editedVariants.map((variant) => ({
+        shopifyVariantId: variant.shopifyVariantId,
+        retailPrice: variant.price,
+    }));
     // the same product can be in multiple price lists
     const priceLists: PriceListDetails[] = res.rows;
     priceLists.forEach(async (priceList) => {
@@ -98,28 +94,23 @@ async function getPriceListForImportedProduct(
     retailerShop: string,
     client: PoolClient,
 ) {
-    try {
-        const priceListQuery = `
-            SELECT "PriceList".*
-            FROM "ImportedProduct"
-            INNER JOIN "Product" ON "Product"."id" = "ImportedProduct"."prismaProductId"
-            INNER JOIN "Session" as "RetailerSession" ON "RetailerSession"."id" = "ImportedProduct"."retailerId"
-            INNER JOIN "PriceList" ON "PriceList"."id" = "Product"."priceListId"
-            WHERE 
-                "ImportedProduct"."shopifyProductId" = $1 AND
-                "RetailerSession"."shop" = $2
-            LIMIT 1
-        `;
-        const res = await client.query(priceListQuery, [importedShopifyProductId, retailerShop]);
-        if (res.rows.length != 1) {
-            throw new Error('Unable to retrieve 1 price list for imported product.');
-        }
-        const priceList: PriceListDetails = res.rows[0];
-        return priceList;
-    } catch (error) {
-        console.error(error);
-        throw new Error('Could not retrieve price list for imported product');
+    const priceListQuery = `
+        SELECT "PriceList".*
+        FROM "ImportedProduct"
+        INNER JOIN "Product" ON "Product"."id" = "ImportedProduct"."prismaProductId"
+        INNER JOIN "Session" as "RetailerSession" ON "RetailerSession"."id" = "ImportedProduct"."retailerId"
+        INNER JOIN "PriceList" ON "PriceList"."id" = "Product"."priceListId"
+        WHERE 
+            "ImportedProduct"."shopifyProductId" = $1 AND
+            "RetailerSession"."shop" = $2
+        LIMIT 1
+    `;
+    const res = await client.query(priceListQuery, [importedShopifyProductId, retailerShop]);
+    if (res.rows.length !== 1) {
+        throw new Error('Unable to retrieve 1 price list for imported product.');
     }
+    const priceList: PriceListDetails = res.rows[0];
+    return priceList;
 }
 
 // We must have the client in order to fetch the price list, which is needed to update the cost per item and profit on shopify
@@ -253,39 +244,34 @@ async function updateRetailerDataOnShopify(
 }
 
 async function getImportedRetailerData(supplierShopifyProductId: string, client: PoolClient) {
-    try {
-        const query = `
-            SELECT 
-                "ImportedProduct"."shopifyProductId" as "retailerShopifyProductId",
-                "Session"."accessToken" as "retailerAccessToken",
-                "Session"."shop" as "retailerShop",
-                "ImportedVariant"."shopifyVariantId" as "retailerShopifyVariantId",
-                "Variant"."shopifyVariantId" as "supplierShopifyVariantId",
-                "FulfillmentService"."shopifyLocationId" as "retailerShopifyLocationId",
-                "ImportedInventoryItem"."shopifyInventoryItemId" as "retailerShopifyInventoryItemId"
-            FROM "Product"
-            INNER JOIN "Variant" ON "Variant"."productId" = "Product"."id"
-            INNER JOIN "ImportedVariant" ON "ImportedVariant"."prismaVariantId" = "Variant"."id"
-            INNER JOIN "ImportedProduct" ON "ImportedProduct"."id" = "ImportedVariant"."importedProductId"
-            INNER JOIN "ImportedInventoryItem" ON "ImportedVariant"."id" = "ImportedInventoryItem"."importedVariantId"
-            INNER JOIN "Session" ON "ImportedProduct"."retailerId" = "Session"."id"
-            INNER JOIN "FulfillmentService" ON "FulfillmentService"."sessionId" = "Session"."id"
-            WHERE "Product"."shopifyProductId" = $1   
-        `;
-        const res = await client.query(query, [supplierShopifyProductId]);
-        const data: ImportedRetailerData[] = res.rows;
-        return data;
-    } catch (error) {
-        console.error(error);
-        throw new Error("failed to get imported retailer data for suppliers' edited variants.");
-    }
+    const query = `
+        SELECT 
+            "ImportedProduct"."shopifyProductId" as "retailerShopifyProductId",
+            "Session"."accessToken" as "retailerAccessToken",
+            "Session"."shop" as "retailerShop",
+            "ImportedVariant"."shopifyVariantId" as "retailerShopifyVariantId",
+            "Variant"."shopifyVariantId" as "supplierShopifyVariantId",
+            "FulfillmentService"."shopifyLocationId" as "retailerShopifyLocationId",
+            "ImportedInventoryItem"."shopifyInventoryItemId" as "retailerShopifyInventoryItemId"
+        FROM "Product"
+        INNER JOIN "Variant" ON "Variant"."productId" = "Product"."id"
+        INNER JOIN "ImportedVariant" ON "ImportedVariant"."prismaVariantId" = "Variant"."id"
+        INNER JOIN "ImportedProduct" ON "ImportedProduct"."id" = "ImportedVariant"."importedProductId"
+        INNER JOIN "ImportedInventoryItem" ON "ImportedVariant"."id" = "ImportedInventoryItem"."importedVariantId"
+        INNER JOIN "Session" ON "ImportedProduct"."retailerId" = "Session"."id"
+        INNER JOIN "FulfillmentService" ON "FulfillmentService"."sessionId" = "Session"."id"
+        WHERE "Product"."shopifyProductId" = $1   
+    `;
+    const res = await client.query(query, [supplierShopifyProductId]);
+    const data: ImportedRetailerData[] = res.rows;
+    return data;
 }
 
 function getFormattedRetailerImportedData(
     importedRetailerData: ImportedRetailerData[],
     supplierEditedVariants: EditedVariant[],
 ) {
-    const supplierEditedVariantsMap = createMapToRestObj(supplierEditedVariants, 'shopifyVariantId');
+    const supplierEditedVariantsMap = createMapIdToRestObj(supplierEditedVariants, 'shopifyVariantId');
     const retailerProductData: GroupedQueryDataWithUpdateFields = new Map();
     importedRetailerData.forEach((row) => {
         const prevValue = retailerProductData.get(row.retailerShopifyProductId);

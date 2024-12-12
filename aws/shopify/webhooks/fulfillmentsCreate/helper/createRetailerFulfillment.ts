@@ -12,7 +12,8 @@ import {
 } from '../graphql';
 import { createMapIdToRestObj, fetchAndValidateGraphQLData, mutateAndValidateGraphQLData } from '/opt/nodejs/utils';
 import { v4 as uuidv4 } from 'uuid';
-import { getOrderFromSupplierShopifyOrderId, getRetailerSessionFromSupplierOrder } from '/opt/nodejs/models/order';
+import { getOrderFromSupplierShopifyOrderId } from '/opt/nodejs/models/order';
+import { getRetailerSessionFromSupplierOrder } from '/opt/nodejs/models/session';
 
 type FulfillmentDetailLineItem = {
     shopifyLineItemId: string;

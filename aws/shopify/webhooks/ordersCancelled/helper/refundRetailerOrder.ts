@@ -3,7 +3,6 @@
 // depending on user feedback, we can change impl
 
 import { PoolClient } from 'pg';
-import { fetchAndValidateGraphQLData, mutateAndValidateGraphQLData } from '../util';
 import {
     FulfillmentOrderQuery,
     MMutation,
@@ -17,7 +16,9 @@ import {
     GET_ORDER_LINE_ITEMS,
     GET_SUBSEQUENT_ORDER_LINE_ITEMS,
 } from '../graphql';
-import createMapIdToRestObj from '../util/createMapToRestObj';
+import { getOrderFromSupplierShopifyOrderId } from '/opt/nodejs/models/order';
+import { getRetailerSessionFromOrderId } from '/opt/nodejs/models/session';
+import { fetchAndValidateGraphQLData, mutateAndValidateGraphQLData, createMapIdToRestObj } from '/opt/nodejs/utils';
 
 type DbOrderLineItemDetails = {
     retailerShopifyVariantId: string;
@@ -34,70 +35,6 @@ type ShopifyRetailerOrderLineWithRetailerVariantId = {
 // START: CANCEL FULFILLMENT ORDER ON RETAILER'S STORE LOGIC
 // ==============================================================================================================
 
-async function getOrderIdFromDatabase(supplierShopifyOrderId: string, client: PoolClient) {
-    try {
-        const query = `
-          SELECT "id" FROM "Order"
-          WHERE "supplierShopifyOrderId" = $1
-          LIMIT 1
-        `;
-        const queryRes = await client.query(query, [supplierShopifyOrderId]);
-        if (queryRes.rows.length === 0) {
-            throw new Error('No order exists for supplierShopifyOrderId ' + supplierShopifyOrderId);
-        }
-
-        return queryRes.rows[0].id as string;
-    } catch (error) {
-        console.error(error);
-        throw new Error('Failed to database order id for supplierShopifyOrderId ' + supplierShopifyOrderId);
-    }
-}
-
-async function getRetailerShopifyFulfillmentOrderId(supplierShopifyOrderId: string, client: PoolClient) {
-    try {
-        const query = `
-          SELECT "retailerShopifyFulfillmentOrderId" FROM "Order"
-          WHERE "supplierShopifyOrderId" = $1
-          LIMIT 1
-        `;
-        const queryRes = await client.query(query, [supplierShopifyOrderId]);
-        if (queryRes.rows.length === 0) {
-            throw new Error(
-                'No retailerShopifyFulfillmentOrderId exists for supplierShopifyOrderId ' + supplierShopifyOrderId,
-            );
-        }
-
-        return queryRes.rows[0].retailerShopifyFulfillmentOrderId as string;
-    } catch (error) {
-        console.error(error);
-        throw new Error(
-            'Failed to get retailerShopifyFulfillmentOrderId from supplierShopifyOrderId ' + supplierShopifyOrderId,
-        );
-    }
-}
-
-async function getRetailerSession(shopifyFulfillmentOrderId: string, client: PoolClient) {
-    try {
-        const query = `
-          SELECT "Session".* FROM "Order"
-          INNER JOIN "Session" ON "Order"."retailerId" = "Session"."id"
-          WHERE "Order"."retailerShopifyFulfillmentOrderId" = $1
-          LIMIT 1
-        `;
-        const queryRes = await client.query(query, [shopifyFulfillmentOrderId]);
-        if (queryRes.rows.length === 0) {
-            throw new Error('No retailer session exists for shopifyFulfillmentOrderId ' + shopifyFulfillmentOrderId);
-        }
-
-        return queryRes.rows[0] as Session;
-    } catch (error) {
-        console.error(error);
-        throw new Error(
-            'Failed to retrieve retailer session from shopifyFulfillmentOrderId ' + shopifyFulfillmentOrderId,
-        );
-    }
-}
-
 async function getRetailerShopifyOrderId(shopifyFulfillmentId: string, retailerSession: Session) {
     const data = await fetchAndValidateGraphQLData<FulfillmentOrderQuery>(
         retailerSession.shop,
@@ -111,7 +48,6 @@ async function getRetailerShopifyOrderId(shopifyFulfillmentId: string, retailerS
     return shopifyRetailerOrderId;
 }
 
-// TODO: I wonder if I can create a generic function for this in the future
 async function getAllRetailerOrderLineItemIdWithVariantId(retailerShopifyOrderId: string, retailerSession: Session) {
     const orderLineItemsWithVariantId: ShopifyRetailerOrderLineWithRetailerVariantId[] = [];
     const initialOrderLines = await fetchAndValidateGraphQLData<OrderLineItemsQuery>(
@@ -165,60 +101,50 @@ async function getRetailerOrderLineItems(
     retailerSession: Session,
     client: PoolClient,
 ): Promise<RetailerLineItemDetail[]> {
-    try {
-        // NOTE: shopify supplier line item = orderLineItem while retailer line item = fulfillmentOrderLineItem in database
-        // shopify currently does not have a method of querying the orderLineItemId from the fulfillmentOrderLineItemId,
-        // so the simplest way to do it is by matching the order line item id with the variants
-        const supplierShopifyLineItemIds = supplierLineItems.map(({ shopifyLineItemId }) => shopifyLineItemId);
-        const query = `
-            SELECT "retailerShopifyVariantId", "supplierShopifyOrderLineItemId", "retailerShopifyOrderLineItemId"
-            FROM "OrderLineItem"
-            WHERE "supplierShopifyOrderLineItemId" = ANY($1)
-        `;
-        const [queryRes, retailerOrderLineItemsWithVariantId] = await Promise.all([
-            client.query(query, [supplierShopifyLineItemIds]),
-            getAllRetailerOrderLineItemIdWithVariantId(shopifyRetailerOrderId, retailerSession),
-        ]);
-        const dbLineItemDetails: DbOrderLineItemDetails[] = queryRes.rows;
-        const supplierOrderLineItemIdToRestMap = createMapIdToRestObj(
-            dbLineItemDetails,
-            'supplierShopifyOrderLineItemId',
-        );
-        const retailerVariantIdToRetailerOrderLineIdMap = createMapIdToRestObj(
-            retailerOrderLineItemsWithVariantId,
-            'retailerShopifyVariantId',
-        );
+    // NOTE: shopify supplier line item = orderLineItem while retailer line item = fulfillmentOrderLineItem in database
+    // shopify currently does not have a method of querying the orderLineItemId from the fulfillmentOrderLineItemId,
+    // so the simplest way to do it is by matching the order line item id with the variants
+    const supplierShopifyLineItemIds = supplierLineItems.map(({ shopifyLineItemId }) => shopifyLineItemId);
+    const query = `
+        SELECT "retailerShopifyVariantId", "supplierShopifyOrderLineItemId", "retailerShopifyOrderLineItemId"
+        FROM "OrderLineItem"
+        WHERE "supplierShopifyOrderLineItemId" = ANY($1)
+    `;
+    const [queryRes, retailerOrderLineItemsWithVariantId] = await Promise.all([
+        client.query(query, [supplierShopifyLineItemIds]),
+        getAllRetailerOrderLineItemIdWithVariantId(shopifyRetailerOrderId, retailerSession),
+    ]);
+    const dbLineItemDetails: DbOrderLineItemDetails[] = queryRes.rows;
+    const supplierOrderLineItemIdToRestMap = createMapIdToRestObj(dbLineItemDetails, 'supplierShopifyOrderLineItemId');
+    const retailerVariantIdToRetailerOrderLineIdMap = createMapIdToRestObj(
+        retailerOrderLineItemsWithVariantId,
+        'retailerShopifyVariantId',
+    );
 
-        const retailerLineItems: RetailerLineItemDetail[] = supplierLineItems.map((lineItem) => {
-            const shopifySupplierLineItemId = lineItem.shopifyLineItemId;
-            const {
-                retailerShopifyVariantId,
-                retailerShopifyOrderLineItemId: shopifyRetailerFulfillmentOrderLineItemId,
-            } = supplierOrderLineItemIdToRestMap.get(shopifySupplierLineItemId) ?? {
+    const retailerLineItems: RetailerLineItemDetail[] = supplierLineItems.map((lineItem) => {
+        const shopifySupplierLineItemId = lineItem.shopifyLineItemId;
+        const { retailerShopifyVariantId, retailerShopifyOrderLineItemId: shopifyRetailerFulfillmentOrderLineItemId } =
+            supplierOrderLineItemIdToRestMap.get(shopifySupplierLineItemId) ?? {
                 retailerShopifyVariantId: undefined,
                 retailerShopifyOrderLineItemId: undefined,
             };
 
-            if (!retailerShopifyVariantId || !shopifyRetailerFulfillmentOrderLineItemId) {
-                throw new Error(`Supplier line item ${lineItem.shopifyLineItemId} was not in the database.`);
-            }
-            const retailerOrderLineId =
-                retailerVariantIdToRetailerOrderLineIdMap.get(retailerShopifyVariantId)?.retailerOrderLineItemId;
+        if (!retailerShopifyVariantId || !shopifyRetailerFulfillmentOrderLineItemId) {
+            throw new Error(`Supplier line item ${lineItem.shopifyLineItemId} was not in the database.`);
+        }
+        const retailerOrderLineId =
+            retailerVariantIdToRetailerOrderLineIdMap.get(retailerShopifyVariantId)?.retailerOrderLineItemId;
 
-            if (!retailerOrderLineId) {
-                throw new Error(`No order line id matches ${retailerShopifyVariantId} in shopify`);
-            }
-            return {
-                shopifyFulfillmentLineItemId: shopifyRetailerFulfillmentOrderLineItemId,
-                shopifyOrderLineItemId: retailerOrderLineId,
-                quantity: lineItem.quantity,
-            };
-        });
-        return retailerLineItems;
-    } catch (error) {
-        console.error(error);
-        throw new Error('Failed to get retailer line items.');
-    }
+        if (!retailerOrderLineId) {
+            throw new Error(`No order line id matches ${retailerShopifyVariantId} in shopify`);
+        }
+        return {
+            shopifyFulfillmentLineItemId: shopifyRetailerFulfillmentOrderLineItemId,
+            shopifyOrderLineItemId: retailerOrderLineId,
+            quantity: lineItem.quantity,
+        };
+    });
+    return retailerLineItems;
 }
 
 async function refundRetailerOrderOnShopify(
@@ -238,8 +164,6 @@ async function refundRetailerOrderOnShopify(
         notify: true,
     };
 
-    console.log(input);
-
     await mutateAndValidateGraphQLData<MMutation>(
         retailerSession.shop,
         retailerSession.accessToken,
@@ -251,21 +175,12 @@ async function refundRetailerOrderOnShopify(
     );
 }
 
-async function updateOrderLineItemsQuantityCancelled(
-    dbOrderId: string,
-    retailerLineItems: RetailerLineItemDetail[],
-    client: PoolClient,
-) {
-    try {
-        const updateQuery = `UPDATE "OrderLineItem" SET "quantityCancelled" = $1 WHERE "retailerShopifyOrderLineItemId" = $2`;
-        const updateOrderLineItemPromises = retailerLineItems.map((lineItem) =>
-            client.query(updateQuery, [lineItem.quantity, lineItem.shopifyFulfillmentLineItemId]),
-        );
-        await Promise.all(updateOrderLineItemPromises);
-    } catch (error) {
-        console.error(error);
-        throw new Error(`Failed to update order ${dbOrderId} to cancelled.`);
-    }
+async function updateOrderLineItemsQuantityCancelled(retailerLineItems: RetailerLineItemDetail[], client: PoolClient) {
+    const updateQuery = `UPDATE "OrderLineItem" SET "quantityCancelled" = $1 WHERE "retailerShopifyOrderLineItemId" = $2`;
+    const updateOrderLineItemPromises = retailerLineItems.map((lineItem) =>
+        client.query(updateQuery, [lineItem.quantity, lineItem.shopifyFulfillmentLineItemId]),
+    );
+    await Promise.all(updateOrderLineItemPromises);
 }
 
 // ==============================================================================================================
@@ -281,12 +196,11 @@ async function refundRetailerOrder(
     supplierLineItems: LineItemDetail[],
     client: PoolClient,
 ) {
-    const dbOrderId = await getOrderIdFromDatabase(supplierShopifyOrderId, client);
-    const retailerShopifyFulfillmentOrderId = await getRetailerShopifyFulfillmentOrderId(
+    const { retailerShopifyFulfillmentOrderId, id: dbOrderId } = await getOrderFromSupplierShopifyOrderId(
         supplierShopifyOrderId,
         client,
     );
-    const retailerSession = await getRetailerSession(retailerShopifyFulfillmentOrderId, client);
+    const retailerSession = await getRetailerSessionFromOrderId(dbOrderId, client);
     const shopifyRetailerOrderId = await getRetailerShopifyOrderId(retailerShopifyFulfillmentOrderId, retailerSession);
     const retailerLineItems = await getRetailerOrderLineItems(
         supplierLineItems,
@@ -295,7 +209,7 @@ async function refundRetailerOrder(
         client,
     );
     await refundRetailerOrderOnShopify(shopifyRetailerOrderId, retailerLineItems, retailerSession);
-    await updateOrderLineItemsQuantityCancelled(dbOrderId, retailerLineItems, client);
+    await updateOrderLineItemsQuantityCancelled(retailerLineItems, client);
 }
 
 export default refundRetailerOrder;

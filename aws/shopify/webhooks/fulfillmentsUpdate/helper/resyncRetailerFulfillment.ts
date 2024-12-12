@@ -1,9 +1,11 @@
 import { PoolClient } from 'pg';
-import { PayloadLineItem, PayloadTrackingInfo, Session, ShopifyEvent } from '../types';
-import { mutateAndValidateGraphQLData } from '../util';
+import { PayloadLineItem, PayloadTrackingInfo, ShopifyEvent } from '../types';
 import { FulfillmentCreateV2Mutation } from '../types/admin.generated';
 import { CREATE_FULFILLMENT_FULFILLMENT_ORDER_MUTATION } from '../graphql';
-import getSessionFromShop from './util/getSessionFromShop';
+import { getSessionFromShop } from '/opt/nodejs/models/session';
+import { Session } from '/opt/nodejs/models/types';
+import { mutateAndValidateGraphQLData } from '/opt/nodejs/utils';
+import { getFulfillmentIdFromRetailerShopify } from '/opt/nodejs/models/fulfillment';
 
 // ==============================================================================================================
 // START: RESYNC FULFILLMENT FOR RETAILER STORE LOGIC
@@ -22,46 +24,17 @@ function getRelevantDetailsForResyncingRetailerFulfillment(payload: ShopifyEvent
     return { lineItems, trackingInfo };
 }
 
-async function getDbFulfillmentId(retailerShopifyFulfillmentId: string, client: PoolClient) {
-    try {
-        const query = `
-          SELECT "id" FROM "Fulfillment"
-          WHERE "retailerShopifyFulfillmentId" = $1
-          LIMIT 1
-        `;
-        const res = await client.query(query, [retailerShopifyFulfillmentId]);
-        if (res.rows.length === 0) {
-            throw new Error(
-                `No fulfillment row exists for retailerShopifyFulfillmentId ${retailerShopifyFulfillmentId}.`,
-            );
-        }
-        return res.rows[0].id as string;
-    } catch (error) {
-        console.error(error);
-        throw new Error(
-            `Failed to retrieve database fulfillment id from retailerShopifyFulfillmentId ${retailerShopifyFulfillmentId}.`,
-        );
+async function getRetailerShopifyFulfillmentOrderId(dbFulfillmentId: string, client: PoolClient) {
+    const query = `
+        SELECT "retailerShopifyFulfillmentOrderId" 
+        FROM "Order" 
+        WHERE "id" = (SELECT "orderId" FROM "Fulfillment" WHERE "id" = $1)
+    `;
+    const res = await client.query(query, [dbFulfillmentId]);
+    if (res.rows.length === 0) {
+        throw new Error(`No retailerShopifyFulfillmentOrderId exists for dbFulfillmentId ${dbFulfillmentId}.`);
     }
-}
-
-async function getretailerShopifyFulfillmentOrderId(dbFulfillmentId: string, client: PoolClient) {
-    try {
-        const query = `
-          SELECT "retailerShopifyFulfillmentOrderId" 
-          FROM "Order" 
-          WHERE "id" = (SELECT "orderId" FROM "Fulfillment" WHERE "id" = $1)
-        `;
-        const res = await client.query(query, [dbFulfillmentId]);
-        if (res.rows.length === 0) {
-            throw new Error(`No retailerShopifyFulfillmentOrderId exists for dbFulfillmentId ${dbFulfillmentId}.`);
-        }
-        return res.rows[0].id as string;
-    } catch (error) {
-        console.error(error);
-        throw new Error(
-            `Failed to retrieve retailerShopifyFulfillmentOrderId from dbFulfillmentId ${dbFulfillmentId}.`,
-        );
-    }
+    return res.rows[0].id as string;
 }
 
 async function updateRetailerFulfillmentOnShopify(
@@ -89,7 +62,7 @@ async function updateRetailerFulfillmentOnShopify(
     const newRetailerShopifyFulfillmentId = res.fulfillmentCreateV2?.fulfillment?.id;
     if (!newRetailerShopifyFulfillmentId) {
         throw new Error('No shopify fulfillment id was created from mutation.');
-    } // this most likely will never run, just for type safety
+    }
     return newRetailerShopifyFulfillmentId;
 }
 
@@ -98,19 +71,12 @@ async function updateFulfillmentInDatabase(
     newRetailerShopifyFulfillmentId: string,
     client: PoolClient,
 ) {
-    try {
-        const query = `
-          UPDATE "Fulfillment"
-          SET "retailerShopifyFulfillmentId" = $1
-          WHERE "id" = $2
-        `;
-        await client.query(query, [newRetailerShopifyFulfillmentId, dbFulfillmentId]);
-    } catch (error) {
-        console.error(error);
-        throw new Error(
-            `Failed to update retailerShopifyFulfillmentId in database (fulfillment id: ${dbFulfillmentId}, retailerShopifyFulfillmentId: ${newRetailerShopifyFulfillmentId}).`,
-        );
-    }
+    const query = `
+        UPDATE "Fulfillment"
+        SET "retailerShopifyFulfillmentId" = $1
+        WHERE "id" = $2
+    `;
+    await client.query(query, [newRetailerShopifyFulfillmentId, dbFulfillmentId]);
 }
 
 // ==============================================================================================================
@@ -130,9 +96,9 @@ async function resyncRetailerFulfillment(
     const { lineItems, trackingInfo } = getRelevantDetailsForResyncingRetailerFulfillment(payload);
     const [retailerSession, dbFulfillmentId] = await Promise.all([
         getSessionFromShop(shop, client),
-        getDbFulfillmentId(retailerShopifyFulfillmentId, client),
+        getFulfillmentIdFromRetailerShopify(retailerShopifyFulfillmentId, client),
     ]);
-    const retailerShopifyFulfillmentOrderId = await getretailerShopifyFulfillmentOrderId(dbFulfillmentId, client);
+    const retailerShopifyFulfillmentOrderId = await getRetailerShopifyFulfillmentOrderId(dbFulfillmentId, client);
     const newRetailerShopifyFulfillmentId = await updateRetailerFulfillmentOnShopify(
         retailerShopifyFulfillmentOrderId,
         lineItems,
