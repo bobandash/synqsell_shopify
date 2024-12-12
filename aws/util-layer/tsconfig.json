@@ -1,0 +1,7 @@
+// https://www.qloudx.com/how-to-split-typescript-based-lambda-functions-into-lambda-layers/
+// TODO: I may need to set up CI/CD
+{
+  "compilerOptions": {
+    "outDir": "./dist"
+  }
+}

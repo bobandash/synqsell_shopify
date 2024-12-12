@@ -4,13 +4,12 @@ import {
     GET_INITIAL_FULFILLMENT_ORDER_LINE_ITEMS,
     GET_SUBSEQUENT_FULFILLMENT_ORDER_LINE_ITEMS,
 } from '../graphql';
-import { fetchAndValidateGraphQLData, mutateAndValidateGraphQLData } from '../util';
+import { fetchAndValidateGraphQLData, mutateAndValidateGraphQLData, createMapIdToRestObj } from '/opt/nodejs/utils';
 import {
     FulfillmentOrderSplitMutation,
     InitialFulfillmentOrderDetailsQuery,
     SubsequentFulfillmentOrderDetailsQuery,
 } from '../types/admin.generated';
-import createMapIdToRestObj from '../util/createMapToRestObj';
 import { FulfillmentOrdersBySupplier } from '../types';
 
 type OrderLineDetail = {
@@ -28,6 +27,8 @@ type ImportedVariantIdDetails = {
 };
 
 type OrderLinesBySupplier = Map<string, OrderLineDetailWithPriceList[]>; // string is supplierId
+
+// TODO: REFACTOR THIS FILE, NOT URGENT
 
 async function getAllOrderLineDetails(fulfillmentOrderId: string, shop: string, accessToken: string) {
     const orderLineDetails: OrderLineDetail[] = [];

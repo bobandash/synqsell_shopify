@@ -1,77 +1,36 @@
-import { APIGatewayProxyResult } from 'aws-lambda';
 import { PoolClient } from 'pg';
 import { initializePool } from './db';
-import { Session, ShopifyEvent } from './types';
+import { ShopifyEvent } from './types';
 import { composeGid } from '@shopify/admin-graphql-api-utilities';
 import { createRetailerFulfillment } from './helper';
+import { getSessionFromShop } from '/opt/nodejs/models/session';
+import { isOrder } from '/opt/nodejs/models/order';
 
-async function getSupplierSession(shop: string, client: PoolClient) {
-    try {
-        const query = `SELECT * FROM "Session" WHERE shop = $1 LIMIT 1`;
-        const sessionData = await client.query(query, [shop]);
-        if (sessionData.rows.length === 0) {
-            throw new Error('Shop data is invalid.');
-        }
-        const session = sessionData.rows[0];
-        return session as Session;
-    } catch (error) {
-        console.error(error);
-        throw new Error(`Failed to retrieve session from shop ${shop}.`);
-    }
-}
-
-async function isSynqsellOrder(shopifyOrderId: string, supplierId: string, client: PoolClient) {
-    try {
-        const query = `
-            SELECT "id" FROM "Order"
-            WHERE "supplierId" = $1 AND "supplierShopifyOrderId" = $2
-        `;
-        const orderData = await client.query(query, [supplierId, shopifyOrderId]);
-        return orderData.rows.length > 0;
-    } catch (error) {
-        console.error(error);
-        throw new Error(`Failed to check if order id ${shopifyOrderId} is a synqsell order.`);
-    }
-}
-
-export const lambdaHandler = async (event: ShopifyEvent): Promise<APIGatewayProxyResult> => {
+export const lambdaHandler = async (event: ShopifyEvent) => {
     let client: null | PoolClient = null;
     try {
         const pool = await initializePool();
         client = await pool.connect();
-        const payload = event.detail.payload;
-        const shop = event.detail.metadata['X-Shopify-Shop-Domain'];
-        const { order_id: orderId, id: fulfillmentId } = payload;
+        const {
+            payload: { order_id: orderId, id: fulfillmentId },
+            metadata: { 'X-Shopify-Shop-Domain': shop },
+        } = event.detail;
+
         const shopifyOrderId = composeGid('Order', orderId);
-        const supplierSession = await getSupplierSession(shop, client);
         const shopifyFulfillmentId = composeGid('Fulfillment', fulfillmentId);
-        const isRelevantOrder = await isSynqsellOrder(shopifyOrderId, supplierSession.id, client);
-        if (!isRelevantOrder) {
-            return {
-                statusCode: 200,
-                body: JSON.stringify({
-                    message: `${shopifyOrderId} is not a SynqSell order.`,
-                }),
-            };
+
+        const supplierSession = await getSessionFromShop(shop, client);
+        const isSynqSellOrder = await isOrder(shopifyOrderId, supplierSession.id, client);
+        if (!isSynqSellOrder) {
+            console.log(`This order ${shopifyOrderId} is not a SynqSell order.`);
+            return;
         }
-
         await createRetailerFulfillment(shopifyFulfillmentId, shopifyOrderId, supplierSession, client);
-
-        return {
-            statusCode: 200,
-            body: JSON.stringify({
-                message: 'Successfully synced fulfillment creation event to retailer..',
-            }),
-        };
+        console.log(`Successfully fulfilled order for retailer ${shopifyOrderId}.`);
+        return;
     } catch (error) {
-        console.error(error);
-        return {
-            statusCode: 500,
-            body: JSON.stringify({
-                message: 'Could not delete products.',
-                error: (error as Error).message,
-            }),
-        };
+        console.error('Failed to fulfil order for retailer', error);
+        throw error;
     } finally {
         if (client) {
             client.release();

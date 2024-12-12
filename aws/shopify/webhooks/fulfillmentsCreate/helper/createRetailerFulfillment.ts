@@ -1,6 +1,5 @@
 import { PoolClient } from 'pg';
 import { Session } from '../types';
-import { fetchAndValidateGraphQLData, mutateAndValidateGraphQLData } from '../util';
 import {
     FulfillmentCreateV2Mutation,
     FulfillmentDetailsQuery,
@@ -11,8 +10,9 @@ import {
     GET_FULFILLMENT_DETAILS,
     GET_SUBSEQUENT_FULFILLMENT_DETAILS,
 } from '../graphql';
-import createMapIdToRestObj from '../util/createMapToRestObj';
+import { createMapIdToRestObj, fetchAndValidateGraphQLData, mutateAndValidateGraphQLData } from '/opt/nodejs/utils';
 import { v4 as uuidv4 } from 'uuid';
+import { getOrderFromSupplierShopifyOrderId, getRetailerSessionFromSupplierOrder } from '/opt/nodejs/models/order';
 
 type FulfillmentDetailLineItem = {
     shopifyLineItemId: string;
@@ -39,28 +39,9 @@ type SupplierAndRetailerOrderLineItem = {
 // START: ADD FULFILLMENT DETAILS HELPER FUNCTIONS
 // ==============================================================================================================
 
-async function getRetailerSessionFromSupplierOrder(supplierShopifyOrderId: string, client: PoolClient) {
-    try {
-        const retailerSessionQuery = `
-            SELECT "Session".* FROM "Order"
-            INNER JOIN "Session" ON "Session"."id" = "Order"."retailerId" 
-            WHERE "supplierShopifyOrderId" = $1
-            LIMIT 1        
-        `;
-        const res = await client.query(retailerSessionQuery, [supplierShopifyOrderId]);
-        if (res.rows.length === 0) {
-            throw new Error('No retailer session exists for ' + supplierShopifyOrderId);
-        }
-        return res.rows[0] as Session;
-    } catch (error) {
-        console.error(error);
-        throw new Error('Failed to get retailer session from supplier order .' + supplierShopifyOrderId);
-    }
-}
-
+// TODO: Refactor this file in the future if need testing, it's too verbose / too much is going on
 async function getFulfillmentDetails(shopifyFulfillmentId: string, session: Session): Promise<FulfillmentDetails> {
     const fulfillmentDetailLineItems: FulfillmentDetailLineItem[] = [];
-
     const initialFulfillmentDetails = await fetchAndValidateGraphQLData<FulfillmentDetailsQuery>(
         session.shop,
         session.accessToken,
@@ -115,44 +96,19 @@ async function getFulfillmentDetails(shopifyFulfillmentId: string, session: Sess
 }
 
 async function getSupplierAndRetailerOrderLineItems(supplierShopifyOrderId: string, client: PoolClient) {
-    try {
-        const query = `
-          SELECT 
-            "OrderLineItem"."retailerShopifyOrderLineItemId" AS "retailerShopifyOrderLineItemId",
-            "OrderLineItem"."supplierShopifyOrderLineItemId" AS "supplierShopifyOrderLineItemId"
-          FROM "Order"
-          INNER JOIN "OrderLineItem" ON "OrderLineItem"."orderId" = "Order"."id"
-          WHERE "supplierShopifyOrderId" = $1
-        `;
-        const queryRes = await client.query(query, [supplierShopifyOrderId]);
-        if (queryRes.rows.length === 0) {
-            throw new Error('There are no order line items for ' + supplierShopifyOrderId);
-        }
-
-        return queryRes.rows as SupplierAndRetailerOrderLineItem[];
-    } catch (error) {
-        console.error(error);
-        throw new Error('Failed to get supplier and retailer order line items from order id ' + supplierShopifyOrderId);
+    const query = `
+        SELECT 
+        "OrderLineItem"."retailerShopifyOrderLineItemId" AS "retailerShopifyOrderLineItemId",
+        "OrderLineItem"."supplierShopifyOrderLineItemId" AS "supplierShopifyOrderLineItemId"
+        FROM "Order"
+        INNER JOIN "OrderLineItem" ON "OrderLineItem"."orderId" = "Order"."id"
+        WHERE "supplierShopifyOrderId" = $1
+    `;
+    const queryRes = await client.query(query, [supplierShopifyOrderId]);
+    if (queryRes.rows.length === 0) {
+        throw new Error(`There are no order line items for ${supplierShopifyOrderId}.`);
     }
-}
-
-async function getRetailerShopifyFulfillmentOrderId(supplierShopifyOrderId: string, client: PoolClient) {
-    try {
-        const query = `
-          SELECT "retailerShopifyFulfillmentOrderId"
-          FROM "Order"
-          WHERE "supplierShopifyOrderId" = $1
-          LIMIT 1
-        `;
-        const queryRes = await client.query(query, [supplierShopifyOrderId]);
-        if (queryRes.rows.length === 0) {
-            throw new Error('There is no retailer fulfillment order id for ' + supplierShopifyOrderId);
-        }
-        return queryRes.rows[0].retailerShopifyFulfillmentOrderId as string;
-    } catch (error) {
-        console.error(error);
-        throw new Error('Failed to get retailer fulfillment order id from supplier order id ' + supplierShopifyOrderId);
-    }
+    return queryRes.rows as SupplierAndRetailerOrderLineItem[];
 }
 
 async function addRetailerFulfillmentOnShopify(
@@ -162,12 +118,11 @@ async function addRetailerFulfillmentOnShopify(
     supplierShopifyOrderId: string,
     client: PoolClient,
 ) {
-    const [supplierFulfillmentDetails, supplierAndRetailerOrderLineItems, retailerShopifyFulfillmentOrderId] =
-        await Promise.all([
-            getFulfillmentDetails(supplierShopifyFulfillmentId, supplierSession),
-            getSupplierAndRetailerOrderLineItems(supplierShopifyOrderId, client),
-            getRetailerShopifyFulfillmentOrderId(supplierShopifyOrderId, client),
-        ]);
+    const [supplierFulfillmentDetails, supplierAndRetailerOrderLineItems, order] = await Promise.all([
+        getFulfillmentDetails(supplierShopifyFulfillmentId, supplierSession),
+        getSupplierAndRetailerOrderLineItems(supplierShopifyOrderId, client),
+        getOrderFromSupplierShopifyOrderId(supplierShopifyOrderId, client),
+    ]);
     const orderLineItemsIdMap = createMapIdToRestObj(
         supplierAndRetailerOrderLineItems,
         'supplierShopifyOrderLineItemId',
@@ -189,7 +144,7 @@ async function addRetailerFulfillmentOnShopify(
             ),
         }),
         lineItemsByFulfillmentOrder: {
-            fulfillmentOrderId: retailerShopifyFulfillmentOrderId,
+            fulfillmentOrderId: order.retailerShopifyFulfillmentOrderId,
             fulfillmentOrderLineItems: lineItems.map(({ shopifyLineItemId, quantity }) => {
                 const retailerFulfillmentOrderLineItemId =
                     orderLineItemsIdMap.get(shopifyLineItemId)?.retailerShopifyOrderLineItemId;
@@ -220,52 +175,23 @@ async function addRetailerFulfillmentOnShopify(
     return retailerFulfillmentId;
 }
 
-async function getDbOrderId(supplierShopifyOrderId: string, client: PoolClient) {
-    try {
-        const query = `
-            SELECT "id" FROM "Order"
-            WHERE "supplierShopifyOrderId" = $1
-            LIMIT 1        
-        `;
-        const orderRes = await client.query(query, [supplierShopifyOrderId]);
-        if (orderRes.rows.length === 0) {
-            throw new Error('There is no order id for shopify supplier order id ' + supplierShopifyOrderId);
-        }
-
-        return orderRes.rows[0].id as string;
-    } catch (error) {
-        console.error(error);
-        throw new Error('Failed to get database order id from supplier shopify order id ' + supplierShopifyOrderId);
-    }
-}
-
 async function addFulfillmentToDatabase(
     supplierShopifyFulfillmentId: string,
     retailerShopifyFulfillmentId: string,
     dbOrderId: string,
     client: PoolClient,
 ) {
-    try {
-        const fulfillmentInsertionQuery = `
-            INSERT INTO "Fulfillment" (
-                "id",
-                "supplierShopifyFulfillmentId",
-                "retailerShopifyFulfillmentId",
-                "orderId"
-            )
-            VALUES ( $1, $2, $3, $4 )
-        `;
+    const query = `
+        INSERT INTO "Fulfillment" (
+            "id",
+            "supplierShopifyFulfillmentId",
+            "retailerShopifyFulfillmentId",
+            "orderId"
+        )
+        VALUES ( $1, $2, $3, $4 )
+    `;
 
-        await client.query(fulfillmentInsertionQuery, [
-            uuidv4(),
-            supplierShopifyFulfillmentId,
-            retailerShopifyFulfillmentId,
-            dbOrderId,
-        ]);
-    } catch (error) {
-        console.error(error);
-        throw new Error('Failed to add fulfillment in database.');
-    }
+    await client.query(query, [uuidv4(), supplierShopifyFulfillmentId, retailerShopifyFulfillmentId, dbOrderId]);
 }
 
 // ==============================================================================================================
@@ -278,9 +204,9 @@ async function createRetailerFulfillment(
     supplierSession: Session,
     client: PoolClient,
 ) {
-    const [retailerSession, dbOrderId] = await Promise.all([
+    const [retailerSession, order] = await Promise.all([
         getRetailerSessionFromSupplierOrder(supplierShopifyOrderId, client),
-        getDbOrderId(supplierShopifyOrderId, client),
+        getOrderFromSupplierShopifyOrderId(supplierShopifyOrderId, client),
     ]);
     const retailerShopifyFulfillmentId = await addRetailerFulfillmentOnShopify(
         supplierShopifyFulfillmentId,
@@ -290,7 +216,7 @@ async function createRetailerFulfillment(
         client,
     );
 
-    await addFulfillmentToDatabase(supplierShopifyFulfillmentId, retailerShopifyFulfillmentId, dbOrderId, client);
+    await addFulfillmentToDatabase(supplierShopifyFulfillmentId, retailerShopifyFulfillmentId, order.id, client);
 }
 
 export default createRetailerFulfillment;

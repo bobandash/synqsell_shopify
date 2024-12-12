@@ -1,5 +1,8 @@
 {
     "compilerOptions": {
+        "paths": {
+            "/opt/nodejs/*": ["../../../util-layer/*"]
+        },
         "target": "es2020",
         "strict": true,
         "preserveConstEnums": true,

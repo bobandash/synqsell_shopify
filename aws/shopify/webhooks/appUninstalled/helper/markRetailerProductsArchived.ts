@@ -1,27 +1,13 @@
 import { PoolClient } from 'pg';
-import { Session } from '../types';
-import { mutateAndValidateGraphQLData } from '../util';
+import { mutateAndValidateGraphQLData } from '/opt/nodejs/utils';
 import { UpdateProductStatusMutation } from '../types/admin.generated';
 import { UPDATE_PRODUCT_STATUS_MUTATION } from '../graphql';
+import { getSessionFromId } from '/opt/nodejs/models/session';
 
 type RetailerImportedProductDetail = {
     retailerShopifyProductId: string;
     retailerId: string;
 };
-
-// ==============================================================================================================
-// START: GENERIC HELPER FUNCTIONS
-// ==============================================================================================================
-
-async function getSession(sessionId: string, client: PoolClient) {
-    const query = `SELECT * FROM "Session" WHERE id = $1 LIMIT 1`;
-    const sessionData = await client.query(query, [sessionId]);
-    if (sessionData.rows.length === 0) {
-        throw new Error('Shop data is invalid.');
-    }
-    const session = sessionData.rows[0];
-    return session as Session;
-}
 
 // ==============================================================================================================
 // START: HELPER FUNCTIONS FOR MARKING RETAILER IMPORTED PRODUCTS FROM SUPPLIER AS INACTIVE
@@ -59,39 +45,34 @@ async function getAllRetailerImportedProductDetails(supplierId: string, client: 
 // END: HELPER FUNCTIONS FOR MARKING RETAILER IMPORTED PRODUCTS FROM SUPPLIER AS INACTIVE
 // ==============================================================================================================
 async function markRetailerProductsArchived(supplierId: string, client: PoolClient) {
-    try {
-        const retailerImportedProductDetails = await getAllRetailerImportedProductDetails(supplierId, client);
-        const retailerToShopifyProductIds = groupByRetailer(retailerImportedProductDetails);
-        const retailerIds = Array.from(retailerToShopifyProductIds.keys());
-        await Promise.all(
-            retailerIds.map(async (retailerId) => {
-                const retailerShopifyProductIds = retailerToShopifyProductIds.get(retailerId);
-                const retailerSession = await getSession(retailerId, client);
-                if (!retailerShopifyProductIds) {
-                    return Promise.resolve();
-                }
-                return Promise.all(
-                    retailerShopifyProductIds.map((shopifyProductId) =>
-                        mutateAndValidateGraphQLData<UpdateProductStatusMutation>(
-                            retailerSession.shop,
-                            retailerSession.accessToken,
-                            UPDATE_PRODUCT_STATUS_MUTATION,
-                            {
-                                input: {
-                                    id: shopifyProductId,
-                                    status: 'ARCHIVED',
-                                },
+    const retailerImportedProductDetails = await getAllRetailerImportedProductDetails(supplierId, client);
+    const retailerToShopifyProductIds = groupByRetailer(retailerImportedProductDetails);
+    const retailerIds = Array.from(retailerToShopifyProductIds.keys());
+    await Promise.all(
+        retailerIds.map(async (retailerId) => {
+            const retailerShopifyProductIds = retailerToShopifyProductIds.get(retailerId);
+            const retailerSession = await getSessionFromId(retailerId, client);
+            if (!retailerShopifyProductIds) {
+                return Promise.resolve();
+            }
+            return Promise.all(
+                retailerShopifyProductIds.map((shopifyProductId) =>
+                    mutateAndValidateGraphQLData<UpdateProductStatusMutation>(
+                        retailerSession.shop,
+                        retailerSession.accessToken,
+                        UPDATE_PRODUCT_STATUS_MUTATION,
+                        {
+                            input: {
+                                id: shopifyProductId,
+                                status: 'ARCHIVED',
                             },
-                            'Failed to update product status.',
-                        ),
+                        },
+                        'Failed to update product status.',
                     ),
-                );
-            }),
-        );
-    } catch (error) {
-        console.error(error);
-        throw new Error('Failed to set all retailer imported products as archived on Shopify.');
-    }
+                ),
+            );
+        }),
+    );
 }
 
 export default markRetailerProductsArchived;

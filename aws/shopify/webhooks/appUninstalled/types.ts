@@ -1,5 +1,3 @@
-import { ROLES } from './constants';
-
 export type ShopifyEvent = {
     version: string;
     id: string;
@@ -77,25 +75,3 @@ export type ShopifyEvent = {
         };
     };
 };
-
-export type Session = {
-    id: string;
-    shop: string;
-    state: string;
-    isOnline: boolean;
-    scope?: string;
-    expires?: Date;
-    accessToken: string;
-    userId?: bigint;
-    firstName?: string;
-    lastName?: string;
-    email?: string;
-    accountOwner: boolean;
-    locale?: string;
-    collaborator?: boolean;
-    emailVerified?: boolean;
-    storefrontAccessToken?: string;
-    isAppUninstalled: boolean;
-};
-
-export type RolesOptions = (typeof ROLES)[keyof typeof ROLES];

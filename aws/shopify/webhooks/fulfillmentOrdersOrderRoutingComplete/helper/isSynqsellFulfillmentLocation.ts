@@ -1,11 +1,12 @@
 import { PoolClient } from 'pg';
-import { fetchAndValidateGraphQLData } from '../util';
+import { fetchAndValidateGraphQLData } from '/opt/nodejs/utils';
 import { FulfillmentOrderLocationQuery } from '../types/admin.generated';
-import { Session } from '../types';
+import type { Session } from '/opt/nodejs/models/types';
+import { getFulfillmentService } from '/opt/nodejs/models/fulfillmentService';
 import { GET_FULFILLMENT_ORDER_LOCATION } from '../graphql';
 
-async function isSynqSellFulfillmentLocation(retailerSession: Session, fulfillmentOrderId: string, client: PoolClient) {
-    const locationQuery = await fetchAndValidateGraphQLData<FulfillmentOrderLocationQuery>(
+async function getShopifyLocationId(retailerSession: Session, fulfillmentOrderId: string) {
+    const res = await fetchAndValidateGraphQLData<FulfillmentOrderLocationQuery>(
         retailerSession.shop,
         retailerSession.accessToken,
         GET_FULFILLMENT_ORDER_LOCATION,
@@ -13,20 +14,16 @@ async function isSynqSellFulfillmentLocation(retailerSession: Session, fulfillme
             id: fulfillmentOrderId,
         },
     );
-    const fulfillmentOrderShopifyLocationId = locationQuery.fulfillmentOrder?.assignedLocation.location?.id ?? '';
-    if (!fulfillmentOrderShopifyLocationId) {
+    const shopifyLocationId = res.fulfillmentOrder?.assignedLocation.location?.id ?? '';
+    return shopifyLocationId;
+}
+
+async function isSynqSellFulfillmentLocation(retailerSession: Session, fulfillmentOrderId: string, client: PoolClient) {
+    const shopifyLocationId = await getShopifyLocationId(retailerSession, fulfillmentOrderId);
+    if (!shopifyLocationId) {
         return false;
     }
-    const fulfillmentServiceQuery = `
-      SELECT id FROM "FulfillmentService" 
-      WHERE "shopifyLocationId" = $1 
-      AND "sessionId" = $2 
-      LIMIT 1
-  `;
-    const fulfillmentService = await client.query(fulfillmentServiceQuery, [
-        fulfillmentOrderShopifyLocationId,
-        retailerSession.id,
-    ]);
+    const fulfillmentService = await getFulfillmentService(retailerSession.id, shopifyLocationId, client);
     if (fulfillmentService && fulfillmentService.rows.length > 0) {
         return true;
     }

@@ -5,6 +5,7 @@ This section stores all the infrastructure for SynqSell (including but not limit
 To reference how to set up the project locally, please go back to the <a href="https://github.com/bobandash/synqsell_shopify">main README</a>.
 
 ## Helpful Links
+
 - [CFN common pseudo parameters](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/pseudo-parameter-reference.html)
 - [List of prebuilt managed policies](https://docs.aws.amazon.com/aws-managed-policy/latest/reference/AmazonECSTaskExecutionRolePolicy.html)
 
@@ -13,30 +14,37 @@ To reference how to set up the project locally, please go back to the <a href="h
 This section aims to explain why I needed AWS, and what resources I provisioned / rationale for some of my decisions.
 
 ### Why AWS?
+
 The primary reason I chose AWS was to reliably handle Shopify’s webhooks. SynqSell’s core functionality is to ensure real-time data synchronization between two Shopify stores. If my application server is down when a webhook event is received, I risk losing critical data. This could lead to significant issues, such as a product being deleted on the supplier's end but remaining in the retailer’s store due to the missed event. To prevent such scenarios, AWS provides the resilience and reliability I need for webhook processing, ensuring no data is lost.
 
 ### Key Design Decisions & Trade-offs
+
 Serverless First Approach
 Given that SynqSell doesn’t yet have a user base, I opted for a serverless architecture where possible to keep costs efficient and scale based on demand:
 
 AWS Fargate over EC2: I chose Fargate for container orchestration to avoid the overhead of managing EC2 instances. Fargate’s serverless model automatically scales with my needs, which is ideal while I assess the application's load requirements. If the application usage stabilizes, I can transition to EC2 Reserved Instances for cost optimization.
 
 ### Resilient Webhook Handling with EventBridge and SQS
+
 To ensure high availability and durability of Shopify webhooks:
 
-#### EventBridge + FIFO SQS: 
+#### EventBridge + FIFO SQS:
+
 I configured Amazon EventBridge to route all incoming Shopify webhooks to a FIFO SQS queue. This setup ensures that events are processed in order and eliminates duplicates. A Dead Letter Queue (DLQ) is attached to capture any events that fail processing, providing a fail-safe mechanism.
 
-#### Single SQS Queue with a Webhook Coordinator: 
+#### Single SQS Queue with a Webhook Coordinator:
+
 Instead of creating multiple SQS queues for each Shopify webhook topic, I chose a simpler design using one FIFO SQS and a coordinator function. This approach processes all events in order while reducing the complexity of managing multiple queues and their processing times. Although dedicated queues per topic could offer parallel processing, my current design ensures ordered processing across all topics, which is better for data consistency.
 
 #### Decoupled and Scalable Processing with Lambda
+
 The coordinator function asynchronously invokes separate Lambda functions to handle each webhook topic:
 
 Async Lambda Invocation: By invoking Lambdas asynchronously, the coordinator function doesn't wait for them to complete, which speeds up the overall processing time.
 Lambda DLQ for Error Handling: Each Lambda function should be by its own DLQ, which would allow me to retry failed webhook processing. This setup ensures robustness by isolating failures and enabling targeted retries without affecting the main event flow.
 
 #### Future Considerations
+
 As SynqSell gains users and traffic patterns become more predictable, I plan to revisit certain architectural decisions:
 
 Multi-AZ Deployment: Currently, I’m not leveraging multiple Availability Zones for resources like Lambda and NAT Gateways to reduce costs. If the application scales, I will have to use more resilient, multi-AZ infra setup.
@@ -75,5 +83,21 @@ Here are a list of common commands used for development. Most of these commands 
 - NOTE: For deploying to staging or prod, this may be frozen for a little bit. You have to make sure the ALB Certificate is approved. Go to ACM -> Create records in Route 53 for the ALB Certificate.
 
 ## Roadmap
+
 I will add the roadmap after talking to users, but before I continue:
+
 - I need to fix the error handling for a lot of the lambda functions (read about best practices too late), make the ECR immutable for prod w/ a CI/CD pipeline to automate build and deploy, and add DLQ to the Shopify webhook topics.
+
+TODO: Integrate this into ReadME
+// when the app/uninstalled webhook runs, the access token to use GraphQL's Admin API is already invalidated
+// this means that, if the user is a retailer, then there's no possible way to delete the products imported on their store already
+// and, if the user is a supplier, you're still able to deactivate/remove the products that your retailers imported because the retailers' access tokens are still valid
+// the shop/redact webhook runs after 48 hours of uninstallation, so the app/uninstalled webhook should delete the data necessary but not all the data, in case uninstallation was just a mistake
+
+// current impl is as follows (subject to change):
+// for retailers, we will delete all the imported products from the database but keep the products on their Shopify store because we cannot delete it (the access token is invalid)
+// if we do not do it this way, then any webhook that mutates the retailer Shopify's data that uninstalled the application (products/update, products/delete, etc.) will throw an error
+// unless the isAppUninstalled field in the retailer session's explicitly checked, but as the app grows with more webhooks/impl, missing this check will break the app, so it's better to do this impl
+
+// for suppliers, we will change the status of the retailer's products as archived, and the products/update will make sure the retailer cannot change the archived status in the products/update webhook
+// When 48 hours pass for the shop/redact webhook to run, the retailers' imported products will be automatically deleted from their store

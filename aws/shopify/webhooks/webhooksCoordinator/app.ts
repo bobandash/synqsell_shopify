@@ -3,11 +3,10 @@ import { Lambda } from 'aws-sdk';
 
 const lambda = new Lambda();
 
-
 async function invokeLambda(functionName: string, payload: any) {
     const params = {
         FunctionName: functionName,
-        InvocationType: 'Event',    
+        InvocationType: 'Event',
         Payload: JSON.stringify(payload),
     };
     await lambda.invoke(params).promise();
@@ -49,6 +48,6 @@ export const lambdaHandler = async (event: Event) => {
         await Promise.all(invocations);
     } catch (error) {
         console.error(error);
-        throw error;    // Throw error for it to go to DLQ and retries
+        throw error; // Throw error for it to go to DLQ and retries
     }
 };

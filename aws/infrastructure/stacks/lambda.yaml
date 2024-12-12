@@ -33,6 +33,8 @@ Conditions:
 Globals:
   Function:
     Timeout: 3
+    Layers:
+      - !Ref UtilLayer
     Environment:
       Variables:
         DB_USER_CREDENTIALS_SECRET_ID: !Ref DatabaseUserCredentialSecret
@@ -67,7 +69,6 @@ Resources:
               - "lambda:InvokeFunction"
             Resource: "*"
 
-  # TODO: see if you want to change this into POLP, so can only send failed webhooks to specific queues instead of all
   PrivateFunctionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -205,6 +206,14 @@ Resources:
       EventSourceArn: !GetAtt WebhookSQS.Arn
       FunctionName: !Ref ShopifyCoordinatorFunction
       Enabled: true
+
+  UtilLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      Description: Layer that contains all util functions shared across lambda functions
+      ContentUri: ../../util-layer
+      CompatibleRuntimes:
+        - nodejs20.x
 
   # Shopify Public Endpoints
   DeliveryCarrierServiceFunction:

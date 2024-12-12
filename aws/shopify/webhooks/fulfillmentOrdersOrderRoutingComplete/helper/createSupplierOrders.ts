@@ -1,6 +1,6 @@
 import { PoolClient } from 'pg';
-import { CustomerShippingDetails, FulfillmentOrdersBySupplier, Session, ShippingRateResponse } from '../types';
-import { fetchAndValidateGraphQLData, mutateAndValidateGraphQLData } from '../util';
+import { CustomerShippingDetails, FulfillmentOrdersBySupplier, ShippingRateResponse } from '../types';
+
 import {
     DRAFT_ORDER_COMPLETE_MUTATION,
     DRAFT_ORDER_CREATE_MUTATION,
@@ -19,11 +19,13 @@ import {
 } from '../types/admin.generated';
 import { ORDER_PAYMENT_STATUS, SERVICE_CODE, ServiceCodeProps } from '../constants';
 import { CurrencyCode } from '../types/admin.types';
-import { getRetailerToSupplierVariantIdMap, getSession } from './util';
-import createMapIdToRestObj from '../util/createMapToRestObj';
+import { getRetailerToSupplierVariantIdMap } from './util';
 import { v4 as uuidv4 } from 'uuid';
 import { parseGid } from '@shopify/admin-graphql-api-utilities';
-
+import { getShopifyCarrierServiceId } from '/opt/nodejs/models/carrierService';
+import { createMapIdToRestObj, fetchAndValidateGraphQLData, mutateAndValidateGraphQLData } from '/opt/nodejs/utils';
+import { getSessionFromId } from '/opt/nodejs/models/session';
+import { Session } from '/opt/nodejs/models/types';
 type OrderDetailForDatabase = {
     shopifyOrderId: string;
     currency: CurrencyCode | null;
@@ -65,17 +67,6 @@ type ShippingRate = {
 // ==============================================================================================================
 // START: ADD EQUIVALENT ORDER FROM FULFILLMENT ORDER ON SUPPLIER'S SHOPIFY STORE LOGIC
 // ==============================================================================================================
-async function getShopifyCarrierServiceId(sessionId: string, client: PoolClient) {
-    const query = `
-        SELECT "shopifyCarrierServiceId" FROM "CarrierService"
-        WHERE "retailerId" = $1
-    `;
-    const res = await client.query(query, [sessionId]);
-    if (res.rows.length === 0) {
-        throw new Error(`No shopify carrier service exists for sessionId ${sessionId}.`);
-    }
-    return res.rows[0].shopifyCarrierServiceId as string;
-}
 
 async function getCarrierServiceCallbackUrl(session: Session, shopifyCarrierServiceId: string) {
     const res = await fetchAndValidateGraphQLData<CarrierServiceCallbackUrlQuery>(
@@ -100,8 +91,7 @@ async function getAllShippingRates(
     customerShippingDetails: CustomerShippingDetails,
     carrierServiceCallbackUrl: string,
 ) {
-    // calls the delivery carrier service public endpoint to get all the shipping rates that are possible for a supplier in this order
-    const requestBody = {
+    const body = {
         rate: {
             destination: {
                 country: customerShippingDetails.countryCode,
@@ -125,35 +115,17 @@ async function getAllShippingRates(
         },
     };
 
-    // TODO: implement retry logic
-    // the impl of callback url is that it should automatically fail
-    try {
-        const response = await fetch(carrierServiceCallbackUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(requestBody),
-        });
+    // TODO: add retry mechanism and rate limiting on this
+    const response = await fetch(carrierServiceCallbackUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+    });
 
-        if (!response.ok) {
-            console.warn('Delivery carrier service returned 4XX error', requestBody);
-            return {
-                rates: [],
-            };
-        }
-
-        const data: ShippingRateResponse = await response.json();
-        return data;
-    } catch (error) {
-        console.error('Failed to get all shipping rates from supplier.', {
-            error: error instanceof Error ? error.message : error,
-            carrierService: carrierServiceCallbackUrl,
-            destination: requestBody.rate.destination.country,
-            itemCount: requestBody.rate.items.length,
-        });
-        throw error;
-    }
+    const data: ShippingRateResponse = await response.json();
+    return data;
 }
 
 // end helper functions for getSupplierShippingRate
@@ -279,7 +251,6 @@ async function completeDraftOrder(draftOrderId: string, supplierSession: Session
     if (!shopifyOrderId) {
         throw new Error('No new order was created from draft order.');
     }
-    console.log(`Supplier order ${shopifyOrderId} was created`);
     return shopifyOrderId;
 }
 
@@ -436,7 +407,7 @@ async function addAllOrderLineItemsToDatabase(
 ) {
     const retailerVariantIds = retailerOrderLineItems.map((lineItem) => lineItem.shopifyVariantId);
     const retailerToSupplierVariantIdsMap = await getRetailerToSupplierVariantIdMap(retailerVariantIds, client);
-    const supplierOrderLineItemsMap = createMapIdToRestObj(supplierOrderLineItems, 'shopifyVariantId'); // key is supplier variant id
+    const supplierOrderLineItemsMap = createMapIdToRestObj(supplierOrderLineItems, 'shopifyVariantId');
 
     const createOrderLineItemPromises = retailerOrderLineItems.map(async (retailerLineItem) => {
         const retailerShopifyVariantId = retailerLineItem.shopifyVariantId;
@@ -529,7 +500,7 @@ async function createSupplierOrder(
     serviceCode: ServiceCodeProps,
     client: PoolClient,
 ) {
-    const supplierSession = await getSession(fulfillmentOrder.supplierId, client);
+    const supplierSession = await getSessionFromId(fulfillmentOrder.supplierId, client);
     const supplierShippingRate = await getSupplierShippingRate(
         fulfillmentOrder,
         serviceCode,
