@@ -29,3 +29,14 @@ export async function hasStripeConnectAccount(
   const res = await client.query(query, [supplierId]);
   return res.rows.length > 0;
 }
+
+export async function deleteStripeConnectAccount(
+  accountId: string,
+  client: PoolClient
+) {
+  const query = `
+        DELETE FROM "StripeConnectAccount"
+        WHERE "stripeAccountId" = $1
+    `;
+  await client.query(query, [accountId]);
+}

@@ -29,3 +29,16 @@ export async function getStripeCustomerId(
   }
   return res.rows[0].stripeCustomerId as string;
 }
+
+export async function updatePaymentMethodStatus(
+  customerId: string,
+  hasPaymentMethod: boolean,
+  client: PoolClient
+) {
+  const query = `
+      UPDATE "StripeCustomerAccount"
+      SET "hasPaymentMethod" = $1
+      WHERE "stripeCustomerId" = $2
+  `;
+  await client.query(query, [hasPaymentMethod, customerId]);
+}
