@@ -30,3 +30,34 @@ export type Order = {
   createdAt: Date;
   updatedAt: Date;
 };
+
+export type OrderLineItem = {
+  id: string;
+  retailerShopifyVariantId: string;
+  supplierShopifyVariantId: string;
+  retailPricePerUnit: number;
+  retailerProfitPerUnit: number;
+  supplierProfitPerUnit: number;
+  retailerShopifyOrderLineItemId: string;
+  supplierShopifyOrderLineItemId: string;
+  quantity: number;
+  quantityFulfilled: number;
+  quantityPaid: number;
+  quantityCancelled: number;
+  orderId: string;
+  priceListId: string;
+};
+
+export type Fulfillment = {
+  id: string;
+  supplierShopifyFulfillmentId: string;
+  retailerShopifyFulfillmentId: string;
+  orderId: string;
+};
+
+export type FulfillmentService = {
+  id: string;
+  sessionId: string;
+  shopifyFulfillmentServiceId: string;
+  shopifyLocationId: string;
+};
