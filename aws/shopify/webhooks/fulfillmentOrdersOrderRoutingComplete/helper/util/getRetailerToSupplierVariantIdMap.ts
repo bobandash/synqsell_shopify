@@ -1,5 +1,5 @@
 import { PoolClient } from 'pg';
-import createMapIdToRestObj from '../../util/createMapToRestObj';
+import { createMapIdToRestObj } from '/opt/nodejs/utils';
 
 type VariantAndImportedVariant = {
     retailerShopifyVariantId: string;

@@ -1,18 +1,16 @@
 {
-  "name": "nodejs",
+  "description": "Lambda layer with common utils",
+  "name": "util-layer",
   "version": "1.0.0",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
   "devDependencies": {
-    "@types/pg": "^8.11.10"
+    "@types/node": "^16.18.122",
+    "@types/pg": "^8.11.10",
+    "typescript": "^5.7.2"
   },
   "dependencies": {
     "pg": "^8.13.1"
+  },
+  "scripts": {
+    "build": "tsc"
   }
 }

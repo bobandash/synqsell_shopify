@@ -1,7 +1,17 @@
 // https://www.qloudx.com/how-to-split-typescript-based-lambda-functions-into-lambda-layers/
-// TODO: I may need to set up CI/CD
+
 {
   "compilerOptions": {
-    "outDir": "./dist"
-  }
+    "target": "es2020",
+    "strict": true,
+    "preserveConstEnums": true,
+    "noEmit": false,
+    "sourceMap": false,
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "outDir": "./opt/nodejs"
+  },
+  "exclude": ["node_modules"]
 }

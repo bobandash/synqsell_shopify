@@ -1,6 +1,6 @@
 import { PoolClient } from 'pg';
 import { PriceListDetails } from '../../types';
-import { createMapToRestObj } from '../../util';
+import { createMapIdToRestObj } from '/opt/nodejs/utils';
 type ShopifyVariantIdAndSupplierProfit = {
     shopifyVariantId: string;
     supplierProfit: string;
@@ -72,7 +72,7 @@ async function getPricingDetailsWholesale(
         await client.query(shopifyVariantIdAndSupplierProfitQuery, [supplierShopifyProductId, priceList.id])
     ).rows;
 
-    const shopifyVariantIdToSupplierProfit = createMapToRestObj(
+    const shopifyVariantIdToSupplierProfit = createMapIdToRestObj(
         shopifyVariantIdAndSupplierProfitRes,
         'shopifyVariantId',
     );
