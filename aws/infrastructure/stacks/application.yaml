@@ -2,6 +2,8 @@ AWSTemplateFormatVersion: "2010-09-09"
 Description: >
   Application-related resources (S3, ALB, Remix App, etc.)
 
+# TODO: add clean up bucket for dev and staging --> delete
+
 Parameters:
   Environment:
     Type: String
@@ -49,7 +51,6 @@ Conditions:
     - "True"
 
 Resources:
-  # TODO: add clean up bucket for dev and staging --> delete
   ImageHostingS3:
     Type: AWS::S3::Bucket
     Properties:

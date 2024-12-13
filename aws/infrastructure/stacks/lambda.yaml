@@ -143,6 +143,53 @@ Resources:
                 Resource: "*"
 
   # https://docs.aws.amazon.com/lambda/latest/dg/with-sqs.html
+  # SNS Topic to send notification that webhooks failed into queue
+  EmailSNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub ${Environment}_shopify_webhook_failure
+      Subscription:
+        - Endpoint: "brucehsu1126@gmail.com"
+          Protocol: "email"
+
+  # instead of creating multiple alarms,
+  # I decided to consolidate single alarm and just filter logs by log insights if I encounter an issue w/ webhook processing
+  # we do not need to create it for the compliance because there's no way it'll fail (no async operations)
+  ShopifyWebhooksDLQAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}_shopify_dlq
+      AlarmDescription: "Alarm when shopify webhook topic throws error and enters DLQ"
+      MetricName: ApproximateNumberOfMessagesVisible
+      Namespace: AWS/SQS
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref EmailSNSTopic
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt WebhookDLQ.QueueName
+        - Name: QueueName
+          Value: !GetAtt ShopifyCoordinatorDLQ.QueueName
+        - Name: QueueName
+          Value: !GetAtt DeleteProductsDLQ.QueueName
+        - Name: QueueName
+          Value: !GetAtt ProductsUpdateDLQ.QueueName
+        - Name: QueueName
+          Value: !GetAtt FulfillmentOrderRoutingCompleteDLQ.QueueName
+        - Name: QueueName
+          Value: !GetAtt OrdersCancelledDLQ.QueueName
+        - Name: QueueName
+          Value: !GetAtt FulfillmentsUpdateDLQ.QueueName
+        - Name: QueueName
+          Value: !GetAtt AppUninstalledDLQ.QueueName
+        - Name: QueueName
+          Value: !GetAtt ShopRedactDLQ.QueueName
+
   # Queue for shopify webhooks
   WebhookSQS:
     Type: AWS::SQS::Queue
@@ -196,10 +243,9 @@ Resources:
   WebhookDLQ:
     Type: AWS::SQS::Queue
     Properties:
-      QueueName:
-        !Join ["_", [!Ref Environment, "webhook_dead_letter_queue.fifo"]]
       FifoQueue: true
       ContentBasedDeduplication: true
+      MessageRetentionPeriod: 604800
 
   SQSQueueTrigger:
     Type: AWS::Lambda::EventSourceMapping
@@ -239,6 +285,53 @@ Resources:
           - app.ts
 
   # Shopify webhooks
+  # Webhook Function DLQs
+  ShopifyCoordinatorDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 604800
+
+  DeleteProductsDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 604800
+
+  ProductsUpdateDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 604800
+
+  FulfillmentOrderRoutingCompleteDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 604800
+
+  FulfillmentsCreateDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 604800
+
+  OrdersCancelledDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 604800
+
+  FulfillmentsUpdateDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 604800
+
+  AppUninstalledDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 604800
+
+  ShopRedactDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 604800
+
+  # Shopify webhook functions
   ShopifyCoordinatorFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -251,6 +344,9 @@ Resources:
       Role: !GetAtt ShopifyCoordinatorFunctionRole.Arn
       Architectures:
         - x86_64
+      DeadLetterQueue:
+        Type: SQS
+        TargetArn: !GetAtt ShopifyCoordinatorDLQ.Arn
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -259,11 +355,6 @@ Resources:
         Sourcemap: false
         EntryPoints:
           - app.ts
-
-  DeleteProductsDLQ:
-    Type: AWS::SQS::Queue
-    Properties:
-      MessageRetentionPeriod: 345600
 
   DeleteProductsFunction:
     Type: AWS::Serverless::Function
@@ -301,6 +392,9 @@ Resources:
       Architectures:
         - x86_64
       Role: !GetAtt PrivateFunctionRole.Arn
+      DeadLetterQueue:
+        Type: SQS
+        TargetArn: !GetAtt ProductsUpdateDLQ.Arn
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -309,11 +403,6 @@ Resources:
         Sourcemap: false
         EntryPoints:
           - app.ts
-
-  FulfillmentOrderRoutingCompleteDLQ:
-    Type: AWS::SQS::Queue
-    Properties:
-      MessageRetentionPeriod: 345600
 
   FulfillmentOrderRoutingCompleteFunction:
     Type: AWS::Serverless::Function
@@ -351,6 +440,9 @@ Resources:
       Architectures:
         - x86_64
       Role: !GetAtt PrivateFunctionRole.Arn
+      DeadLetterQueue:
+        Type: SQS
+        TargetArn: !GetAtt FulfillmentsCreateDLQ.Arn
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
