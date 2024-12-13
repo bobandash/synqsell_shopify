@@ -16,7 +16,7 @@ export async function getFulfillmentService(
       `No fulfillment service exists for sessionId ${sessionId}.`
     );
   }
-  return res[0] as FulfillmentService;
+  return res.rows[0] as FulfillmentService;
 }
 
 export async function hasFulfillmentService(
