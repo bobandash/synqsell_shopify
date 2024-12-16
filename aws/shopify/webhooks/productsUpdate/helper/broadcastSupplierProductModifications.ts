@@ -33,26 +33,32 @@ type GroupedQueryDataWithUpdateFields = Map<
 // START: HELPER FUNCTIONS TO BROADCAST CHANGES TO PRODUCT STATUS, PRODUCT VARIANT PRICE + INVENTORY TO RETAILERS
 // ==============================================================================================================
 // START: Functions related to updating prices in the database
+async function getAllPriceLists(supplierShopifyProductId: string, client: PoolClient) {
+    const query = `
+        SELECT "PriceList".* FROM "Product"
+        INNER JOIN "PriceList" ON "Product"."priceListId" = "PriceList"."id"
+        WHERE "Product"."shopifyProductId" = $1
+    `;
+    const res = await client.query(query, [supplierShopifyProductId]);
+    if (res.rows.length === 0) {
+        throw new Error('No price list found.');
+    }
+
+    // the same product can be in multiple price lists
+    const priceLists: PriceListDetails[] = res.rows;
+    return priceLists;
+}
+
 async function updateVariantPricesDatabase(
     editedVariants: EditedVariant[],
     supplierShopifyProductId: string,
     client: PoolClient,
 ) {
-    const priceListDetailsQuery = `
-        SELECT "PriceList".* FROM "Product"
-        INNER JOIN "PriceList" ON "Product"."priceListId" = "PriceList"."id"
-        WHERE "Product"."shopifyProductId" = $1
-    `;
-    const res = await client.query(priceListDetailsQuery, [supplierShopifyProductId]);
-    if (res.rows.length === 0) {
-        throw new Error('No price list found.');
-    }
     const variantsFormatted = editedVariants.map((variant) => ({
         shopifyVariantId: variant.shopifyVariantId,
         retailPrice: variant.price,
     }));
-    // the same product can be in multiple price lists
-    const priceLists: PriceListDetails[] = res.rows;
+    const priceLists = await getAllPriceLists(supplierShopifyProductId, client);
     priceLists.forEach(async (priceList) => {
         const newPricingDetails = await getPricingDetails(
             variantsFormatted,
@@ -60,7 +66,6 @@ async function updateVariantPricesDatabase(
             supplierShopifyProductId,
             client,
         );
-        // There should only be one unique shopifyVariantId in the price List
         const updateVariantPriceQuery = `
             UPDATE "Variant"
             SET 

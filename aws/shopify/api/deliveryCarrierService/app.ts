@@ -5,6 +5,7 @@ import { ShippingRateRequest } from './types';
 import { getShippingRates } from './helper';
 import { initializePool } from './db';
 import { composeGid } from '@shopify/admin-graphql-api-utilities';
+import { logError, logInfo } from '/opt/nodejs/utils/logger';
 
 async function orderHasImportedItems(shopifyVariantIds: string[], client: PoolClient) {
     const query = `SELECT COUNT(*) FROM "ImportedVariant" WHERE "shopifyVariantId" = ANY($1)`;
@@ -23,22 +24,33 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
         return RESPONSE.EMPTY;
     }
     try {
+        logInfo('Begin: Fetch carrier service rates', {
+            sessionId,
+        });
         const pool = await initializePool();
         client = await pool.connect();
 
         const shopifyVariantIds = request.rate.items.map(({ variant_id }) => composeGid('ProductVariant', variant_id));
         const hasImportedItems = await orderHasImportedItems(shopifyVariantIds, client);
         if (!hasImportedItems) {
+            logInfo('End: Order has no imported items.', {
+                sessionId,
+            });
             return RESPONSE.EMPTY;
         }
         const shippingRates = await getShippingRates(sessionId, request, client);
-
+        logInfo('End: Successfully fetched rates.', {
+            sessionId,
+        });
         return {
             statusCode: 200,
             body: JSON.stringify(shippingRates),
         };
     } catch (error) {
-        console.error('Failed to get delivery carrier service shipping rates', error);
+        logError(error, {
+            sessionId: sessionId,
+            context: 'Failed to get delivery carrier service shipping rates',
+        });
         return RESPONSE.BACKUP;
     } finally {
         if (client) {

@@ -5,45 +5,62 @@ import { broadcastSupplierProductModifications, revertRetailerProductModificatio
 import { ProductStatus, ShopifyEvent } from './types';
 import { isImportedProduct } from '/opt/nodejs/models/importedProduct';
 import { isProduct } from '/opt/nodejs/models/product';
+import { logError, logInfo } from '/opt/nodejs/utils/logger';
 
 export const lambdaHandler = async (event: ShopifyEvent) => {
     let client: null | PoolClient = null;
+    const payload = event.detail.payload;
+    const shopifyProductId = payload.admin_graphql_api_id;
+    const newProductStatus = payload.status.toUpperCase() as ProductStatus;
+    const editedVariants = payload.variants.map((variant) => ({
+        shopifyVariantId: composeGid('ProductVariant', variant.id),
+        hasUpdatedInventory: variant.inventory_quantity !== variant.old_inventory_quantity,
+        newInventory: variant.inventory_quantity,
+        price: variant.price,
+    }));
+    const shop = event.detail.metadata['X-Shopify-Shop-Domain'];
+    const eventDetails = {
+        shopifyProductId,
+    };
     try {
+        logInfo('Start: Update product details', {
+            shop,
+            eventDetails,
+        });
         const pool = await initializePool();
         client = await pool.connect();
-        const payload = event.detail.payload;
-        const shopifyProductId = payload.admin_graphql_api_id;
         const [isRetailerProduct, isSupplierProduct] = await Promise.all([
             isImportedProduct(shopifyProductId, client),
             isProduct(shopifyProductId, client),
         ]);
 
         if (!isSupplierProduct && !isRetailerProduct) {
-            console.log(`${shopifyProductId} is not a product on SynqSell`);
+            logInfo('End: Not a product on SynqSell', {
+                shop,
+                eventDetails,
+            });
             return;
         }
 
         // there is no old price, so we cannot check if the variant price has been updated
         // even though it consumes GraphQL resources, we are going to broadcast the price changes
-        const newProductStatus = payload.status.toUpperCase() as ProductStatus;
-        const editedVariants = payload.variants.map((variant) => ({
-            shopifyVariantId: composeGid('ProductVariant', variant.id),
-            hasUpdatedInventory: variant.inventory_quantity !== variant.old_inventory_quantity,
-            newInventory: variant.inventory_quantity,
-            price: variant.price,
-        }));
 
         if (isSupplierProduct) {
             await broadcastSupplierProductModifications(editedVariants, shopifyProductId, newProductStatus, client);
-            console.log(`Successfully broadcasted changes from ${shopifyProductId} to retailers.`);
         } else if (isRetailerProduct) {
             await revertRetailerProductModifications(shopifyProductId, editedVariants, newProductStatus, client);
-            console.log(`Successfully reverted retailer product modifications for ${shopifyProductId}.`);
         }
-
+        logInfo('End: Successfully updated product details.', {
+            shop,
+            eventDetails,
+        });
         return;
     } catch (error) {
-        console.error('Failed to handle productsUpdate webhook', error);
+        logError(error, {
+            shop,
+            context: 'Failed to update product for either retailer or supplier.',
+            eventDetails,
+        });
         return;
     } finally {
         if (client) {

@@ -4,7 +4,7 @@ const { createLogger, format, transports } = winston;
 const { combine, json } = format;
 
 const logger = createLogger({
-  level: 'warn',
+  level: 'info',
   format: combine(json()),
   transports: [new transports.Console()],
 });

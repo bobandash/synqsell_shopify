@@ -5,6 +5,7 @@ import { PoolClient } from 'pg';
 import { initializePool } from './db';
 import { client, lambda } from './singletons';
 import { hasProcessed } from '/opt/nodejs/models/stripeWebhook';
+import { logError, logInfo } from '/opt/nodejs/utils/logger';
 
 async function getStripeSecrets() {
     const response = await client.send(
@@ -37,8 +38,13 @@ export const lambdaHandler = async (event: Event) => {
     const env = process.env.NODE_ENV ?? 'dev';
     const payload = JSON.parse(body);
     const { id: webhookId, type: webhookTopic } = payload;
+    const eventDetails = {
+        webhookTopic,
+    };
+
     try {
         // resolve webhook signature verification
+        logInfo('Start: Invoke lambda function to handle stripe webhook.', { webhookId, eventDetails });
         const stripeSecrets = await getStripeSecrets();
         const stripe = new Stripe(stripeSecrets.STRIPE_SECRET_API_KEY);
         stripe.webhooks.constructEvent(body, stripeSignature, stripeSecrets.WEBHOOK_SIGNING_SECRET);
@@ -47,7 +53,7 @@ export const lambdaHandler = async (event: Event) => {
 
         const hasProcessedBefore = await hasProcessed(webhookId, client);
         if (hasProcessedBefore) {
-            console.log(`Webhook id ${webhookId} has already been processed before.`);
+            logInfo('End: Webhook has been processed before.', { webhookId, eventDetails });
             return;
         }
 
@@ -59,10 +65,14 @@ export const lambdaHandler = async (event: Event) => {
                 invokeLambda(`${env}_stripe_payment_method_detached`, payload);
                 break;
         }
-        console.log('Successfully invoked Stripe function.');
+        logInfo('End: Successfully invoked stripe lambda function.', { webhookId, eventDetails });
         return;
     } catch (error) {
-        console.error(error);
+        logError(error, {
+            context: 'Failed to invoke stripe lambda function',
+            webhookId,
+            eventDetails,
+        });
         throw error;
     } finally {
         if (client) {

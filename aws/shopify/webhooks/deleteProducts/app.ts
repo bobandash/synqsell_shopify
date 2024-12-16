@@ -5,17 +5,28 @@ import { deleteImportedProduct, isImportedProduct } from '/opt/nodejs/models/imp
 import { initializePool } from './db';
 import { ShopifyEvent } from './types';
 import { handleDeletedSupplierProduct } from './helper';
+import { logError, logInfo } from '/opt/nodejs/utils/logger';
 
 export const lambdaHandler = async (event: ShopifyEvent) => {
     let client: null | PoolClient = null;
+    const shop = event.detail.metadata['X-Shopify-Shop-Domain'];
+    const {
+        detail: {
+            payload: { id },
+        },
+    } = event;
+    const shopifyProductId = composeGid('Product', id);
+
     try {
-        const pool = await initializePool();
-        const {
-            detail: {
-                payload: { id },
+        logInfo('Start: delete product', {
+            shop,
+            eventDetails: {
+                shopifyProductId,
             },
-        } = event;
-        const shopifyProductId = composeGid('Product', id);
+        });
+
+        const pool = await initializePool();
+
         client = await pool.connect();
 
         const [isRetailerProduct, isSupplierProduct] = await Promise.all([
@@ -23,16 +34,25 @@ export const lambdaHandler = async (event: ShopifyEvent) => {
             isProduct(shopifyProductId, client),
         ]);
 
-        if (!isRetailerProduct && !isSupplierProduct) {
-        } else if (isSupplierProduct) {
+        if (isSupplierProduct) {
             await handleDeletedSupplierProduct(shopifyProductId, client);
         } else if (isRetailerProduct) {
             await deleteImportedProduct(shopifyProductId, client);
         }
-        console.log(`Successfully handled product deletion ${shopifyProductId}.`);
+        logInfo('End: delete product', {
+            eventDetails: {
+                shopifyProductId,
+            },
+        });
         return;
     } catch (error) {
-        console.error('Failed to delete product.', error);
+        logError(error, {
+            context: `Failed to delete product`,
+            shop,
+            eventDetails: {
+                shopifyProductId,
+            },
+        });
         throw error;
     } finally {
         if (client) {

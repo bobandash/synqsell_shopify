@@ -7,11 +7,15 @@ import { deleteAllImportedProducts } from '/opt/nodejs/models/importedProduct';
 import { getSessionFromShop, updateUninstalledStatus } from '/opt/nodejs/models/session';
 import { hasRole } from '/opt/nodejs/models/role';
 import { deleteBilling } from '/opt/nodejs/models/billing';
+import { logError, logInfo } from '/opt/nodejs/utils/logger';
 
 export const lambdaHandler = async (event: ShopifyEvent) => {
     const shop = event.detail.metadata['X-Shopify-Shop-Domain'];
     let client: null | PoolClient = null;
     try {
+        logInfo('Start: Uninstall application', {
+            shop,
+        });
         const pool = await initializePool();
         client = await pool.connect();
         const session = await getSessionFromShop(shop, client);
@@ -25,9 +29,14 @@ export const lambdaHandler = async (event: ShopifyEvent) => {
             deleteBilling(session.id, client),
             updateUninstalledStatus(session.id, false, client),
         ]);
-        console.log(`Successfully uninstalled application for ${shop}.`);
+        logInfo('End: Successfully uninstalled application', {
+            shop,
+        });
     } catch (error) {
-        console.error(`Failed to uninstall app for shop ${shop}.`, error);
+        logError(error, {
+            shop,
+            context: 'Failed to uninstall application',
+        });
         throw error;
     } finally {
         if (client) {

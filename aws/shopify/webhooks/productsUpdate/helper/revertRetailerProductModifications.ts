@@ -59,23 +59,18 @@ async function getSupplierSession(retailerShopifyProductId: string, client: Pool
 // START: FUNCTION(S) TO REVERT RETAILER PRODUCT STATUS CHANGE IF SUPPLIER UNINSTALLED APP
 // ==============================================================================================================
 async function changeRetailerProductStatusArchived(retailerSession: Session, retailerShopifyProductId: string) {
-    try {
-        await mutateAndValidateGraphQLData<UpdateProductMutation>(
-            retailerSession.shop,
-            retailerSession.accessToken,
-            UPDATE_PRODUCT_MUTATION,
-            {
-                input: {
-                    id: retailerShopifyProductId,
-                    status: PRODUCT_STATUS.ARCHIVED,
-                },
+    await mutateAndValidateGraphQLData<UpdateProductMutation>(
+        retailerSession.shop,
+        retailerSession.accessToken,
+        UPDATE_PRODUCT_MUTATION,
+        {
+            input: {
+                id: retailerShopifyProductId,
+                status: PRODUCT_STATUS.ARCHIVED,
             },
-            `Failed to update product status to archived for sessionId ${retailerSession.id} and retailerShopifyProductId ${retailerShopifyProductId}.`,
-        );
-    } catch (error) {
-        console.error(error);
-        throw new Error('Failed to change retailer product status to archived.');
-    }
+        },
+        `Failed to update product status to archived.`,
+    );
 }
 
 // ==============================================================================================================
@@ -313,9 +308,7 @@ async function getSupplierShopifyProductId(retailerShopifyProductId: string, cli
     `;
     const res = await client.query(query, [retailerShopifyProductId]);
     if (res.rows.length === 0) {
-        throw new Error(
-            `No supplier shopify product id exists for retailerShopifyProductId ${retailerShopifyProductId}.`,
-        );
+        throw new Error(`No matching supplier shopify product id exists for ${retailerShopifyProductId}.`);
     }
     return res.rows[0].shopifyProductId as string;
 }

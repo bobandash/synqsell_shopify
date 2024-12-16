@@ -4,9 +4,9 @@ import { LineItemDetail, ShopifyEvent } from './types';
 import { refundRetailerOrder } from './helper';
 import { getSessionFromShop } from '/opt/nodejs/models/session';
 import { ORDER_PAYMENT_STATUS } from '/opt/nodejs/constants';
+import { logError, logInfo } from '/opt/nodejs/utils/logger';
 
 // TODO: I have to store the retailer's order id and handle the retailer cancelling the order as well
-// TODO: you can abuse the system; I need to set a check for like 7 days
 // checks whether or not we need to process the order and cancel the retailers' fulfillment order
 async function isProcessableOrder(shopifyOrderId: string, supplierId: string, client: PoolClient) {
     const orderQuery = `
@@ -24,19 +24,29 @@ async function isProcessableOrder(shopifyOrderId: string, supplierId: string, cl
 
 export const lambdaHandler = async (event: ShopifyEvent) => {
     let client: null | PoolClient = null;
-
+    const shop = event.detail.metadata['X-Shopify-Shop-Domain'];
+    const payload = event.detail.payload;
+    const shopifyOrderId = payload.admin_graphql_api_id;
+    const eventDetails = {
+        shopifyOrderId,
+    };
     try {
+        logInfo('Start: Handle order cancellation.', {
+            shop,
+            eventDetails: {
+                shopifyOrderId,
+            },
+        });
         const pool = await initializePool();
         client = await pool.connect();
-        const shop = event.detail.metadata['X-Shopify-Shop-Domain'];
-        const payload = event.detail.payload;
-        const shopifyOrderId = payload.admin_graphql_api_id;
-
         const supplierSession = await getSessionFromShop(shop, client);
         const isRelevantOrder = await isProcessableOrder(shopifyOrderId, supplierSession.id, client);
 
         if (!isRelevantOrder) {
-            console.log(`${shopifyOrderId} is not a processable order.`);
+            logInfo('End: Order is not relevant (no need to refund on for retailer).', {
+                shop,
+                eventDetails,
+            });
             return;
         }
 
@@ -46,10 +56,17 @@ export const lambdaHandler = async (event: ShopifyEvent) => {
         }));
 
         await refundRetailerOrder(shopifyOrderId, lineItems, client);
-        console.log(`Refunded order on retailer store for order ${shopifyOrderId}.`);
+        logInfo('End: Successfully refunded order on retailer store.', {
+            shop,
+            eventDetails,
+        });
         return;
     } catch (error) {
-        console.error('Failed to run ordersCancelled webhook', error);
+        logError(error, {
+            context: 'Failed to refund order on retailer store',
+            shop,
+            eventDetails,
+        });
         throw error;
     } finally {
         if (client) {

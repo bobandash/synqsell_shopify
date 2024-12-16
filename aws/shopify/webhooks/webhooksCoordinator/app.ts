@@ -1,6 +1,6 @@
 import { ShopifyEvent, Event } from './types';
 import { Lambda } from 'aws-sdk';
-
+import { logError, logInfo } from '/opt/nodejs/utils/logger';
 const lambda = new Lambda();
 
 async function invokeLambda(functionName: string, payload: any) {
@@ -14,6 +14,7 @@ async function invokeLambda(functionName: string, payload: any) {
 // serves as coordinator from sqs to this function to invoke other lambda functions
 export const lambdaHandler = async (event: Event) => {
     try {
+        logInfo('Start: invoke Shopify webhook lambda functions.', {});
         const invocations = event.Records.map(async (record) => {
             const shopifyEvent: ShopifyEvent = JSON.parse(record.body);
             const env = process.env.NODE_ENV ?? 'dev';
@@ -46,8 +47,11 @@ export const lambdaHandler = async (event: Event) => {
             }
         });
         await Promise.all(invocations);
+        logInfo('End: successfully invoked Shopify webhook lambda functions.', {});
     } catch (error) {
-        console.error(error);
-        throw error; // Throw error for it to go to DLQ and retries
+        logError(error, {
+            context: 'Failed to invoke lambda functions.',
+        });
+        throw error;
     }
 };
