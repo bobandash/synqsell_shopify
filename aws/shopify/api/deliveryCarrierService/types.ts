@@ -68,7 +68,7 @@ export type Session = {
     storefrontAccessToken?: string;
 };
 
-export type BuyerIdentityInput = {
+export type BuyerIdentity = {
     buyerIdentity: {
         countryCode: string;
         deliveryAddressPreferences: {

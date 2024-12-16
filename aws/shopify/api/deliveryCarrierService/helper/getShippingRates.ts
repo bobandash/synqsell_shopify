@@ -1,15 +1,12 @@
 import type { PoolClient } from 'pg';
-import { createMapToRestObj } from '../util';
-import { BuyerIdentityInput, OrderShopifyVariantDetail, Session } from '../types';
+import { BuyerIdentity, OrderShopifyVariantDetail, ShippingRateRequest } from '../types';
 import { CART_CREATE_MUTATION } from '../graphql/storefront/graphql';
 import { DeliveryGroupsFragment } from '../types/storefront/storefront.generated';
 import { SERVICE_CODE, SHIPPING_RATE } from '../constants';
-
-type ImportedVariantDetail = {
-    retailerShopifyVariantId: string;
-    supplierShopifyVariantId: string;
-    supplierId: string;
-};
+import { createMapIdToRestObj } from '/opt/nodejs/utils';
+import { getAllImportedVariants } from '/opt/nodejs/models/importedVariant';
+import { getSessionFromId } from '/opt/nodejs/models/session';
+import { composeGid } from '@shopify/admin-graphql-api-utilities';
 
 type ShopifyVariantIdAndQty = {
     shopifyVariantId: string;
@@ -44,75 +41,60 @@ type ShippingRateResponse = {
 // ==============================================================================================================
 // START: HELPER FUNCTIONS FOR GETTING SHIPPING RATES
 // ==============================================================================================================
-async function getAllImportedVariants(retailerId: string, client: PoolClient): Promise<ImportedVariantDetail[]> {
-    try {
-        const query = `
-          SELECT 
-            "ImportedVariant"."shopifyVariantId" as "retailerShopifyVariantId",
-            "Variant"."shopifyVariantId" as "supplierShopifyVariantId",
-            "PriceList"."supplierId" as "supplierId"
-          FROM "ImportedVariant"
-          INNER JOIN "ImportedProduct" ON "ImportedProduct"."id" = "ImportedVariant"."importedProductId"
-          INNER JOIN "Product" ON "Product"."id" = "ImportedProduct"."prismaProductId"
-          INNER JOIN "PriceList" ON "PriceList"."id" = "Product"."priceListId"
-          INNER JOIN "Variant" ON "Variant"."id" = "ImportedVariant"."prismaVariantId"
-          WHERE "ImportedProduct"."retailerId" = $1    
-        `;
-        const res = await client.query(query, [retailerId]);
-        return res.rows as ImportedVariantDetail[];
-    } catch {
-        throw new Error(`Failed to get all imported variants the retailer ${retailerId} has.`);
-    }
+
+// function to format buyer's address to calculate shipping rate
+function getBuyerIdentity(destination: ShippingRateRequest['rate']['destination']) {
+    return {
+        buyerIdentity: {
+            countryCode: destination.country,
+            deliveryAddressPreferences: {
+                deliveryAddress: {
+                    address1: destination.address1,
+                    ...(destination.address2 ? { address2: destination.address2 } : {}),
+                    city: destination.city,
+                    country: destination.country,
+                    province: destination.province,
+                    zip: destination.postal_code,
+                },
+            },
+        },
+    };
 }
 
-async function getShopifyVariantIdsAndQtyBySupplier(
+async function getOrderDetailsBySupplier(
     retailerId: string,
-    orderShopifyVariantDetails: OrderShopifyVariantDetail[],
+    orderDetails: OrderShopifyVariantDetail[],
     client: PoolClient,
 ) {
-    const shopifyVariantIdsAndQtyBySupplier = new Map<string, ShopifyVariantIdAndQty[]>(); // creates a map of supplier session id to array to supplier's shopify variant id
+    const orderDetailsBySupplier = new Map<string, ShopifyVariantIdAndQty[]>(); // session id to array of supplier's shopify variant id
     const allRetailerImportedVariants = await getAllImportedVariants(retailerId, client);
-    const supplierDetailsMap = createMapToRestObj(allRetailerImportedVariants, 'retailerShopifyVariantId'); // retailerShopifyVariantId => {supplierId, supplierShopifyVariantId}
-    orderShopifyVariantDetails.forEach((orderShopifyVariantDetail) => {
-        const { id: retailerShopifyVariantId, quantity } = orderShopifyVariantDetail;
+    const supplierDetailsMap = createMapIdToRestObj(allRetailerImportedVariants, 'retailerShopifyVariantId'); // retailerShopifyVariantId => {supplierId, supplierShopifyVariantId}
+    orderDetails.forEach((orderDetail) => {
+        const { id: retailerShopifyVariantId, quantity } = orderDetail;
         const supplierDetail = supplierDetailsMap.get(retailerShopifyVariantId);
 
         if (!supplierDetail) {
-            // case: the supplier for the product was the retailer
-            const prevValues = shopifyVariantIdsAndQtyBySupplier.get(retailerId) ?? [];
-            shopifyVariantIdsAndQtyBySupplier.set(retailerId, [
+            // case: not a SynqSell item; the supplier is the retailer's store
+            const prevValues = orderDetailsBySupplier.get(retailerId) ?? [];
+            orderDetailsBySupplier.set(retailerId, [
                 ...prevValues,
                 { shopifyVariantId: retailerShopifyVariantId, quantity },
             ]);
         } else {
             // case: the retailer imported this product
             const { supplierId, supplierShopifyVariantId } = supplierDetail;
-            const prevValues = shopifyVariantIdsAndQtyBySupplier.get(supplierId) ?? [];
-            shopifyVariantIdsAndQtyBySupplier.set(supplierId, [
+            const prevValues = orderDetailsBySupplier.get(supplierId) ?? [];
+            orderDetailsBySupplier.set(supplierId, [
                 ...prevValues,
                 { shopifyVariantId: supplierShopifyVariantId, quantity },
             ]);
         }
     });
 
-    return shopifyVariantIdsAndQtyBySupplier;
+    return orderDetailsBySupplier;
 }
 
 // helper functions for getSupplierShippingRate
-async function getSession(sessionId: string, client: PoolClient) {
-    try {
-        const query = `SELECT * FROM "Session" WHERE "id" = $1`;
-        const res = await client.query(query, [sessionId]);
-        const session = res.rows[0] as Session;
-        if (!session) {
-            throw new Error(`Session is not found for sessionId ${sessionId}.`);
-        }
-        return session;
-    } catch (error) {
-        throw new Error('Failed to get session ' + sessionId);
-    }
-}
-
 function getParsedData(part: string) {
     try {
         const jsonString = part.split('\r\n\r\n')[1].trim();
@@ -124,108 +106,102 @@ function getParsedData(part: string) {
 }
 
 async function getSupplierShippingRate(
-    supplierSessionId: string,
+    supplierId: string,
     shopifyVariantIdsAndQty: ShopifyVariantIdAndQty[],
-    buyerIdentityInput: BuyerIdentityInput,
+    buyerIdentity: BuyerIdentity,
     client: PoolClient,
 ) {
-    try {
-        const supplierSession = await getSession(supplierSessionId, client);
-        const storefrontAccessToken = supplierSession.storefrontAccessToken;
-        if (!storefrontAccessToken) {
-            throw new Error('Storefront access token does not exist for supplier session id ' + supplierSessionId);
-        }
+    const supplierSession = await getSessionFromId(supplierId, client);
+    const storefrontAccessToken = supplierSession.storefrontAccessToken;
+    if (!storefrontAccessToken) {
+        throw new Error('Storefront access token does not exist for supplier session id ' + supplierId);
+    }
+    const cartCreateInput = {
+        lines: shopifyVariantIdsAndQty.map((lineItem) => ({
+            merchandiseId: lineItem.shopifyVariantId,
+            quantity: lineItem.quantity,
+        })),
+        ...buyerIdentity,
+    };
 
-        const cartCreateInput = {
-            lines: shopifyVariantIdsAndQty.map((lineItem) => ({
-                merchandiseId: lineItem.shopifyVariantId,
-                quantity: lineItem.quantity,
-            })),
-            ...buyerIdentityInput,
-        };
+    // TODO: Figure out how to use meros to decode response instead of doing it manually
+    // calculated carrier shipping rates are when the customer reach the checkout screen, and Shopify calculates the exact cost of USPS or any shipping carrier service to charge the customer
+    // the CART_CREATE_MUTATION retrieves the calculated shipping rates and static shipping rates
+    // however, the only way to get calculated carrier shipping rates from Shopify is by using multipart responses, where data is streamed into chunks
+    // https://github.com/graphql/graphql-over-http/blob/c1acb54053679f08939c9cdcee00b72d77c42211/rfcs/IncrementalDelivery.md
+    // I tried using meros to decode it, but even though the "Content-Type: multipart/mixed; boundary=graphql", calling meros does not split it into parts
 
-        // calculated carrier shipping rates are when the customer reach the checkout screen, and Shopify calculates the exact cost of USPS or any shipping carrier service to charge the customer
-        // the CART_CREATE_MUTATION retrieves the calculated shipping rates and static shipping rates
-        // however, the only way to get calculated carrier shipping rates from Shopify is by using multipart responses, where data is streamed into chunks
-        // https://github.com/graphql/graphql-over-http/blob/c1acb54053679f08939c9cdcee00b72d77c42211/rfcs/IncrementalDelivery.md
-        // I tried using meros to decode it, but even though the "Content-Type: multipart/mixed; boundary=graphql", calling meros does not split it into parts
-        // TODO: Figure out how to use meros to decode response instead of doing it manually
-
-        const url = `https://${supplierSession.shop}/api/2024-07/graphql.json`;
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Shopify-Storefront-Access-Token': storefrontAccessToken,
+    const url = `https://${supplierSession.shop}/api/2024-07/graphql.json`;
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Shopify-Storefront-Access-Token': storefrontAccessToken,
+        },
+        body: JSON.stringify({
+            query: CART_CREATE_MUTATION,
+            variables: {
+                input: cartCreateInput,
             },
-            body: JSON.stringify({
-                query: CART_CREATE_MUTATION,
-                variables: {
-                    input: cartCreateInput,
-                },
-            }),
-        });
+        }),
+    });
 
-        let result = '';
-        if (!response.body) {
-            throw new Error('Creating a cart does not have a response body.');
+    let result = '';
+    if (!response.body) {
+        throw new Error('Creating a cart does not have a response body.');
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        result += decoder.decode(value, { stream: true });
+    }
+
+    const parts = result.split('--graphql');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const parsedDataArr: any[] = [];
+    const supplierShippingRate: SupplierShippingRate[] = [];
+    parts.forEach((part) => {
+        const parsedData = getParsedData(part);
+        if (parsedData) {
+            parsedDataArr.push(parsedData);
         }
+    });
 
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-            result += decoder.decode(value, { stream: true });
-        }
-
-        const parts = result.split('--graphql');
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const parsedDataArr: any[] = [];
-        const supplierShippingRate: SupplierShippingRate[] = [];
-        parts.forEach((part) => {
-            const parsedData = getParsedData(part);
-            if (parsedData) {
-                parsedDataArr.push(parsedData);
-            }
-        });
-
-        parsedDataArr.forEach((dataItem) => {
-            // case: initial streamed data response
-            // context: there's only two ways two main ways to implement shipping: create a mock cart and get the shipping rate or import shipping profiles
-            // aps like printify use shipping profiles but the disadvantage is that bloats the user's store and there's max 100 shipping profiles
-            // mock cart has the disadvantage that the item has to have at least one stock, but it shouldn't matter because the supplier's order is not created until after the delivery carrier service api is called
-            const userErrors = dataItem?.data?.cartCreate?.userErrors;
-            if (userErrors && userErrors.length > 0) {
-                throw new Error(userErrors);
-            } else if (dataItem.incremental?.[0]?.data?.deliveryGroups?.edges) {
-                dataItem.incremental.forEach((incremental: SubsequentCartCreateIncremental) => {
-                    const deliveryGroups = incremental.data.deliveryGroups.edges;
-                    deliveryGroups.forEach(({ node }) => {
-                        const deliveryOptions = node.deliveryOptions;
-                        deliveryOptions.forEach((option) => {
-                            const {
-                                title,
-                                estimatedCost: { amount, currencyCode },
-                                description,
-                            } = option;
-                            supplierShippingRate.push({
-                                title: title ?? '',
-                                amount: amount,
-                                currencyCode: currencyCode,
-                                description: description ?? '',
-                            });
+    parsedDataArr.forEach((dataItem) => {
+        // case: initial streamed data response
+        // context: there's only two ways two main ways to implement shipping: create a mock cart and get the shipping rate or import shipping profiles
+        // aps like printify use shipping profiles but the disadvantage is that bloats the user's store and there's max 100 shipping profiles
+        // mock cart has the disadvantage that the item has to have at least one stock, but it shouldn't matter because the supplier's order is not created until after the delivery carrier service api is called
+        const userErrors = dataItem?.data?.cartCreate?.userErrors;
+        if (userErrors && userErrors.length > 0) {
+            throw new Error(userErrors);
+        } else if (dataItem.incremental?.[0]?.data?.deliveryGroups?.edges) {
+            dataItem.incremental.forEach((incremental: SubsequentCartCreateIncremental) => {
+                const deliveryGroups = incremental.data.deliveryGroups.edges;
+                deliveryGroups.forEach(({ node }) => {
+                    const deliveryOptions = node.deliveryOptions;
+                    deliveryOptions.forEach((option) => {
+                        const {
+                            title,
+                            estimatedCost: { amount, currencyCode },
+                            description,
+                        } = option;
+                        supplierShippingRate.push({
+                            title: title ?? '',
+                            amount: amount,
+                            currencyCode: currencyCode,
+                            description: description ?? '',
                         });
                     });
                 });
-            }
-        });
+            });
+        }
+    });
 
-        return supplierShippingRate;
-    } catch (error) {
-        console.error(error);
-        throw new Error('Failed to get supplier shipping rate.');
-    }
+    return supplierShippingRate;
 }
 
 // helper functions for calculateTotalShippingRates
@@ -319,19 +295,19 @@ function getInternationalShippingRates(allShippingRates: SupplierShippingRate[])
     return totalShippingRates;
 }
 
-// I don't know how other merchants set up their delivery profiles
+// TODO: Change implementation once see how other merchants in the real world setup their international profiles
 // By default, shopify has "Economy" and "Standard" set up for every merchant for domestic shipping (names cannot be changed)
 // while for international shipping, you can either use Calculated Carrier Cost or set a shipping rate manually
 // However, the name for the default shipping rate for international is custom and can be changed to any name (e.g. International, International Shipping, Worldwide)
-// For now, my implementation will be like this:
-// I'll use the default unchanged name "International Shipping" and sum up all the shipping costs for that name and return it, but I need to see how merchants in the real world setup their international profiles
+// For now, the implementation is as follows:
+// If it's not the default name "International Shipping", then it will immediately fail
+// otherwise, all shipping costs will be summed for that name and return it
 function calculateTotalShippingRates(shippingRatesBySupplier: SupplierShippingRatesMap) {
     const allShippingRates = Array.from(shippingRatesBySupplier.values()).flatMap((rates) => rates);
     const hasEconomyOrStandard =
         allShippingRates.filter(({ title }) => title === SHIPPING_RATE.ECONOMY || title === SHIPPING_RATE.STANDARD)
             .length > 0;
     const hasInternational = allShippingRates.filter(({ title }) => title === SHIPPING_RATE.INTERNATIONAL).length > 0;
-    // TODO: I believe that setting up multi-currency is adopted in most stores, so the currency should be the same (presentment currency in customer's local currency), but should verify
     const isMultiCurrency = new Set(allShippingRates.map(({ currencyCode }) => currencyCode)).size > 1;
 
     if (!hasEconomyOrStandard && !hasInternational) {
@@ -357,38 +333,34 @@ function calculateTotalShippingRates(shippingRatesBySupplier: SupplierShippingRa
 // ==============================================================================================================
 // END: HELPER FUNCTIONS FOR GETTING SHIPPING RATES
 // ==============================================================================================================
-async function getShippingRates(
-    retailerSessionId: string,
-    orderShopifyVariantDetails: OrderShopifyVariantDetail[],
-    buyerIdentityInput: BuyerIdentityInput,
-    client: PoolClient,
-) {
-    // get the delivery profiles and sum the values
-    // I need to think about how to restrict retailers to have access to the carrier service api, this should be from the app, so it's ok
-    const shopifyVariantIdsAndQtyBySupplier = await getShopifyVariantIdsAndQtyBySupplier(
-        retailerSessionId,
-        orderShopifyVariantDetails,
-        client,
-    );
-
-    const supplierSessionIds = Array.from(shopifyVariantIdsAndQtyBySupplier.keys());
+// Shopify relies on delivery carrier service
+async function getShippingRates(retailerId: string, request: ShippingRateRequest, client: PoolClient) {
+    const orderDetails = request.rate.items.map(({ variant_id, quantity }) => ({
+        id: composeGid('ProductVariant', variant_id),
+        quantity,
+    }));
+    const destination = request.rate.destination;
+    const buyerIdentity: BuyerIdentity = getBuyerIdentity(destination);
+    const orderDetailsBySupplier = await getOrderDetailsBySupplier(retailerId, orderDetails, client);
+    const supplierSessionIds = Array.from(orderDetailsBySupplier.keys());
     const shippingRatesBySupplier: SupplierShippingRatesMap = new Map();
 
     // this calculates the shipping rates for each supplier
     await Promise.all(
-        supplierSessionIds.map(async (sessionId) => {
-            const shopifyVariantIdsAndQty = shopifyVariantIdsAndQtyBySupplier.get(sessionId) ?? []; // this should not null-coalesce, only for ts
+        supplierSessionIds.map(async (supplierId) => {
+            const shopifyVariantIdsAndQty = orderDetailsBySupplier.get(supplierId) ?? []; // this should not null-coalesce, only for ts
             const supplierShippingRate = await getSupplierShippingRate(
-                sessionId,
+                supplierId,
                 shopifyVariantIdsAndQty,
-                buyerIdentityInput,
+                buyerIdentity,
                 client,
             );
-            shippingRatesBySupplier.set(sessionId, supplierShippingRate);
+            shippingRatesBySupplier.set(supplierId, supplierShippingRate);
         }),
     );
 
-    return calculateTotalShippingRates(shippingRatesBySupplier);
+    const totalShippingRate = calculateTotalShippingRates(shippingRatesBySupplier);
+    return totalShippingRate;
 }
 
 export default getShippingRates;
