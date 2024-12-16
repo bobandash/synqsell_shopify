@@ -1,5 +1,6 @@
 # https://www.reddit.com/r/aws/comments/12zqh13/how_i_got_typescript_lambda_layers_working_with/
 # https://dan.salvagni.io/b/aws-sam-and-typescript-building-functions-and-layers/
+# TODO: change to Linux after figure out how to make it compatible w windows
 .PHONY: build-UtilLayer
 
 build-UtilLayer:
