@@ -2,14 +2,14 @@ AWSTemplateFormatVersion: "2010-09-09"
 Description: >
   Networking Stack w/ VPC, Public and Private Subnets, IGW, and NAT Gateway
 
-Parameters:
-  Environment:
-    Type: String
+# Parameters:
+#   Environment:
+#     Type: String
 
-Conditions:
-  isProd: !Equals
-    - !Ref Environment
-    - prod
+# Conditions:
+#   isProd: !Equals
+#     - !Ref Environment
+#     - prod
 
 Resources:
   Vpc:

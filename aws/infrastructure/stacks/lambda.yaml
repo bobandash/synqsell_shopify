@@ -285,6 +285,8 @@ Resources:
         Sourcemap: false
         EntryPoints:
           - app.ts
+        External:
+          - "/opt/nodejs/*"
 
   # Shopify webhooks
   # Webhook Function DLQs

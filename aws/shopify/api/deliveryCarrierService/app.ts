@@ -4,7 +4,6 @@ import { RESPONSE } from './constants';
 import { ShippingRateRequest } from './types';
 import { getShippingRates } from './helper';
 import { initializePool } from './db';
-import { composeGid } from '@shopify/admin-graphql-api-utilities';
 import { logError, logInfo } from '/opt/nodejs/utils/logger';
 
 async function orderHasImportedItems(shopifyVariantIds: string[], client: PoolClient) {
@@ -30,7 +29,9 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
         const pool = await initializePool();
         client = await pool.connect();
 
-        const shopifyVariantIds = request.rate.items.map(({ variant_id }) => composeGid('ProductVariant', variant_id));
+        const shopifyVariantIds = request.rate.items.map(
+            ({ variant_id }) => `gid://shopify/ProductVariant/${variant_id}`,
+        );
         const hasImportedItems = await orderHasImportedItems(shopifyVariantIds, client);
         if (!hasImportedItems) {
             logInfo('End: Order has no imported items.', {

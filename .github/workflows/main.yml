@@ -46,7 +46,7 @@ jobs:
           aws-region: us-east-2
       - name: Validate Nested Stacks
         run: |
-          sam validate --template-file infrastructure/stacks/template.yaml --lint
+          sam validate --template-file infrastructure/template.yaml --lint
           sam validate --template-file infrastructure/stacks/api.yaml --lint
           sam validate --template-file infrastructure/stacks/application.yaml --lint
           sam validate --template-file infrastructure/stacks/database.yaml --lint

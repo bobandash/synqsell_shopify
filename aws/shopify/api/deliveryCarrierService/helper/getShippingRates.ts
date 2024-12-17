@@ -6,7 +6,6 @@ import { SERVICE_CODE, SHIPPING_RATE } from '../constants';
 import { createMapIdToRestObj } from '/opt/nodejs/utils';
 import { getAllImportedVariants } from '/opt/nodejs/models/importedVariant';
 import { getSessionFromId } from '/opt/nodejs/models/session';
-import { composeGid } from '@shopify/admin-graphql-api-utilities';
 
 type ShopifyVariantIdAndQty = {
     shopifyVariantId: string;
@@ -336,7 +335,7 @@ function calculateTotalShippingRates(shippingRatesBySupplier: SupplierShippingRa
 // Shopify relies on delivery carrier service
 async function getShippingRates(retailerId: string, request: ShippingRateRequest, client: PoolClient) {
     const orderDetails = request.rate.items.map(({ variant_id, quantity }) => ({
-        id: composeGid('ProductVariant', variant_id),
+        id: `gid://shopify/ProductVariant/${variant_id}`,
         quantity,
     }));
     const destination = request.rate.destination;
