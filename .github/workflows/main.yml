@@ -148,7 +148,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-2
       - name: Verify Initial Stack Was Created
-        run: test $(aws ecr describe-repositories --query 'length(repositories[?repositoryArn==`${{ secrets.ECR_ARN }}`])') -eq 1
+        run: test $(aws ecr describe-repositories --query "length(repositories[?repositoryUri=='${{ secrets.ECR_URL }}'])") -eq 1
       - name: Build and Push Docker Image to ECR
         uses: mr-smithers-excellent/docker-build-push@v6
         with:
