@@ -13,6 +13,7 @@ on:
 
 jobs:
   ci_application:
+    name: CI - Application
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
     runs-on: ubuntu-latest
@@ -36,6 +37,7 @@ jobs:
         run: npm run test
 
   ci_aws:
+    name: CI - AWS Infrastructure
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -61,7 +63,7 @@ jobs:
         run: sam build --use-container
 
   cd_application_config:
-    name: Deploy application configuration
+    name: CD - App Config
     needs: [ci_application, ci_aws]
     if: github.event_name == 'push'
     environment: ${{ github.ref_name }}
@@ -87,11 +89,11 @@ jobs:
           COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
           SHOPIFY_API_KEY: ${{ secrets.SHOPIFY_API_KEY }}
         run: |
-          shopify app use:${{ github.ref_name  }}
+          npm run config:use ${{ github.ref_name  }}
           shopify app deploy -f --source-control-url "$COMMIT_URL"
 
   deploy_aws_dev:
-    name: Deploy Infrastructure Changes (Dev, Pending Changesets)
+    name: CD - Infrastructure (Dev)
     needs: [cd_application_config]
     if: github.event_name == 'push' && github.ref_name == 'dev'
     runs-on: ubuntu-latest
@@ -109,7 +111,7 @@ jobs:
 
   # NOTE: For prod and staging environments, I am not able to build until after deploying the infra manually once bc application's image is stored in ECR
   deploy_application:
-    name: Deploy application on ECR (Prod and Staging)
+    name: CD - Application (Prod/Staging)
     needs: [cd_application_config]
     if: github.event_name == 'push' && (github.ref_name == 'prod' || github.ref_name == 'staging')
     environment: ${{ github.ref_name }}
@@ -144,7 +146,7 @@ jobs:
   # https://github.com/aws/aws-sam-cli/issues/2380
   # ^ they are working on this issue but when you pass parameter overrides on cli, it replaces the toml file config instead of overriding the parameter you set
   deploy_aws_live:
-    name: Deploy Infrastructure Changes (Prod and Staging, Pending Changeset)
+    name: CD - Infrastructure (Prod/Staging)
     needs: [deploy_application]
     if: github.event_name == 'push' && (github.ref_name == 'prod' || github.ref_name == 'staging')
     runs-on: ubuntu-latest
