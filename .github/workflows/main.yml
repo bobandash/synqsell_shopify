@@ -186,7 +186,7 @@ jobs:
         run: sam build
       - name: Deploy Infrastructure
         run:
-          sam deploy --config-env ${{github.ref_name}} --no-execute-changeset --override-parameters \
+          sam deploy --config-env ${{github.ref_name}} --no-execute-changeset --parameter-overrides \
           --Environment=${{github.ref_name}} \
           --ApiKeySecret=${{github.ref_name}}/apiKeys \
           --AppConfigSecret=${{github.ref_name}}/appConfig \
