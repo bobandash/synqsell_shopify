@@ -101,11 +101,14 @@ jobs:
       run:
         working-directory: ./aws
     steps:
+      - uses: actions/checkout@v4
       - uses: aws-actions/setup-sam@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-2
+      - name: Build Infrastructure
+        run: sam build --use-container
       - name: Deploy Dev Infrastructure (Delivery)
         run: sam deploy --config-env dev --no-execute-changeset
 
