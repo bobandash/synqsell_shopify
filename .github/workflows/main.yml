@@ -23,6 +23,7 @@ jobs:
         with:
           node-version: 18
           cache: "npm"
+          cache-dependency-path: "./application/package-lock.json"
       - name: Install dependencies
         run: npm ci
       - name: Install Shopify cli
@@ -71,6 +72,7 @@ jobs:
         with:
           node-version: 18
           cache: "npm"
+          cache-dependency-path: "./application/package-lock.json"
       - name: Install npm dependencies
         run: npm ci
       - name: Install Shopify CLI
@@ -117,6 +119,7 @@ jobs:
         with:
           node-version: 18
           cache: "npm"
+          cache-dependency-path: "./application/package-lock.json"
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
