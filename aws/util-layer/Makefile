@@ -23,6 +23,7 @@ ifeq ($(OS),Windows_NT)
     MKDIR = mkdir
     NPM = npm.cmd
     TARGET_DIR = $(subst /,\,$(ARTIFACTS_DIR)\nodejs)
+    SOURCE_DIR = $(subst /,\,opt\nodejs)
 else
     # Linux commands
     COPY = cp
@@ -31,6 +32,7 @@ else
     MKDIR = mkdir -p
     NPM = npm
     TARGET_DIR = $(ARTIFACTS_DIR)/nodejs
+    SOURCE_DIR = opt/nodejs
 endif
 
 build-UtilLayer:
@@ -41,4 +43,4 @@ build-UtilLayer:
 	$(COPY) package-lock.json "$(TARGET_DIR)"
 	$(NPM) ci --omit=dev --prefix "$(TARGET_DIR)"
 	$(RM) "$(TARGET_DIR)\package.json"
-	$(CP_R) opt\nodejs\* "$(TARGET_DIR)"
+	$(CP_R) $(SOURCE_DIR)/* "$(TARGET_DIR)/"
