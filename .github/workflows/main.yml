@@ -192,5 +192,5 @@ jobs:
           --AppConfigSecret=${{github.ref_name}}/appConfig \
           --AppHostedZoneId=${{vars.HOSTED_ZONE_ID}} \
           --AppDomainName=app.${{github.ref_name}}.synqsell.com \
-          --AppImageTag=${{ github.sha }}
+          --AppImageTag=${{ github.sha }} \
           --IsInitialDeploy="False"
