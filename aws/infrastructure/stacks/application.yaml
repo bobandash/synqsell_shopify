@@ -31,6 +31,8 @@ Parameters:
     Type: String
   SecretsAccessPolicy:
     Type: String
+  AppImageTag:
+    Type: String
   IsInitialDeploy:
     Type: String
     AllowedValues:
@@ -163,7 +165,7 @@ Resources:
       EmptyOnDelete: True
       ImageScanningConfiguration:
         ScanOnPush: true
-      ImageTagMutability: MUTABLE
+      ImageTagMutability: IMMUTABLE
 
   EcsCluster:
     Type: "AWS::ECS::Cluster"
@@ -254,7 +256,7 @@ Resources:
     Properties:
       ContainerDefinitions:
         - Name: synqsell-app
-          Image: !Join [":", [!GetAtt Ecr.RepositoryUri, "latest"]]
+          Image: !Join [":", [!GetAtt Ecr.RepositoryUri, !Ref AppImageTag]]
           LogConfiguration:
             LogDriver: awslogs
             Options:

@@ -34,6 +34,10 @@ Parameters:
     Type: String
     Default: ""
     Description: Domain name to deploy application # TODO: secrets manager cannot resolve certain resources like DNS record, see if there's a better way besides passing in parameters
+  AppImageTag:
+    Type: String
+    Default: "latest"
+    Description: "Docker Image Tag for SynqSell application"
   IsInitialDeploy:
     Type: String
     Default: "True"
@@ -151,6 +155,7 @@ Resources:
         DatabaseConnectionSecret: !GetAtt DatabaseStack.Outputs.DatabaseConnectionSecret
         ApiId: !GetAtt ApiStack.Outputs.ApiGatewayId
         SecretsAccessPolicy: !GetAtt ManagedPolicyStack.Outputs.SecretsAccessPolicy
+        AppImageTag: !Ref AppImageTag
         IsInitialDeploy: !Ref IsInitialDeploy
       Tags:
         - Key: Environment

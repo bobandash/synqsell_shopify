@@ -1,0 +1,165 @@
+name: CI/CD pipeline for application
+on:
+  push:
+    branches:
+      - dev
+      - staging
+      - prod
+  pull_request:
+    branches:
+      - dev
+      - staging
+      - prod
+
+jobs:
+  ci_application:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./application
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: "npm"
+      - name: Install dependencies
+        run: npm install
+      - name: Install Shopify cli
+        run: npm install -g @shopify/cli@latest
+      - name: Build application
+        run: npm run build
+      - name: Run tests
+        run: npm run test
+
+  ci_aws:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./aws
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/setup-sam@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-2
+      - name: Validate Nested Stacks
+        run: |
+          sam validate --template-file infrastructure/stacks/template.yaml --lint
+          sam validate --template-file infrastructure/stacks/api.yaml --lint
+          sam validate --template-file infrastructure/stacks/application.yaml --lint
+          sam validate --template-file infrastructure/stacks/database.yaml --lint
+          sam validate --template-file infrastructure/stacks/lambda.yaml --lint
+          sam validate --template-file infrastructure/stacks/networking.yaml --lint
+          sam validate --template-file infrastructure/stacks/policy.yaml --lint
+          sam validate --template-file infrastructure/stacks/security.yaml --lint
+      - name: Build Infrastructure
+        run: sam build --use-container
+
+  cd_application_config:
+    name: Deploy application configuration
+    needs: [ci_application, ci_aws]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./application
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: "npm"
+      - name: Install npm dependencies
+        run: npm install
+      - name: Install Shopify CLI
+        run: npm install -g @shopify/cli@latest
+      - name: Deploy configuration
+        env:
+          # Token from the Partner Dashboard
+          SHOPIFY_CLI_PARTNERS_TOKEN: ${{ secrets.SHOPIFY_CLI_PARTNERS_TOKEN }}
+          COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+          SHOPIFY_API_KEY: ${{ secrets.SHOPIFY_API_KEY }}
+        run: |
+          shopify app use:${{ github.ref_name  }}
+          shopify app deploy -f --source-control-url "$COMMIT_URL"
+
+  deploy_aws_dev:
+    name: Deploy Infrastructure Changes (Dev, Pending Changesets)
+    needs: [cd_application_config]
+    if: github.event_name == 'push' && github.ref_name == 'dev'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./aws
+    steps:
+      - uses: aws-actions/setup-sam@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-2
+      - name: Deploy Dev Infrastructure (Delivery)
+        run: sam deploy --config-env dev --no-execute-changeset
+
+  # NOTE: For prod and staging environments, I am not able to build until after deploying the infra manually once bc application's image is stored in ECR
+  deploy_application:
+    name: Deploy application on ECR (Prod and Staging)
+    needs: [cd_application_config]
+    if: github.event_name == 'push' && (github.ref_name == 'prod' || github.ref_name == 'staging')
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./application
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: "npm"
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-2
+      - name: Verify Initial Stack Was Created
+        run: test $(aws ecr describe-repositories --query 'length(repositories[?repositoryArn==`${{ secrets.ECR_ARN }}`])') -eq 1
+      - name: Build and Push Docker Image to ECR
+        uses: mr-smithers-excellent/docker-build-push@v6
+        with:
+          image: synqsell-app
+          registry: ${{ secrets.ECR_ARN }}
+          tags: ${{github.sha}}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+  # https://github.com/aws/aws-sam-cli/issues/2380
+  # ^ they are working on this issue but when you pass parameter overrides on cli, it replaces the toml file config instead of overriding the parameter you set
+  deploy_aws_live:
+    name: Deploy Infrastructure Changes (Prod and Staging, Pending Changeset)
+    needs: [deploy_application]
+    if: github.event_name == 'push' && (github.ref_name == 'prod' || github.ref_name == 'staging')
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./aws
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/setup-sam@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-2
+      - name: Build Infrastructure
+        run: sam build
+      - name: Deploy Infrastructure
+        run:
+          sam deploy --config-env ${{github.ref_name}} --no-execute-changeset --override-parameters \
+          --Environment=staging \
+          --ApiKeySecret=${{secrets.API_KEYS}} \
+          --AppConfigSecret=${{secrets.APP_CONFIG_SECRETS}} \
+          --AppHostedZoneId=${{secrets.HOSTED_ZONE_ID}} \
+          --AppDomainName=${{secrets.APP_DOMAIN}} \
+          --AppImageTag=${{ github.sha }}
+          --IsInitialDeploy="False"
