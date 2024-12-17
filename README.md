@@ -59,15 +59,14 @@ When I worked in the eCommerce space selling anime merchandise, I had some key o
 
 These observations led me to a crucial question: could I create a risk-free method for wholesale customers to test out manufacturers' promising but underperforming products, and potentially trigger the positive feedback loop of successful products? That was my motivation for building SynqSell, a Shopify app that allows cross-store product imports between suppliers and retailers, and automatic synchronization of prices, orders, and payments.
 
-Just a disclaimer: I may be completely wrong in understanding Shopify merchants' needs. This project showcased to me that software is a continuous process of iteration.
+Just a disclaimer: I may be completely wrong in understanding Shopify merchants' needs. Software is a continuous process of iteration, and after building the project, I recognize that you have to know WHAT to build as well as HOW to build it. This project was an opportunity for me to learn how to build Shopify applications.
 
 ### Deployment Status
 
-- Submitted to Shopify app store for review
-- No CI/CD pipeline set up that pushes image to ECR, and automatically redeploys the service in ECS; will set up after application is fully approved and found initial users
+- Submitted to Shopify app store for review; this is taking longer than expected because, if there's any issue with the application, Shopify immediately rejects the app without giving any employee contact, so you must submit it again and wait 2-3 weeks.
 - Video Demo: https://www.youtube.com/watch?v=D-RJJmcRiks&feature=youtu.be
 - Main Features (Text): https://aback-thistle-ade.notion.site/Features-At-A-Glance-8be5cba5a5254a67bb59845c5b1c738a
-- Basic Information Site: https://www.synqsell.com/
+- Information Site (Currently missing project images): https://www.synqsell.com/
 
 ![image](https://github.com/user-attachments/assets/8330a875-a78a-45c3-acf0-2996c73df7ac)
 
@@ -236,15 +235,18 @@ Note: the architecture currently has many single points of failure. This is inte
 This section delves into the rationale behind key technical decisions when working on this project and highlights the challenges I encountered during the project's development.
 <br />
 <br />
-Regarding automated testing, I only decided to write automated testing for common util functions used throughout the application and interactions with the database.
+Regarding automated testing, I only decided to write automated testing for common utility functions and basic model queries used throughout the application. I recently refactored my Lambda functions to use a shared Lambda layer, with more util functions. This needs to be tested as well. I made the conscious decision not to aim for high coverage. This is because:
 
 <ul>
-  <li><strong>Development Team Size:</strong> As the sole developer on this project, the risk of unexpected breaking changes is minimized. This allows for a more agile development process without the immediate need for extensive test coverage.</li>
-  <li><strong>Anticipated Future Changes:</strong> Given the early nature of this SaaS application, I expect significant changes and modifications, especially to the actions and loaders within the application, frontend, and certain webhook handling logic. Investing a lot of time in automated tests could just result in technical debt.</li>
-  <li><strong>Focus on MVP and User Feedback:</strong> My goal was to create an MVP or POC to gather real-world feedback as soon as possible. In doing so, the future development direction and user needs could be identified more rapidly.</li>
+  <li><strong>Development Team Size:</strong> As the sole developer on this project, the risk of unexpected breaking changes is minimal. This allows for a more agile development process without the immediate need for extensive test coverage.</li>
+  <li><strong>Anticipated Future Changes:</strong> Given the early nature of this application, I expect significant changes and modifications. A lot of what I built / have to build depends entirely on the users I talk to. If I test the entire application, the automated tests can just end up becoming technical debt instead that I have to remove.</li>
+  <li><strong>Focus on MVP and User Feedback:</strong> Because of the early nature of this application, I needed to create MVP or POC to gather real-world feedback as soon as possible. In doing so, the future development direction and user needs could be identified more rapidly.</li>
 </ul>
 <br />
-However, I wanted to also balance this project as a learning opportunity, to experiment and deepen my knowledge of technologies such as:
+
+While waiting for the app to be approved on Shopify's App Store, I set up a basic CI/CD pipeline to streamline the deployment process and enable rollbacks using Docker tags. I opted for Continuous Delivery instead of Continuous Deployment to maintain manual control over releases. This approach prevents accidental pushes to the production branch from automatically triggering deployments. Instead, I can manually trigger the changeset in AWS CloudFormation Stack, ensuring the new version is deployed only manually, while still benefiting from a smooth and reliable delivery pipeline.
+
+While working on this project, I learned about the following technologies:
 
 ### Remix.run
 
@@ -258,12 +260,12 @@ As a side note, for a platform like Shopify that's encouraging most of their app
 
 ### AWS
 
-Despite this project's early stage, I decided to learn and implement scalable cloud solutions using AWS. While I recently obtained the AWS Certified Cloud Practioner certification, I recognized that the certificate primarily involved memorizing AWS microservices rather than gaining practical experience.
+Despite this project's early stage, I decided to learn and implement scalable cloud solutions using AWS. While I recently obtained the AWS Certified Cloud Practioner certification,the certificate primarily involved memorizing AWS services rather than gaining practical experience.
 
-In this project, I wanted to move beyond theoretical knowledge and acquire hands-on experience using AWS microservices and IaC tools like CloudFormation/AWS SAM. When developing AWS Lambda functions, I initially struggled with manually testing if the functions were properly receiving Shopify's webhooks and updating the database. Despite my general approach of minimizing automated tests, I initially resorted to writing integration tests to verify function calls, aiming to maximize development efficiency.
+In this project, I wanted to move beyond theoretical knowledge and acquire hands-on experience using AWS services and IaC tools like CloudFormation/AWS SAM. When developing AWS Lambda functions, I initially struggled with manually testing if the functions were properly receiving Shopify's webhooks and updating the database.
 <br />
 <br />
-However, I later learned about AWS SAM Accelerate and log watch features. These tools allowed me to sync Lambda function code with my AWS infrastructure in real-time, eliminating the need for frequent deployments or extensive integration testing. This hands-on approach, while challenging, provided invaluable insights into cloud-based application development and significantly enhanced my practical skills with AWS services.
+I learned concepts like AWS SAM Accelerate and log watch features. These tools allowed me to sync Lambda function code with my AWS infrastructure in real-time, eliminating the need for frequent deployments or extensive integration testing. This hands-on approach, while challenging, provided invaluable insights into cloud-based application development and significantly enhanced my practical skills with AWS services.
 <br />
 <br />
 These are a few problems that I faced when developing this app. I learned a tremendous amount developing this project, and I'm excited to further my knowledge of development, cloud computing, system design, and other concepts.
