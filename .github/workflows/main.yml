@@ -187,10 +187,10 @@ jobs:
       - name: Deploy Infrastructure
         run:
           sam deploy --config-env ${{github.ref_name}} --no-execute-changeset --parameter-overrides \
-          --Environment=${{github.ref_name}} \
-          --ApiKeySecret=${{github.ref_name}}/apiKeys \
-          --AppConfigSecret=${{github.ref_name}}/appConfig \
-          --AppHostedZoneId=${{vars.HOSTED_ZONE_ID}} \
-          --AppDomainName=app.${{github.ref_name}}.synqsell.com \
-          --AppImageTag=${{ github.sha }} \
-          --IsInitialDeploy="False"
+          Environment=${{github.ref_name}} \
+          ApiKeySecret=${{github.ref_name}}/apiKeys \
+          AppConfigSecret=${{github.ref_name}}/appConfig \
+          AppHostedZoneId=${{vars.HOSTED_ZONE_ID}} \
+          AppDomainName=app.${{github.ref_name}}.synqsell.com \
+          AppImageTag=${{ github.sha }} \
+          IsInitialDeploy="False"
