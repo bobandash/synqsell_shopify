@@ -152,44 +152,6 @@ Resources:
         - Endpoint: "brucehsu1126@gmail.com"
           Protocol: "email"
 
-  # instead of creating multiple alarms,
-  # I decided to consolidate single alarm and just filter logs by log insights if I encounter an issue w/ webhook processing
-  # we do not need to create it for the compliance because there's no way it'll fail (no async operations)
-  ShopifyWebhooksDLQAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      AlarmName: !Sub ${Environment}_shopify_dlq
-      AlarmDescription: "Alarm when shopify webhook topic throws error and enters DLQ"
-      MetricName: ApproximateNumberOfMessagesVisible
-      Namespace: AWS/SQS
-      Statistic: Sum
-      Period: 300
-      EvaluationPeriods: 1
-      Threshold: 0
-      ComparisonOperator: GreaterThanThreshold
-      TreatMissingData: notBreaching
-      AlarmActions:
-        - !Ref EmailSNSTopic
-      Dimensions:
-        - Name: QueueName
-          Value: !GetAtt WebhookDLQ.QueueName
-        - Name: QueueName
-          Value: !GetAtt ShopifyCoordinatorDLQ.QueueName
-        - Name: QueueName
-          Value: !GetAtt DeleteProductsDLQ.QueueName
-        - Name: QueueName
-          Value: !GetAtt ProductsUpdateDLQ.QueueName
-        - Name: QueueName
-          Value: !GetAtt FulfillmentOrderRoutingCompleteDLQ.QueueName
-        - Name: QueueName
-          Value: !GetAtt OrdersCancelledDLQ.QueueName
-        - Name: QueueName
-          Value: !GetAtt FulfillmentsUpdateDLQ.QueueName
-        - Name: QueueName
-          Value: !GetAtt AppUninstalledDLQ.QueueName
-        - Name: QueueName
-          Value: !GetAtt ShopRedactDLQ.QueueName
-
   # Queue for shopify webhooks
   WebhookSQS:
     Type: AWS::SQS::Queue
@@ -680,6 +642,188 @@ Resources:
           - app.ts
         External:
           - "/opt/nodejs/*"
+
+  # Cloudwatch Alarms to Inform If A Webhook Failed
+  # AWS CloudWatch provides a free tier of 10 alarms per month
+  ShopifyWebhooksDLQAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: isProd
+    Properties:
+      AlarmName: !Sub ${Environment}_shopify_dlq
+      AlarmDescription: "Alarm when shopify webhook topic throws error and enters DLQ"
+      MetricName: ApproximateNumberOfMessagesVisible
+      Namespace: AWS/SQS
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref EmailSNSTopic
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt WebhookDLQ.QueueName
+
+  ShopifyCoordinatorDLQAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: isProd
+    Properties:
+      AlarmName: !Sub ${Environment}_shopify_coordinator_dlq
+      AlarmDescription: "Alarm when shopify coordinator topic throws error and enters DLQ"
+      MetricName: ApproximateNumberOfMessagesVisible
+      Namespace: AWS/SQS
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref EmailSNSTopic
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt ShopifyCoordinatorDLQ.QueueName
+
+  DeleteProductsDLQAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: isProd
+    Properties:
+      AlarmName: !Sub ${Environment}_delete_products_dlq
+      AlarmDescription: "Alarm when delete products topic throws error and enters DLQ"
+      MetricName: ApproximateNumberOfMessagesVisible
+      Namespace: AWS/SQS
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref EmailSNSTopic
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt DeleteProductsDLQ.QueueName
+
+  ProductsUpdateDLQAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: isProd
+    Properties:
+      AlarmName: !Sub ${Environment}_products_update_dlq
+      AlarmDescription: "Alarm when products update topic throws error and enters DLQ"
+      MetricName: ApproximateNumberOfMessagesVisible
+      Namespace: AWS/SQS
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref EmailSNSTopic
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt ProductsUpdateDLQ.QueueName
+
+  FulfillmentOrderRoutingCompleteDLQAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: isProd
+    Properties:
+      AlarmName: !Sub ${Environment}_fulfillment_order_routing_complete_dlq
+      AlarmDescription: "Alarm when fulfillment order routing complete topic throws error and enters DLQ"
+      MetricName: ApproximateNumberOfMessagesVisible
+      Namespace: AWS/SQS
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref EmailSNSTopic
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt FulfillmentOrderRoutingCompleteDLQ.QueueName
+
+  OrdersCancelledDLQAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: isProd
+    Properties:
+      AlarmName: !Sub ${Environment}_orders_cancelled_dlq
+      AlarmDescription: "Alarm when orders cancelled topic throws error and enters DLQ"
+      MetricName: ApproximateNumberOfMessagesVisible
+      Namespace: AWS/SQS
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref EmailSNSTopic
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt OrdersCancelledDLQ.QueueName
+
+  FulfillmentsUpdateDLQAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: isProd
+    Properties:
+      AlarmName: !Sub ${Environment}_fulfillments_update_dlq
+      AlarmDescription: "Alarm when fulfillments update topic throws error and enters DLQ"
+      MetricName: ApproximateNumberOfMessagesVisible
+      Namespace: AWS/SQS
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref EmailSNSTopic
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt FulfillmentsUpdateDLQ.QueueName
+
+  AppUninstalledDLQAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: isProd
+    Properties:
+      AlarmName: !Sub ${Environment}_app_uninstalled_dlq
+      AlarmDescription: "Alarm when app uninstalled topic throws error and enters DLQ"
+      MetricName: ApproximateNumberOfMessagesVisible
+      Namespace: AWS/SQS
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref EmailSNSTopic
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt AppUninstalledDLQ.QueueName
+
+  ShopRedactDLQAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: isProd
+    Properties:
+      AlarmName: !Sub ${Environment}_shop_redact_dlq
+      AlarmDescription: "Alarm when app uninstalled topic throws error and enters DLQ"
+      MetricName: ApproximateNumberOfMessagesVisible
+      Namespace: AWS/SQS
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref EmailSNSTopic
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt ShopRedactDLQ.QueueName
 
 Outputs:
   StripeWebhookCoordinatorFunctionArn:
