@@ -9,8 +9,9 @@ ifeq ($(OS),Windows_NT)
     RM = del /Q
     MKDIR = mkdir
     NPM = npm.cmd
-    TARGET_DIR = $(subst /,\,$(ARTIFACTS_DIR)\nodejs)
-    SOURCE_DIR = $(subst /,\,opt\nodejs\*)
+    ROOT_TARGET_DIR = $(subst /,\,$(ARTIFACTS_DIR)\nodejs)
+    TARGET_DIR = $(subst /,\,$(ARTIFACTS_DIR)\nodejs\node_modules)
+    SOURCE_DIR = $(subst /,\,opt\nodejs\)
     SLASH = \
 
 else
@@ -20,8 +21,9 @@ else
     RM = rm -f
     MKDIR = mkdir -p
     NPM = npm
-    TARGET_DIR = $(ARTIFACTS_DIR)/nodejs/
-    SOURCE_DIR = opt/nodejs/*
+    ROOT_TARGET_DIR = $(ARTIFACTS_DIR)/nodejs
+    TARGET_DIR = $(ARTIFACTS_DIR)/nodejs/node_modules
+    SOURCE_DIR = opt/nodejs/
     SLASH = /
 
 endif
@@ -30,8 +32,8 @@ build-UtilLayer:
 	$(NPM) ci
 	$(NPM) run build
 	$(MKDIR) "$(TARGET_DIR)"
-	$(COPY) package.json "$(TARGET_DIR)"
-	$(COPY) package-lock.json "$(TARGET_DIR)"
-	$(NPM) ci --omit=dev --prefix "$(TARGET_DIR)"
-	$(RM) "$(TARGET_DIR)\package.json"
-	$(CP_R) $(SOURCE_DIR) "$(TARGET_DIR)${SLASH}"
+	$(COPY) package.json "$(ROOT_TARGET_DIR)"
+	$(COPY) package-lock.json "$(ROOT_TARGET_DIR)"
+	$(NPM) ci --production --prefix "$(ROOT_TARGET_DIR)"
+	$(RM) "$(ROOT_TARGET_DIR)${SLASH}package.json"
+	$(CP_R) $(SOURCE_DIR) "${ROOT_TARGET_DIR}${SLASH}"
