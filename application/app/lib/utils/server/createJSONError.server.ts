@@ -1,3 +1,4 @@
+import { json } from '@remix-run/node';
 import logError from './logError.server';
 
 // This function is used to get errors for actions / loaders to pass to UI
@@ -9,7 +10,7 @@ function createJSONError(message: string, statusCode: number) {
     statusCode = 500;
   }
 
-  return Response.json(
+  return json(
     {
       error: {
         message: message,

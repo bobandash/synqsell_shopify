@@ -33,18 +33,23 @@ describe('logError', () => {
   describe('HttpError', () => {
     test('should log HTTP error as info', () => {
       const error = NotFound('Information has not been found');
-      const context = 'Information not found.';
-      logError(error, context);
+      logError(error);
       const loggedData = loggerInfoSpy.mock.calls[0][0];
       expect(loggerErrorSpy).toHaveBeenCalledTimes(0);
       expect(loggedData).toHaveProperty('referenceId', referenceId);
-      expect(loggedData).toHaveProperty('context', 'Information not found.');
       expect(loggedData).toHaveProperty('name', 'HTTPError');
       expect(loggedData).toHaveProperty(
         'message',
         'Information has not been found',
       );
       expect(loggedData).toHaveProperty('stack');
+    });
+
+    test('should log context', () => {
+      const error = NotFound('Information has not been found');
+      logError(error, { sessionId: '123' });
+      const loggedData = loggerInfoSpy.mock.calls[0][0];
+      expect(loggedData).toHaveProperty('sessionId', '123');
     });
   });
 
@@ -59,17 +64,12 @@ describe('logError', () => {
           batchRequestIdx: 1,
         },
       );
-      const context = 'Constraint violation error.';
 
-      logError(error, context);
+      logError(error);
 
       const loggedData = loggerErrorSpy.mock.calls[0][0];
       expect(loggerErrorSpy).toHaveBeenCalledTimes(1);
       expect(loggedData).toHaveProperty('referenceId', referenceId);
-      expect(loggedData).toHaveProperty(
-        'context',
-        'Constraint violation error.',
-      );
       expect(loggedData).toHaveProperty('name', 'PrismaError');
       expect(loggedData).toHaveProperty('code', 'P2002');
       expect(loggedData).toHaveProperty(
@@ -83,14 +83,11 @@ describe('logError', () => {
         'Failed to reach database.',
         clientVersion,
       );
-      const context = 'Database connection issue.';
-
-      logError(error, context);
+      logError(error);
 
       const loggedData = loggerErrorSpy.mock.calls[0][0];
       expect(loggerErrorSpy).toHaveBeenCalledTimes(1);
       expect(loggedData).toHaveProperty('referenceId', referenceId);
-      expect(loggedData).toHaveProperty('context', context);
       expect(loggedData).toHaveProperty('name', 'PrismaInitializationError');
       expect(loggedData).toHaveProperty('message', 'Failed to reach database.');
       expect(loggedData).toHaveProperty('clientVersion', clientVersion);
@@ -101,14 +98,12 @@ describe('logError', () => {
         'Invalid query parameters.',
         { clientVersion },
       );
-      const context = 'Query validation error.';
 
-      logError(error, context);
+      logError(error);
 
       const loggedData = loggerErrorSpy.mock.calls[0][0];
       expect(loggerErrorSpy).toHaveBeenCalledTimes(1);
       expect(loggedData).toHaveProperty('referenceId', referenceId);
-      expect(loggedData).toHaveProperty('context', 'Query validation error.');
       expect(loggedData).toHaveProperty('name', 'PrismaValidationError');
       expect(loggedData).toHaveProperty(
         'message',
@@ -120,12 +115,10 @@ describe('logError', () => {
   describe('Generic Error', () => {
     test('should log generic error with details', () => {
       const error = new Error('Something went wrong');
-      const context = 'Generic error context';
-      logError(error, context);
+      logError(error);
       const loggedData = loggerErrorSpy.mock.calls[0][0];
       expect(loggerErrorSpy).toHaveBeenCalledTimes(1);
       expect(loggedData).toHaveProperty('referenceId', referenceId);
-      expect(loggedData).toHaveProperty('context', context);
       expect(loggedData).toHaveProperty('name', error.name);
       expect(loggedData).toHaveProperty('message', 'Something went wrong');
       expect(loggedData).toHaveProperty('stack'); // Ensure stack trace is logged
@@ -135,15 +128,13 @@ describe('logError', () => {
   describe('Unhandled Error', () => {
     test('should log unhandled error if error passed is not type Error', () => {
       const error = 'Unhandled';
-      const context = 'Generic error context';
-      logError(error, context);
+      logError(error);
       const loggedData = loggerErrorSpy.mock.calls[0][0] as object & {
         errorDetails: {};
       };
       expect(loggedData).toHaveProperty('errorDetails');
       expect(loggerErrorSpy).toHaveBeenCalledTimes(1);
       expect(loggedData).toHaveProperty('referenceId', referenceId);
-      expect(loggedData).toHaveProperty('context', context);
       expect(loggedData).toHaveProperty('name', 'UnhandledError');
       expect(loggedData).toHaveProperty('message', String(error));
       expect(loggedData).toHaveProperty('errorType', 'string');

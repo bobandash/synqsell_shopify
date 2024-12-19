@@ -8,6 +8,7 @@
     "test:db:down": "docker compose -f docker-compose.test.yml down",
     "test:db:push": "dotenv -e .env.test -- npx prisma db push",
     "test:unit": "jest --selectProjects unit",
+    "test:unit:watch": "jest --selectProjects unit --watch",
     "test:integration:regular": "dotenv -e .env.test -- jest --selectProjects integration --runInBand",
     "test:all:watch": "dotenv -e .env.test -- jest --watch --runInBand --no-cache",
     "test:integration": "npm run test:db:up && npm run test:db:push && npm run test:integration:regular && npm run test:db:down",

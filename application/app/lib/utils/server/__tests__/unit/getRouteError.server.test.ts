@@ -11,7 +11,9 @@ jest.mock('../../createJSONError.server', () => ({
 }));
 
 describe('getRouteError', () => {
-  const defaultMessage = 'Something went wrong';
+  const defaultMessage = 'Something went wrong.';
+  const unhandledErrorMessage =
+    'An internal server error occurred. Please contact support.';
 
   describe('PrismaClientKnownRequestError handling', () => {
     test('should handle P2002 (unique constraint violation)', () => {
@@ -23,10 +25,9 @@ describe('getRouteError', () => {
         },
       );
 
-      const result = getRouteError(defaultMessage, error);
-
+      const result = getRouteError(error, defaultMessage);
       expect(result).toEqual({
-        message: defaultMessage,
+        message: unhandledErrorMessage,
         statusCode: StatusCodes.CONFLICT,
       });
     });
@@ -40,10 +41,10 @@ describe('getRouteError', () => {
         },
       );
 
-      const result = getRouteError(defaultMessage, error);
+      const result = getRouteError(error, defaultMessage);
 
       expect(result).toEqual({
-        message: defaultMessage,
+        message: unhandledErrorMessage,
         statusCode: StatusCodes.NOT_FOUND,
       });
     });
@@ -54,10 +55,10 @@ describe('getRouteError', () => {
         clientVersion: '4.x.x',
       });
 
-      const result = getRouteError(defaultMessage, error);
+      const result = getRouteError(error, defaultMessage);
 
       expect(result).toEqual({
-        message: `${defaultMessage}. Please refresh or contact support if the problem persists.`,
+        message: unhandledErrorMessage,
         statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
       });
     });
@@ -68,7 +69,7 @@ describe('getRouteError', () => {
       const validationMessage = 'Invalid input';
       const error = new ValidationError(validationMessage);
 
-      const result = getRouteError(defaultMessage, error);
+      const result = getRouteError(error, defaultMessage);
 
       expect(result).toEqual({
         message: validationMessage,
@@ -80,7 +81,7 @@ describe('getRouteError', () => {
   describe('HttpError handling', () => {
     test('should use HttpError message and status code', () => {
       const error = Unauthorized('Not authorized');
-      const result = getRouteError(defaultMessage, error);
+      const result = getRouteError(error, defaultMessage);
 
       expect(result).toEqual({
         message: error.message,
@@ -93,36 +94,10 @@ describe('getRouteError', () => {
     test('should handle standard Error objects', () => {
       const error = new Error('Standard error');
 
-      const result = getRouteError(defaultMessage, error);
+      const result = getRouteError(error, defaultMessage);
 
       expect(result).toEqual({
-        message: `${defaultMessage}. Please refresh or contact support if the problem persists.`,
-        statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-      });
-    });
-  });
-
-  describe('Default message formatting', () => {
-    test('should add period before support message if missing', () => {
-      const messageWithoutPeriod = 'Something went wrong';
-      const error = new Error();
-
-      const result = getRouteError(messageWithoutPeriod, error);
-      expect(result).toEqual({
-        message:
-          'Something went wrong. Please refresh or contact support if the problem persists.',
-        statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-      });
-    });
-
-    test('should not add extra period if already present', () => {
-      const messageWithPeriod = 'Something went wrong.';
-      const error = new Error();
-      const result = getRouteError(messageWithPeriod, error);
-
-      expect(result).toEqual({
-        message:
-          'Something went wrong. Please refresh or contact support if the problem persists.',
+        message: `${defaultMessage}`,
         statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
       });
     });
@@ -130,19 +105,19 @@ describe('getRouteError', () => {
 
   describe('Unknown error handling', () => {
     test('should handle undefined error', () => {
-      const result = getRouteError(defaultMessage, undefined);
+      const result = getRouteError(undefined);
 
       expect(result).toEqual({
-        message: 'An internal server error occurred. Please contact support.',
+        message: unhandledErrorMessage,
         statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
       });
     });
 
     test('should handle null error', () => {
-      const result = getRouteError(defaultMessage, null);
+      const result = getRouteError(null);
 
       expect(result).toEqual({
-        message: 'An internal server error occurred. Please contact support.',
+        message: unhandledErrorMessage,
         statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
       });
     });
