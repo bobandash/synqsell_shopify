@@ -1,5 +1,4 @@
 import type { HeadersFunction, LoaderFunctionArgs } from '@remix-run/node';
-import { json } from '@remix-run/node';
 import {
   isRouteErrorResponse,
   Link,
@@ -25,13 +24,12 @@ import {
   Image,
   Link as PolarisLink,
 } from '@shopify/polaris';
+import sharedStyles from '~/shared.module.css';
 import { PaddedBox } from '~/components';
 import { WarningIcon } from '~/assets';
 import { userHasStripeConnectAccount } from '~/services/models/stripeConnectAccount.server';
 import { userHasStripePaymentMethod } from '~/services/models/stripeCustomerAccount.server';
-import sharedStyles from '~/shared.module.css';
-import { requireBilling, addBillingToDatabaseIfNotExists } from './loader';
-import { getRouteError, logError } from '~/lib/utils/server';
+import { requireBilling, addBillingToDatabase } from './loader';
 
 export const links = () => [{ rel: 'stylesheet', href: polarisStyles }];
 
@@ -40,31 +38,24 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     session: { id: sessionId, shop },
     billing,
   } = await authenticate.admin(request);
-  let isTest = process.env.NODE_ENV === 'production' ? false : true;
+  let isTest = process.env.NODE_ENV !== 'production';
   // this has to be outside cause the onFailure will be wrapped by the try catch
   await requireBilling(shop, isTest, billing);
+  await addBillingToDatabase(sessionId, isTest, billing);
+  const [roles, hasStripeConnectAccount, hasStripePaymentMethod] =
+    await Promise.all([
+      getRoles(sessionId),
+      userHasStripeConnectAccount(sessionId),
+      userHasStripePaymentMethod(sessionId),
+    ]);
 
-  try {
-    await addBillingToDatabaseIfNotExists(shop, sessionId, isTest, billing);
-    const [roles, hasStripeConnectAccount, hasStripePaymentMethod] =
-      await Promise.all([
-        getRoles(sessionId),
-        userHasStripeConnectAccount(sessionId),
-        userHasStripePaymentMethod(sessionId),
-      ]);
-
-    const roleNames = roles.map((role) => role.name);
-
-    return json({
-      apiKey: process.env.SHOPIFY_API_KEY || '',
-      roleNames,
-      hasStripeConnectAccount,
-      hasStripePaymentMethod,
-    });
-  } catch (error) {
-    logError(error, 'Loader: initialize application');
-    throw getRouteError('Failed to initialize application.', error);
-  }
+  const roleNames = roles.map(({ name }) => name);
+  return {
+    apiKey: process.env.SHOPIFY_API_KEY || '',
+    roleNames,
+    hasStripeConnectAccount,
+    hasStripePaymentMethod,
+  };
 };
 
 export default function App() {
@@ -114,16 +105,11 @@ export default function App() {
 // Shopify needs Remix to catch some thrown responses, so that their headers are included in the response.
 export function ErrorBoundary() {
   const error = useRouteError();
+  console.log(error);
+
   let reason = 'Unhandled error. Please contact support.';
   if (isRouteErrorResponse(error)) {
-    if (
-      error &&
-      'data' in error &&
-      'error' in error.data &&
-      'message' in error.data.error
-    ) {
-      reason = error.data.error.message;
-    }
+    reason = error.data.error.message;
   }
 
   return (

@@ -26,7 +26,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     );
     return json(productIdToStoreUrl, StatusCodes.OK);
   } catch (error) {
-    logError(error, 'API: Get store url');
-    return getRouteError('Failed to retrieve Shopify product urls.', error);
+    logError(error);
+    return getRouteError(error, 'Failed to retrieve Shopify product urls.');
   }
 };

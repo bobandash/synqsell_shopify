@@ -81,8 +81,11 @@ async function initiatePartnershipAction(
       StatusCodes.CREATED,
     );
   } catch (error) {
-    logError(error, 'Action: Initiate Partnership');
-    return getRouteError('Failed to initiate partnership request.', error);
+    logError(error);
+    return getRouteError(
+      error,
+      'Failed to initiate partnership request. Please try again later.',
+    );
   }
 }
 

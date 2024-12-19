@@ -5,7 +5,6 @@ import {
   ROLES,
 } from '~/constants';
 import { boolean, object, string } from 'yup';
-import { hasSession } from '~/services/models/session.server';
 import type { Prisma } from '@prisma/client';
 import createHttpError from 'http-errors';
 import {
@@ -15,6 +14,7 @@ import {
 import { getAllPriceLists } from '~/services/models/priceList.server';
 import { PARTNERSHIP_STATUS, type PartnershipStatusProps } from '../constants';
 import { isSupplierRetailerPartnered } from '~/services/models/partnership.server';
+import { sessionIdSchema } from '~/schemas/models';
 
 export type RetailerPaginatedInfoProps = {
   retailerPaginatedInfo: {
@@ -84,15 +84,7 @@ type GetPrismaUnformattedRetailerInfo = GetRetailerPaginatedInfoProps & {
 const getRetailerPaginatedInfoSchema = object({
   isReverseDirection: boolean().required(),
   cursor: string().nullable(),
-  sessionId: string()
-    .required()
-    .test(
-      'session-id-is-valid',
-      'Session id has to be in database',
-      async (sessionId) => {
-        return await hasSession(sessionId);
-      },
-    ),
+  sessionId: sessionIdSchema,
 }).test(
   'is-reverse-direction-not-true',
   'Cannot fetch information from reverse direction if cursor is not provided',

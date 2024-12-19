@@ -59,21 +59,16 @@ const INTENTS = {
 };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  try {
-    const { session } = await authenticate.admin(request);
-    const { id: sessionId } = session;
-    const isAdmin = await hasRole(sessionId, ROLES.ADMIN);
-    if (!isAdmin) {
-      throw new createHttpError.Unauthorized(
-        'Unauthorized. User is not an administrator.',
-      );
-    }
-    const supplierAccessRequests = await getAllSupplierAccessRequests();
-    return json(supplierAccessRequests, StatusCodes.OK);
-  } catch (error) {
-    logError(error, 'Loader: Admin Route');
-    throw getRouteError('Failed to load admin route.', error);
+  const { session } = await authenticate.admin(request);
+  const { id: sessionId } = session;
+  const isAdmin = await hasRole(sessionId, ROLES.ADMIN);
+  if (!isAdmin) {
+    throw new createHttpError.Unauthorized(
+      'Unauthorized. User is not an administrator.',
+    );
   }
+  const supplierAccessRequests = await getAllSupplierAccessRequests();
+  return json(supplierAccessRequests, StatusCodes.OK);
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -81,7 +76,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const formData = await request.formData();
     const data = convertFormDataToObject(formData) as ActionData;
     const { intent, supplierAccessRequestInfo } = data;
-    if (!supplierAccessRequestInfo) {
+    const supplierAccessRequestIds = supplierAccessRequestInfo.map(
+      (info) => info.supplierAccessRequestId,
+    );
+    const sessionIds = supplierAccessRequestInfo.map((info) => info.sessionId);
+
+    if (supplierAccessRequestInfo.length === 0) {
       return createJSONError(
         'There were no suppliers selected.',
         StatusCodes.BAD_REQUEST,
@@ -90,12 +90,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     switch (intent) {
       case INTENTS.APPROVE:
         return await updateSupplierAccessAction(
-          supplierAccessRequestInfo,
+          supplierAccessRequestIds,
+          sessionIds,
           ACCESS_REQUEST_STATUS.APPROVED,
         );
       case INTENTS.REJECT:
         return await updateSupplierAccessAction(
-          supplierAccessRequestInfo,
+          supplierAccessRequestIds,
+          sessionIds,
           ACCESS_REQUEST_STATUS.REJECTED,
         );
       default:
@@ -105,8 +107,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         );
     }
   } catch (error) {
-    logError(error, 'Action: Admin Route');
-    return getRouteError('Failed to process request.', error);
+    logError(error);
+    return getRouteError(error, 'Failed to process request.');
   }
 };
 

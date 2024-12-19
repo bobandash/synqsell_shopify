@@ -46,22 +46,17 @@ import type {
 import createHttpError from 'http-errors';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  try {
-    const {
-      session: { id: sessionId },
-    } = await authenticate.admin(request);
-    const isRetailer = await hasRole(sessionId, ROLES.RETAILER);
-    if (!isRetailer) {
-      throw new createHttpError.Unauthorized(
-        'User is not retailer. Unauthorized to view supplier partnership requests.',
-      );
-    }
-    const supplierPartnershipInfo = await getSupplierPartnershipInfo(sessionId);
-    return json(supplierPartnershipInfo, StatusCodes.OK);
-  } catch (error) {
-    logError(error, 'Loader: Supplier Partnerships');
-    throw getRouteError('Failed to load supplier partnerships.', error);
+  const {
+    session: { id: sessionId },
+  } = await authenticate.admin(request);
+  const isRetailer = await hasRole(sessionId, ROLES.RETAILER);
+  if (!isRetailer) {
+    throw new createHttpError.Unauthorized(
+      'User is not retailer. Unauthorized to view supplier partnership requests.',
+    );
   }
+  const supplierPartnershipInfo = await getSupplierPartnershipInfo(sessionId);
+  return json(supplierPartnershipInfo, StatusCodes.OK);
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -85,8 +80,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         );
     }
   } catch (error) {
-    logError(error, 'Action: Supplier Partnerships');
-    return getRouteError('Failed to process request.', error);
+    logError(error);
+    return getRouteError(
+      error,
+      'Failed to process request. Please try again later.',
+    );
   }
 };
 

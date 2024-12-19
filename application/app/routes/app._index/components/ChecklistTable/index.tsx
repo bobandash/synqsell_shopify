@@ -3,16 +3,12 @@ import {
   Card,
   InlineStack,
   Text,
-  Button,
   ProgressBar,
   Divider,
 } from '@shopify/polaris';
-import { ChevronUpIcon, ChevronDownIcon } from '@shopify/polaris-icons';
 import styles from './styles.module.css';
-import type { FormEvent, FC } from 'react';
+import type { FC } from 'react';
 import { CheckListItem } from './ChecklistItem';
-import { useFetcher } from '@remix-run/react';
-import { INTENTS, FETCHER_KEYS } from '../../constants';
 import type { TransformedChecklistTableData } from '../../types';
 
 export type toggleActiveChecklistItemProps = (
@@ -27,23 +23,13 @@ type Props = {
 };
 
 const ChecklistTable: FC<Props> = (props) => {
-  const fetcher = useFetcher({ key: FETCHER_KEYS.TOGGLE_CHECKLIST_VISIBILITY });
   const { table, tableIndex, toggleActiveChecklistItem } = props;
-  const { id, header, subheader, checklistItems, isHidden } = table;
+  const { header, subheader, checklistItems, isHidden } = table;
   const numTasks = checklistItems.length;
   const numTasksCompleted = checklistItems.filter(
     (task) => task.isCompleted === true,
   ).length;
   const progress = (numTasksCompleted / numTasks) * 100;
-
-  const handleSubmitToggleVisibility = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (fetcher.state !== 'idle') {
-      return;
-    }
-    let formData = new FormData(event.currentTarget);
-    fetcher.submit(formData, { method: 'patch' });
-  };
 
   return (
     <Card>
@@ -53,23 +39,6 @@ const ChecklistTable: FC<Props> = (props) => {
             <Text as="h2" variant="headingMd" fontWeight="semibold">
               {header}
             </Text>
-            <fetcher.Form
-              method="patch"
-              onSubmit={handleSubmitToggleVisibility}
-            >
-              <input
-                type="hidden"
-                name="intent"
-                value={INTENTS.TOGGLE_CHECKLIST_VISIBILITY}
-              />
-              <input type="hidden" name="tableId" value={id} />
-              <Button
-                icon={isHidden ? ChevronDownIcon : ChevronUpIcon}
-                accessibilityLabel="toggle-checklist-table-visibility"
-                variant="tertiary"
-                submit={true}
-              />
-            </fetcher.Form>
           </InlineStack>
           <Text as="p" variant="bodyMd">
             {subheader}

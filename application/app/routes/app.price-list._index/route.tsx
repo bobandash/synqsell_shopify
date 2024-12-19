@@ -34,21 +34,17 @@ import { getPriceListTableInfo } from './loader';
 import TableRow from './components/TableRow';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  try {
-    const { session } = await authenticate.admin(request);
-    const { id: sessionId } = session;
-    const priceListTableInfo = await getPriceListTableInfo(sessionId);
-    return json(priceListTableInfo, { status: StatusCodes.OK });
-  } catch (error) {
-    logError(error, 'Loader: Price List');
-    throw getRouteError('Failed to load price list table.', error);
-  }
+  const { session } = await authenticate.admin(request);
+  const { id: sessionId } = session;
+  const priceListTableInfo = await getPriceListTableInfo(sessionId);
+  return json(priceListTableInfo, { status: StatusCodes.OK });
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
+  let sessionId: undefined | string;
   try {
     const { session } = await authenticate.admin(request);
-    const { id: sessionId } = session;
+    sessionId = session.id;
     let formData = await request.formData();
     const intent = formData.get('intent');
     const formDataObject = convertFormDataToObject(formData);
@@ -61,8 +57,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       StatusCodes.NOT_IMPLEMENTED,
     );
   } catch (error) {
-    logError(error, 'Action: Price List Table.');
-    return getRouteError('Failed to process request.', error);
+    logError(error, { sessionId });
+    return getRouteError(error, 'Failed to process request.');
   }
 };
 

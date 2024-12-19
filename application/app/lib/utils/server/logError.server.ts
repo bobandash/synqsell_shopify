@@ -1,4 +1,3 @@
-import { v4 as uuidv4 } from 'uuid';
 import logger from '~/logger';
 import { Prisma } from '@prisma/client';
 import { HttpError } from 'http-errors';
@@ -8,26 +7,16 @@ import { HttpError } from 'http-errors';
 // ^ more for microservices, but learned a lot
 // https://logging.apache.org/log4j/1.x/manual.html
 // ^ when to use difference levels
-// Apparently for microservices, technical errors and domain errors are separated
-// And if you generate a reference id for microservices (services calling other services), you just use that reference id to log that service
-// Reference ids are also good for filtering
 
-function getLogReferenceId() {
-  return 'ref-' + uuidv4();
-}
-
-function logError(error: unknown, context: string) {
-  const referenceId = getLogReferenceId();
-
+function logError(error: unknown, context: any = {}) {
   // HTTP Errors are treated as explicitly defined and business logic (e.g. unauthorized to view route; we don't have to log these)
   if (error instanceof HttpError) {
     logger.info({
-      referenceId,
-      context,
       name: 'HTTPError',
       code: error.statusCode,
       message: error.message,
       stack: error.stack,
+      ...context,
     });
     return;
   }
@@ -35,50 +24,44 @@ function logError(error: unknown, context: string) {
   // For prisma errors, we have to handle differently to not log sensitive info like host name
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     logger.error({
-      referenceId,
-      context,
       name: 'PrismaError',
       code: error.code,
       message: 'Failed to handle query constraint.',
+      ...context,
     });
     return;
   }
 
   if (error instanceof Prisma.PrismaClientInitializationError) {
     logger.error({
-      referenceId,
-      context,
       name: 'PrismaInitializationError',
       message: 'Failed to reach database.',
       clientVersion: error.clientVersion,
+      ...context,
     });
     return;
   }
 
   if (error instanceof Prisma.PrismaClientValidationError) {
     logger.error({
-      referenceId,
-      context,
       name: 'PrismaValidationError',
       message: 'Failed to validate database query parameters.',
+      ...context,
     });
     return;
   }
 
   if (error instanceof Error) {
     logger.error({
-      referenceId,
-      context,
       name: error.name,
       message: error.message,
       stack: error.stack,
+      ...context,
     });
     return;
   }
 
   logger.error({
-    referenceId,
-    context,
     name: 'UnhandledError',
     message: error,
     errorType: typeof error,
@@ -88,10 +71,8 @@ function logError(error: unknown, context: string) {
       stringify: JSON.stringify(error),
       toString: String(error),
     },
+    ...context,
   });
 }
 
 export default logError;
-
-export const exportsForTesting =
-  process.env.NODE_ENV === 'test' ? { getLogReferenceId } : undefined;

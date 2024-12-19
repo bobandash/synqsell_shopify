@@ -44,46 +44,43 @@ import { userHasStripePaymentMethod } from '~/services/models/stripeCustomerAcco
 import createHttpError from 'http-errors';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  try {
-    const { session } = await authenticate.admin(request);
-    const { id: sessionId } = session;
-    const [isRetailer, hasStripePaymentMethod] = await Promise.all([
-      hasRole(sessionId, ROLES.RETAILER),
-      userHasStripePaymentMethod(sessionId),
-    ]);
-    const { searchParams } = new URL(request.url);
-    const next = searchParams.get('next');
-    const prev = searchParams.get('prev');
-    const isReverseDirection = prev ? true : false;
-    let cursor = null;
-    if (next) {
-      cursor = next;
-    } else if (prev) {
-      cursor = prev;
-    }
-
-    if (!isRetailer) {
-      throw new createHttpError.Unauthorized(
-        'Unauthorized. User is not a retailer',
-      );
-    } else if (!hasStripePaymentMethod) {
-      throw new createHttpError.Unauthorized(
-        'Unauthorized. User is does not have a payment method',
-      );
-    }
-    const supplierInfo = await getSupplierPaginatedInfo({
-      isReverseDirection,
-      sessionId,
-      cursor,
-    });
-    return json(supplierInfo, StatusCodes.OK);
-  } catch (error) {
-    logError(error, 'Loader: supplier network.');
-    throw getRouteError('Failed to load supplier network.', error);
+  const { session } = await authenticate.admin(request);
+  const { id: sessionId } = session;
+  const [isRetailer, hasStripePaymentMethod] = await Promise.all([
+    hasRole(sessionId, ROLES.RETAILER),
+    userHasStripePaymentMethod(sessionId),
+  ]);
+  const { searchParams } = new URL(request.url);
+  const next = searchParams.get('next');
+  const prev = searchParams.get('prev');
+  const isReverseDirection = prev ? true : false;
+  let cursor = null;
+  if (next) {
+    cursor = next;
+  } else if (prev) {
+    cursor = prev;
   }
+
+  if (!isRetailer) {
+    throw new createHttpError.Unauthorized(
+      'Unauthorized. User is not a retailer',
+    );
+  } else if (!hasStripePaymentMethod) {
+    throw new createHttpError.Unauthorized(
+      'Unauthorized. User is does not have a payment method',
+    );
+  }
+  const supplierInfo = await getSupplierPaginatedInfo({
+    isReverseDirection,
+    sessionId,
+    cursor,
+  });
+  return json(supplierInfo, StatusCodes.OK);
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
+  let sessionId: string | undefined;
+
   try {
     const { session } = await authenticate.admin(request);
     const { id: sessionId } = session;
@@ -102,8 +99,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       StatusCodes.NOT_IMPLEMENTED,
     );
   } catch (error) {
-    logError(error, 'Action: Supplier Network');
-    return getRouteError('Failed to process request.', error);
+    logError(error, { sessionId });
+    return getRouteError(
+      error,
+      'Failed to process request. Please try again later.',
+    );
   }
 };
 

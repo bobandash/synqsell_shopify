@@ -22,12 +22,7 @@ export async function requireBilling(
   });
 }
 
-export async function addBillingToDatabaseIfNotExists(
-  shop: string,
-  sessionId: string,
-  isTest: boolean,
-  billing: any,
-) {
+async function verifyBillingPlans(isTest: boolean, billing: any) {
   const billingPlans = await billing.check({
     plans: [PLANS.BASIC_PLAN],
     isTest,
@@ -39,15 +34,24 @@ export async function addBillingToDatabaseIfNotExists(
     !appSubscriptions[0].lineItems ||
     appSubscriptions[0].lineItems.length === 0
   ) {
-    throw new Error(
-      `Shopify store ${shop} does not have any usage billing plans.`,
-    );
+    throw new Error(`Store does not have any usage billing plans.`);
   }
 
-  // record billing api to call in webhooks
+  return appSubscriptions[0].lineItems[0].id;
+}
+
+async function addBillingIfMissing(sessionId: string, billingPlanId: string) {
   const hasBillingInDb = await userHasBilling(sessionId);
   if (!hasBillingInDb) {
-    const { id } = appSubscriptions[0].lineItems[0];
-    addBilling(sessionId, id, PLANS.BASIC_PLAN);
+    await addBilling(sessionId, billingPlanId, PLANS.BASIC_PLAN);
   }
+}
+
+export async function addBillingToDatabase(
+  sessionId: string,
+  isTest: boolean,
+  billing: any,
+) {
+  const billingPlanId = await verifyBillingPlans(isTest, billing);
+  await addBillingIfMissing(sessionId, billingPlanId);
 }

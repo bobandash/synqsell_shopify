@@ -52,8 +52,8 @@ async function finishStripeConnectOnboarding(
       StatusCodes.OK,
     );
   } catch (error) {
-    logError(error, 'Action: Finish Stripe Connect onboarding');
-    return getRouteError('Failed to finish Stripe Connect onboarding.', error);
+    logError(error, { sessionId });
+    return getRouteError(error, 'Failed to finish Stripe Connect Onboarding.');
   }
 }
 

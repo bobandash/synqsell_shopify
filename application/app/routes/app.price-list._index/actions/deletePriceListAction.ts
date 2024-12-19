@@ -25,8 +25,11 @@ async function deletePriceListAction(
       StatusCodes.OK,
     );
   } catch (error) {
-    logError(error, 'Action: Delete price list.');
-    return getRouteError('Failed to delete price list.', error);
+    logError(error, { sessionId });
+    return getRouteError(
+      error,
+      'Failed to delete price list. Please try again later.',
+    );
   }
 }
 

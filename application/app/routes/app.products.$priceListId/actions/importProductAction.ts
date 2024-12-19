@@ -334,7 +334,10 @@ export async function importProductAction(
       { status: StatusCodes.OK },
     );
   } catch (error) {
-    logError(error, 'Action: Import Product');
-    return getRouteError('Failed to import product.', error);
+    logError(error, { sessionId });
+    return getRouteError(
+      error,
+      'Failed to import product. Please try again later.',
+    );
   }
 }

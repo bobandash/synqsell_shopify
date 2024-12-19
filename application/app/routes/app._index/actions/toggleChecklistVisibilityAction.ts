@@ -37,7 +37,10 @@ export async function toggleChecklistVisibilityAction(
       StatusCodes.OK,
     );
   } catch (error) {
-    logError(error, 'Action: toggleChecklistVisibilityAction');
-    return getRouteError('Failed to toggle checklist table visibility.', error);
+    logError(error, { sessionId });
+    return getRouteError(
+      error,
+      'Failed to toggle checklist table visibility. Please try again later.',
+    );
   }
 }

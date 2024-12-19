@@ -50,45 +50,40 @@ type InitiatePartnershipData = {
 };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  try {
-    const { session } = await authenticate.admin(request);
-    const { id: sessionId } = session;
+  const { session } = await authenticate.admin(request);
+  const { id: sessionId } = session;
 
-    const [isSupplier, hasStripeConnectAccount] = await Promise.all([
-      hasRole(sessionId, ROLES.SUPPLIER),
-      userHasStripeConnectAccount(sessionId),
-    ]);
+  const [isSupplier, hasStripeConnectAccount] = await Promise.all([
+    hasRole(sessionId, ROLES.SUPPLIER),
+    userHasStripeConnectAccount(sessionId),
+  ]);
 
-    const { searchParams } = new URL(request.url);
-    const next = searchParams.get('next');
-    const prev = searchParams.get('prev');
-    const isReverseDirection = prev ? true : false;
-    let cursor = null;
-    if (next) {
-      cursor = next;
-    } else if (prev) {
-      cursor = prev;
-    }
-
-    if (!isSupplier) {
-      throw new createHttpError.Unauthorized('User is not supplier.');
-    } else if (!hasStripeConnectAccount) {
-      throw new createHttpError.Unauthorized(
-        'Supplier did not integrate with Stripe Connect.',
-      );
-    }
-    const retailerPaginatedInfo = await getRetailerPaginatedInfo({
-      isReverseDirection,
-      sessionId,
-      cursor,
-    });
-    const priceLists = await getAllPriceLists(sessionId);
-
-    return json({ retailerPaginatedInfo, priceLists }, StatusCodes.OK);
-  } catch (error) {
-    logError(error, 'Loader: Retailer Network');
-    throw getRouteError('Failed to load retailer network.', error);
+  const { searchParams } = new URL(request.url);
+  const next = searchParams.get('next');
+  const prev = searchParams.get('prev');
+  const isReverseDirection = prev ? true : false;
+  let cursor = null;
+  if (next) {
+    cursor = next;
+  } else if (prev) {
+    cursor = prev;
   }
+
+  if (!isSupplier) {
+    throw new createHttpError.Unauthorized('User is not supplier.');
+  } else if (!hasStripeConnectAccount) {
+    throw new createHttpError.Unauthorized(
+      'Supplier did not integrate with Stripe Connect.',
+    );
+  }
+  const retailerPaginatedInfo = await getRetailerPaginatedInfo({
+    isReverseDirection,
+    sessionId,
+    cursor,
+  });
+  const priceLists = await getAllPriceLists(sessionId);
+
+  return json({ retailerPaginatedInfo, priceLists }, StatusCodes.OK);
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -110,8 +105,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       StatusCodes.NOT_IMPLEMENTED,
     );
   } catch (error) {
-    logError(error, 'Action: Retailer Network');
-    return getRouteError('Failed to process request.', error);
+    logError(error);
+    return getRouteError(
+      error,
+      'Failed to process request. Please try again later.',
+    );
   }
 };
 

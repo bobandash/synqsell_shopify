@@ -82,8 +82,11 @@ async function createPriceListAndCompleteChecklistItemAction(
     });
     return redirect(`/app/price-list/${newPriceList.id}?referrer=new`);
   } catch (error) {
-    logError(error, 'Action: Create Price List');
-    return getRouteError('Failed to create list.', error);
+    logError(error, { sessionId });
+    return getRouteError(
+      error,
+      'Failed to create list. Please try again later.',
+    );
   }
 }
 

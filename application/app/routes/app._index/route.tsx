@@ -37,48 +37,44 @@ import { userHasStripePaymentMethod } from '~/services/models/stripeCustomerAcco
 import { userHasStripeConnectAccount } from '~/services/models/stripeConnectAccount.server';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  try {
-    const {
-      session: { id: sessionId },
-      admin: { graphql },
-    } = await authenticate.admin(request);
-    // for initializing the application with required data to run the app
-    await Promise.all([
-      getOrCreateCarrierService(sessionId, graphql),
-      getOrCreateStorefrontAccessToken(sessionId, graphql),
-      getOrCreateProfile(sessionId, graphql),
-      getOrCreateUserPreferences(sessionId),
-    ]);
+  const {
+    session: { id: sessionId },
+    admin: { graphql },
+  } = await authenticate.admin(request);
+  // for initializing the application with required data to run the app
+  await Promise.all([
+    getOrCreateCarrierService(sessionId, graphql),
+    getOrCreateStorefrontAccessToken(sessionId, graphql),
+    getOrCreateProfile(sessionId, graphql),
+    getOrCreateUserPreferences(sessionId),
+  ]);
 
-    const missingChecklistIds = await getMissingChecklistIds(sessionId);
-    if (missingChecklistIds) {
-      await createMissingChecklistStatuses(missingChecklistIds, sessionId);
-    }
-
-    return defer({
-      loaderData: Promise.all([
-        getTablesAndStatuses(sessionId),
-        userHasStripePaymentMethod(sessionId),
-        userHasStripeConnectAccount(sessionId),
-      ]).then(([tables, hasStripePaymentMethod, hasStripeConnectAccount]) => ({
-        tables,
-        hasStripePaymentMethod,
-        hasStripeConnectAccount,
-      })),
-    });
-  } catch (error) {
-    logError(error, 'Loader: app._index');
-    throw getRouteError('Failed to initialize application data.', error);
+  const missingChecklistIds = await getMissingChecklistIds(sessionId);
+  if (missingChecklistIds.length > 0) {
+    await createMissingChecklistStatuses(missingChecklistIds, sessionId);
   }
+
+  return defer({
+    loaderData: Promise.all([
+      getTablesAndStatuses(sessionId),
+      userHasStripePaymentMethod(sessionId),
+      userHasStripeConnectAccount(sessionId),
+    ]).then(([tables, hasStripePaymentMethod, hasStripeConnectAccount]) => ({
+      tables,
+      hasStripePaymentMethod,
+      hasStripeConnectAccount,
+    })),
+  });
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
+  let sessionId: string | undefined;
   try {
     const {
       session,
       admin: { graphql },
     } = await authenticate.admin(request);
-    const { id: sessionId } = session;
+    sessionId = session.id;
     let formData = await request.formData();
     const intent = formData.get('intent');
     const formDataObject = convertFormDataToObject(formData);
@@ -96,8 +92,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         );
     }
   } catch (error) {
-    logError(error, 'Action: app._index');
-    throw getRouteError('Failed to process request.', error);
+    logError(error, { sessionId });
+    return getRouteError(
+      error,
+      'Failed to toggle checklist table visibility. Please try again later.',
+    );
   }
 };
 

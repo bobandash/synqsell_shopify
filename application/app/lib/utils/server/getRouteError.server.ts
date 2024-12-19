@@ -4,36 +4,26 @@ import { StatusCodes } from 'http-status-codes';
 import { ValidationError } from 'yup';
 import createJSONError from './createJSONError.server';
 
-function getRouteError(defaultHumanReadableMessage: string, error: any) {
-  const internalServerErrorMessage = !defaultHumanReadableMessage
-    ? ''
-    : defaultHumanReadableMessage.charAt(
-          defaultHumanReadableMessage.length - 1,
-        ) === '.'
-      ? `${defaultHumanReadableMessage} Please refresh or contact support if the problem persists.`
-      : `${defaultHumanReadableMessage}. Please refresh or contact support if the problem persists.`;
+function getRouteError(error: any, humanReadableMessage?: string) {
+  const defaultMessage =
+    'An internal server error occurred. Please contact support.';
 
+  // We do not want to show anything related to database for prisma errors
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     switch (error.code) {
       case 'P2002':
-        return createJSONError(
-          defaultHumanReadableMessage,
-          StatusCodes.CONFLICT,
-        );
+        return createJSONError(defaultMessage, StatusCodes.CONFLICT);
       case 'P2025':
-        return createJSONError(
-          defaultHumanReadableMessage,
-          StatusCodes.NOT_FOUND,
-        );
+        return createJSONError(defaultMessage, StatusCodes.NOT_FOUND);
       default:
         return createJSONError(
-          internalServerErrorMessage,
+          defaultMessage,
           StatusCodes.INTERNAL_SERVER_ERROR,
         );
     }
   }
 
-  // override the default human readable message in these cases
+  // Specific errors with Yup and createHttpError should automatically have humanReadableMessages
   if (error instanceof ValidationError) {
     return createJSONError(error.message, StatusCodes.BAD_REQUEST);
   }
@@ -44,13 +34,13 @@ function getRouteError(defaultHumanReadableMessage: string, error: any) {
 
   if (error instanceof Error) {
     return createJSONError(
-      internalServerErrorMessage,
+      humanReadableMessage ?? error.message,
       StatusCodes.INTERNAL_SERVER_ERROR,
     );
   }
 
   return createJSONError(
-    'An internal server error occurred. Please contact support.',
+    humanReadableMessage ?? defaultMessage,
     StatusCodes.INTERNAL_SERVER_ERROR,
   );
 }

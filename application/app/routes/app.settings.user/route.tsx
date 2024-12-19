@@ -82,33 +82,30 @@ type LoaderDataProps = {
 };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  try {
-    const { session } = await authenticate.admin(request);
-    const { id: sessionId } = session;
-    const hasExistingProfile = await hasProfile(sessionId);
-    const [profileWithSocialMediaLinks, roles] = await Promise.all([
-      getProfile(sessionId),
-      getRoles(sessionId),
-    ]);
-    const { socialMediaLink: socialMediaLinks, ...profile } =
-      profileWithSocialMediaLinks;
+  const { session } = await authenticate.admin(request);
+  const { id: sessionId } = session;
+  const hasExistingProfile = await hasProfile(sessionId);
+  const [profileWithSocialMediaLinks, roles] = await Promise.all([
+    getProfile(sessionId),
+    getRoles(sessionId),
+  ]);
+  const { socialMediaLink: socialMediaLinks, ...profile } =
+    profileWithSocialMediaLinks;
 
-    return json(
-      { profile, roles, socialMediaLinks },
-      {
-        status: hasExistingProfile ? 200 : 201,
-      },
-    );
-  } catch (error) {
-    logError(error, 'Loader: User settings');
-    throw getRouteError('Failed to load user settings.', error);
-  }
+  return json(
+    { profile, roles, socialMediaLinks },
+    {
+      status: hasExistingProfile ? StatusCodes.OK : StatusCodes.CREATED,
+    },
+  );
 };
 // TODO: Refactor social social media model to be more flexible so you don't have to destructure props in future
 export const action = async ({ request }: ActionFunctionArgs) => {
+  let sessionId: string | undefined;
+
   try {
     const { session } = await authenticate.admin(request);
-    const { id: sessionId } = session;
+    sessionId = session.id;
 
     // extract all important data
     const formData = await request.formData();
@@ -162,8 +159,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       StatusCodes.OK,
     );
   } catch (error) {
-    logError(error, 'Action: Update user settings');
-    return getRouteError('Failed to update user settings.', error);
+    logError(error, { sessionId });
+    return getRouteError(
+      error,
+      'Failed to update user settings. Please try again later.',
+    );
   }
 };
 
