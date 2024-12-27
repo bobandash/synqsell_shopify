@@ -85,20 +85,15 @@ async function getSessionIdsWithoutRole(
 
 // updates the status of the StatusAccessRequest and creates supplier roles for these suppliers
 export async function approveSuppliers(
-  supplierAccessRequestInfo: SupplierAccessRequestInfo[],
+  supplierAccessRequestIds: string[],
+  sessionIds: string[],
 ) {
   try {
-    const supplierAccessRequestIds = supplierAccessRequestInfo.map(
-      (info) => info.supplierAccessRequestId,
-    );
-    const sessionIds = supplierAccessRequestInfo.map((info) => info.sessionId);
-
     // Do not want to add another supplier roles to users who already have a supplier role
     const sessionIdsWithoutSupplierRole = await getSessionIdsWithoutRole(
       sessionIds,
       ROLES.SUPPLIER,
     );
-
     await db.$transaction(async (tx) => {
       await Promise.all([
         updateSupplierAccessRequestBatchTx(
@@ -115,25 +110,24 @@ export async function approveSuppliers(
         ),
       ]);
     });
-
     return createJSONSuccess(
       'Suppliers were successfully approved.',
       StatusCodes.OK,
     );
   } catch (error) {
-    logError(error, 'Action: Approve Supplier Requests');
-    return getRouteError('Failed to approve supplier requests.', error);
+    logError(error, { sessionIds, supplierAccessRequestIds });
+    return getRouteError(
+      error,
+      'Failed to approve supplier requests. Please try again later.',
+    );
   }
 }
 
 async function rejectSuppliers(
-  supplierAccessRequestInfo: SupplierAccessRequestInfo[],
+  supplierAccessRequestIds: string[],
+  sessionIds: string[],
 ) {
   try {
-    const supplierAccessRequestIds = supplierAccessRequestInfo.map(
-      (info) => info.supplierAccessRequestId,
-    );
-    const sessionIds = supplierAccessRequestInfo.map((info) => info.sessionId);
     await db.$transaction(async (tx) => {
       await Promise.all([
         updateSupplierAccessRequestBatchTx(
@@ -150,24 +144,27 @@ async function rejectSuppliers(
         ),
       ]);
     });
-
     return createJSONSuccess(
       'Suppliers were successfully rejected.',
       StatusCodes.OK,
     );
   } catch (error) {
-    logError(error, 'Action: Reject Supplier Requests');
-    return getRouteError('Failed to reject supplier requests.', error);
+    logError(error, { sessionIds, supplierAccessRequestIds });
+    return getRouteError(
+      error,
+      'Failed to reject supplier requests. Please try again later.',
+    );
   }
 }
 
 export async function updateSupplierAccessAction(
-  supplierAccessRequestInfo: SupplierAccessRequestInfo[],
+  supplierAccessRequestIds: string[],
+  sessionIds: string[],
   status: AccessRequestStatusOptions,
 ) {
   if (status === ACCESS_REQUEST_STATUS.REJECTED) {
-    return await rejectSuppliers(supplierAccessRequestInfo);
+    return await rejectSuppliers(supplierAccessRequestIds, sessionIds);
   } else if (status === ACCESS_REQUEST_STATUS.APPROVED) {
-    return await approveSuppliers(supplierAccessRequestInfo);
+    return await approveSuppliers(supplierAccessRequestIds, sessionIds);
   }
 }

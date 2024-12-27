@@ -39,7 +39,10 @@ export async function rejectRemoveRetailersAction(
       StatusCodes.OK,
     );
   } catch (error) {
-    logError(error, 'Action: reject retailers.');
-    return getRouteError('Failed to reject retailers.', error);
+    logError(error);
+    return getRouteError(
+      error,
+      'Failed to reject retailers. Please try again later.',
+    );
   }
 }

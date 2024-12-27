@@ -6,7 +6,6 @@ function createJSONError(message: string, statusCode: number) {
   if (statusCode < 400 || statusCode >= 600) {
     logError(
       new Error(`Invalid statusCode input ${statusCode} for ${message}`),
-      'createJSONError',
     );
     statusCode = 500;
   }

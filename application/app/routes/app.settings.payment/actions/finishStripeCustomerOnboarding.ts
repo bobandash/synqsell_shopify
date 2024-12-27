@@ -28,8 +28,8 @@ async function finishStripeCustomerOnboarding(sessionId: string) {
       StatusCodes.OK,
     );
   } catch (error) {
-    logError(error, 'Action: Finish Stripe Customer Onboarding');
-    return getRouteError('Failed to finish stripe customer onboarding.', error);
+    logError(error, { sessionId });
+    return getRouteError(error, 'Failed to finish Stripe Customer onboarding.');
   }
 }
 

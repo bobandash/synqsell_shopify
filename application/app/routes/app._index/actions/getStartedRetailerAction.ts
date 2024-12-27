@@ -46,7 +46,7 @@ export type GetStartedRetailerActionData = {
 };
 
 // Either all these fields should be created or none should be created
-async function createMissingFields(
+async function becomeRetailer(
   fulfillmentServiceExists: boolean,
   checklistStatusCompleted: boolean,
   hasRetailerRole: boolean,
@@ -98,7 +98,7 @@ export async function getStartedRetailerAction(
     if (isRetailer) {
       return createJSONSuccess('User is already a retailer.', StatusCodes.OK);
     }
-    await createMissingFields(
+    await becomeRetailer(
       fulfillmentServiceExists,
       checklistStatusCompleted,
       hasRetailerRole,
@@ -111,7 +111,10 @@ export async function getStartedRetailerAction(
       StatusCodes.OK,
     );
   } catch (error) {
-    logError(error, 'Action: getStartedRetailerAction');
-    return getRouteError('Failed to become a retailer.', error);
+    logError(error, { sessionId });
+    return getRouteError(
+      error,
+      'Failed to become a retailer. Please try again later.',
+    );
   }
 }

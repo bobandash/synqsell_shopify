@@ -31,7 +31,10 @@ export async function approveRetailersAction(
       StatusCodes.CREATED,
     );
   } catch (error) {
-    logError(error, 'Action: Approve Retailers');
-    return getRouteError('Failed to approve retailers.', error);
+    logError(error);
+    return getRouteError(
+      error,
+      'Failed to approve retailers. Please try again later.',
+    );
   }
 }

@@ -32,7 +32,10 @@ export async function approveSuppliersAction(
       StatusCodes.CREATED,
     );
   } catch (error) {
-    logError(error, 'Action: approve suppliers');
-    return getRouteError('Failed to approve suppliers.', error);
+    logError(error);
+    return getRouteError(
+      error,
+      'Failed to approve suppliers. Please try again later.',
+    );
   }
 }

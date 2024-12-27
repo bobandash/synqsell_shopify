@@ -92,7 +92,10 @@ export async function changePermissionRetailersAction(
       StatusCodes.OK,
     );
   } catch (error) {
-    logError(error, 'Action: Change Retailer Permissions');
-    return getRouteError('Failed to change retailer permissions.', error);
+    logError(error);
+    return getRouteError(
+      error,
+      'Failed to change retailer permissions. Please try again later.',
+    );
   }
 }

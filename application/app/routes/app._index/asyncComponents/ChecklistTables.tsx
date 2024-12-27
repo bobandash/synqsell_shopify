@@ -1,9 +1,7 @@
-import { useAsyncValue, useFetcher, useNavigate } from '@remix-run/react';
+import { useAsyncValue, useNavigate } from '@remix-run/react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FETCHER_KEYS } from '../constants';
 import { useAppBridge } from '@shopify/app-bridge-react';
 import { RetailerModal } from '../components/Modals';
-import type { ToggleChecklistVisibilityActionData } from '../actions';
 import { getChecklistBtnFunction, getChecklistItemId } from '../util';
 import { CHECKLIST_ITEM_KEYS } from '~/constants';
 import SupplierModal from '../components/Modals/SupplierModal';
@@ -37,42 +35,27 @@ function ChecklistTables() {
     tables,
   );
 
-  // fetchers to get data from actions w/out refreshing the page
-  const checklistVisibilityFetcher = useFetcher({
-    key: FETCHER_KEYS.TOGGLE_CHECKLIST_VISIBILITY,
-  });
-
   const transformedTablesData = useMemo(() => {
     const getDisabledState = (
       index: number,
       isFirstCompleted: boolean,
       key: string,
     ) => {
-      if (
-        (index === 0 && isFirstCompleted) ||
-        (index > 0 && !isFirstCompleted)
-      ) {
-        return true;
-      }
-
-      // retailer checklist
-      if (
+      const isDisabledFromFirstItem =
+        (index === 0 && isFirstCompleted) || (index > 0 && !isFirstCompleted);
+      const isDisabledRetailerChecklist =
         !hasStripePaymentMethod &&
         (key === CHECKLIST_ITEM_KEYS.RETAILER_REQUEST_PARTNERSHIP ||
-          key === CHECKLIST_ITEM_KEYS.RETAILER_IMPORT_PRODUCT)
-      ) {
-        return true;
-      }
-
-      // supplier checklist
-      if (
+          key === CHECKLIST_ITEM_KEYS.RETAILER_IMPORT_PRODUCT);
+      const isDisabledSupplierChecklist =
         !hasStripeConnectAccount &&
-        key === CHECKLIST_ITEM_KEYS.SUPPLIER_EXPLORE_NETWORK
-      ) {
-        return true;
-      }
+        key === CHECKLIST_ITEM_KEYS.SUPPLIER_EXPLORE_NETWORK;
 
-      return false;
+      return (
+        isDisabledFromFirstItem ||
+        isDisabledRetailerChecklist ||
+        isDisabledSupplierChecklist
+      );
     };
 
     return tablesData.map((table) => ({
@@ -103,26 +86,6 @@ function ChecklistTables() {
   useEffect(() => {
     setTables(transformedTablesData);
   }, [transformedTablesData]);
-
-  // helper functions to optimistically render actions
-  const updateTableVisibility = useCallback((tableIdsHidden: String[]) => {
-    setTables((prev) =>
-      prev.map((table) => ({
-        ...table,
-        isHidden: tableIdsHidden.includes(table.id),
-      })),
-    );
-  }, []);
-
-  // render ui changes when form is completed
-  // may need to decide whether or not to use formData to optimistically render UI in the future
-  useEffect(() => {
-    const data = checklistVisibilityFetcher.data;
-    if (data) {
-      const userPreference = data as ToggleChecklistVisibilityActionData;
-      updateTableVisibility(userPreference.tableIdsHidden);
-    }
-  }, [checklistVisibilityFetcher.data, updateTableVisibility]);
 
   const toggleActiveChecklistItem = useCallback(
     (checklistItemIndex: number, tableIndex: number) => {

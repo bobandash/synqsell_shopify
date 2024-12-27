@@ -7,6 +7,7 @@ Description: >
 # TODO: Add a way to automatically poll and receive the failed webhook / create support ticket
 # TODO: Change to POLP by only being able to invoke shopify or only being able to invoke stripe
 # TODO: Add DLQ to all lambda functions that handle webhook topics
+# TODO: Add modules
 
 Parameters:
   Environment:
@@ -44,10 +45,11 @@ Globals:
         DB_CONNECTION_SECRET_ID: !Ref DatabaseConnectionSecret
         API_KEYS_SECRET_ID: !Ref ApiKeySecret
         NODE_ENV: !Ref Environment
+        NODE_OPTIONS: --enable-source-maps
     LoggingConfig:
       LogFormat: JSON
-      ApplicationLogLevel: !If [isProd, WARN, TRACE]
-      SystemLogLevel: !If [isProd, WARN, DEBUG]
+      ApplicationLogLevel: !If [isProd, INFO, TRACE]
+      SystemLogLevel: !If [isProd, INFO, DEBUG]
     VpcConfig:
       SecurityGroupIds:
         - !Ref LambdaSecurityGroup
@@ -141,6 +143,13 @@ Resources:
               - Effect: Allow
                 Action: lambda:InvokeFunction
                 Resource: "*"
+        - PolicyName: SqsDlqSendMessage
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: sqs:SendMessage
+                Resource: !GetAtt ShopifyCoordinatorDLQ.Arn
 
   # https://docs.aws.amazon.com/lambda/latest/dg/with-sqs.html
   # SNS Topic to send notification that webhooks failed into queue
@@ -152,6 +161,9 @@ Resources:
         - Endpoint: "brucehsu1126@gmail.com"
           Protocol: "email"
 
+  # instead of creating multiple alarms,
+  # I decided to consolidate single alarm and just filter logs by log insights if I encounter an issue w/ webhook processing
+  # we do not need to create it for the compliance because there's no way it'll fail (no async operations)
   # Queue for shopify webhooks
   WebhookSQS:
     Type: AWS::SQS::Queue
@@ -244,7 +256,7 @@ Resources:
       BuildProperties:
         Minify: true
         Target: es2020
-        Sourcemap: false
+        Sourcemap: true
         EntryPoints:
           - app.ts
         External:
@@ -319,7 +331,7 @@ Resources:
       BuildProperties:
         Minify: true
         Target: es2020
-        Sourcemap: false
+        Sourcemap: true
         EntryPoints:
           - app.ts
         External:
@@ -345,7 +357,7 @@ Resources:
       BuildProperties:
         Minify: true
         Target: es2020
-        Sourcemap: false
+        Sourcemap: true
         EntryPoints:
           - app.ts
         External:
@@ -371,7 +383,7 @@ Resources:
       BuildProperties:
         Minify: true
         Target: es2020
-        Sourcemap: false
+        Sourcemap: true
         EntryPoints:
           - app.ts
         External:
@@ -397,7 +409,7 @@ Resources:
       BuildProperties:
         Minify: true
         Target: es2020
-        Sourcemap: false
+        Sourcemap: true
         EntryPoints:
           - app.ts
         External:
@@ -423,7 +435,7 @@ Resources:
       BuildProperties:
         Minify: true
         Target: es2020
-        Sourcemap: false
+        Sourcemap: true
         EntryPoints:
           - app.ts
         External:
@@ -446,7 +458,7 @@ Resources:
       BuildProperties:
         Minify: true
         Target: es2020
-        Sourcemap: false
+        Sourcemap: true
         EntryPoints:
           - app.ts
         External:
@@ -469,7 +481,7 @@ Resources:
       BuildProperties:
         Minify: true
         Target: es2020
-        Sourcemap: false
+        Sourcemap: true
         EntryPoints:
           - app.ts
         External:
@@ -492,7 +504,7 @@ Resources:
       BuildProperties:
         Minify: true
         Target: es2020
-        Sourcemap: false
+        Sourcemap: true
         EntryPoints:
           - app.ts
         External:
@@ -515,7 +527,7 @@ Resources:
       BuildProperties:
         Minify: true
         Target: es2020
-        Sourcemap: false
+        Sourcemap: true
         EntryPoints:
           - app.ts
         External:
@@ -539,7 +551,7 @@ Resources:
       BuildProperties:
         Minify: true
         Target: es2020
-        Sourcemap: false
+        Sourcemap: true
         EntryPoints:
           - app.ts
         External:
@@ -562,7 +574,7 @@ Resources:
       BuildProperties:
         Minify: true
         Target: es2020
-        Sourcemap: false
+        Sourcemap: true
         EntryPoints:
           - app.ts
         External:
@@ -586,7 +598,7 @@ Resources:
       BuildProperties:
         Minify: true
         Target: es2020
-        Sourcemap: false
+        Sourcemap: true
         EntryPoints:
           - app.ts
         External:
@@ -643,14 +655,11 @@ Resources:
         External:
           - "/opt/nodejs/*"
 
-  # Cloudwatch Alarms to Inform If A Webhook Failed
-  # AWS CloudWatch provides a free tier of 10 alarms per month
-  ShopifyWebhooksDLQAlarm:
+  ShopifyWebhookDLQAlarm:
     Type: AWS::CloudWatch::Alarm
-    Condition: isProd
     Properties:
-      AlarmName: !Sub ${Environment}_shopify_dlq
-      AlarmDescription: "Alarm when shopify webhook topic throws error and enters DLQ"
+      AlarmName: !Sub ${Environment}_shopify_webhook_dlq
+      AlarmDescription: "Alarm when shopify webhook DLQ has messages"
       MetricName: ApproximateNumberOfMessagesVisible
       Namespace: AWS/SQS
       Statistic: Sum
@@ -667,10 +676,9 @@ Resources:
 
   ShopifyCoordinatorDLQAlarm:
     Type: AWS::CloudWatch::Alarm
-    Condition: isProd
     Properties:
       AlarmName: !Sub ${Environment}_shopify_coordinator_dlq
-      AlarmDescription: "Alarm when shopify coordinator topic throws error and enters DLQ"
+      AlarmDescription: "Alarm when shopify coordinator DLQ has messages"
       MetricName: ApproximateNumberOfMessagesVisible
       Namespace: AWS/SQS
       Statistic: Sum
@@ -687,10 +695,9 @@ Resources:
 
   DeleteProductsDLQAlarm:
     Type: AWS::CloudWatch::Alarm
-    Condition: isProd
     Properties:
       AlarmName: !Sub ${Environment}_delete_products_dlq
-      AlarmDescription: "Alarm when delete products topic throws error and enters DLQ"
+      AlarmDescription: "Alarm when delete products DLQ has messages"
       MetricName: ApproximateNumberOfMessagesVisible
       Namespace: AWS/SQS
       Statistic: Sum
@@ -707,10 +714,9 @@ Resources:
 
   ProductsUpdateDLQAlarm:
     Type: AWS::CloudWatch::Alarm
-    Condition: isProd
     Properties:
       AlarmName: !Sub ${Environment}_products_update_dlq
-      AlarmDescription: "Alarm when products update topic throws error and enters DLQ"
+      AlarmDescription: "Alarm when products update DLQ has messages"
       MetricName: ApproximateNumberOfMessagesVisible
       Namespace: AWS/SQS
       Statistic: Sum
@@ -725,12 +731,11 @@ Resources:
         - Name: QueueName
           Value: !GetAtt ProductsUpdateDLQ.QueueName
 
-  FulfillmentOrderRoutingCompleteDLQAlarm:
+  FulfillmentOrderRoutingDLQAlarm:
     Type: AWS::CloudWatch::Alarm
-    Condition: isProd
     Properties:
-      AlarmName: !Sub ${Environment}_fulfillment_order_routing_complete_dlq
-      AlarmDescription: "Alarm when fulfillment order routing complete topic throws error and enters DLQ"
+      AlarmName: !Sub ${Environment}_fulfillment_order_routing_dlq
+      AlarmDescription: "Alarm when fulfillment order routing DLQ has messages"
       MetricName: ApproximateNumberOfMessagesVisible
       Namespace: AWS/SQS
       Statistic: Sum
@@ -747,10 +752,9 @@ Resources:
 
   OrdersCancelledDLQAlarm:
     Type: AWS::CloudWatch::Alarm
-    Condition: isProd
     Properties:
       AlarmName: !Sub ${Environment}_orders_cancelled_dlq
-      AlarmDescription: "Alarm when orders cancelled topic throws error and enters DLQ"
+      AlarmDescription: "Alarm when orders cancelled DLQ has messages"
       MetricName: ApproximateNumberOfMessagesVisible
       Namespace: AWS/SQS
       Statistic: Sum
@@ -767,10 +771,9 @@ Resources:
 
   FulfillmentsUpdateDLQAlarm:
     Type: AWS::CloudWatch::Alarm
-    Condition: isProd
     Properties:
       AlarmName: !Sub ${Environment}_fulfillments_update_dlq
-      AlarmDescription: "Alarm when fulfillments update topic throws error and enters DLQ"
+      AlarmDescription: "Alarm when fulfillments update DLQ has messages"
       MetricName: ApproximateNumberOfMessagesVisible
       Namespace: AWS/SQS
       Statistic: Sum
@@ -787,10 +790,9 @@ Resources:
 
   AppUninstalledDLQAlarm:
     Type: AWS::CloudWatch::Alarm
-    Condition: isProd
     Properties:
       AlarmName: !Sub ${Environment}_app_uninstalled_dlq
-      AlarmDescription: "Alarm when app uninstalled topic throws error and enters DLQ"
+      AlarmDescription: "Alarm when app uninstalled DLQ has messages"
       MetricName: ApproximateNumberOfMessagesVisible
       Namespace: AWS/SQS
       Statistic: Sum
@@ -807,10 +809,9 @@ Resources:
 
   ShopRedactDLQAlarm:
     Type: AWS::CloudWatch::Alarm
-    Condition: isProd
     Properties:
       AlarmName: !Sub ${Environment}_shop_redact_dlq
-      AlarmDescription: "Alarm when app uninstalled topic throws error and enters DLQ"
+      AlarmDescription: "Alarm when shop redact DLQ has messages"
       MetricName: ApproximateNumberOfMessagesVisible
       Namespace: AWS/SQS
       Statistic: Sum

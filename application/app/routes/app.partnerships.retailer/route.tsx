@@ -61,25 +61,20 @@ type LoaderData = {
 };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  try {
-    const {
-      session: { id: sessionId },
-    } = await authenticate.admin(request);
-    const isSupplier = await hasRole(sessionId, ROLES.SUPPLIER);
-    if (!isSupplier) {
-      throw new createHttpError.Unauthorized(
-        'User is not a supplier. Unauthorized to view retailer partnership requests.',
-      );
-    }
-    const [partnershipInfo, priceLists] = await Promise.all([
-      getSupplierPartnershipInfo(sessionId),
-      getAllPriceLists(sessionId),
-    ]);
-    return json({ partnershipInfo, priceLists }, { status: StatusCodes.OK });
-  } catch (error) {
-    logError(error, 'Loader: Retailer Partnerships');
-    throw getRouteError('Failed to load retailer partnerships.', error);
+  const {
+    session: { id: sessionId },
+  } = await authenticate.admin(request);
+  const isSupplier = await hasRole(sessionId, ROLES.SUPPLIER);
+  if (!isSupplier) {
+    throw new createHttpError.Unauthorized(
+      'User is not a supplier. Unauthorized to view retailer partnership requests.',
+    );
   }
+  const [partnershipInfo, priceLists] = await Promise.all([
+    getSupplierPartnershipInfo(sessionId),
+    getAllPriceLists(sessionId),
+  ]);
+  return json({ partnershipInfo, priceLists }, { status: StatusCodes.OK });
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -106,8 +101,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       StatusCodes.NOT_IMPLEMENTED,
     );
   } catch (error) {
-    logError(error, 'Action: Retailer Partnerships');
-    return getRouteError('Failed to process request.', error);
+    logError(error);
+    return getRouteError(
+      error,
+      'Failed to process request. Please try again later.',
+    );
   }
 };
 

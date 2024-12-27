@@ -23,7 +23,7 @@ import { updatePartnershipsInPriceListTx } from './util';
 import { StatusCodes } from 'http-status-codes';
 import { createJSONSuccess, getRouteError, logError } from '~/lib/utils/server';
 
-// TODO: Refactor this entire file, the code is verbose
+// TODO: REFACTOR THIS ENTIRE FILE; THIS CODE IS TOO VERBOSE
 export async function updatePriceListSettings(
   sessionId: string,
   priceListId: string,
@@ -137,7 +137,7 @@ export async function getMapShopifyProductIdToPrismaIdTx(
 // returns the data of the variants to add, remove, and update
 // the problem with variants is that when a product is deleted, it should cascade delete the variants as well
 // so that's why you have to use the transaction instead and call this when products are already deleted
-// TODO: refactor this to be modularized
+
 async function getVariantStatusTx(
   tx: Prisma.TransactionClient,
   priceListId: string,
@@ -266,8 +266,11 @@ async function updateAllPriceListInformationAction(
       StatusCodes.OK,
     );
   } catch (error) {
-    logError(error, 'Action: Update price list information');
-    return getRouteError('Failed to update price list.', error);
+    logError(error, { sessionId });
+    return getRouteError(
+      error,
+      'Failed to update price list. Please try again later.',
+    );
   }
 }
 

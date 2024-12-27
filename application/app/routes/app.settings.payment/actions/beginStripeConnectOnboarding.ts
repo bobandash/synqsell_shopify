@@ -15,8 +15,8 @@ async function beginStripeConnectOnboarding(appBaseUrl: string) {
     const accountLink = await createAccountLink(account.id, appBaseUrl);
     return json({ onboardingUrl: accountLink.url }, StatusCodes.CREATED);
   } catch (error) {
-    logError(error, 'Action: Start Stripe Connect Onboarding');
-    return getRouteError('Failed to begin stripe connect onboarding.', error);
+    logError(error);
+    return getRouteError(error, 'Failed to begin Stripe Connect onboarding.');
   }
 }
 

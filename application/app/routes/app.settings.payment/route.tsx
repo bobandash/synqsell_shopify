@@ -54,44 +54,38 @@ type FinishStripeAccountOnboardingFormData = {
 };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  try {
-    const {
-      session: { id: sessionId, shop },
-    } = await authenticate.admin(request);
-    const appBaseUrl = getAppBaseUrl(shop);
-    const [isRetailer] = await Promise.all([
-      hasRole(sessionId, ROLES.RETAILER),
-      hasRole(sessionId, ROLES.SUPPLIER),
+  const {
+    session: { id: sessionId, shop },
+  } = await authenticate.admin(request);
+  const appBaseUrl = getAppBaseUrl(shop);
+  const [isRetailer] = await Promise.all([
+    hasRole(sessionId, ROLES.RETAILER),
+    hasRole(sessionId, ROLES.SUPPLIER),
+  ]);
+
+  const [{ clientSecret, hasPaymentMethod }, hasStripeConnectAccount] =
+    await Promise.all([
+      handleStripeCustomerAccount(isRetailer, sessionId),
+      userHasStripeConnectAccount(sessionId),
     ]);
 
-    const [{ clientSecret, hasPaymentMethod }, hasStripeConnectAccount] =
-      await Promise.all([
-        handleStripeCustomerAccount(isRetailer, sessionId),
-        userHasStripeConnectAccount(sessionId),
-      ]);
-
-    const stripePublishableKey = getStripePublishableKey();
-    return json({
-      clientSecret,
-      appBaseUrl,
-      stripePublishableKey,
-      hasStripeConnectAccount,
-      hasPaymentMethod,
-    });
-  } catch (error) {
-    logError(error, 'Loader: Payment Settings');
-    throw getRouteError('Failed to load payment settings.', error);
-  }
+  const stripePublishableKey = getStripePublishableKey();
+  return json({
+    clientSecret,
+    appBaseUrl,
+    stripePublishableKey,
+    hasStripeConnectAccount,
+    hasPaymentMethod,
+  });
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
+  let sessionId: string | undefined;
   try {
     let formData = await request.formData();
     const intent = formData.get('intent');
-    const {
-      session: { id: sessionId },
-    } = await authenticate.admin(request);
-
+    const { session } = await authenticate.admin(request);
+    sessionId = session.id;
     const formDataObject = convertFormDataToObject(formData);
     switch (intent) {
       case INTENTS.CREATE_STRIPE_CUSTOMER_ACCOUNT:
@@ -116,8 +110,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       StatusCodes.NOT_IMPLEMENTED,
     );
   } catch (error) {
-    logError(error, 'Action: Payment Settings');
-    return getRouteError('Failed to process request.', error);
+    logError(error, { sessionId });
+    return getRouteError(
+      error,
+      'Failed to process request. Please try again later.',
+    );
   }
 };
 

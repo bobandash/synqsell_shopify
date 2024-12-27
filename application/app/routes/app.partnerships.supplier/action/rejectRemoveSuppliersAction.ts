@@ -40,7 +40,10 @@ export async function rejectRemoveSuppliersAction(
       StatusCodes.OK,
     );
   } catch (error) {
-    logError(error, 'Action: Reject Suppliers');
-    return getRouteError('Failed to reject suppliers.', error);
+    logError(error);
+    return getRouteError(
+      error,
+      'Failed to reject suppliers. Please try again later.',
+    );
   }
 }

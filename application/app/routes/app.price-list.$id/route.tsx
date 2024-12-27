@@ -92,48 +92,45 @@ type LoaderDataProps = {
 };
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
-  try {
-    const {
-      session,
-      admin: { graphql },
-    } = await authenticate.admin(request);
-    const { id: sessionId } = session;
-    const { id: priceListId } = params;
-    const isNew = priceListId === 'new';
-    let data = null;
+  const {
+    session,
+    admin: { graphql },
+  } = await authenticate.admin(request);
+  const { id: sessionId } = session;
+  const { id: priceListId } = params;
+  const isNew = priceListId === 'new';
+  let data = null;
 
-    if (!priceListId) {
-      throw new createHttpError.BadRequest('No price list was provided.');
-    }
-
-    const hasPriceList = await userHasPriceList(sessionId, priceListId);
-    if (!isNew && !hasPriceList) {
-      throw new createHttpError.Unauthorized(
-        'User is not the owner of this price list.',
-      );
-    }
-
-    if (!isNew) {
-      data = await getExistingPriceListData(sessionId, priceListId, graphql);
-    } else {
-      data = await getNewPriceListData(sessionId);
-    }
-    return json(data, StatusCodes.OK);
-  } catch (error) {
-    logError(error, 'Loader: Price list');
-    throw getRouteError('Failed to load price list.', error);
+  if (!priceListId) {
+    throw new createHttpError.BadRequest('No price list was provided.');
   }
+
+  const hasPriceList = await userHasPriceList(sessionId, priceListId);
+  if (!isNew && !hasPriceList) {
+    throw new createHttpError.Unauthorized(
+      'User is not the owner of this price list.',
+    );
+  }
+
+  if (!isNew) {
+    data = await getExistingPriceListData(sessionId, priceListId, graphql);
+  } else {
+    data = await getNewPriceListData(sessionId);
+  }
+  return json(data, StatusCodes.OK);
 };
 
 export const action = async ({ request, params }: ActionFunctionArgs) => {
+  let sessionId: string | undefined;
+
   try {
     const { session, redirect } = await authenticate.admin(request);
-    const { id: sessionId } = session;
+    sessionId = session.id;
     const formData = await request.formData();
     const { id: priceListId } = params;
     if (!priceListId) {
       return createJSONError(
-        'There is no price list id;',
+        'Price list does not exist.',
         StatusCodes.BAD_REQUEST,
       );
     }
@@ -151,8 +148,11 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       sessionId,
     );
   } catch (error) {
-    logError(error, 'Action: Price List');
-    return getRouteError('Failed to process request.', error);
+    logError(error, { sessionId });
+    return getRouteError(
+      error,
+      'Failed to process request. Please try again later.',
+    );
   }
 };
 

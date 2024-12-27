@@ -35,7 +35,7 @@ import { getProductCardInfoFromPriceList } from './loader/getProductCardInfoForS
 import type { ProductCardJSON } from './types';
 import ProductCard from './components/ProductCard';
 import { userHasStripePaymentMethod } from '~/services/models/stripeCustomerAccount.server';
-import createHttpError from 'http-errors';
+import * as createHttpError from 'http-errors';
 
 type ProductCardInfo = {
   products: ProductCardJSON[];
@@ -60,64 +60,63 @@ type NotImplementedAction = {
 type ActionData = ImportProductAction | NotImplementedAction | undefined;
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
-  try {
-    const {
-      session: { id: sessionId },
-    } = await authenticate.admin(request);
-    const priceListId = params.priceListId ?? '';
-    const { searchParams } = new URL(request.url);
-    const next = searchParams.get('next');
-    const prev = searchParams.get('prev');
-    const isReverseDirection = prev ? true : false;
-    let cursor = next || prev || null;
+  const {
+    session: { id: sessionId },
+  } = await authenticate.admin(request);
+  const priceListId = params.priceListId ?? '';
+  const { searchParams } = new URL(request.url);
+  const next = searchParams.get('next');
+  const prev = searchParams.get('prev');
+  const isReverseDirection = prev ? true : false;
+  let cursor = next || prev || null;
 
-    const [
-      isValidPriceListId,
-      hasAccessToPriceList,
-      isUserPriceListOwner,
-      userHasStripePayments,
-    ] = await Promise.all([
-      isValidPriceList(priceListId),
-      hasAccessToViewPriceList(priceListId, sessionId),
-      userHasPriceList(sessionId, priceListId),
-      userHasStripePaymentMethod(sessionId),
-    ]);
+  const [
+    isValidPriceListId,
+    hasAccessToPriceList,
+    isUserPriceListOwner,
+    userHasStripePayments,
+  ] = await Promise.all([
+    isValidPriceList(priceListId),
+    hasAccessToViewPriceList(priceListId, sessionId),
+    userHasPriceList(sessionId, priceListId),
+    userHasStripePaymentMethod(sessionId),
+  ]);
 
-    if (isUserPriceListOwner) {
-      throw new createHttpError.Unauthorized(
-        "User cannot view and import products in the user's own price list.",
-      );
-    } else if (!userHasStripePayments) {
-      throw new createHttpError.Unauthorized(
-        'User does not have stripe payments set up to begin importing products.',
-      );
-    } else if (!isValidPriceListId) {
-      throw new createHttpError.NotFound('Price list could not be found.');
-    } else if (!hasAccessToPriceList) {
-      throw new createHttpError.Unauthorized('Price list could not be found.');
-    }
-
-    const productCardInfo = await getProductCardInfoFromPriceList({
-      priceListId,
-      isReverseDirection,
-      sessionId,
-      ...(cursor && { cursor }),
-    });
-    const priceListsWithAccess =
-      await getPriceListsWithAccessForSpecificSupplier(priceListId, sessionId);
-    return json({ productCardInfo, priceListsWithAccess }, StatusCodes.OK);
-  } catch (error) {
-    logError(error, 'Loader: Products in Price List');
-    throw getRouteError('Failed to load products in price list.', error);
+  if (isUserPriceListOwner) {
+    throw new createHttpError.Unauthorized(
+      "User cannot view and import products in the user's own price list.",
+    );
+  } else if (!userHasStripePayments) {
+    throw new createHttpError.Unauthorized(
+      'User does not have stripe payments set up to begin importing products.',
+    );
+  } else if (!isValidPriceListId) {
+    throw new createHttpError.NotFound('Price list could not be found.');
+  } else if (!hasAccessToPriceList) {
+    throw new createHttpError.Unauthorized('Price list could not be found.');
   }
+
+  const productCardInfo = await getProductCardInfoFromPriceList({
+    priceListId,
+    isReverseDirection,
+    sessionId,
+    ...(cursor && { cursor }),
+  });
+  const priceListsWithAccess = await getPriceListsWithAccessForSpecificSupplier(
+    priceListId,
+    sessionId,
+  );
+  return json({ productCardInfo, priceListsWithAccess }, StatusCodes.OK);
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
+  let sessionId: string | undefined;
   try {
     const {
-      session: { id: sessionId },
+      session,
       admin: { graphql },
     } = await authenticate.admin(request);
+    sessionId = session.id;
     let formData = await request.formData();
     const intent = formData.get('intent');
     const formDataObject = convertFormDataToObject(formData);
@@ -132,8 +131,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         );
     }
   } catch (error) {
-    logError(error, 'Action: Admin Route');
-    return getRouteError('Failed to process request.', error);
+    logError(error, { sessionId });
+    return getRouteError(
+      error,
+      'Failed to process request. Please try again later.',
+    );
   }
 };
 

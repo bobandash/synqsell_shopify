@@ -9,10 +9,7 @@ export async function userHasBilling(sessionId: string) {
     },
   });
 
-  if (billing) {
-    return true;
-  }
-  return false;
+  return billing !== null;
 }
 
 export async function addBilling(

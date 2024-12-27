@@ -1,7 +1,7 @@
 import { vitePlugin as remix } from '@remix-run/dev';
 import { defineConfig, type UserConfig } from 'vite';
 import tsconfigPaths from 'vite-tsconfig-paths';
-
+import { sentryVitePlugin } from '@sentry/vite-plugin';
 // Related: https://github.com/remix-run/remix/issues/2835#issuecomment-1144102176
 // Replace the HOST env var with SHOPIFY_APP_URL so that it doesn't break the remix server. The CLI will eventually
 // stop passing in HOST, so we can remove this workaround after the next major release.
@@ -43,14 +43,25 @@ export default defineConfig({
       allow: ['app', 'node_modules'],
     },
   },
+  build: {
+    assetsInlineLimit: 0,
+    sourcemap: true,
+  },
   plugins: [
     remix({
       ignoredRouteFiles: ['**/.*'],
     }),
     tsconfigPaths(),
+    {
+      ...(process.env.NODE_ENV !== 'development' &&
+        sentryVitePlugin({
+          org: process.env.SENTRY_ORG,
+          project: process.env.SENTRY_PROJECT,
+          authToken: process.env.SENTRY_AUTH_TOKEN,
+          sourcemaps: {
+            filesToDeleteAfterUpload: ['build/**/*.js.map'],
+          },
+        })),
+    },
   ],
-  build: {
-    assetsInlineLimit: 0,
-    sourcemap: false,
-  },
 }) satisfies UserConfig;

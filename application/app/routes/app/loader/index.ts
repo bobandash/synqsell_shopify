@@ -1,4 +1,1 @@
-export {
-  requireBilling,
-  addBillingToDatabaseIfNotExists,
-} from './handleBilling';
+export { requireBilling, addBillingToDatabase } from './handleBilling';

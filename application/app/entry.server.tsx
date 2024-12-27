@@ -1,16 +1,12 @@
-import { PassThrough } from "stream";
-import { renderToPipeableStream } from "react-dom/server";
-import { RemixServer } from "@remix-run/react";
-import {
-  createReadableStreamFromReadable,
-  type ActionFunctionArgs,
-  type LoaderFunctionArgs,
-  type EntryContext,
-} from "@remix-run/node";
-import { isbot } from "isbot";
-import { addDocumentResponseHeaders } from "./shopify.server";
-import createHttpError from "http-errors";
-import logger from "~/logger";
+import * as Sentry from '@sentry/remix';
+import { PassThrough } from 'stream';
+import { renderToPipeableStream } from 'react-dom/server';
+import { RemixServer } from '@remix-run/react';
+import { createReadableStreamFromReadable } from '@remix-run/node';
+import type { EntryContext } from '@remix-run/node';
+import { isbot } from 'isbot';
+import { addDocumentResponseHeaders, authenticate } from './shopify.server';
+import { getRouteError, logError } from './lib/utils/server';
 
 const ABORT_DELAY = 5000;
 
@@ -21,8 +17,8 @@ export default async function handleRequest(
   remixContext: EntryContext,
 ) {
   addDocumentResponseHeaders(request, responseHeaders);
-  const userAgent = request.headers.get("user-agent");
-  const callbackName = isbot(userAgent ?? "") ? "onAllReady" : "onShellReady";
+  const userAgent = request.headers.get('user-agent');
+  const callbackName = isbot(userAgent ?? '') ? 'onAllReady' : 'onShellReady';
 
   return new Promise((resolve, reject) => {
     const { pipe, abort } = renderToPipeableStream(
@@ -36,7 +32,7 @@ export default async function handleRequest(
           const body = new PassThrough();
           const stream = createReadableStreamFromReadable(body);
 
-          responseHeaders.set("Content-Type", "text/html");
+          responseHeaders.set('Content-Type', 'text/html');
           resolve(
             new Response(stream, {
               headers: responseHeaders,
@@ -59,19 +55,20 @@ export default async function handleRequest(
   });
 }
 
-export function handleError(
-  error: unknown,
-  { request, params, context }: LoaderFunctionArgs | ActionFunctionArgs,
-) {
-  if (!request.signal.aborted) {
-    sendErrorToErrorReportingService(error);
-  }
-}
+export const handleError = Sentry.wrapHandleErrorWithSentry(
+  async (error: unknown, { request }: { request: any }) => {
+    if (!request.signal.aborted) {
+      await sendErrorToErrorReportingService(error, request);
+      // errors typically bubble up to entry.server.tsx on unhandled errors / loaders
+      throw getRouteError(error);
+    }
+  },
+);
 
-function sendErrorToErrorReportingService(error: unknown) {
-  if (error instanceof createHttpError.HttpError || error instanceof Error) {
-    logger.error(error.message);
-  } else {
-    logger.error("Unhandled: An internal server error occurred.");
-  }
+// sends error to cloudwatch and sentry
+async function sendErrorToErrorReportingService(error: unknown, request: any) {
+  const {
+    session: { id: sessionId },
+  } = await authenticate.admin(request);
+  logError(error, { sessionId });
 }

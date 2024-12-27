@@ -1,3 +1,4 @@
+import { captureRemixErrorBoundaryError } from '@sentry/remix';
 import type { LoaderFunctionArgs } from '@remix-run/node';
 import {
   json,
@@ -6,6 +7,7 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useRouteError,
 } from '@remix-run/react';
 import { authenticate, registerWebhooks } from './shopify.server';
 
@@ -20,6 +22,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   return json({
     apiKey: process.env.SHOPIFY_API_KEY,
   });
+};
+
+export const ErrorBoundary = () => {
+  const error = useRouteError();
+  captureRemixErrorBoundaryError(error);
+  return <div>Something went wrong</div>;
 };
 
 export default function App() {

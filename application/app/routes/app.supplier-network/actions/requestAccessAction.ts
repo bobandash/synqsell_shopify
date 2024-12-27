@@ -82,8 +82,11 @@ export async function requestAccessAction(
       StatusCodes.CREATED,
     );
   } catch (error) {
-    logError(error, 'Action: Request Supplier Access.');
-    return getRouteError('Failed to request supplier access.', error);
+    logError(error, { sessionId });
+    return getRouteError(
+      error,
+      'Failed to request supplier access. Please try again later.',
+    );
   }
 }
 

@@ -60,10 +60,10 @@ export async function getStartedSupplierAction(
       supplierAccessRequestExists ? StatusCodes.OK : StatusCodes.CREATED,
     );
   } catch (error) {
-    logError(error, 'Action: getStartedSupplierAction');
+    logError(error, { sessionId });
     return getRouteError(
-      'Failed to process request to become a supplier.',
       error,
+      'Failed to process request to become a supplier. Please try again later.',
     );
   }
 }
