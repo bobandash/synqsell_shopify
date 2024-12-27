@@ -41,10 +41,8 @@ export const lambdaHandler = async (event: ShopifyEvent) => {
             });
             return;
         }
-
         // there is no old price, so we cannot check if the variant price has been updated
         // even though it consumes GraphQL resources, we are going to broadcast the price changes
-
         if (isSupplierProduct) {
             await broadcastSupplierProductModifications(editedVariants, shopifyProductId, newProductStatus, client);
         } else if (isRetailerProduct) {
@@ -61,7 +59,7 @@ export const lambdaHandler = async (event: ShopifyEvent) => {
             context: 'Failed to update product for either retailer or supplier.',
             eventDetails,
         });
-        return;
+        throw error;
     } finally {
         if (client) {
             client.release();
