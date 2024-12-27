@@ -1,28 +1,35 @@
 import {
-  sampleChecklistItemOne,
-  sampleChecklistItemTwo,
-} from '@fixtures/checklist.fixture';
-import {
   checklistItemIdMatchesKey,
   getChecklistItem,
   hasChecklistItem,
 } from '../../checklistItem.server';
 import db from '~/db.server';
-import { createSampleChecklistTable } from '@factories/checklist.factories';
+import { createTestChecklistTableWithItems } from '@factories/checklist.factories';
+import type { ChecklistItem } from '@prisma/client';
+import { simpleFaker } from '@faker-js/faker';
+import type { ChecklistItemKeysOptions } from '~/constants';
 
 describe('Checklist Item', () => {
+  let checklistItemOne: ChecklistItem;
+  let checklistItemTwo: ChecklistItem;
+  const nonExistentId = simpleFaker.string.uuid();
+  beforeEach(async () => {
+    let res = await createTestChecklistTableWithItems();
+    checklistItemOne = res.checklistItemOne;
+    checklistItemTwo = res.checklistItemTwo;
+  });
+
   describe('hasChecklistItem', () => {
     it('should return true when checklist item key exists', async () => {
-      await createSampleChecklistTable();
       const checklistItemExists = await hasChecklistItem(
-        sampleChecklistItemOne.key,
+        checklistItemOne.key as ChecklistItemKeysOptions,
       );
       expect(checklistItemExists).toBe(true);
     });
 
     it("should return false if the checklist item key doesn't exists", async () => {
       const checklistItemExists = await hasChecklistItem(
-        sampleChecklistItemOne.key,
+        nonExistentId as ChecklistItemKeysOptions,
       );
       expect(checklistItemExists).toBe(false);
     });
@@ -30,36 +37,33 @@ describe('Checklist Item', () => {
 
   describe('getChecklistItem', () => {
     it('should return checklist item if it exists', async () => {
-      await createSampleChecklistTable();
-      const checklistItem = await getChecklistItem(sampleChecklistItemOne.key);
-      expect(checklistItem).toEqual(sampleChecklistItemOne);
+      const checklistItem = await getChecklistItem(
+        checklistItemOne.key as ChecklistItemKeysOptions,
+      );
+      expect(checklistItem).toEqual(checklistItemOne);
     });
 
     it("should throw error if the checklist item doesn't exists", async () => {
       await db.checklistItem.deleteMany({});
       await expect(
-        getChecklistItem(sampleChecklistItemOne.key),
+        getChecklistItem(checklistItemOne.key as ChecklistItemKeysOptions),
       ).rejects.toThrow();
     });
   });
 
   describe('checklistItemIdMatchesKey', () => {
-    beforeEach(async () => {
-      await createSampleChecklistTable();
-    });
-
     it('should return true if item id and key matches', async () => {
       const matches = await checklistItemIdMatchesKey(
-        sampleChecklistItemOne.id,
-        sampleChecklistItemOne.key,
+        checklistItemOne.id,
+        checklistItemOne.key as ChecklistItemKeysOptions,
       );
       expect(matches).toBe(true);
     });
 
     it('should return false if item id and key do not match', async () => {
       const matches = await checklistItemIdMatchesKey(
-        sampleChecklistItemOne.id,
-        sampleChecklistItemTwo.key,
+        checklistItemOne.id,
+        checklistItemTwo.key as ChecklistItemKeysOptions,
       );
       expect(matches).toBe(false);
     });

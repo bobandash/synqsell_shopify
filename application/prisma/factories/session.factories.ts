@@ -1,10 +1,11 @@
-import { sampleSession } from '../fixtures/session.fixture';
+import { generateSessionData } from '@fixtures';
 import db from '~/db.server';
 
-export const createSampleSession = async (overrides = {}) => {
+export const createTestSession = async (overrides = {}) => {
+  const data = generateSessionData();
   return db.session.create({
     data: {
-      ...sampleSession,
+      ...data,
       ...overrides,
     },
   });

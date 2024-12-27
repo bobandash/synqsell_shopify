@@ -1,13 +1,20 @@
 import db from '~/db.server';
-import { createSampleSession } from './session.factories';
-import { sampleBilling } from '@fixtures/billing.fixture';
+import { createTestSession } from './session.factories';
+import { generateBillingData } from '@fixtures';
 
-export const createSampleBilling = async (overrides = {}) => {
-  await createSampleSession();
+export const generateBilling = async (sessionId: string, overrides = {}) => {
+  const data = generateBillingData(sessionId);
   return db.billing.create({
     data: {
-      ...sampleBilling,
+      ...data,
+      sessionId,
       ...overrides,
     },
   });
+};
+
+export const createTestBilling = async (overrides = {}) => {
+  const session = await createTestSession();
+  const billing = await generateBilling(session.id, overrides);
+  return { session, billing };
 };

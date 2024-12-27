@@ -1,13 +1,26 @@
 import db from '~/db.server';
-import { createSampleSession } from './session.factories';
-import { sampleFulfillmentService } from '@fixtures/fulfillmentService.fixture';
+import { generateFulfillmentServiceData } from '@fixtures';
+import { createTestSession } from './session.factories';
 
-export const createSampleFulfillmentService = async (overrides = {}) => {
-  await createSampleSession();
-  await db.fulfillmentService.create({
+export const generateFulfillmentService = async (
+  sessionId: string,
+  overrides = {},
+) => {
+  const data = generateFulfillmentServiceData(sessionId);
+  return db.fulfillmentService.create({
     data: {
-      ...sampleFulfillmentService,
+      ...data,
+      sessionId,
       ...overrides,
     },
   });
+};
+
+export const createTestFulfillmentService = async (overrides = {}) => {
+  const session = await createTestSession();
+  const fulfillmentService = await generateFulfillmentService(
+    session.id,
+    overrides,
+  );
+  return { session, fulfillmentService };
 };

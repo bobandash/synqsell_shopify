@@ -11,7 +11,7 @@ export default {
   rootDir: '.',
   moduleNameMapper: {
     '^~/(.*)$': '<rootDir>/app/$1',
-    '^@fixtures/(.*)$': '<rootDir>/prisma/fixtures/$1',
+    '^@fixtures(/.*)?$': '<rootDir>/prisma/fixtures.ts',
     '^@factories/(.*)$': '<rootDir>/prisma/factories/$1',
   },
 };

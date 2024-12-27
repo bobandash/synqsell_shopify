@@ -1,11 +1,4 @@
 import { simpleFaker } from '@faker-js/faker';
-import { createSampleChecklistTable } from '@factories/checklist.factories';
-import {
-  sampleChecklistItemOne,
-  sampleChecklistStatusOne,
-  sampleChecklistStatusTwo,
-  sampleUserPreference,
-} from '@fixtures/checklist.fixture';
 import {
   getChecklistStatus,
   getChecklistStatusBatch,
@@ -18,11 +11,15 @@ import {
   updateChecklistStatusTx,
 } from '../../checklistStatus.server';
 import db from '~/db.server';
-import { sampleSession } from '@fixtures/session.fixture';
-import { createSampleSession } from '@factories/session.factories';
-import type { ChecklistStatus } from '@prisma/client';
+import type { ChecklistItem, ChecklistStatus } from '@prisma/client';
 import type { Session } from '../../session.server';
 import type { ChecklistItemKeysOptions } from '~/constants';
+import {
+  createTestChecklistTableWithItems,
+  createTestChecklistTableWithItemsAndStatus,
+  generateChecklistStatus,
+} from '@factories/checklist.factories';
+import { createTestSession } from '@factories/session.factories';
 
 describe('Checklist Status', () => {
   const nonExistentId = simpleFaker.string.uuid();
@@ -30,18 +27,14 @@ describe('Checklist Status', () => {
   describe('One user', () => {
     let checklistStatusOne: ChecklistStatus;
     let checklistStatusTwo: ChecklistStatus;
-
+    let checklistItemOne: ChecklistItem;
+    let sessionId: string;
     beforeEach(async () => {
-      await createSampleChecklistTable();
-      await createSampleSession();
-      checklistStatusOne = sampleChecklistStatusOne(sampleSession.id);
-      checklistStatusTwo = sampleChecklistStatusTwo(sampleSession.id);
-
-      await db.checklistStatus.create({ data: checklistStatusOne });
-      await db.checklistStatus.create({ data: checklistStatusTwo });
-      await db.userPreference.create({
-        data: sampleUserPreference(sampleSession.id),
-      });
+      const res = await createTestChecklistTableWithItemsAndStatus();
+      checklistStatusOne = res.checklistStatusOne;
+      checklistStatusTwo = res.checklistStatusTwo;
+      checklistItemOne = res.checklistItemOne;
+      sessionId = res.session.id;
     });
 
     describe('isValidChecklistStatusId', () => {
@@ -62,25 +55,19 @@ describe('Checklist Status', () => {
 
     describe('hasChecklistStatus', () => {
       it('should return true if has checklist status', async () => {
-        const exists = await hasChecklistStatus(
-          sampleSession.id,
-          sampleChecklistItemOne.id,
-        );
+        const exists = await hasChecklistStatus(sessionId, checklistItemOne.id);
         expect(exists).toBe(true);
       });
 
       it('should return false for non-existent checklist status ID', async () => {
-        const exists = await hasChecklistStatus(
-          sampleSession.id,
-          nonExistentId,
-        );
+        const exists = await hasChecklistStatus(sessionId, nonExistentId);
         expect(exists).toBe(false);
       });
 
       it('should return false for non-existent session id.', async () => {
         const isValid = await hasChecklistStatus(
           nonExistentId,
-          sampleChecklistItemOne.id,
+          checklistItemOne.id,
         );
         expect(isValid).toBe(false);
       });
@@ -88,23 +75,20 @@ describe('Checklist Status', () => {
 
     describe('getChecklistStatus', () => {
       it('should return checklist status if exists', async () => {
-        const status = await getChecklistStatus(
-          sampleSession.id,
-          sampleChecklistItemOne.id,
-        );
-        expect(status.sessionId).toBe(sampleSession.id);
-        expect(status.checklistItemId).toBe(sampleChecklistItemOne.id);
+        const status = await getChecklistStatus(sessionId, checklistItemOne.id);
+        expect(status.sessionId).toBe(sessionId);
+        expect(status.checklistItemId).toBe(checklistItemOne.id);
       });
 
       it('should throw error if checklist status does not exist', async () => {
         await expect(
-          getChecklistStatus(sampleSession.id, nonExistentId),
+          getChecklistStatus(sessionId, nonExistentId),
         ).rejects.toThrow();
       });
 
       it('should throw error if session id is invalid', async () => {
         await expect(
-          getChecklistStatus(nonExistentId, sampleChecklistItemOne.id),
+          getChecklistStatus(nonExistentId, checklistItemOne.id),
         ).rejects.toThrow();
       });
     });
@@ -112,8 +96,8 @@ describe('Checklist Status', () => {
     describe('isChecklistStatusCompleted', () => {
       it('should return false if checklist status is not completed.', async () => {
         const isCompleted = await isChecklistStatusCompleted(
-          sampleSession.id,
-          sampleChecklistItemOne.id,
+          sessionId,
+          checklistItemOne.id,
         );
         expect(isCompleted).toBe(false);
       });
@@ -128,8 +112,8 @@ describe('Checklist Status', () => {
           },
         });
         const isCompleted = await isChecklistStatusCompleted(
-          sampleSession.id,
-          sampleChecklistItemOne.id,
+          sessionId,
+          checklistItemOne.id,
         );
 
         expect(isCompleted).toBe(true);
@@ -137,13 +121,13 @@ describe('Checklist Status', () => {
 
       it('should throw error if session id is invalid', async () => {
         await expect(
-          isChecklistStatusCompleted(nonExistentId, sampleChecklistItemOne.id),
+          isChecklistStatusCompleted(nonExistentId, checklistItemOne.id),
         ).rejects.toThrow();
       });
 
       it('should throw error if checklistItemId is invalid', async () => {
         await expect(
-          isChecklistStatusCompleted(sampleSession.id, nonExistentId),
+          isChecklistStatusCompleted(sessionId, nonExistentId),
         ).rejects.toThrow();
       });
     });
@@ -188,8 +172,8 @@ describe('Checklist Status', () => {
           where: { id: checklistStatusOne.id },
         });
         await updateChecklistStatus(
-          sampleSession.id,
-          sampleChecklistItemOne.key,
+          sessionId,
+          checklistItemOne.key as ChecklistItemKeysOptions,
           true,
         );
         const newStatus = await db.checklistStatus.findFirst({
@@ -203,13 +187,13 @@ describe('Checklist Status', () => {
 
       it('should update the completed status to false', async () => {
         await updateChecklistStatus(
-          sampleSession.id,
-          sampleChecklistItemOne.key,
+          sessionId,
+          checklistItemOne.key as ChecklistItemKeysOptions,
           true,
         );
         await updateChecklistStatus(
-          sampleSession.id,
-          sampleChecklistItemOne.key,
+          sessionId,
+          checklistItemOne.key as ChecklistItemKeysOptions,
           false,
         );
         const status = await db.checklistStatus.findFirst({
@@ -224,7 +208,7 @@ describe('Checklist Status', () => {
         await expect(
           updateChecklistStatus(
             nonExistentId,
-            sampleChecklistItemOne.key,
+            checklistItemOne.key as ChecklistItemKeysOptions,
             true,
           ),
         ).rejects.toThrow();
@@ -240,8 +224,8 @@ describe('Checklist Status', () => {
 
           await updateChecklistStatusTx(
             tx,
-            sampleSession.id,
-            sampleChecklistItemOne.key,
+            sessionId,
+            checklistItemOne.key as ChecklistItemKeysOptions,
             true,
           );
           const newStatus = await tx.checklistStatus.findFirst({
@@ -258,14 +242,14 @@ describe('Checklist Status', () => {
         await db.$transaction(async (tx) => {
           await updateChecklistStatusTx(
             tx,
-            sampleSession.id,
-            sampleChecklistItemOne.key,
+            sessionId,
+            checklistItemOne.key as ChecklistItemKeysOptions,
             true,
           );
           await updateChecklistStatusTx(
             tx,
-            sampleSession.id,
-            sampleChecklistItemOne.key,
+            sessionId,
+            checklistItemOne.key as ChecklistItemKeysOptions,
             false,
           );
           const status = await tx.checklistStatus.findFirst({
@@ -283,7 +267,7 @@ describe('Checklist Status', () => {
             await updateChecklistStatusTx(
               tx,
               nonExistentId,
-              sampleChecklistItemOne.key,
+              checklistItemOne.key as ChecklistItemKeysOptions,
               true,
             );
           }),
@@ -294,6 +278,8 @@ describe('Checklist Status', () => {
 
   describe('Multiple Users', () => {
     const nonExistentId = simpleFaker.string.uuid();
+    let checklistItemOne: ChecklistItem;
+    let checklistItemTwo: ChecklistItem;
     let userOne: {
       session: Session;
       checklistStatusOne: ChecklistStatus;
@@ -306,32 +292,38 @@ describe('Checklist Status', () => {
     };
 
     beforeEach(async () => {
-      await createSampleChecklistTable();
+      const res = await createTestChecklistTableWithItems();
+      checklistItemOne = res.checklistItemOne;
+      checklistItemTwo = res.checklistItemTwo;
       const [sessionOne, sessionTwo] = await Promise.all([
-        createSampleSession({
-          id: simpleFaker.string.uuid(),
-        }),
-        createSampleSession({
-          id: simpleFaker.string.uuid(),
-        }),
+        createTestSession(),
+        createTestSession(),
       ]);
       userOne = {
         session: sessionOne,
-        checklistStatusOne: await db.checklistStatus.create({
-          data: sampleChecklistStatusOne(sessionOne.id),
-        }),
-        checklistStatusTwo: await db.checklistStatus.create({
-          data: sampleChecklistStatusTwo(sessionOne.id),
-        }),
+        checklistStatusOne: await generateChecklistStatus(
+          sessionOne.id,
+          checklistItemOne.id,
+          false,
+        ),
+        checklistStatusTwo: await generateChecklistStatus(
+          sessionOne.id,
+          checklistItemTwo.id,
+          false,
+        ),
       };
       userTwo = {
         session: sessionTwo,
-        checklistStatusOne: await db.checklistStatus.create({
-          data: sampleChecklistStatusOne(sessionTwo.id),
-        }),
-        checklistStatusTwo: await db.checklistStatus.create({
-          data: sampleChecklistStatusTwo(sessionTwo.id),
-        }),
+        checklistStatusOne: await generateChecklistStatus(
+          sessionOne.id,
+          checklistItemOne.id,
+          false,
+        ),
+        checklistStatusTwo: await generateChecklistStatus(
+          sessionOne.id,
+          checklistItemTwo.id,
+          false,
+        ),
       };
     });
 
@@ -339,7 +331,7 @@ describe('Checklist Status', () => {
       it('should return all checklist statuses for all sessions that have checklistItemId', async () => {
         const checklistStatuses = await getChecklistStatusBatch(
           [userOne.session.id, userTwo.session.id],
-          sampleChecklistItemOne.id,
+          checklistItemOne.id,
         );
         expect(checklistStatuses).toHaveLength(2);
         checklistStatuses.forEach((status) => {
@@ -355,7 +347,7 @@ describe('Checklist Status', () => {
       it('should return empty array if sessionId is nonexistent', async () => {
         const checklistStatuses = await getChecklistStatusBatch(
           [nonExistentId],
-          sampleChecklistItemOne.id,
+          checklistItemOne.id,
         );
         expect(checklistStatuses).toHaveLength(0);
       });
@@ -375,14 +367,14 @@ describe('Checklist Status', () => {
           await updateChecklistStatusBatchTx(
             tx,
             [userOne.session.id, userTwo.session.id],
-            sampleChecklistItemOne.key,
+            checklistItemOne.key as ChecklistItemKeysOptions,
             true,
           );
         });
         const statuses = await db.checklistStatus.findMany({
           where: {
             sessionId: { in: [userOne.session.id, userTwo.session.id] },
-            checklistItemId: sampleChecklistItemOne.id,
+            checklistItemId: checklistItemOne.id,
           },
         });
         expect(statuses).toHaveLength(2);
@@ -394,13 +386,13 @@ describe('Checklist Status', () => {
           await updateChecklistStatusBatchTx(
             tx,
             [userOne.session.id, userTwo.session.id],
-            sampleChecklistItemOne.key,
+            checklistItemOne.key as ChecklistItemKeysOptions,
             true,
           );
           await updateChecklistStatusBatchTx(
             tx,
             [userOne.session.id, userTwo.session.id],
-            sampleChecklistItemOne.key,
+            checklistItemOne.key as ChecklistItemKeysOptions,
             false,
           );
         });
@@ -408,7 +400,7 @@ describe('Checklist Status', () => {
         const statuses = await db.checklistStatus.findMany({
           where: {
             sessionId: { in: [userOne.session.id, userTwo.session.id] },
-            checklistItemId: sampleChecklistItemOne.id,
+            checklistItemId: checklistItemOne.id,
           },
         });
         expect(statuses.every((s) => !s.isCompleted)).toBe(true);

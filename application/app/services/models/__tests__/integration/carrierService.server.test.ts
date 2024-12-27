@@ -1,31 +1,31 @@
 import db from '~/db.server';
 import { v4 as uuidv4 } from 'uuid';
-import { createSampleCarrierService } from '@factories/carrierService.factories';
-import { sampleSession } from '@fixtures/session.fixture';
+import { createTestCarrierService } from '@factories/carrierService.factories';
 import {
   createCarrierService,
   deleteCarrierService,
   userGetCarrierService,
   userHasCarrierService,
 } from '../../carrierService.server';
-import { createSampleSession } from '@factories/session.factories';
+import { createTestSession } from '@factories/session.factories';
 
 describe('Carrier Service', () => {
   const nonExistentRetailerId = uuidv4();
   describe('userHasCarrierService', () => {
     it('should return true when carrier service is added to retailer', async () => {
-      await createSampleCarrierService();
-      const hasCarrierService = await userHasCarrierService(sampleSession.id);
+      const { retailer } = await createTestCarrierService();
+      const hasCarrierService = await userHasCarrierService(retailer.id);
       expect(hasCarrierService).toBe(true);
     });
 
     it('should return false if carrier service is not added to retailer', async () => {
-      const hasCarrierService = await userHasCarrierService(sampleSession.id);
+      const session = await createTestSession();
+      const hasCarrierService = await userHasCarrierService(session.id);
       expect(hasCarrierService).toBe(false);
     });
 
     it('should return false if retailerId input is incorrect', async () => {
-      await createSampleCarrierService();
+      await createTestCarrierService();
       const hasCarrierService = await userHasCarrierService(
         nonExistentRetailerId,
       );
@@ -35,19 +35,20 @@ describe('Carrier Service', () => {
 
   describe('userGetCarrierService', () => {
     it('should throw if carrier service is not found', async () => {
-      await expect(userGetCarrierService(sampleSession.id)).rejects.toThrow();
+      const session = await createTestSession();
+      await expect(userGetCarrierService(session.id)).rejects.toThrow();
     });
 
     it('should throw if random retailer id is inputted', async () => {
-      await createSampleCarrierService();
       await expect(
         userGetCarrierService(nonExistentRetailerId),
       ).rejects.toThrow();
     });
 
     it('should return carrier service if found', async () => {
-      const newCarrierService = await createSampleCarrierService();
-      const carrierService = await userGetCarrierService(sampleSession.id);
+      const { retailer, carrierService: newCarrierService } =
+        await createTestCarrierService();
+      const carrierService = await userGetCarrierService(retailer.id);
       expect(carrierService).toEqual(newCarrierService);
     });
   });
@@ -55,12 +56,12 @@ describe('Carrier Service', () => {
   describe('createCarrierService', () => {
     it('should successfully add carrier service to retailerId', async () => {
       const shopifyCarrierServiceId = 'test-carrier-service-id';
-      await createSampleSession();
-      await createCarrierService(sampleSession.id, shopifyCarrierServiceId);
+      const session = await createTestSession();
+      await createCarrierService(session.id, shopifyCarrierServiceId);
       const hasCarrierService =
         (await db.carrierService.count({
           where: {
-            retailerId: sampleSession.id,
+            retailerId: session.id,
           },
         })) > 0;
       expect(hasCarrierService).toBe(true);
@@ -73,22 +74,22 @@ describe('Carrier Service', () => {
     });
 
     it(`should only be able to add a single carrier service at a time`, async () => {
-      await createSampleSession();
-      await createCarrierService(sampleSession.id, 'carrier-service-1');
+      const session = await createTestSession();
+      await createCarrierService(session.id, 'carrier-service-1');
       await expect(
-        createCarrierService(sampleSession.id, 'carrier-service-2'),
+        createCarrierService(session.id, 'carrier-service-2'),
       ).rejects.toThrow();
     });
 
     it(`should store carrier service properly`, async () => {
       const shopifyCarrierServiceId = 'test-carrier-service-id';
-      await createSampleSession();
-      await createCarrierService(sampleSession.id, shopifyCarrierServiceId);
+      const session = await createTestSession();
+      await createCarrierService(session.id, shopifyCarrierServiceId);
       const carrierService = await db.carrierService.findFirst({
-        where: { retailerId: sampleSession.id },
+        where: { retailerId: session.id },
       });
       expect(carrierService).toMatchObject({
-        retailerId: sampleSession.id,
+        retailerId: session.id,
         shopifyCarrierServiceId,
       });
     });
@@ -96,18 +97,20 @@ describe('Carrier Service', () => {
 
   describe('deleteCarrierService', () => {
     it('should delete carrier service properly', async () => {
-      await createSampleCarrierService();
-      await deleteCarrierService(sampleSession.id);
+      const { retailer } = await createTestCarrierService();
+      await deleteCarrierService(retailer.id);
       const carrierServiceCount = await db.carrierService.count({
         where: {
-          retailerId: sampleSession.id,
+          retailerId: retailer.id,
         },
       });
       expect(carrierServiceCount).toBe(0);
     });
 
     it('should throw error if no carrier service can be deleted', async () => {
-      await expect(deleteCarrierService(sampleSession.id)).rejects.toThrow();
+      await expect(
+        deleteCarrierService(nonExistentRetailerId),
+      ).rejects.toThrow();
     });
   });
 });

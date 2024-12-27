@@ -1,36 +1,38 @@
 import db from '~/db.server';
-import { createSampleChecklistTable } from '@factories/checklist.factories';
-import {
-  sampleChecklistItemOne,
-  sampleChecklistItemTwo,
-  sampleChecklistStatusOne,
-  sampleChecklistStatusTwo,
-  sampleChecklistTable,
-  sampleUserPreference,
-} from '@fixtures/checklist.fixture';
 import {
   createMissingChecklistStatuses,
   getMissingChecklistIds,
   getTablesAndStatuses,
   hasChecklistTable,
 } from '../../checklistTable.server';
-import { sampleSession } from '@fixtures/session.fixture';
-import { createSampleSession } from '@factories/session.factories';
 import { simpleFaker } from '@faker-js/faker';
+import {
+  createTestChecklistTableWithItems,
+  generateChecklistStatus,
+  generateUserPreference,
+} from '@factories/checklist.factories';
+import { createTestSession } from '@factories/session.factories';
+import type { ChecklistItem, ChecklistTable, Session } from '@prisma/client';
 
 describe('Checklist Table', () => {
+  let checklistTable: ChecklistTable;
+  let session: Session;
+  let checklistItemOne: ChecklistItem;
+  let checklistItemTwo: ChecklistItem;
+
   beforeEach(async () => {
-    await createSampleChecklistTable();
-    await createSampleSession();
-    await db.userPreference.create({
-      data: sampleUserPreference(sampleSession.id),
-    });
+    const res = await createTestChecklistTableWithItems();
+    checklistTable = res.checklistTable;
+    checklistItemOne = res.checklistItemOne;
+    checklistItemTwo = res.checklistItemTwo;
+    session = await createTestSession();
+    await generateUserPreference(session.id, []);
   });
 
   const nonExistentId = simpleFaker.string.uuid();
   describe('hasChecklistTable', () => {
     it('should return true when checklist table exists', async () => {
-      const tableExists = await hasChecklistTable(sampleChecklistTable.id);
+      const tableExists = await hasChecklistTable(checklistTable.id);
       expect(tableExists).toBe(true);
     });
 
@@ -43,10 +45,7 @@ describe('Checklist Table', () => {
   describe('createMissingChecklistStatuses', () => {
     it('should create 1 checklist status if specify 1 checklist id.', async () => {
       const oldNumChecklistStatus = await db.checklistStatus.count({});
-      await createMissingChecklistStatuses(
-        [sampleChecklistItemOne.id],
-        sampleSession.id,
-      );
+      await createMissingChecklistStatuses([checklistItemOne.id], session.id);
       const numChecklistStatus = await db.checklistStatus.count({});
       expect(numChecklistStatus).toBe(oldNumChecklistStatus + 1);
     });
@@ -54,8 +53,8 @@ describe('Checklist Table', () => {
     it('should create 2 checklist status if specify 2 checklist id.', async () => {
       const oldNumChecklistStatus = await db.checklistStatus.count({});
       await createMissingChecklistStatuses(
-        [sampleChecklistItemOne.id, sampleChecklistItemTwo.id],
-        sampleSession.id,
+        [checklistItemOne.id, checklistItemTwo.id],
+        session.id,
       );
       const numChecklistStatus = await db.checklistStatus.count({});
       expect(numChecklistStatus).toBe(oldNumChecklistStatus + 2);
@@ -64,7 +63,7 @@ describe('Checklist Table', () => {
     it('should throw if session id is invalid', async () => {
       await expect(
         createMissingChecklistStatuses(
-          [sampleChecklistItemOne.id, sampleChecklistItemTwo.id],
+          [checklistItemOne.id, checklistItemTwo.id],
           nonExistentId,
         ),
       ).rejects.toThrow();
@@ -73,8 +72,8 @@ describe('Checklist Table', () => {
     it('should throw if checklist item id is invalid', async () => {
       await expect(
         createMissingChecklistStatuses(
-          [nonExistentId, sampleChecklistItemTwo.id],
-          sampleSession.id,
+          [nonExistentId, checklistItemTwo.id],
+          session.id,
         ),
       ).rejects.toThrow();
     });
@@ -90,30 +89,26 @@ describe('Checklist Table', () => {
       await db.checklistStatus.create({
         data: {
           id: 'random-status-id',
-          checklistItemId: sampleChecklistItemOne.id,
+          checklistItemId: checklistItemOne.id,
           isCompleted: false,
-          sessionId: sampleSession.id,
+          sessionId: session.id,
         },
       });
-      const checklistIds = await getMissingChecklistIds(sampleSession.id);
-      expect(checklistIds).toEqual([sampleChecklistItemTwo.id]);
+      const checklistIds = await getMissingChecklistIds(session.id);
+      expect(checklistIds).toEqual([checklistItemTwo.id]);
     });
 
     it('should return empty array when there are no checklist items', async () => {
       await db.checklistItem.deleteMany();
-      const checklistIds = await getMissingChecklistIds(sampleSession.id);
+      const checklistIds = await getMissingChecklistIds(session.id);
       expect(checklistIds).toEqual([]);
     });
   });
 
   describe('getTablesAndStatuses', () => {
     beforeEach(async () => {
-      await db.checklistStatus.create({
-        data: sampleChecklistStatusOne(sampleSession.id),
-      });
-      await db.checklistStatus.create({
-        data: sampleChecklistStatusTwo(sampleSession.id),
-      });
+      await generateChecklistStatus(session.id, checklistItemOne.id, false);
+      await generateChecklistStatus(session.id, checklistItemTwo.id, false);
     });
 
     it('should return table status with all details for frontend', async () => {
@@ -123,43 +118,40 @@ describe('Checklist Table', () => {
             {
               button: {
                 action: null,
-                content: 'Get Access',
+                content: checklistItemOne.buttonText,
               },
-              checklistTableId: sampleChecklistTable.id,
-              header: 'Become a retailer',
-              id: sampleChecklistItemOne.id,
+              checklistTableId: checklistTable.id,
+              header: checklistItemOne.header,
+              id: checklistItemOne.id,
               isActive: true,
               isCompleted: false,
-              key: 'retailer_get_started',
+              key: checklistItemOne.key,
               position: 1,
-              subheader:
-                "Click get access to add SynqSell's functionality onto your store and start importing products from our supplier network.",
+              subheader: checklistItemOne.subheader,
             },
             {
               button: {
                 action: null,
-                content: 'Edit Brand Profile',
+                content: checklistItemTwo.buttonText,
               },
-              checklistTableId: sampleChecklistTable.id,
-              header: 'Customize your brand profile',
-              id: sampleChecklistItemTwo.id,
+              checklistTableId: checklistTable.id,
+              header: checklistItemTwo.header,
+              id: checklistItemTwo.id,
               isActive: false,
               isCompleted: false,
-              key: 'retailer_customize_profile',
+              key: checklistItemTwo.key,
               position: 2,
-              subheader:
-                'Showcase the information you would like to display in the retailer network for suppliers to see.',
+              subheader: checklistItemTwo.subheader,
             },
           ],
-          header: 'Retailer Setup Guide',
-          id: sampleChecklistTable.id,
-          isHidden: true,
-          position: 1,
-          subheader:
-            'Follow the steps below to import products from suppliers on our platform.',
+          header: checklistTable.header,
+          id: checklistTable.id,
+          isHidden: false,
+          position: checklistTable.position,
+          subheader: checklistTable.subheader,
         },
       ];
-      const tablesAndStatus = await getTablesAndStatuses(sampleSession.id);
+      const tablesAndStatus = await getTablesAndStatuses(session.id);
       expect(tablesAndStatus).toEqual(expectedData);
     });
   });

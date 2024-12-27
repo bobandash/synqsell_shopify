@@ -1,13 +1,23 @@
-import { sampleCarrierService } from '@fixtures/carrierService.fixture';
 import db from '~/db.server';
-import { createSampleSession } from './session.factories';
+import { createTestSession } from './session.factories';
+import { generateCarrierServiceData } from '@fixtures';
 
-export const createSampleCarrierService = async (overrides = {}) => {
-  await createSampleSession();
+export const generateCarrierService = async (
+  retailerId: string,
+  overrides = {},
+) => {
+  const data = generateCarrierServiceData(retailerId);
   return db.carrierService.create({
     data: {
-      ...sampleCarrierService,
+      ...data,
+      retailerId,
       ...overrides,
     },
   });
+};
+
+export const createTestCarrierService = async (overrides = {}) => {
+  const retailer = await createTestSession();
+  const carrierService = await generateCarrierService(retailer.id, overrides);
+  return { retailer, carrierService };
 };

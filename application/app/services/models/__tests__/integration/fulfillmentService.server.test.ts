@@ -1,5 +1,5 @@
-import { createSampleFulfillmentService } from '@factories/fulfillmentService.factories';
 // import db from '~/db.server';
+import { createTestFulfillmentService } from '@factories/fulfillmentService.factories';
 import {
   deleteFulfillmentService,
   getFulfillmentService,
@@ -8,24 +8,29 @@ import {
   userGetFulfillmentService,
   userHasFulfillmentService,
 } from '../../fulfillmentService.server';
-import { sampleFulfillmentService } from '@fixtures/fulfillmentService.fixture';
 import { simpleFaker } from '@faker-js/faker';
 import db from '~/db.server';
 import type { AllFulfillmentServicesQuery } from '~/types/admin.generated';
+import type { FulfillmentService } from '@prisma/client';
+import { createTestSession } from '@factories/session.factories';
 
 describe('FulfillmentService', () => {
   const nonExistentId = simpleFaker.string.uuid();
-  const fulfillmentServiceId = sampleFulfillmentService.id;
-  const sessionId = sampleFulfillmentService.sessionId;
+  let fulfillmentService: FulfillmentService;
+  let sessionId: string;
 
   beforeEach(async () => {
-    await createSampleFulfillmentService();
+    const { session, fulfillmentService: newFulfillmentService } =
+      await createTestFulfillmentService();
+    sessionId = session.id;
+    fulfillmentService = newFulfillmentService;
   });
 
   describe('hasFulfillmentService', () => {
     it('should return true when fulfillment service id is valid', async () => {
-      const fulfillmentServiceExists =
-        await hasFulfillmentService(fulfillmentServiceId);
+      const fulfillmentServiceExists = await hasFulfillmentService(
+        fulfillmentService.id,
+      );
       expect(fulfillmentServiceExists).toBe(true);
     });
 
@@ -38,14 +43,13 @@ describe('FulfillmentService', () => {
 
   describe('getFulfillmentService', () => {
     it('should return fulfillment service when valid id is inputted', async () => {
-      const fulfillmentService =
-        await getFulfillmentService(fulfillmentServiceId);
-      expect(fulfillmentService).toMatchObject({
-        id: fulfillmentServiceId,
-        sessionId: sampleFulfillmentService.sessionId,
+      const res = await getFulfillmentService(fulfillmentService.id);
+      expect(res).toMatchObject({
+        id: fulfillmentService.id,
+        sessionId: fulfillmentService.sessionId,
         shopifyFulfillmentServiceId:
-          sampleFulfillmentService.shopifyFulfillmentServiceId,
-        shopifyLocationId: sampleFulfillmentService.shopifyLocationId,
+          fulfillmentService.shopifyFulfillmentServiceId,
+        shopifyLocationId: fulfillmentService.shopifyLocationId,
       });
     });
 
@@ -69,13 +73,13 @@ describe('FulfillmentService', () => {
 
   describe('userGetFulfillmentService', () => {
     it('should return fulfillment service when valid session id is provided', async () => {
-      const fulfillmentService = await userGetFulfillmentService(sessionId);
-      expect(fulfillmentService).toMatchObject({
-        id: sampleFulfillmentService.id,
+      const res = await userGetFulfillmentService(sessionId);
+      expect(res).toMatchObject({
+        id: fulfillmentService.id,
         sessionId: sessionId,
         shopifyFulfillmentServiceId:
-          sampleFulfillmentService.shopifyFulfillmentServiceId,
-        shopifyLocationId: sampleFulfillmentService.shopifyLocationId,
+          fulfillmentService.shopifyFulfillmentServiceId,
+        shopifyLocationId: fulfillmentService.shopifyLocationId,
       });
     });
 
@@ -86,7 +90,7 @@ describe('FulfillmentService', () => {
 
   describe('deleteFulfillmentService', () => {
     it('should delete fulfillment service when id is provided.', async () => {
-      await deleteFulfillmentService(sampleFulfillmentService.id);
+      await deleteFulfillmentService(fulfillmentService.id);
       const numFulfillmentServices = await db.fulfillmentService.count({});
       expect(numFulfillmentServices).toBe(0);
     });
@@ -105,27 +109,28 @@ describe('FulfillmentService', () => {
     } as AllFulfillmentServicesQuery['shop']['fulfillmentServices'][0];
 
     it('should get fulfillment service if exists, instead of creating new one', async () => {
-      const fulfillmentService = await getOrCreateFulfillmentService(
+      const res = await getOrCreateFulfillmentService(
         sessionId,
         mockShopifyFulfillmentService,
       );
-      expect(fulfillmentService).toMatchObject({
-        id: sampleFulfillmentService.id,
+      expect(res).toMatchObject({
+        id: fulfillmentService.id,
         sessionId: sessionId,
         shopifyFulfillmentServiceId:
-          sampleFulfillmentService.shopifyFulfillmentServiceId,
-        shopifyLocationId: sampleFulfillmentService.shopifyLocationId,
+          fulfillmentService.shopifyFulfillmentServiceId,
+        shopifyLocationId: fulfillmentService.shopifyLocationId,
       });
     });
 
     it(`should create fulfillment service if doesn't exist`, async () => {
       await db.fulfillmentService.deleteMany({});
-      const fulfillmentService = await getOrCreateFulfillmentService(
-        sessionId,
+      const newSession = await createTestSession();
+      const res = await getOrCreateFulfillmentService(
+        newSession.id,
         mockShopifyFulfillmentService,
       );
-      expect(fulfillmentService).toMatchObject({
-        sessionId: sessionId,
+      expect(res).toMatchObject({
+        sessionId: newSession.id,
         shopifyFulfillmentServiceId: mockShopifyFulfillmentService.id,
         shopifyLocationId: mockShopifyFulfillmentService.location?.id,
       });
