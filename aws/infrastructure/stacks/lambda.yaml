@@ -7,6 +7,7 @@ Description: >
 # TODO: Add a way to automatically poll and receive the failed webhook / create support ticket
 # TODO: Change to POLP by only being able to invoke shopify or only being able to invoke stripe
 # TODO: Add DLQ to all lambda functions that handle webhook topics
+# TODO: Add modules
 
 Parameters:
   Environment:
@@ -44,10 +45,11 @@ Globals:
         DB_CONNECTION_SECRET_ID: !Ref DatabaseConnectionSecret
         API_KEYS_SECRET_ID: !Ref ApiKeySecret
         NODE_ENV: !Ref Environment
+        NODE_OPTIONS: --enable-source-maps
     LoggingConfig:
       LogFormat: JSON
-      ApplicationLogLevel: !If [isProd, WARN, TRACE]
-      SystemLogLevel: !If [isProd, WARN, DEBUG]
+      ApplicationLogLevel: !If [isProd, INFO, TRACE]
+      SystemLogLevel: !If [isProd, INFO, DEBUG]
     VpcConfig:
       SecurityGroupIds:
         - !Ref LambdaSecurityGroup
@@ -254,7 +256,7 @@ Resources:
       BuildProperties:
         Minify: true
         Target: es2020
-        Sourcemap: false
+        Sourcemap: true
         EntryPoints:
           - app.ts
         External:
@@ -329,7 +331,7 @@ Resources:
       BuildProperties:
         Minify: true
         Target: es2020
-        Sourcemap: false
+        Sourcemap: true
         EntryPoints:
           - app.ts
         External:
@@ -355,7 +357,7 @@ Resources:
       BuildProperties:
         Minify: true
         Target: es2020
-        Sourcemap: false
+        Sourcemap: true
         EntryPoints:
           - app.ts
         External:
@@ -381,7 +383,7 @@ Resources:
       BuildProperties:
         Minify: true
         Target: es2020
-        Sourcemap: false
+        Sourcemap: true
         EntryPoints:
           - app.ts
         External:
@@ -407,7 +409,7 @@ Resources:
       BuildProperties:
         Minify: true
         Target: es2020
-        Sourcemap: false
+        Sourcemap: true
         EntryPoints:
           - app.ts
         External:
@@ -433,7 +435,7 @@ Resources:
       BuildProperties:
         Minify: true
         Target: es2020
-        Sourcemap: false
+        Sourcemap: true
         EntryPoints:
           - app.ts
         External:
@@ -456,7 +458,7 @@ Resources:
       BuildProperties:
         Minify: true
         Target: es2020
-        Sourcemap: false
+        Sourcemap: true
         EntryPoints:
           - app.ts
         External:
@@ -479,7 +481,7 @@ Resources:
       BuildProperties:
         Minify: true
         Target: es2020
-        Sourcemap: false
+        Sourcemap: true
         EntryPoints:
           - app.ts
         External:
@@ -502,7 +504,7 @@ Resources:
       BuildProperties:
         Minify: true
         Target: es2020
-        Sourcemap: false
+        Sourcemap: true
         EntryPoints:
           - app.ts
         External:
@@ -525,7 +527,7 @@ Resources:
       BuildProperties:
         Minify: true
         Target: es2020
-        Sourcemap: false
+        Sourcemap: true
         EntryPoints:
           - app.ts
         External:
@@ -549,7 +551,7 @@ Resources:
       BuildProperties:
         Minify: true
         Target: es2020
-        Sourcemap: false
+        Sourcemap: true
         EntryPoints:
           - app.ts
         External:
@@ -572,7 +574,7 @@ Resources:
       BuildProperties:
         Minify: true
         Target: es2020
-        Sourcemap: false
+        Sourcemap: true
         EntryPoints:
           - app.ts
         External:
@@ -596,7 +598,7 @@ Resources:
       BuildProperties:
         Minify: true
         Target: es2020
-        Sourcemap: false
+        Sourcemap: true
         EntryPoints:
           - app.ts
         External:
