@@ -1,12 +1,12 @@
 import {
   generateSocialMediaLinkData,
   generateUserProfileData,
-} from '@fixtures';
-import db from '~/db.server';
+} from "@db/fixtures";
+import db from "@db/test-db";
 
 export const generateUserProfile = async (
   sessionId: string,
-  overrides = {},
+  overrides = {}
 ) => {
   const data = generateUserProfileData(sessionId);
   return db.userProfile.create({
@@ -19,7 +19,7 @@ export const generateUserProfile = async (
 
 export const generateSocialMediaLink = async (
   userProfileId: string,
-  overrides = {},
+  overrides = {}
 ) => {
   const data = generateSocialMediaLinkData(userProfileId);
   return db.socialMediaLink.create({

@@ -1,8 +1,8 @@
-import { createTestSession } from '@factories/session.factories';
+import { createTestSession } from '@db/factories/session.factories';
 import {
   generateSocialMediaLink,
   generateUserProfile,
-} from '@factories/userProfile.factories';
+} from '@db/factories/userProfile.factories';
 import { simpleFaker } from '@faker-js/faker';
 import type { Session, UserProfile } from '@prisma/client';
 import {

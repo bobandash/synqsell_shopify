@@ -1,5 +1,4 @@
 {
-  "include": ["env.d.ts", "**/*.ts", "**/*.tsx", "jest.integration.config.js"],
   "compilerOptions": {
     "lib": ["DOM", "DOM.Iterable", "ES2022"],
     "strict": true,
@@ -17,9 +16,8 @@
     "target": "ES2022",
     "baseUrl": ".",
     "paths": {
-      "~/*": ["./app/*"],
-      "@db/*": ["../prisma/*"]
+      "@db/*": ["*"]
     },
-    "types": ["node", "jest", "@quramy/jest-prisma"]
+    "types": ["node", "jest"]
   }
 }

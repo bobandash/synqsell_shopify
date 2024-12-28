@@ -1,4 +1,4 @@
-import { createTestGeneralPriceListWithProducts } from '@factories/pricelist.factories';
+import { createTestGeneralPriceListWithProducts } from '@db/factories/pricelist.factories';
 import { simpleFaker } from '@faker-js/faker';
 import type { ImportedProduct } from '@prisma/client';
 import { isImportedProduct } from '../../importedProduct.server';

@@ -1,18 +1,18 @@
-import { PLANS } from '~/constants';
+import { PLANS } from "./constants";
 import type {
   RolesOptions,
   PriceListPricingStrategyOptions,
   ChecklistItemKeysOptions,
   PartnershipRequestTypeOptions,
   PartnershipRequestStatusOptions,
-} from '~/constants';
-import { simpleFaker } from '@faker-js/faker';
+} from "@db/constants";
+import { simpleFaker } from "@faker-js/faker";
 
 export const generateSessionData = () => ({
   id: simpleFaker.string.uuid(),
   shop: simpleFaker.string.uuid(),
   accessToken: simpleFaker.string.uuid(),
-  state: '',
+  state: "",
 });
 
 export const generateUserProfileData = (sessionId: string) => ({
@@ -25,7 +25,7 @@ export const generateUserProfileData = (sessionId: string) => ({
   sessionId,
   address: simpleFaker.string.alphanumeric(10),
   website: simpleFaker.string.alpha(10),
-  currencyCode: 'USD',
+  currencyCode: "USD",
 });
 
 export const generateSocialMediaLinkData = (userProfileId: string) => ({
@@ -61,7 +61,7 @@ export const generateChecklistTableData = (position: number) => ({
 export const generateChecklistItemData = (
   key: ChecklistItemKeysOptions,
   position: number,
-  checklistTableId: string,
+  checklistTableId: string
 ) => ({
   id: simpleFaker.string.uuid(),
   key,
@@ -75,7 +75,7 @@ export const generateChecklistItemData = (
 export const generateChecklistStatusData = (
   sessionId: string,
   checklistItemId: string,
-  isCompleted: boolean,
+  isCompleted: boolean
 ) => ({
   id: simpleFaker.string.uuid(),
   checklistItemId,
@@ -85,7 +85,7 @@ export const generateChecklistStatusData = (
 
 export const generateUserPreferenceData = (
   sessionId: string,
-  tableIdsHidden: string[],
+  tableIdsHidden: string[]
 ) => ({
   id: simpleFaker.string.uuid(),
   tableIdsHidden,
@@ -138,7 +138,7 @@ export const generateVariantData = (dbProductId: string) => ({
 
 export const generateImportedProductData = (
   dbProductId: string,
-  retailerId: string,
+  retailerId: string
 ) => ({
   id: simpleFaker.string.uuid(),
   retailerId,
@@ -155,7 +155,7 @@ export const generateInventoryItemData = (dbVariantId: string) => ({
 
 export const generateImportedVariantData = (
   dbVariantId: string,
-  dbImportedProductId: string,
+  dbImportedProductId: string
 ) => ({
   id: simpleFaker.string.uuid(),
   importedProductId: dbImportedProductId,
@@ -165,7 +165,7 @@ export const generateImportedVariantData = (
 
 export const generateImportedInventoryItemData = (
   dbInventoryItemId: string,
-  dbImportedVariantId: string,
+  dbImportedVariantId: string
 ) => ({
   id: simpleFaker.string.uuid(),
   shopifyInventoryItemId: simpleFaker.string.alpha(10),
@@ -177,7 +177,7 @@ export const generatePartnershipRequestData = (
   senderId: string,
   recipientId: string,
   status: PartnershipRequestStatusOptions,
-  type: PartnershipRequestTypeOptions,
+  type: PartnershipRequestTypeOptions
 ) => ({
   id: simpleFaker.string.uuid(),
   senderId,
@@ -190,7 +190,7 @@ export const generatePartnershipRequestData = (
 
 export const generatePartnershipData = (
   retailerId: string,
-  supplierId: string,
+  supplierId: string
 ) => ({
   id: simpleFaker.string.uuid(),
   retailerId,
@@ -202,7 +202,7 @@ export const generatePartnershipData = (
 export const generateRoleData = (
   sessionId: string,
   name: RolesOptions,
-  isVisibleInNetwork: boolean = true,
+  isVisibleInNetwork: boolean = true
 ) => ({
   id: simpleFaker.string.uuid(),
   name,

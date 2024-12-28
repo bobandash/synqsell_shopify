@@ -1,7 +1,7 @@
 import {
   createTestGeneralPriceListWithProducts,
   generatePriceList,
-} from '@factories/pricelist.factories';
+} from '@db/factories/pricelist.factories';
 import { simpleFaker } from '@faker-js/faker';
 import type { PriceList, Session } from '@prisma/client';
 import {
@@ -16,8 +16,8 @@ import {
 } from '../../priceList.server';
 import db from '~/db.server';
 import { PRICE_LIST_PRICING_STRATEGY } from '~/constants';
-import { createTestSession } from '@factories/session.factories';
-import { generatePartnership } from '@factories/partnership.factories';
+import { createTestSession } from '@db/factories/session.factories';
+import { generatePartnership } from '@db/factories/partnership.factories';
 
 describe('Price List', () => {
   let generalPriceList: PriceList;

@@ -12,8 +12,8 @@ import {
   updateRoleVisibilityTx,
 } from '../../roles.server';
 import db from '~/db.server';
-import { createTestSession } from '@factories/session.factories';
-import { generateRole } from '@factories/role.factories';
+import { createTestSession } from '@db/factories/session.factories';
+import { generateRole } from '@db/factories/role.factories';
 
 describe('Roles', () => {
   const nonExistentId = simpleFaker.string.uuid();

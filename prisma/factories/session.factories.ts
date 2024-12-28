@@ -1,5 +1,5 @@
-import { generateSessionData } from '@fixtures';
-import db from '~/db.server';
+import { generateSessionData } from "@db/fixtures";
+import db from "@db/test-db";
 
 export const createTestSession = async (overrides = {}) => {
   const data = generateSessionData();

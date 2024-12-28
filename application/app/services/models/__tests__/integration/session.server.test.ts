@@ -8,7 +8,7 @@ import {
 } from '../../session.server';
 import { v4 as uuidv4 } from 'uuid';
 import type { Session } from '@prisma/client';
-import { createTestSession } from '@factories/session.factories';
+import { createTestSession } from '@db/factories/session.factories';
 import db from '~/db.server';
 
 describe('Session', () => {

@@ -1,9 +1,9 @@
-import { createTestBilling } from '@factories/billing.factories';
+import { createTestBilling } from '@db/factories/billing.factories';
 import { v4 as uuidv4 } from 'uuid';
 import { addBilling, userHasBilling } from '../../billing.server';
 import { PLANS } from '~/constants';
 import db from '~/db.server';
-import { createTestSession } from '@factories/session.factories';
+import { createTestSession } from '@db/factories/session.factories';
 import type { Session } from '@prisma/client';
 
 describe('Billing', () => {

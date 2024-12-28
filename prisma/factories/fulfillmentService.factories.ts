@@ -1,10 +1,10 @@
-import db from '~/db.server';
-import { generateFulfillmentServiceData } from '@fixtures';
-import { createTestSession } from './session.factories';
+import db from "@db/test-db";
+import { generateFulfillmentServiceData } from "@db/fixtures";
+import { createTestSession } from "./session.factories";
 
 export const generateFulfillmentService = async (
   sessionId: string,
-  overrides = {},
+  overrides = {}
 ) => {
   const data = generateFulfillmentServiceData(sessionId);
   return db.fulfillmentService.create({
@@ -20,7 +20,7 @@ export const createTestFulfillmentService = async (overrides = {}) => {
   const session = await createTestSession();
   const fulfillmentService = await generateFulfillmentService(
     session.id,
-    overrides,
+    overrides
   );
   return { session, fulfillmentService };
 };

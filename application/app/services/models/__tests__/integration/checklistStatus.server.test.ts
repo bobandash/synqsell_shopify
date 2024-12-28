@@ -18,8 +18,8 @@ import {
   createTestChecklistTableWithItems,
   createTestChecklistTableWithItemsAndStatus,
   generateChecklistStatus,
-} from '@factories/checklist.factories';
-import { createTestSession } from '@factories/session.factories';
+} from '@db/factories/checklist.factories';
+import { createTestSession } from '@db/factories/session.factories';
 
 describe('Checklist Status', () => {
   const nonExistentId = simpleFaker.string.uuid();

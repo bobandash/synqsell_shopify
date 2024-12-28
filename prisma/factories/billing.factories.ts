@@ -1,6 +1,6 @@
-import db from '~/db.server';
-import { createTestSession } from './session.factories';
-import { generateBillingData } from '@fixtures';
+import { createTestSession } from "./session.factories";
+import { generateBillingData } from "@db/fixtures";
+import db from "@db/test-db";
 
 export const generateBilling = async (sessionId: string, overrides = {}) => {
   const data = generateBillingData(sessionId);

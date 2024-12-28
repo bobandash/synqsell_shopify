@@ -1,9 +1,7 @@
-import db from '~/db.server';
-import { config } from 'dotenv';
-import * as path from 'path';
-// https://medium.com/@mrk5199/streamlining-prisma-integration-tests-with-jest-a-step-by-step-guide-f6ba53e5030c
-config({ path: path.join(__dirname, '../.env.test') });
+import db from "@db/test-db";
+import { beforeAll, afterAll, afterEach } from "@jest/globals";
 
+// https://medium.com/@mrk5199/streamlining-prisma-integration-tests-with-jest-a-step-by-step-guide-f6ba53e5030c
 // NOTE: For some reason, prisma's recommendation to use raw sql to clear the database is only working some times, so I generated a temp script to delete all data
 async function clearDatabase() {
   await db.$transaction([

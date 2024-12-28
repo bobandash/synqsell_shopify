@@ -1,4 +1,4 @@
-import db from '~/db.server';
+import db from "@db/test-db";
 import {
   generateImportedInventoryItemData,
   generateImportedProductData,
@@ -7,19 +7,19 @@ import {
   generatePriceListData,
   generateProductData,
   generateVariantData,
-} from '@fixtures';
+} from "@db/fixtures";
 import {
   PRICE_LIST_PRICING_STRATEGY,
   type PriceListPricingStrategyOptions,
-} from '~/constants';
-import { createTestSession } from './session.factories';
+} from "@db/constants";
+import { createTestSession } from "./session.factories";
 
 // Contains price list and relevant fields (product, imported product, etc)
 export const generatePriceList = (
   supplierId: string,
   isGeneral: boolean,
   pricingStrategy: PriceListPricingStrategyOptions,
-  overrides = {},
+  overrides = {}
 ) => {
   const data = generatePriceListData({
     supplierId,
@@ -57,7 +57,7 @@ export const generateVariant = (dbProductId: string, overrides = {}) => {
 export const generateImportedVariant = (
   dbVariantId: string,
   dbImportedProductId: string,
-  overrides = {},
+  overrides = {}
 ) => {
   const data = generateImportedVariantData(dbVariantId, dbImportedProductId);
   return db.importedVariant.create({
@@ -71,7 +71,7 @@ export const generateImportedVariant = (
 export const generateImportedProduct = (
   dbProductId: string,
   retailerId: string,
-  overrides = {},
+  overrides = {}
 ) => {
   const data = generateImportedProductData(dbProductId, retailerId);
   return db.importedProduct.create({
@@ -95,11 +95,11 @@ export const generateInventoryItem = (dbVariantId: string, overrides = {}) => {
 export const generateImportedInventoryItem = (
   dbInventoryItemId: string,
   dbImportedVariantId: string,
-  overrides = {},
+  overrides = {}
 ) => {
   const data = generateImportedInventoryItemData(
     dbInventoryItemId,
-    dbImportedVariantId,
+    dbImportedVariantId
   );
   return db.importedInventoryItem.create({
     data: {
@@ -114,7 +114,7 @@ export const createTestGeneralPriceListWithProducts = async () => {
   const priceList = await generatePriceList(
     session.id,
     true,
-    PRICE_LIST_PRICING_STRATEGY.MARGIN,
+    PRICE_LIST_PRICING_STRATEGY.MARGIN
   );
   const product = await generateProduct(priceList.id);
   const variant = await generateVariant(product.id);
@@ -122,11 +122,11 @@ export const createTestGeneralPriceListWithProducts = async () => {
   const importedProduct = await generateImportedProduct(product.id, session.id);
   const importedVariant = await generateImportedVariant(
     variant.id,
-    importedProduct.id,
+    importedProduct.id
   );
   const importedInventoryItem = await generateImportedInventoryItem(
     inventoryItem.id,
-    importedVariant.id,
+    importedVariant.id
   );
 
   return {

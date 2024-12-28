@@ -4,7 +4,7 @@ import {
   addStripeConnectAccountDb,
   userHasStripeConnectAccount,
 } from '../../stripeConnectAccount.server';
-import { createTestSession } from '@factories/session.factories';
+import { createTestSession } from '@db/factories/session.factories';
 
 describe('stripeConnectAccount', () => {
   const nonExistentId = simpleFaker.string.uuid();

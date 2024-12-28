@@ -1,13 +1,13 @@
-import type { RolesOptions } from '~/constants';
-import db from '~/db.server';
-import { generateRoleData } from '@fixtures';
-import { createTestSession } from './session.factories';
+import type { RolesOptions } from "@db/constants";
+import db from "@db/test-db";
+import { generateRoleData } from "@db/fixtures";
+import { createTestSession } from "@db/factories/session.factories";
 
 export const generateRole = async (
   sessionId: string,
   name: RolesOptions,
   isVisibleInNetwork: boolean = true,
-  overrides = {},
+  overrides = {}
 ) => {
   const data = generateRoleData(sessionId, name, isVisibleInNetwork);
   return db.role.create({
@@ -22,14 +22,14 @@ export const generateRole = async (
 export const createTestRole = async (
   name: RolesOptions,
   isVisibleInNetwork: boolean = true,
-  overrides = {},
+  overrides = {}
 ) => {
   const session = await createTestSession();
   const role = await generateRole(
     session.id,
     name,
     isVisibleInNetwork,
-    overrides,
+    overrides
   );
   return { session, role };
 };

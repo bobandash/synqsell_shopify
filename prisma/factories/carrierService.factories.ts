@@ -1,10 +1,10 @@
-import db from '~/db.server';
-import { createTestSession } from './session.factories';
-import { generateCarrierServiceData } from '@fixtures';
+import { createTestSession } from "./session.factories";
+import { generateCarrierServiceData } from "@db/fixtures";
+import db from "@db/test-db";
 
 export const generateCarrierService = async (
   retailerId: string,
-  overrides = {},
+  overrides = {}
 ) => {
   const data = generateCarrierServiceData(retailerId);
   return db.carrierService.create({

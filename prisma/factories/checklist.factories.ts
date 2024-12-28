@@ -3,15 +3,15 @@ import {
   generateChecklistStatusData,
   generateChecklistTableData,
   generateUserPreferenceData,
-} from '@fixtures';
-import { CHECKLIST_ITEM_KEYS } from '~/constants';
-import type { ChecklistItemKeysOptions } from '~/constants';
-import db from '~/db.server';
-import { createTestSession } from './session.factories';
+} from "@db/fixtures";
+import { CHECKLIST_ITEM_KEYS } from "@db/constants";
+import type { ChecklistItemKeysOptions } from "@db/constants";
+import db from "@db/test-db";
+import { createTestSession } from "./session.factories";
 
 export const generateChecklistTable = async (
   position: number,
-  overrides = {},
+  overrides = {}
 ) => {
   const data = generateChecklistTableData(position);
   return db.checklistTable.create({
@@ -26,7 +26,7 @@ export const generateChecklistItem = async (
   key: ChecklistItemKeysOptions,
   position: number,
   checklistTableId: string,
-  overrides = {},
+  overrides = {}
 ) => {
   const data = generateChecklistItemData(key, position, checklistTableId);
   return db.checklistItem.create({
@@ -41,12 +41,12 @@ export const generateChecklistStatus = async (
   sessionId: string,
   checklistItemId: string,
   isCompleted: boolean,
-  overrides = {},
+  overrides = {}
 ) => {
   const data = generateChecklistStatusData(
     sessionId,
     checklistItemId,
-    isCompleted,
+    isCompleted
   );
   return db.checklistStatus.create({
     data: {
@@ -59,7 +59,7 @@ export const generateChecklistStatus = async (
 export const generateUserPreference = async (
   sessionId: string,
   tableIdsHidden: string[],
-  overrides = {},
+  overrides = {}
 ) => {
   const data = generateUserPreferenceData(sessionId, tableIdsHidden);
   return db.userPreference.create({
@@ -75,12 +75,12 @@ export const createTestChecklistTableWithItems = async () => {
   const checklistItemOne = await generateChecklistItem(
     CHECKLIST_ITEM_KEYS.RETAILER_ADD_PAYMENT_METHOD,
     1,
-    checklistTable.id,
+    checklistTable.id
   );
   const checklistItemTwo = await generateChecklistItem(
     CHECKLIST_ITEM_KEYS.RETAILER_CUSTOMIZE_PROFILE,
     2,
-    checklistTable.id,
+    checklistTable.id
   );
   return { checklistTable, checklistItemOne, checklistItemTwo };
 };
@@ -90,23 +90,23 @@ export const createTestChecklistTableWithItemsAndStatus = async () => {
   const checklistItemOne = await generateChecklistItem(
     CHECKLIST_ITEM_KEYS.RETAILER_ADD_PAYMENT_METHOD,
     1,
-    checklistTable.id,
+    checklistTable.id
   );
   const checklistItemTwo = await generateChecklistItem(
     CHECKLIST_ITEM_KEYS.RETAILER_CUSTOMIZE_PROFILE,
     2,
-    checklistTable.id,
+    checklistTable.id
   );
   const session = await createTestSession();
   const checklistStatusOne = await generateChecklistStatus(
     session.id,
     checklistItemOne.id,
-    false,
+    false
   );
   const checklistStatusTwo = await generateChecklistStatus(
     session.id,
     checklistItemTwo.id,
-    false,
+    false
   );
 
   const userPreference = await generateUserPreference(session.id, []);

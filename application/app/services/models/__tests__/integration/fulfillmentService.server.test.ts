@@ -1,5 +1,5 @@
 // import db from '~/db.server';
-import { createTestFulfillmentService } from '@factories/fulfillmentService.factories';
+import { createTestFulfillmentService } from '@db/factories/fulfillmentService.factories';
 import {
   deleteFulfillmentService,
   getFulfillmentService,
@@ -12,7 +12,7 @@ import { simpleFaker } from '@faker-js/faker';
 import db from '~/db.server';
 import type { AllFulfillmentServicesQuery } from '~/types/admin.generated';
 import type { FulfillmentService } from '@prisma/client';
-import { createTestSession } from '@factories/session.factories';
+import { createTestSession } from '@db/factories/session.factories';
 
 describe('FulfillmentService', () => {
   const nonExistentId = simpleFaker.string.uuid();

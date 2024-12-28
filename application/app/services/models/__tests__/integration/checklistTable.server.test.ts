@@ -10,8 +10,8 @@ import {
   createTestChecklistTableWithItems,
   generateChecklistStatus,
   generateUserPreference,
-} from '@factories/checklist.factories';
-import { createTestSession } from '@factories/session.factories';
+} from '@db/factories/checklist.factories';
+import { createTestSession } from '@db/factories/session.factories';
 import type { ChecklistItem, ChecklistTable, Session } from '@prisma/client';
 
 describe('Checklist Table', () => {

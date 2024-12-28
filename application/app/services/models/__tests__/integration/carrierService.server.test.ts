@@ -1,13 +1,13 @@
 import db from '~/db.server';
 import { v4 as uuidv4 } from 'uuid';
-import { createTestCarrierService } from '@factories/carrierService.factories';
+import { createTestCarrierService } from '@db/factories/carrierService.factories';
 import {
   createCarrierService,
   deleteCarrierService,
   userGetCarrierService,
   userHasCarrierService,
 } from '../../carrierService.server';
-import { createTestSession } from '@factories/session.factories';
+import { createTestSession } from '@db/factories/session.factories';
 
 describe('Carrier Service', () => {
   const nonExistentRetailerId = uuidv4();

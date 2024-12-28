@@ -4,7 +4,7 @@ import {
   hasChecklistItem,
 } from '../../checklistItem.server';
 import db from '~/db.server';
-import { createTestChecklistTableWithItems } from '@factories/checklist.factories';
+import { createTestChecklistTableWithItems } from '@db/factories/checklist.factories';
 import type { ChecklistItem } from '@prisma/client';
 import { simpleFaker } from '@faker-js/faker';
 import type { ChecklistItemKeysOptions } from '~/constants';

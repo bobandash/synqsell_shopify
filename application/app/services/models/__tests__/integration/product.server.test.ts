@@ -1,7 +1,7 @@
 import {
   createTestGeneralPriceListWithProducts,
   generateProduct,
-} from '@factories/pricelist.factories';
+} from '@db/factories/pricelist.factories';
 import { simpleFaker } from '@faker-js/faker';
 import type { PriceList, Product } from '@prisma/client';
 import db from '~/db.server';
