@@ -3,6 +3,8 @@ import type {
   RolesOptions,
   PriceListPricingStrategyOptions,
   ChecklistItemKeysOptions,
+  PartnershipRequestTypeOptions,
+  PartnershipRequestStatusOptions,
 } from '~/constants';
 import { simpleFaker } from '@faker-js/faker';
 
@@ -11,6 +13,29 @@ export const generateSessionData = () => ({
   shop: simpleFaker.string.uuid(),
   accessToken: simpleFaker.string.uuid(),
   state: '',
+});
+
+export const generateUserProfileData = (sessionId: string) => ({
+  id: simpleFaker.string.uuid(),
+  name: simpleFaker.string.alpha(10),
+  email: simpleFaker.string.alpha(10),
+  logo: simpleFaker.string.alphanumeric(10),
+  biography: simpleFaker.string.alphanumeric(10),
+  desiredProducts: simpleFaker.string.alphanumeric(10),
+  sessionId,
+  address: simpleFaker.string.alphanumeric(10),
+  website: simpleFaker.string.alpha(10),
+  currencyCode: 'USD',
+});
+
+export const generateSocialMediaLinkData = (userProfileId: string) => ({
+  id: simpleFaker.string.uuid(),
+  facebook: simpleFaker.string.uuid(),
+  twitter: simpleFaker.string.uuid(),
+  instagram: simpleFaker.string.uuid(),
+  youtube: simpleFaker.string.uuid(),
+  tiktok: simpleFaker.string.uuid(),
+  userProfileId,
 });
 
 export const generateBillingData = (sessionId: string) => ({
@@ -111,15 +136,29 @@ export const generateVariantData = (dbProductId: string) => ({
   supplierProfit: simpleFaker.string.numeric(2),
 });
 
+export const generateImportedProductData = (
+  dbProductId: string,
+  retailerId: string,
+) => ({
+  id: simpleFaker.string.uuid(),
+  retailerId,
+  importedAt: simpleFaker.date.recent(),
+  prismaProductId: dbProductId,
+  shopifyProductId: simpleFaker.string.uuid(),
+});
+
 export const generateInventoryItemData = (dbVariantId: string) => ({
   id: simpleFaker.string.uuid(),
   variantId: dbVariantId,
   shopifyInventoryItemId: simpleFaker.string.alpha(10),
 });
 
-export const generateImportedVariantData = (dbVariantId: string) => ({
+export const generateImportedVariantData = (
+  dbVariantId: string,
+  dbImportedProductId: string,
+) => ({
   id: simpleFaker.string.uuid(),
-  importedProductId: simpleFaker.string.alpha(10),
+  importedProductId: dbImportedProductId,
   prismaVariantId: dbVariantId,
   shopifyVariantId: simpleFaker.string.alpha(10),
 });
@@ -132,6 +171,32 @@ export const generateImportedInventoryItemData = (
   shopifyInventoryItemId: simpleFaker.string.alpha(10),
   importedVariantId: dbImportedVariantId,
   prismaInventoryItemId: dbInventoryItemId,
+});
+
+export const generatePartnershipRequestData = (
+  senderId: string,
+  recipientId: string,
+  status: PartnershipRequestStatusOptions,
+  type: PartnershipRequestTypeOptions,
+) => ({
+  id: simpleFaker.string.uuid(),
+  senderId,
+  recipientId,
+  message: simpleFaker.string.alpha(10),
+  status,
+  type,
+  createdAt: simpleFaker.date.recent(),
+});
+
+export const generatePartnershipData = (
+  retailerId: string,
+  supplierId: string,
+) => ({
+  id: simpleFaker.string.uuid(),
+  retailerId,
+  supplierId,
+  createdAt: simpleFaker.date.recent(),
+  message: simpleFaker.string.uuid(),
 });
 
 export const generateRoleData = (

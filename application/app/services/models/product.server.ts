@@ -53,6 +53,19 @@ export async function addProductsTx(
   priceListId: string,
   shopifyProductIdsToAdd: string[],
 ) {
+  const hasProducts =
+    (await tx.product.count({
+      where: {
+        shopifyProductId: {
+          in: shopifyProductIdsToAdd,
+        },
+        priceListId,
+      },
+    })) > 0;
+  if (hasProducts) {
+    throw new Error('Cannot add duplicate products to price list.');
+  }
+
   const newProducts = await Promise.all(
     shopifyProductIdsToAdd.map((shopifyProductId) =>
       tx.product.create({

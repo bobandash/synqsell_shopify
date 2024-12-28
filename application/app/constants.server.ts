@@ -15,14 +15,12 @@ function getServiceName() {
 const getCarrierServiceCallbackUrl = (sessionId: string) => {
   const callbackUrl = process.env.CARRIER_SERVICE_CALLBACK_URL;
   if (!callbackUrl) {
-    throw new Error('Callback url is not defined in environment variables.');
+    throw new Error('Callback url is not defined.');
   }
   return `${callbackUrl}?sessionId=${sessionId}`;
 };
 
-export const getCarrierServiceDetails = (sessionId: string) => {
-  return {
-    name: getServiceName(),
-    callbackUrl: getCarrierServiceCallbackUrl(sessionId),
-  };
-};
+export const getCarrierServiceDetails = (sessionId: string) => ({
+  name: getServiceName(),
+  callbackUrl: getCarrierServiceCallbackUrl(sessionId),
+});

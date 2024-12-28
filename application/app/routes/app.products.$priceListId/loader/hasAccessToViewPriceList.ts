@@ -1,7 +1,6 @@
 import {
   getPriceList,
   getRetailerIds,
-  getSupplierId,
 } from '~/services/models/priceList.server';
 import { object } from 'yup';
 import { priceListIdSchema, sessionIdSchema } from '~/schemas/models';
@@ -46,7 +45,7 @@ async function hasAccessToViewPriceList(
   retailerId: string,
 ) {
   await hasAccessToViewPriceListSchema.validate({ priceListId, retailerId });
-  const supplierId = await getSupplierId(priceListId);
+  const { supplierId } = await getPriceList(priceListId);
   const [isSupplierAppUninstalled, stripeIntegrationsExist, hasViewPermission] =
     await Promise.all([
       isAppUninstalled(supplierId),
