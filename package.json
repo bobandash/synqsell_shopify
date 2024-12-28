@@ -2,6 +2,7 @@
   "type": "module",
   "devDependencies": {
     "@faker-js/faker": "^9.3.0",
+    "@types/jest": "^29.5.14",
     "jest": "^29.7.0",
     "prisma": "^6.1.0",
     "ts-jest": "^29.2.5"
@@ -12,8 +13,8 @@
     "test:db:push": "dotenv -e .env.test -- npx prisma db push",
     "test:unit": "jest --selectProjects unit",
     "test:unit:watch": "jest --selectProjects unit --watch",
-    "test:unit-aws": "jest --selectProjects unit-aws",
-    "test:unit-aws:watch": "jest --selectProjects unit-aws --watch",
+    "test:aws-unit": "jest --selectProjects aws-unit",
+    "test:aws-unit:watch": "jest --selectProjects aws-unit --watch",
     "test:integration:regular": "dotenv -e .env.test -- jest --selectProjects integration --runInBand",
     "test:all:watch": "dotenv -e .env.test -- jest --watch --runInBand --no-cache",
     "test:integration": "npm run test:db:up && npm run test:db:push && npm run test:integration:regular && npm run test:db:down",

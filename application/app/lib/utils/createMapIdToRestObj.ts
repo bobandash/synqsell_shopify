@@ -1,16 +1,15 @@
 function createMapIdToRestObj<
-  T extends { [key: string]: any },
+  T extends Record<string, string>,
   K extends keyof T,
->(data: T[], idKey: K): Map<string, Omit<T, K>> {
+>(data: T[], idKey: K) {
   const map = new Map<string, Omit<T, K>>();
   data.forEach((entry) => {
-    const id = entry[idKey] as unknown as string;
-    if (id !== undefined) {
+    const id = entry[idKey];
+    if (id) {
       const { [idKey]: _, ...rest } = entry;
-      map.set(id, rest as Omit<T, K>);
+      map.set(id, rest);
     }
   });
-
   return map;
 }
 
