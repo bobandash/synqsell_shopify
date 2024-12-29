@@ -2,7 +2,7 @@ import { createLogger, format, transports } from "winston";
 const { combine, json } = format;
 
 // pg package just returns these as errors:
-// https://www.postgresql.org/docs/12/errcodes-appendix.html
+// https://www.postgresql.org/docs/current/errcodes-appendix.html
 
 // these context give any important details to filter to see issues
 type ErrorContext = {
@@ -24,7 +24,6 @@ type InfoContext = {
 
 class PostgresError extends Error {
   code?: string;
-  detail?: string;
   table?: string;
   schema?: string;
 
@@ -48,13 +47,14 @@ function logError(error: unknown, context: ErrorContext) {
   // For postgres errors, note: detail can contain PII, so decided not to log it
   if (isPostgresError(error)) {
     logger.error({
-      name: error.name,
+      name: "PostgresError",
       message: error.message,
-      pgErrorCode: error.code,
-      pgTable: error.table,
-      pgSchema: error.schema,
+      code: error.code,
+      table: error.table,
+      schema: error.schema,
       ...context,
     });
+    return;
   }
 
   if (error instanceof Error) {
@@ -89,3 +89,5 @@ function logInfo(message: string, context: InfoContext) {
 }
 
 export { logError, logInfo };
+export const exportsForTesting =
+  process.env.NODE_ENV === "test" ? { isPostgresError, logger } : undefined;

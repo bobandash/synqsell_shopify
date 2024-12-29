@@ -1,3 +1,4 @@
+// TODO: Refactor this function to be more clean; should be okay temporarily because stack trace will provide debugging support
 async function mutateAndValidateGraphQLData<T>(
   shop: string,
   accessToken: string,
@@ -19,7 +20,7 @@ async function mutateAndValidateGraphQLData<T>(
     const statusCode = response.status;
     const errors = errorData.errors;
     let errorMessage = "";
-    if ("query" in errors) {
+    if (errors && errors.query) {
       errorMessage = errors.query;
     } else {
       errorMessage = errors;

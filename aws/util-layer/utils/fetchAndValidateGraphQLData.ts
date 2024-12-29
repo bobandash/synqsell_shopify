@@ -1,3 +1,4 @@
+// TODO: Refactor this function to be more clean
 /* eslint-disable @typescript-eslint/no-explicit-any */
 async function fetchAndValidateGraphQLData<T>(
   shop: string,
@@ -20,7 +21,7 @@ async function fetchAndValidateGraphQLData<T>(
     const statusCode = response.status;
     const errors = errorData.errors;
     let errorMessage = "";
-    if ("query" in errors) {
+    if (errors && errors.query) {
       errorMessage = errors.query;
     } else {
       errorMessage = errors;
