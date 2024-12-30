@@ -8,7 +8,7 @@ export async function getOrderLineItems(dbOrderId: string, client: PoolClient) {
   `;
   const res = await client.query(query, [dbOrderId]);
   if (res.rows.length === 0) {
-    throw new Error(`No order line items exist for dbOrder ${dbOrderId}.`);
+    throw new Error(`No order line items exists.`);
   }
   return res.rows as OrderLineItem[];
 }

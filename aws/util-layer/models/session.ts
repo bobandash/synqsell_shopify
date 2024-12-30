@@ -47,7 +47,7 @@ export async function getRetailerSessionFromSupplierOrder(
   `;
   const res = await client.query(query, [supplierShopifyOrderId]);
   if (res.rows.length === 0) {
-    throw new Error("No retailer session exists for " + supplierShopifyOrderId);
+    throw new Error("No retailer session exists.");
   }
   return res.rows[0] as Session;
 }
@@ -63,7 +63,7 @@ export async function getRetailerSessionFromOrderId(
   `;
   const res = await client.query(query, [orderId]);
   if (res.rows.length === 0) {
-    throw new Error(`No retailer session exists for dbOrderId ${orderId}.`);
+    throw new Error(`No retailer session exists.`);
   }
   return res.rows[0] as Session;
 }

@@ -12,9 +12,7 @@ export async function getFulfillment(
     `;
   const res = await client.query(query, [dbFulfillmentId]);
   if (res.rows.length === 0) {
-    throw new Error(
-      `No fulfillment exists for dbFulfillmentId ${dbFulfillmentId}.`
-    );
+    throw new Error(`No fulfillment exists.`);
   }
   return res.rows[0] as Fulfillment;
 }
@@ -35,9 +33,7 @@ export async function getFulfillmentIdFromSupplierShopify(
     `;
   const res = await client.query(query, [supplierShopifyFulfillmentId]);
   if (res.rows.length === 0) {
-    throw new Error(
-      `No fulfillment row exists for supplierShopifyFulfillmentId ${supplierShopifyFulfillmentId}.`
-    );
+    throw new Error(`No fulfillment exists.`);
   }
   return res.rows[0].id as string;
 }
@@ -53,9 +49,7 @@ export async function getFulfillmentIdFromRetailerShopify(
   `;
   const res = await client.query(query, [retailerShopifyFulfillmentId]);
   if (res.rows.length === 0) {
-    throw new Error(
-      `No fulfillment row exists for retailerShopifyFulfillmentId ${retailerShopifyFulfillmentId}.`
-    );
+    throw new Error(`No fulfillment exists.`);
   }
   return res.rows[0].id as string;
 }

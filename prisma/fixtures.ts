@@ -242,7 +242,7 @@ export const generateOrderData = (
   retailerId: string,
   supplierId: string,
   currency = "USD",
-  paymentStatus = "PENDING",
+  paymentStatus = "INCOMPLETE",
   shippingCost = 0
 ) => ({
   id: simpleFaker.string.uuid(),
@@ -257,58 +257,50 @@ export const generateOrderData = (
   updatedAt: simpleFaker.date.recent(),
 });
 
-// model OrderLineItem {
-//   id                             String     @id @default(uuid())
-//   retailerShopifyVariantId       String
-//   supplierShopifyVariantId       String
-//   retailPricePerUnit             Decimal    @db.Decimal(10, 2)
-//   retailerProfitPerUnit          Decimal    @db.Decimal(10, 2)
-//   supplierProfitPerUnit          Decimal    @db.Decimal(10, 2)
-//   retailerShopifyOrderLineItemId String
-//   supplierShopifyOrderLineItemId String
-//   quantity                       Int
-//   quantityFulfilled              Int        @default(0)
-//   quantityPaid                   Int        @default(0)
-//   quantityCancelled              Int        @default(0)
-//   orderId                        String
-//   priceListId                    String?
-//   order                          Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
-//   priceList                      PriceList? @relation(fields: [priceListId], references: [id], onDelete: SetNull)
-// }
+export const generateOrderLineItemData = (
+  orderId: string,
+  priceListId?: string
+) => ({
+  id: simpleFaker.string.uuid(),
+  retailerShopifyVariantId: simpleFaker.string.uuid(),
+  supplierShopifyVariantId: simpleFaker.string.uuid(),
+  retailPricePerUnit: Number(simpleFaker.number.float({ min: 10, max: 100 })),
+  retailerProfitPerUnit: Number(simpleFaker.number.float({ min: 1, max: 20 })),
+  supplierProfitPerUnit: Number(simpleFaker.number.float({ min: 1, max: 10 })),
+  retailerShopifyOrderLineItemId: simpleFaker.string.uuid(),
+  supplierShopifyOrderLineItemId: simpleFaker.string.uuid(),
+  quantity: simpleFaker.number.int({ min: 1, max: 10 }),
+  quantityFulfilled: 0,
+  quantityPaid: 0,
+  quantityCancelled: 0,
+  orderId,
+  priceListId,
+});
 
-// model Fulfillment {
-//   id                           String   @id @default(uuid())
-//   supplierShopifyFulfillmentId String
-//   retailerShopifyFulfillmentId String
-//   orderId                      String
-//   order                        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-//   payment                      Payment?
-// }
+export const generatePaymentData = (
+  orderId: string,
+  fulfillmentId: string
+) => ({
+  id: simpleFaker.string.uuid(),
+  orderId,
+  stripeEventId: simpleFaker.string.uuid(),
+  status: "PENDING",
+  orderPaid: Number(simpleFaker.number.float({ min: 10, max: 1000 })),
+  shippingPaid: Number(simpleFaker.number.float({ min: 5, max: 50 })),
+  totalPaid: Number(simpleFaker.number.float({ min: 15, max: 1050 })),
+  createdAt: simpleFaker.date.recent(),
+  fulfillmentId,
+});
 
-// model Payment {
-//   id                  String               @id @default(uuid())
-//   orderId             String
-//   stripeEventId       String               @unique
-//   status              String // need to listen to stripe's webhooks for this
-//   orderPaid           Decimal              @db.Decimal(10, 2)
-//   shippingPaid        Decimal              @db.Decimal(10, 2)
-//   totalPaid           Decimal              @db.Decimal(10, 2)
-//   createdAt           DateTime             @default(now())
-//   fulfillmentId       String               @unique
-//   order               Order                @relation(fields: [orderId], references: [id], onDelete: Cascade)
-//   fulfillment         Fulfillment          @relation(fields: [fulfillmentId], references: [id], onDelete: Cascade)
-//   billingTransactions BillingTransaction[]
-// }
-
-// // when a payment is made, we bill the merchants a portion of what they made
-// model BillingTransaction {
-//   id                   String   @id @default(uuid())
-//   createdAt            DateTime @default(now())
-//   paymentId            String
-//   shopifyUsageRecordId String   @unique
-//   amountPaid           Decimal  @db.Decimal(10, 2)
-//   currencyCode         String
-//   sessionId            String?
-//   payment              Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
-//   session              Session? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
-// }
+export const generateBillingTransactionData = (
+  paymentId: string,
+  sessionId?: string
+) => ({
+  id: simpleFaker.string.uuid(),
+  createdAt: simpleFaker.date.recent(),
+  paymentId,
+  shopifyUsageRecordId: simpleFaker.string.uuid(),
+  amountPaid: Number(simpleFaker.number.float({ min: 5, max: 500 })),
+  currencyCode: "USD",
+  sessionId,
+});
