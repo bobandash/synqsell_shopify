@@ -3,6 +3,7 @@
   "devDependencies": {
     "@faker-js/faker": "^9.3.0",
     "@types/jest": "^29.5.14",
+    "@types/pg": "^8.11.10",
     "jest": "^29.7.0",
     "prisma": "^6.1.0",
     "ts-jest": "^29.2.5"
@@ -13,17 +14,22 @@
     "test:db:push": "dotenv -e .env.test -- npx prisma db push",
     "test:unit": "jest --selectProjects unit",
     "test:unit:watch": "jest --selectProjects unit --watch",
+    "test:integration:cmd": "dotenv -e .env.test -- jest --selectProjects integration --runInBand",
+    "test:integration:cmd:watch": "dotenv -e .env.test -- jest --selectProjects integration --runInBand --watch",
+    "test:integration": "npm run test:db:up && npm run test:db:push && npm run test:integration:cmd && npm run test:db:down",
+    "test:integration:watch": "npm run test:db:up && npm run test:db:push && npm run test:integration:cmd:watch",
     "test:aws-unit": "jest --selectProjects aws-unit",
     "test:aws-unit:watch": "jest --selectProjects aws-unit --watch",
-    "test:integration:regular": "dotenv -e .env.test -- jest --selectProjects integration --runInBand",
-    "test:all:watch": "dotenv -e .env.test -- jest --watch --runInBand --no-cache",
-    "test:integration": "npm run test:db:up && npm run test:db:push && npm run test:integration:regular && npm run test:db:down",
+    "test:aws-integration:cmd": "dotenv -e .env.test -- jest --selectProjects aws-integration --runInBand",
+    "test:aws-integration:cmd:watch": "dotenv -e .env.test -- jest --selectProjects aws-integration --runInBand --watch",
+    "test:aws-integration": "npm run test:db:up && npm run test:db:push && npm run test:aws-integration:cmd && npm run test:db:down",
+    "test:aws-integration:watch": "npm run test:db:up && npm run test:db:push && npm run test:aws-integration:cmd:watch",
     "test": "npm run test:unit && npm run test:integration",
-    "test:watch": "npm run test:db:up && npm run test:db:push && npm run test:all:watch",
     "test:seed": "cross-env NODE_ENV=test dotenv -e .env.test tsx prisma/test-seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.1.0",
-    "@types/node": "^22.10.2"
+    "@types/node": "^22.10.2",
+    "pg": "^8.13.1"
   }
 }

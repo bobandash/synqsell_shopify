@@ -1,7 +1,6 @@
 import { simpleFaker } from "@faker-js/faker/.";
 import fetchAndValidateGraphQLData from "../../fetchAndValidateGraphQLData";
 
-// Mock the global fetch function
 global.fetch = jest.fn();
 
 describe("fetchAndValidateGraphQLData", () => {

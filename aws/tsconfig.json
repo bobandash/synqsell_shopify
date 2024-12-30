@@ -9,7 +9,12 @@
     "moduleResolution": "node",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "outDir": "./opt/nodejs"
+    "outDir": "./opt/nodejs",
+    "baseUrl": ".",
+    "paths": {
+      "~/*": ["./app/*"],
+      "@db/*": ["../prisma/*"]
+    }
   },
   "exclude": ["node_modules"]
 }

@@ -6,5 +6,6 @@ export default {
     "<rootDir>/application/jest.unit.config.js",
     "<rootDir>/application/jest.integration.config.js",
     "<rootDir>/aws/jest.unit.config.js",
+    "<rootDir>/aws/jest.integration.config.js",
   ],
 };

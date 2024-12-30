@@ -1,7 +1,8 @@
 /** @type {import('ts-jest').JestConfigWithTsJest} **/
 export default {
-  displayName: "integration",
+  displayName: "aws-integration",
   testMatch: ["**/__tests__/**/integration/**/*.[jt]s?(x)"],
+  testPathIgnorePatterns: ["<rootDir>/.*setup.*"],
   testEnvironment: "node",
   transform: {
     "^.+.tsx?$": ["ts-jest", {}],
@@ -9,10 +10,8 @@ export default {
   maxWorkers: 1,
   setupFilesAfterEnv: ["<rootDir>/../prisma/setup.server.ts"],
   rootDir: ".",
-  modulePathIgnorePatterns: [".aws-sam"],
   moduleNameMapper: {
-    "^~/(.*)$": "<rootDir>/app/$1",
-    "^@fixtures(/.*)?$": "<rootDir>/../prisma/fixtures.ts",
-    "^@db/factories/(.*)$": "<rootDir>/../prisma/factories/$1",
+    "^@db/(.*)$": "<rootDir>/../prisma/$1",
   },
+  modulePathIgnorePatterns: [".aws-sam"],
 };

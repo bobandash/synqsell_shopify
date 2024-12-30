@@ -10,9 +10,7 @@ export async function getShopifyCarrierServiceId(
   `;
   const res = await client.query(query, [sessionId]);
   if (res.rows.length === 0) {
-    throw new Error(
-      `No shopify carrier service exists for sessionId ${sessionId}.`
-    );
+    throw new Error(`No shopify carrier service exists.`);
   }
   return res.rows[0].shopifyCarrierServiceId as string;
 }
