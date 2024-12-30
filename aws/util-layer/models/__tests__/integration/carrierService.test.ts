@@ -36,7 +36,7 @@ describe("Billing", () => {
       expect(res).toBe(carrierService.shopifyCarrierServiceId);
     });
 
-    it("should throw error if retaukerUd is invalid", async () => {
+    it("should throw error if retailerId is invalid", async () => {
       const { client } = database;
       await expect(
         getShopifyCarrierServiceId(nonExistentId, client)

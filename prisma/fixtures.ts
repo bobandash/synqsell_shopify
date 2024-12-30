@@ -218,3 +218,22 @@ export const generateStripeConnectAccountData = (supplierId: string) => ({
   createdAt: simpleFaker.date.recent(),
   updatedAt: simpleFaker.date.recent(),
 });
+
+export const generateStripeCustomerAccountData = (
+  retailerId: string,
+  hasPaymentMethod: boolean
+) => ({
+  id: simpleFaker.string.uuid(),
+  stripeCustomerId: simpleFaker.string.uuid(),
+  retailerId,
+  hasPaymentMethod,
+  createdAt: simpleFaker.date.recent(),
+  updatedAt: simpleFaker.date.recent(),
+});
+
+export const generateFulfillmentData = (orderId: string) => ({
+  id: simpleFaker.string.uuid(),
+  supplierShopifyFulfillmentId: simpleFaker.string.uuid(),
+  retailerShopifyFulfillmentId: simpleFaker.string.uuid(),
+  orderId,
+});

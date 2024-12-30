@@ -11,9 +11,7 @@ export async function getStripeAccountId(
   `;
   const res = await client.query(query, [supplierId]);
   if (res.rows.length === 0) {
-    throw new Error(
-      `No stripe account id exists for supplierId ${supplierId}.`
-    );
+    throw new Error(`No stripe connect account id exists.`);
   }
   return res.rows[0].stripeAccountId as string;
 }

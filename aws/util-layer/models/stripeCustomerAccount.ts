@@ -23,9 +23,7 @@ export async function getStripeCustomerId(
   `;
   const res = await client.query(query, [retailerId]);
   if (res.rows.length === 0) {
-    throw new Error(
-      `No stripe customer id id exists for retailerId ${retailerId}.`
-    );
+    throw new Error(`No stripe customer id exists.`);
   }
   return res.rows[0].stripeCustomerId as string;
 }

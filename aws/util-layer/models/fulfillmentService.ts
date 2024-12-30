@@ -12,9 +12,7 @@ export async function getFulfillmentService(
   `;
   const res = await client.query(query, [sessionId]);
   if (res.rows.length === 0) {
-    throw new Error(
-      `No fulfillment service exists for sessionId ${sessionId}.`
-    );
+    throw new Error(`No fulfillment service exists.`);
   }
   return res.rows[0] as FulfillmentService;
 }

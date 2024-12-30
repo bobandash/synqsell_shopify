@@ -13,6 +13,28 @@ import {
   type PriceListPricingStrategyOptions,
 } from "@db/constants";
 import { createTestSession } from "./session.factories";
+import type {
+  ImportedInventoryItem,
+  ImportedProduct,
+  ImportedVariant,
+  InventoryItem,
+  PriceList,
+  Product,
+  Session,
+  Variant,
+} from "@prisma/client";
+
+export type TestGeneralPriceList = {
+  supplier: Session;
+  retailer: Session;
+  priceList: PriceList;
+  product: Product;
+  variant: Variant;
+  inventoryItem: InventoryItem;
+  importedProduct: ImportedProduct;
+  importedVariant: ImportedVariant;
+  importedInventoryItem: ImportedInventoryItem;
+};
 
 // Contains price list and relevant fields (product, imported product, etc)
 export const generatePriceList = (
@@ -109,34 +131,40 @@ export const generateImportedInventoryItem = (
   });
 };
 
-export const createTestGeneralPriceListWithProducts = async () => {
-  const session = await createTestSession();
-  const priceList = await generatePriceList(
-    session.id,
-    true,
-    PRICE_LIST_PRICING_STRATEGY.MARGIN
-  );
-  const product = await generateProduct(priceList.id);
-  const variant = await generateVariant(product.id);
-  const inventoryItem = await generateInventoryItem(variant.id);
-  const importedProduct = await generateImportedProduct(product.id, session.id);
-  const importedVariant = await generateImportedVariant(
-    variant.id,
-    importedProduct.id
-  );
-  const importedInventoryItem = await generateImportedInventoryItem(
-    inventoryItem.id,
-    importedVariant.id
-  );
+export const createTestGeneralPriceListWithProducts =
+  async (): Promise<TestGeneralPriceList> => {
+    const supplier = await createTestSession();
+    const retailer = await createTestSession();
+    const priceList = await generatePriceList(
+      supplier.id,
+      true,
+      PRICE_LIST_PRICING_STRATEGY.MARGIN
+    );
+    const product = await generateProduct(priceList.id);
+    const variant = await generateVariant(product.id);
+    const inventoryItem = await generateInventoryItem(variant.id);
+    const importedProduct = await generateImportedProduct(
+      product.id,
+      retailer.id
+    );
+    const importedVariant = await generateImportedVariant(
+      variant.id,
+      importedProduct.id
+    );
+    const importedInventoryItem = await generateImportedInventoryItem(
+      inventoryItem.id,
+      importedVariant.id
+    );
 
-  return {
-    session,
-    priceList,
-    product,
-    variant,
-    inventoryItem,
-    importedProduct,
-    importedVariant,
-    importedInventoryItem,
+    return {
+      supplier,
+      priceList,
+      product,
+      variant,
+      inventoryItem,
+      importedProduct,
+      importedVariant,
+      importedInventoryItem,
+      retailer,
+    };
   };
-};
