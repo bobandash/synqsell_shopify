@@ -10,7 +10,7 @@ import {
   disconnectClient,
   setupDatabase,
   teardownPool,
-} from "./setup/db-setup";
+} from "~/test-db-setup";
 import db from "@db/test-db";
 import {
   deleteAllImportedProducts,

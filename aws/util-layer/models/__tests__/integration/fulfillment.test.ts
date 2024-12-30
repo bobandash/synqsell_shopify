@@ -8,7 +8,7 @@ import {
   disconnectClient,
   setupDatabase,
   teardownPool,
-} from "./setup/db-setup";
+} from "~/test-db-setup";
 import db from "@db/test-db";
 import {
   deleteFulfillment,
@@ -17,7 +17,7 @@ import {
   getFulfillmentIdFromSupplierShopify,
 } from "../../fulfillment";
 
-describe("importedProduct", () => {
+describe("fulfillment", () => {
   let orderEntireFlowDetails: TestOrderEntireFlow;
   let database: DatabaseSetup;
   const nonExistentId = simpleFaker.string.uuid();

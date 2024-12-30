@@ -7,5 +7,8 @@ export default {
   transform: {
     "^.+.tsx?$": ["ts-jest", {}],
   },
+  moduleNameMapper: {
+    "^/opt/nodejs/(.*)$": "<rootDir>/util-layer/$1",
+  },
   maxWorkers: 4,
 };

@@ -14,6 +14,7 @@
     "outDir": "./opt/nodejs",
     "baseUrl": ".",
     "paths": {
+      "~/*": ["../*"],
       "@db/*": ["../../prisma/*"]
     }
   },

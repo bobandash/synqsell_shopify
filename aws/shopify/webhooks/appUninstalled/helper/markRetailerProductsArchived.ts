@@ -76,3 +76,7 @@ async function markRetailerProductsArchived(supplierId: string, client: PoolClie
 }
 
 export default markRetailerProductsArchived;
+export const exportsForTesting =
+    process.env.NODE_ENV === 'test'
+        ? { groupByRetailer, getAllRetailerImportedProductDetails, markRetailerProductsArchived }
+        : undefined;

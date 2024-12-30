@@ -9,7 +9,7 @@ import {
   disconnectClient,
   setupDatabase,
   teardownPool,
-} from "./setup/db-setup";
+} from "~/test-db-setup";
 import { getOrderLineItems } from "../../orderLineItem";
 
 describe("OrderLineItem", () => {
@@ -82,18 +82,3 @@ describe("OrderLineItem", () => {
     });
   });
 });
-
-// import { PoolClient } from "pg";
-// import { OrderLineItem } from "./types";
-
-// export async function getOrderLineItems(dbOrderId: string, client: PoolClient) {
-//   const query = `
-//       SELECT * FROM "OrderLineItem"
-//       WHERE "orderId" = $1
-//   `;
-//   const res = await client.query(query, [dbOrderId]);
-//   if (res.rows.length === 0) {
-//     throw new Error(`No order line items exists.`);
-//   }
-//   return res.rows as OrderLineItem[];
-// }

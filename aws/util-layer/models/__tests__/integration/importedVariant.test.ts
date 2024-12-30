@@ -12,7 +12,7 @@ import {
   disconnectClient,
   setupDatabase,
   teardownPool,
-} from "./setup/db-setup";
+} from "~/test-db-setup";
 import { getAllImportedVariants } from "../../importedVariant";
 
 describe("importedVariants", () => {

@@ -11,7 +11,9 @@ export default {
   setupFilesAfterEnv: ["<rootDir>/../prisma/setup.server.ts"],
   rootDir: ".",
   moduleNameMapper: {
+    "^~/(.*)$": "<rootDir>/$1",
     "^@db/(.*)$": "<rootDir>/../prisma/$1",
+    "^/opt/nodejs/(.*)$": "<rootDir>/util-layer/$1",
   },
   modulePathIgnorePatterns: [".aws-sam"],
 };
