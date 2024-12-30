@@ -95,9 +95,11 @@ describe("Stripe Customer Account", () => {
       expect(newAccount?.hasPaymentMethod).toBe(false);
     });
 
-    it("should not throw errors if inputs are invalid", async () => {
+    it("should not throw error if stripe customer id is invalid", async () => {
       const { client } = database;
-      await updatePaymentMethodStatus(nonExistentId, false, client);
+      await expect(
+        updatePaymentMethodStatus(nonExistentId, false, client)
+      ).rejects.toThrow("Stripe customer id does not exist.");
     });
   });
 });

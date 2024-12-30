@@ -237,3 +237,78 @@ export const generateFulfillmentData = (orderId: string) => ({
   retailerShopifyFulfillmentId: simpleFaker.string.uuid(),
   orderId,
 });
+
+export const generateOrderData = (
+  retailerId: string,
+  supplierId: string,
+  currency = "USD",
+  paymentStatus = "PENDING",
+  shippingCost = 0
+) => ({
+  id: simpleFaker.string.uuid(),
+  currency,
+  retailerShopifyFulfillmentOrderId: simpleFaker.string.uuid(),
+  supplierShopifyOrderId: simpleFaker.string.uuid(),
+  retailerId,
+  supplierId,
+  shippingCost,
+  paymentStatus,
+  createdAt: simpleFaker.date.recent(),
+  updatedAt: simpleFaker.date.recent(),
+});
+
+// model OrderLineItem {
+//   id                             String     @id @default(uuid())
+//   retailerShopifyVariantId       String
+//   supplierShopifyVariantId       String
+//   retailPricePerUnit             Decimal    @db.Decimal(10, 2)
+//   retailerProfitPerUnit          Decimal    @db.Decimal(10, 2)
+//   supplierProfitPerUnit          Decimal    @db.Decimal(10, 2)
+//   retailerShopifyOrderLineItemId String
+//   supplierShopifyOrderLineItemId String
+//   quantity                       Int
+//   quantityFulfilled              Int        @default(0)
+//   quantityPaid                   Int        @default(0)
+//   quantityCancelled              Int        @default(0)
+//   orderId                        String
+//   priceListId                    String?
+//   order                          Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+//   priceList                      PriceList? @relation(fields: [priceListId], references: [id], onDelete: SetNull)
+// }
+
+// model Fulfillment {
+//   id                           String   @id @default(uuid())
+//   supplierShopifyFulfillmentId String
+//   retailerShopifyFulfillmentId String
+//   orderId                      String
+//   order                        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+//   payment                      Payment?
+// }
+
+// model Payment {
+//   id                  String               @id @default(uuid())
+//   orderId             String
+//   stripeEventId       String               @unique
+//   status              String // need to listen to stripe's webhooks for this
+//   orderPaid           Decimal              @db.Decimal(10, 2)
+//   shippingPaid        Decimal              @db.Decimal(10, 2)
+//   totalPaid           Decimal              @db.Decimal(10, 2)
+//   createdAt           DateTime             @default(now())
+//   fulfillmentId       String               @unique
+//   order               Order                @relation(fields: [orderId], references: [id], onDelete: Cascade)
+//   fulfillment         Fulfillment          @relation(fields: [fulfillmentId], references: [id], onDelete: Cascade)
+//   billingTransactions BillingTransaction[]
+// }
+
+// // when a payment is made, we bill the merchants a portion of what they made
+// model BillingTransaction {
+//   id                   String   @id @default(uuid())
+//   createdAt            DateTime @default(now())
+//   paymentId            String
+//   shopifyUsageRecordId String   @unique
+//   amountPaid           Decimal  @db.Decimal(10, 2)
+//   currencyCode         String
+//   sessionId            String?
+//   payment              Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+//   session              Session? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+// }

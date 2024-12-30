@@ -33,7 +33,7 @@ describe("importedVariants", () => {
   });
 
   describe("getAllImportedVariants", () => {
-    it("should return imported variants for retailer", async () => {
+    it("should return imported variant for retailer", async () => {
       const { importedVariant, variant, retailer, supplier } = priceListDetails;
       const { client } = database;
       const res = await getAllImportedVariants(retailer.id, client);
@@ -47,7 +47,7 @@ describe("importedVariants", () => {
       ]);
     });
 
-    it("should return ALL imported variants for retailer", async () => {
+    it("should return multiple imported variants for retailer", async () => {
       const { importedVariant, variant, retailer, supplier, priceList } =
         priceListDetails;
       const { client } = database;
