@@ -3,9 +3,17 @@ import { exportsForTesting } from '../../markRetailerProductsArchived';
 import { DatabaseSetup, disconnectClient, setupDatabase, teardownPool } from '~/test-db-setup';
 import { createTestOrderWithEntireFlow, type TestOrderEntireFlow } from '@db/factories/order.factories';
 import { generateImportedProduct, generateProduct } from '@db/factories/pricelist.factories';
+import { mutateAndValidateGraphQLData } from '/opt/nodejs/utils';
+import { UPDATE_PRODUCT_STATUS_MUTATION } from '../../../graphql';
+import { createTestSession } from '@db/factories/session.factories';
+
 if (!exportsForTesting) {
     throw new Error('Environment is not tests.');
 }
+
+jest.mock('/opt/nodejs/utils', () => ({
+    mutateAndValidateGraphQLData: jest.fn(),
+}));
 
 const { getAllRetailerImportedProductDetails, markRetailerProductsArchived } = exportsForTesting;
 
@@ -14,6 +22,7 @@ describe('markRetailerProductsArchived', () => {
     let database: DatabaseSetup;
     const nonExistentId = simpleFaker.string.uuid();
     beforeEach(async () => {
+        jest.clearAllMocks();
         database = await setupDatabase();
         orderEntireFlowDetails = await createTestOrderWithEntireFlow();
     });
@@ -68,60 +77,54 @@ describe('markRetailerProductsArchived', () => {
             expect(res).toHaveLength(0);
         });
     });
+
+    describe('markRetailerProductsArchived', () => {
+        it('should archive single product for supplier with correct mutation parameters', async () => {
+            const { client } = database;
+            const { supplier, retailer, importedProduct } = orderEntireFlowDetails;
+            const { shopifyProductId } = importedProduct;
+            (mutateAndValidateGraphQLData as jest.Mock).mockResolvedValue({});
+            await markRetailerProductsArchived(supplier.id, client);
+            expect(mutateAndValidateGraphQLData).toHaveBeenCalledTimes(1);
+            expect(mutateAndValidateGraphQLData).toHaveBeenCalledWith(
+                retailer.shop,
+                retailer.accessToken,
+                UPDATE_PRODUCT_STATUS_MUTATION,
+                {
+                    input: {
+                        id: shopifyProductId,
+                        status: 'ARCHIVED',
+                    },
+                },
+                'Failed to update product status.',
+            );
+        });
+
+        it('should archive all products in single retailer for suppliers', async () => {
+            const { client } = database;
+            const { supplier, retailer, priceList } = orderEntireFlowDetails;
+            const newProduct = await generateProduct(priceList.id);
+            await generateImportedProduct(newProduct.id, retailer.id);
+            (mutateAndValidateGraphQLData as jest.Mock).mockResolvedValue({});
+            await markRetailerProductsArchived(supplier.id, client);
+            expect(mutateAndValidateGraphQLData).toHaveBeenCalledTimes(2);
+        });
+
+        it('should handle case no products found for supplier', async () => {
+            const { client } = database;
+            (mutateAndValidateGraphQLData as jest.Mock).mockResolvedValue({});
+            await markRetailerProductsArchived(nonExistentId, client);
+            expect(mutateAndValidateGraphQLData).toHaveBeenCalledTimes(0);
+        });
+
+        it('should archive all products for multiple retailers importing same product', async () => {
+            const { client } = database;
+            const { supplier, product } = orderEntireFlowDetails;
+            const retailerTwo = await createTestSession();
+            await generateImportedProduct(product.id, retailerTwo.id);
+            (mutateAndValidateGraphQLData as jest.Mock).mockResolvedValue({});
+            await markRetailerProductsArchived(supplier.id, client);
+            expect(mutateAndValidateGraphQLData).toHaveBeenCalledTimes(2);
+        });
+    });
 });
-
-// async function getAllRetailerImportedProductDetails(supplierId: string, client: PoolClient) {
-//     // retrieves all imported product ids from products listed by supplier
-//     const query = `
-//         SELECT
-//         "ImportedProduct"."shopifyProductId" AS "retailerShopifyProductId",
-//         "ImportedProduct"."retailerId"
-//         FROM "ImportedProduct"
-//         INNER JOIN "Product" ON "ImportedProduct"."prismaProductId" = "Product"."id"
-//         INNER JOIN "PriceList" ON "PriceList"."id" = "Product"."priceListId"
-//         WHERE "PriceList"."supplierId" = $1
-//     `;
-//     const res = await client.query(query, [supplierId]);
-//     const data: RetailerImportedProductDetail[] = res.rows;
-//     return data;
-// }
-
-// // ==============================================================================================================
-// // END: HELPER FUNCTIONS FOR MARKING RETAILER IMPORTED PRODUCTS FROM SUPPLIER AS INACTIVE
-// // ==============================================================================================================
-// async function markRetailerProductsArchived(supplierId: string, client: PoolClient) {
-//     const retailerImportedProductDetails = await getAllRetailerImportedProductDetails(supplierId, client);
-//     const retailerToShopifyProductIds = groupByRetailer(retailerImportedProductDetails);
-//     const retailerIds = Array.from(retailerToShopifyProductIds.keys());
-//     await Promise.all(
-//         retailerIds.map(async (retailerId) => {
-//             const retailerShopifyProductIds = retailerToShopifyProductIds.get(retailerId);
-//             const retailerSession = await getSessionFromId(retailerId, client);
-//             if (!retailerShopifyProductIds) {
-//                 return Promise.resolve();
-//             }
-//             return Promise.all(
-//                 retailerShopifyProductIds.map((shopifyProductId) =>
-//                     mutateAndValidateGraphQLData<UpdateProductStatusMutation>(
-//                         retailerSession.shop,
-//                         retailerSession.accessToken,
-//                         UPDATE_PRODUCT_STATUS_MUTATION,
-//                         {
-//                             input: {
-//                                 id: shopifyProductId,
-//                                 status: 'ARCHIVED',
-//                             },
-//                         },
-//                         'Failed to update product status.',
-//                     ),
-//                 ),
-//             );
-//         }),
-//     );
-// }
-
-// export default markRetailerProductsArchived;
-// export const exportsForTesting =
-//     process.env.NODE_ENV === 'test'
-//         ? { groupByRetailer, getAllRetailerImportedProductDetails, markRetailerProductsArchived }
-//         : undefined;

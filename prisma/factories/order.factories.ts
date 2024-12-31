@@ -16,7 +16,7 @@ import {
   generateProduct,
   generateVariant,
 } from "./pricelist.factories";
-import { PRICE_LIST_PRICING_STRATEGY } from "@db/constants";
+import { PRICE_LIST_PRICING_STRATEGY, ROLES } from "@db/constants";
 import {
   Session,
   PriceList,
@@ -31,7 +31,10 @@ import {
   Fulfillment,
   Payment,
   BillingTransaction,
+  Billing,
 } from "@prisma/client";
+import { generateRole } from "./role.factories";
+import { generateBilling } from "./billing.factories";
 
 export type TestOrderEntireFlow = {
   supplier: Session;
@@ -47,6 +50,8 @@ export type TestOrderEntireFlow = {
   orderLineItem: OrderLineItem;
   fulfillment: Fulfillment;
   payment: Payment;
+  supplierBilling: Billing,
+  retailerBilling: Billing,
   billingTransactionRetailer: BillingTransaction;
   billingTransactionSupplier: BillingTransaction;
 };
@@ -121,6 +126,10 @@ export const generateBillingTransaction = async (
 export async function createTestOrderWithEntireFlow(): Promise<TestOrderEntireFlow> {
   const supplier = await createTestSession();
   const retailer = await createTestSession();
+  await generateRole(supplier.id, ROLES.SUPPLIER);
+  await generateRole(retailer.id, ROLES.RETAILER);
+  const supplierBilling = await generateBilling(supplier.id);
+  const retailerBilling = await generateBilling(retailer.id);
   const priceList = await generatePriceList(
     supplier.id,
     true,
@@ -170,5 +179,7 @@ export async function createTestOrderWithEntireFlow(): Promise<TestOrderEntireFl
     payment,
     billingTransactionRetailer,
     billingTransactionSupplier,
+    supplierBilling,
+    retailerBilling,
   };
 }

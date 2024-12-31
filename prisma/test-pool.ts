@@ -23,4 +23,5 @@ async function initializePool() {
   return pool;
 }
 
+export { pool };
 export default initializePool;

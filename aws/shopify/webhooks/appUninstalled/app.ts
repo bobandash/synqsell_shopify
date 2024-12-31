@@ -11,9 +11,11 @@ import { logError, logInfo } from '/opt/nodejs/utils/logger';
 
 export const lambdaHandler = async (event: ShopifyEvent) => {
     const shop = event.detail.metadata['X-Shopify-Shop-Domain'];
+    const webhookId = event.id;
     let client: null | PoolClient = null;
     try {
         logInfo('Start: Uninstall application', {
+            webhookId,
             shop,
         });
         const pool = await initializePool();
@@ -27,13 +29,15 @@ export const lambdaHandler = async (event: ShopifyEvent) => {
             ...(isSupplier ? [markRetailerProductsArchived(session.id, client)] : []),
             ...(isRetailer ? [deleteAllImportedProducts(session.id, client)] : []),
             deleteBilling(session.id, client),
-            updateUninstalledStatus(session.id, false, client),
+            updateUninstalledStatus(session.id, true, client),
         ]);
         logInfo('End: Successfully uninstalled application', {
+            webhookId,
             shop,
         });
     } catch (error) {
         logError(error, {
+            webhookId,
             shop,
             context: 'Failed to uninstall application',
         });
