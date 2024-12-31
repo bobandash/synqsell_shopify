@@ -10,6 +10,7 @@ import { logError, logInfo } from '/opt/nodejs/utils/logger';
 export const lambdaHandler = async (event: ShopifyEvent) => {
     let client: null | PoolClient = null;
     const shop = event.detail.metadata['X-Shopify-Shop-Domain'];
+    const webhookId = event.detail.metadata['X-Shopify-Webhook-Id'];
     const {
         detail: {
             payload: { id },
@@ -20,9 +21,7 @@ export const lambdaHandler = async (event: ShopifyEvent) => {
     try {
         logInfo('Start: delete product', {
             shop,
-            eventDetails: {
-                shopifyProductId,
-            },
+            webhookId,
         });
 
         const pool = await initializePool();
@@ -38,20 +37,20 @@ export const lambdaHandler = async (event: ShopifyEvent) => {
             await handleDeletedSupplierProduct(shopifyProductId, client);
         } else if (isRetailerProduct) {
             await deleteImportedProduct(shopifyProductId, client);
+        } else {
+            logInfo('End: product deleted is not a SynqSell product', {
+                webhookId,
+            });
+            return;
         }
         logInfo('End: delete product', {
-            eventDetails: {
-                shopifyProductId,
-            },
+            webhookId,
         });
         return;
     } catch (error) {
         logError(error, {
             context: `Failed to delete product`,
-            shop,
-            eventDetails: {
-                shopifyProductId,
-            },
+            webhookId,
         });
         throw error;
     } finally {

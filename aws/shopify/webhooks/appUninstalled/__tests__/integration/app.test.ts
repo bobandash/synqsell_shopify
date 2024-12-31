@@ -36,10 +36,10 @@ describe('AppUninstalled Shopify Webhook', () => {
     it('should successfully handle supplier flow', async () => {
         const { supplier, supplierBilling } = orderEntireFlowDetails;
         const supplierEvent = {
-            id: simpleFaker.string.uuid(),
             detail: {
                 metadata: {
                     'X-Shopify-Shop-Domain': supplier.shop,
+                    'X-Shopify-Webhook-Id': simpleFaker.string.uuid(),
                 },
             },
         };
@@ -70,10 +70,10 @@ describe('AppUninstalled Shopify Webhook', () => {
     it('should successfully handle retailer flow', async () => {
         const { retailer, retailerBilling } = orderEntireFlowDetails;
         const retailerEvent = {
-            id: simpleFaker.string.uuid(),
             detail: {
                 metadata: {
                     'X-Shopify-Shop-Domain': retailer.shop,
+                    'X-Shopify-Webhook-Id': simpleFaker.string.uuid(),
                 },
             },
         };
@@ -110,10 +110,10 @@ describe('AppUninstalled Shopify Webhook', () => {
         const { retailer, retailerBilling } = orderEntireFlowDetails;
         await generateRole(retailer.id, ROLES.SUPPLIER);
         const retailerEvent = {
-            id: simpleFaker.string.uuid(),
             detail: {
                 metadata: {
                     'X-Shopify-Shop-Domain': retailer.shop,
+                    'X-Shopify-Webhook-Id': simpleFaker.string.uuid(),
                 },
             },
         };
@@ -144,10 +144,10 @@ describe('AppUninstalled Shopify Webhook', () => {
         const newSession = await createTestSession();
         const newBilling = await generateBilling(newSession.id);
         const uninstallEvent = {
-            id: simpleFaker.string.uuid(),
             detail: {
                 metadata: {
                     'X-Shopify-Shop-Domain': newSession.shop,
+                    'X-Shopify-Webhook-Id': simpleFaker.string.uuid(),
                 },
             },
         };

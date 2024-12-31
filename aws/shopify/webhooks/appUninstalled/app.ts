@@ -11,7 +11,7 @@ import { logError, logInfo } from '/opt/nodejs/utils/logger';
 
 export const lambdaHandler = async (event: ShopifyEvent) => {
     const shop = event.detail.metadata['X-Shopify-Shop-Domain'];
-    const webhookId = event.id;
+    const webhookId = event.detail.metadata['X-Shopify-Webhook-Id'];
     let client: null | PoolClient = null;
     try {
         logInfo('Start: Uninstall application', {

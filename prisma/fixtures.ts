@@ -123,7 +123,7 @@ export const generatePriceListData = ({
 export const generateProductData = (priceListId: string) => ({
   id: simpleFaker.string.uuid(),
   priceListId,
-  shopifyProductId: simpleFaker.string.alpha(10),
+  shopifyProductId: `gid://shopify/Product/${simpleFaker.number.bigInt()}`,
   createdAt: simpleFaker.date.recent(),
 });
 
@@ -144,7 +144,7 @@ export const generateImportedProductData = (
   retailerId,
   importedAt: simpleFaker.date.recent(),
   prismaProductId: dbProductId,
-  shopifyProductId: simpleFaker.string.uuid(),
+  shopifyProductId: `gid://shopify/Product/${simpleFaker.number.bigInt()}`,
 });
 
 export const generateInventoryItemData = (dbVariantId: string) => ({
