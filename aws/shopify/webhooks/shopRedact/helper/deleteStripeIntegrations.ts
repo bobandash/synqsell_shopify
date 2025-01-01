@@ -33,16 +33,20 @@ async function deleteStripeIntegrations(sessionId: string, client: PoolClient) {
         hasStripeCustomerAccount(sessionId, client),
         hasStripeConnectAccount(sessionId, client),
     ]);
+    console.log(stripeCustomerAccountExists);
+    console.log(stripeConnectAccountExists);
 
     if (stripeCustomerAccountExists) {
-        await deleteStripeConnectAccount(sessionId, client);
+        await deleteStripeCustomerAccount(sessionId, client);
     }
 
     if (stripeConnectAccountExists) {
-        await deleteStripeCustomerAccount(sessionId, client);
+        await deleteStripeConnectAccount(sessionId, client);
     }
 }
 
 export default deleteStripeIntegrations;
 export const exportsForTesting =
-    process.env.NODE_ENV === 'test' ? { deleteStripeConnectAccount, deleteStripeCustomerAccount } : undefined;
+    process.env.NODE_ENV === 'test'
+        ? { deleteStripeConnectAccount, deleteStripeCustomerAccount, deleteStripeIntegrations }
+        : undefined;
