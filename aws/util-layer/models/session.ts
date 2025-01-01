@@ -15,7 +15,7 @@ export async function getSessionFromId(sessionId: string, client: PoolClient) {
   const query = `SELECT * FROM "Session" WHERE id = $1 LIMIT 1`;
   const sessionData = await client.query(query, [sessionId]);
   if (sessionData.rows.length === 0) {
-    throw new Error("Shop data is invalid.");
+    throw new Error("Session id is invalid.");
   }
   const session = sessionData.rows[0];
   return session as Session;

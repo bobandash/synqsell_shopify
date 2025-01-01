@@ -1,7 +1,8 @@
 import { createTestSession } from "./session.factories";
 import { generateCarrierServiceData } from "@db/fixtures";
 import db from "@db/test-db";
-import { CarrierService, Session } from "@prisma/client";
+import { PrismaClient, Prisma, CarrierService, Session } from "@prisma/client";
+type DbClient = PrismaClient | Prisma.TransactionClient;
 
 export type TestCarrierService = {
   retailer: Session;
@@ -10,10 +11,11 @@ export type TestCarrierService = {
 
 export const generateCarrierService = async (
   retailerId: string,
-  overrides = {}
+  overrides = {},
+  ctx: DbClient = db
 ) => {
   const data = generateCarrierServiceData(retailerId);
-  return db.carrierService.create({
+  return await ctx.carrierService.create({
     data: {
       ...data,
       retailerId,

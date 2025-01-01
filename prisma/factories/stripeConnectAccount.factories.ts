@@ -1,7 +1,13 @@
 import { generateStripeConnectAccountData } from "@db/fixtures";
 import db from "@db/test-db";
 import { createTestSession } from "./session.factories";
-import { Session, StripeConnectAccount } from "@prisma/client";
+import {
+  Session,
+  StripeConnectAccount,
+  Prisma,
+  PrismaClient,
+} from "@prisma/client";
+type DbClient = PrismaClient | Prisma.TransactionClient;
 
 export type TestStripeConnectAccount = {
   session: Session;
@@ -10,10 +16,11 @@ export type TestStripeConnectAccount = {
 
 export const generateStripeConnectAccount = async (
   supplierId: string,
-  overrides = {}
+  overrides = {},
+  ctx: DbClient = db
 ) => {
   const data = generateStripeConnectAccountData(supplierId);
-  return db.stripeConnectAccount.create({
+  return await ctx.stripeConnectAccount.create({
     data: {
       ...data,
       ...overrides,

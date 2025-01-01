@@ -1,13 +1,12 @@
 import { simpleFaker } from '@faker-js/faker/.';
-import { exportsForTesting } from '../../markRetailerProductsArchived';
+import { exportsForTesting } from '../../deleteDataFromShopify';
 import { DatabaseSetup, disconnectClient, setupDatabase, teardownPool } from '~/test-db-setup';
 import { createTestOrderWithEntireFlow, type TestOrderEntireFlow } from '@db/factories/order.factories';
 import { generateImportedProduct, generateProduct } from '@db/factories/pricelist.factories';
-import { mutateAndValidateGraphQLData } from '/opt/nodejs/utils';
-import { UPDATE_PRODUCT_STATUS_MUTATION } from '../../../graphql';
-import { createTestSession } from '@db/factories/session.factories';
-import db from '@db/test-db';
-
+import { mutateAndValidateGraphQLData } from '~/util-layer/utils';
+import { DELETE_PRODUCT_MUTATION } from '../../../graphql';
+import { createTestRole } from '@db/factories/role.factories';
+import { ROLES } from '@db/constants';
 if (!exportsForTesting) {
     throw new Error('Environment is not tests.');
 }
@@ -16,9 +15,9 @@ jest.mock('/opt/nodejs/utils', () => ({
     mutateAndValidateGraphQLData: jest.fn(),
 }));
 
-const { getAllRetailerImportedProductDetails, markRetailerProductsArchived } = exportsForTesting;
+const { getAllRetailerImportedProductDetails, deleteAllImportedProductsShopify } = exportsForTesting;
 
-describe('markRetailerProductsArchived', () => {
+describe('deleteDataFromShopify', () => {
     let orderEntireFlowDetails: TestOrderEntireFlow;
     let database: DatabaseSetup;
     const nonExistentId = simpleFaker.string.uuid();
@@ -33,7 +32,7 @@ describe('markRetailerProductsArchived', () => {
     });
 
     afterAll(async () => {
-        await teardownPool(database.pool);
+        teardownPool(database.pool);
     });
 
     describe('getAllRetailerImportedProductDetails', () => {
@@ -79,53 +78,39 @@ describe('markRetailerProductsArchived', () => {
         });
     });
 
-    describe('markRetailerProductsArchived', () => {
-        it('should handle case no products found for supplier', async () => {
+    describe('deleteAllImportedProductsShopify', () => {
+        it(`should delete imported product on retailer's shopify store with correct parameters`, async () => {
+            const { importedProduct, retailer, supplier } = orderEntireFlowDetails;
             const { client } = database;
             (mutateAndValidateGraphQLData as jest.Mock).mockResolvedValue({});
-            await markRetailerProductsArchived(nonExistentId, client);
-            expect(mutateAndValidateGraphQLData).toHaveBeenCalledTimes(0);
-        });
-
-        it('should archive single product for supplier with correct mutation parameters', async () => {
-            const { client } = database;
-            const { supplier, retailer, importedProduct } = orderEntireFlowDetails;
-            const { shopifyProductId } = importedProduct;
-            (mutateAndValidateGraphQLData as jest.Mock).mockResolvedValue({});
-            await markRetailerProductsArchived(supplier.id, client);
+            await deleteAllImportedProductsShopify(supplier.id, client);
             expect(mutateAndValidateGraphQLData).toHaveBeenCalledTimes(1);
             expect(mutateAndValidateGraphQLData).toHaveBeenCalledWith(
                 retailer.shop,
                 retailer.accessToken,
-                UPDATE_PRODUCT_STATUS_MUTATION,
+                DELETE_PRODUCT_MUTATION,
                 {
-                    input: {
-                        id: shopifyProductId,
-                        status: 'ARCHIVED',
-                    },
+                    id: importedProduct.shopifyProductId,
                 },
-                'Failed to update product status.',
+                'Failed to delete product for retailer.',
             );
         });
 
-        it('should archive all products in single retailer for suppliers', async () => {
+        it(`should delete all imported products for all retailers' shopify stores that imported products from supplier`, async () => {
+            const { supplier, product } = orderEntireFlowDetails;
             const { client } = database;
-            const { supplier, retailer, priceList } = orderEntireFlowDetails;
-            const newProduct = await generateProduct(priceList.id);
-            await generateImportedProduct(newProduct.id, retailer.id);
+            const { session: newRetailer } = await createTestRole(ROLES.RETAILER, false);
+            await generateImportedProduct(product.id, newRetailer.id);
             (mutateAndValidateGraphQLData as jest.Mock).mockResolvedValue({});
-            await markRetailerProductsArchived(supplier.id, client);
+            await deleteAllImportedProductsShopify(supplier.id, client);
             expect(mutateAndValidateGraphQLData).toHaveBeenCalledTimes(2);
         });
 
-        it('should archive all products for multiple retailers importing same product', async () => {
+        it(`should not delete any imported products for nonExistent ID`, async () => {
             const { client } = database;
-            const { supplier, product } = orderEntireFlowDetails;
-            const retailerTwo = await createTestSession();
-            await generateImportedProduct(product.id, retailerTwo.id);
             (mutateAndValidateGraphQLData as jest.Mock).mockResolvedValue({});
-            await markRetailerProductsArchived(supplier.id, client);
-            expect(mutateAndValidateGraphQLData).toHaveBeenCalledTimes(2);
+            await deleteAllImportedProductsShopify(nonExistentId, client);
+            expect(mutateAndValidateGraphQLData).toHaveBeenCalledTimes(0);
         });
     });
 });

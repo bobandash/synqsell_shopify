@@ -44,3 +44,5 @@ async function deleteStripeIntegrations(sessionId: string, client: PoolClient) {
 }
 
 export default deleteStripeIntegrations;
+export const exportsForTesting =
+    process.env.NODE_ENV === 'test' ? { deleteStripeConnectAccount, deleteStripeCustomerAccount } : undefined;

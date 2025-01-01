@@ -8,13 +8,16 @@ import { CHECKLIST_ITEM_KEYS } from "@db/constants";
 import type { ChecklistItemKeysOptions } from "@db/constants";
 import db from "@db/test-db";
 import { createTestSession } from "./session.factories";
+import { Prisma, PrismaClient } from "@prisma/client";
+type DbClient = PrismaClient | Prisma.TransactionClient;
 
 export const generateChecklistTable = async (
   position: number,
-  overrides = {}
+  overrides = {},
+  ctx: DbClient = db
 ) => {
   const data = generateChecklistTableData(position);
-  return db.checklistTable.create({
+  return await ctx.checklistTable.create({
     data: {
       ...data,
       ...overrides,
@@ -26,10 +29,11 @@ export const generateChecklistItem = async (
   key: ChecklistItemKeysOptions,
   position: number,
   checklistTableId: string,
-  overrides = {}
+  overrides = {},
+  ctx: DbClient = db
 ) => {
   const data = generateChecklistItemData(key, position, checklistTableId);
-  return db.checklistItem.create({
+  return await ctx.checklistItem.create({
     data: {
       ...data,
       ...overrides,
@@ -41,14 +45,15 @@ export const generateChecklistStatus = async (
   sessionId: string,
   checklistItemId: string,
   isCompleted: boolean,
-  overrides = {}
+  overrides = {},
+  ctx: DbClient = db
 ) => {
   const data = generateChecklistStatusData(
     sessionId,
     checklistItemId,
     isCompleted
   );
-  return db.checklistStatus.create({
+  return await ctx.checklistStatus.create({
     data: {
       ...data,
       ...overrides,
@@ -59,10 +64,11 @@ export const generateChecklistStatus = async (
 export const generateUserPreference = async (
   sessionId: string,
   tableIdsHidden: string[],
-  overrides = {}
+  overrides = {},
+  ctx: DbClient = db
 ) => {
   const data = generateUserPreferenceData(sessionId, tableIdsHidden);
-  return db.userPreference.create({
+  return await ctx.userPreference.create({
     data: {
       ...data,
       ...overrides,

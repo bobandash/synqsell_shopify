@@ -17,9 +17,9 @@ function disconnectClient(client: PoolClient | null) {
   }
 }
 
-function teardownPool(pool: Pool | null) {
+async function teardownPool(pool: Pool | null) {
   if (pool) {
-    pool.end();
+    await pool.end();
   }
 }
 

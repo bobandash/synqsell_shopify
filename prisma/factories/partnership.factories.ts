@@ -7,13 +7,16 @@ import type {
   PartnershipRequestTypeOptions,
 } from "@db/constants";
 import db from "@db/test-db";
+import { Prisma, PrismaClient } from "@prisma/client";
+type DbClient = PrismaClient | Prisma.TransactionClient;
 
-export const generatePartnershipRequest = (
+export const generatePartnershipRequest = async (
   senderId: string,
   recipientId: string,
   status: PartnershipRequestStatusOptions,
   type: PartnershipRequestTypeOptions,
-  overrides = {}
+  overrides = {},
+  ctx: DbClient = db
 ) => {
   const data = generatePartnershipRequestData(
     senderId,
@@ -21,7 +24,7 @@ export const generatePartnershipRequest = (
     status,
     type
   );
-  return db.partnershipRequest.create({
+  return await ctx.partnershipRequest.create({
     data: {
       ...data,
       ...overrides,
@@ -29,13 +32,14 @@ export const generatePartnershipRequest = (
   });
 };
 
-export const generatePartnership = (
+export const generatePartnership = async (
   retailerId: string,
   supplierId: string,
-  overrides = {}
+  overrides = {},
+  ctx: DbClient = db
 ) => {
   const data = generatePartnershipData(retailerId, supplierId);
-  return db.partnership.create({
+  return await ctx.partnership.create({
     data: {
       ...data,
       ...overrides,

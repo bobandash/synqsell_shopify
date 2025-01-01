@@ -3,13 +3,16 @@ import {
   generateUserProfileData,
 } from "@db/fixtures";
 import db from "@db/test-db";
+import { PrismaClient, Prisma } from "@prisma/client";
+type DbClient = PrismaClient | Prisma.TransactionClient;
 
 export const generateUserProfile = async (
   sessionId: string,
-  overrides = {}
+  overrides = {},
+  ctx: DbClient = db
 ) => {
   const data = generateUserProfileData(sessionId);
-  return db.userProfile.create({
+  return await ctx.userProfile.create({
     data: {
       ...data,
       ...overrides,
@@ -19,10 +22,11 @@ export const generateUserProfile = async (
 
 export const generateSocialMediaLink = async (
   userProfileId: string,
-  overrides = {}
+  overrides = {},
+  ctx: DbClient = db
 ) => {
   const data = generateSocialMediaLinkData(userProfileId);
-  return db.socialMediaLink.create({
+  return await ctx.socialMediaLink.create({
     data: {
       ...data,
       ...overrides,

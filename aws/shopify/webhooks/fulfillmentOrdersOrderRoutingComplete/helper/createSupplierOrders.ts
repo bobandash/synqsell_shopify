@@ -19,13 +19,13 @@ import {
 } from '../types/admin.generated';
 import { ORDER_PAYMENT_STATUS, SERVICE_CODE, ServiceCodeProps } from '../constants';
 import { CurrencyCode } from '../types/admin.types';
-import { getRetailerToSupplierVariantIdMap } from './util';
 import { v4 as uuidv4 } from 'uuid';
 import { parseGid } from '@shopify/admin-graphql-api-utilities';
 import { getShopifyCarrierServiceId } from '/opt/nodejs/models/carrierService';
 import { createMapIdToRestObj, fetchAndValidateGraphQLData, mutateAndValidateGraphQLData } from '/opt/nodejs/utils';
 import { getSessionFromId } from '/opt/nodejs/models/session';
 import { Session } from '/opt/nodejs/models/types';
+
 type OrderDetailForDatabase = {
     shopifyOrderId: string;
     currency: CurrencyCode | null;
@@ -63,6 +63,31 @@ type ShippingRate = {
     };
     title: string;
 };
+type VariantAndImportedVariant = {
+    retailerShopifyVariantId: string;
+    supplierShopifyVariantId: string;
+};
+
+// ==============================================================================================================
+// START: UTILITY FUNCTION
+// ==============================================================================================================
+
+async function getRetailerToSupplierVariantIdMap(retailerVariantIds: string[], client: PoolClient) {
+    const supplierAndRetailerVariantIdsQuery = `
+      SELECT 
+          "ImportedVariant"."shopifyVariantId" as "retailerShopifyVariantId",
+          "Variant"."shopifyVariantId" as "supplierShopifyVariantId"
+      FROM "ImportedVariant"
+      INNER JOIN "Variant" ON "ImportedVariant"."prismaVariantId" = "Variant"."id"
+      WHERE "ImportedVariant"."shopifyVariantId" = ANY($1)  
+    `;
+    const baseAndImportedVariantData: VariantAndImportedVariant[] = (
+        await client.query(supplierAndRetailerVariantIdsQuery, [retailerVariantIds])
+    ).rows;
+
+    const retailerToSupplierVariantIdMap = createMapIdToRestObj(baseAndImportedVariantData, 'retailerShopifyVariantId');
+    return retailerToSupplierVariantIdMap;
+}
 
 // ==============================================================================================================
 // START: ADD EQUIVALENT ORDER FROM FULFILLMENT ORDER ON SUPPLIER'S SHOPIFY STORE LOGIC
@@ -115,7 +140,6 @@ async function getAllShippingRates(
         },
     };
 
-    // TODO: add retry mechanism and rate limiting on this
     const response = await fetch(carrierServiceCallbackUrl, {
         method: 'POST',
         headers: {

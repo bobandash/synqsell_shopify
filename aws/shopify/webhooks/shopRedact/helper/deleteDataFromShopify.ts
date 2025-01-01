@@ -45,8 +45,8 @@ async function getAllRetailerImportedProductDetails(supplierId: string, client: 
     return data;
 }
 
-async function deleteAllImportedProductsShopify(supplierSession: Session, client: PoolClient) {
-    const retailerImportedProductDetails = await getAllRetailerImportedProductDetails(supplierSession.id, client);
+async function deleteAllImportedProductsShopify(supplierSessionId: string, client: PoolClient) {
+    const retailerImportedProductDetails = await getAllRetailerImportedProductDetails(supplierSessionId, client);
     const retailerToShopifyProductIds = groupByRetailer(retailerImportedProductDetails);
     const retailerIds = Array.from(retailerToShopifyProductIds.keys());
     await Promise.all(
@@ -65,7 +65,7 @@ async function deleteAllImportedProductsShopify(supplierSession: Session, client
                         {
                             id: shopifyProductId,
                         },
-                        `Failed to delete product ${shopifyProductId} for retailer ${retailerId}.`,
+                        `Failed to delete product for retailer.`,
                     ),
                 ),
             );
@@ -81,8 +81,12 @@ async function deleteDataFromShopify(session: Session, client: PoolClient) {
     // There may be other impl in the future when user is a retailer, so I'll put the supplier check here
     const isSupplier = await hasRole(session.id, ROLES.SUPPLIER, client);
     if (isSupplier) {
-        await deleteAllImportedProductsShopify(session, client);
+        await deleteAllImportedProductsShopify(session.id, client);
     }
 }
 
 export default deleteDataFromShopify;
+export const exportsForTesting =
+    process.env.NODE_ENV === 'test'
+        ? { groupByRetailer, getAllRetailerImportedProductDetails, deleteAllImportedProductsShopify }
+        : undefined;

@@ -2,7 +2,9 @@ import type { RolesOptions } from "@db/constants";
 import db from "@db/test-db";
 import { generateRoleData } from "@db/fixtures";
 import { createTestSession } from "@db/factories/session.factories";
-import { Role, Session } from "@prisma/client";
+import { Prisma, Role, Session } from "@prisma/client";
+import { PrismaClient } from "@prisma/client/extension";
+type DbClient = PrismaClient | Prisma.TransactionClient;
 
 export type TestRole = {
   session: Session;
@@ -13,10 +15,11 @@ export const generateRole = async (
   sessionId: string,
   name: RolesOptions,
   isVisibleInNetwork: boolean = true,
-  overrides = {}
+  overrides = {},
+  ctx: DbClient = db
 ) => {
   const data = generateRoleData(sessionId, name, isVisibleInNetwork);
-  return db.role.create({
+  return await ctx.role.create({
     data: {
       ...data,
       sessionId,

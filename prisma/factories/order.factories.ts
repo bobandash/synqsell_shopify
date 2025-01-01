@@ -32,9 +32,12 @@ import {
   Payment,
   BillingTransaction,
   Billing,
+  Role,
 } from "@prisma/client";
 import { generateRole } from "./role.factories";
 import { generateBilling } from "./billing.factories";
+import { Prisma, PrismaClient } from "@prisma/client";
+type DbClient = PrismaClient | Prisma.TransactionClient;
 
 export type TestOrderEntireFlow = {
   supplier: Session;
@@ -50,19 +53,22 @@ export type TestOrderEntireFlow = {
   orderLineItem: OrderLineItem;
   fulfillment: Fulfillment;
   payment: Payment;
-  supplierBilling: Billing,
-  retailerBilling: Billing,
+  supplierBilling: Billing;
+  retailerBilling: Billing;
   billingTransactionRetailer: BillingTransaction;
   billingTransactionSupplier: BillingTransaction;
+  supplierRole: Role;
+  retailerRole: Role;
 };
 
 export const generateOrder = async (
   retailerId: string,
   supplierId: string,
-  overrides = {}
+  overrides = {},
+  ctx: DbClient = db
 ) => {
   const data = generateOrderData(retailerId, supplierId);
-  return db.order.create({
+  return await ctx.order.create({
     data: {
       ...data,
       ...overrides,
@@ -73,10 +79,11 @@ export const generateOrder = async (
 export const generateOrderLineItem = async (
   orderId: string,
   priceListId?: string,
-  overrides = {}
+  overrides = {},
+  ctx: DbClient = db
 ) => {
   const data = generateOrderLineItemData(orderId, priceListId);
-  return db.orderLineItem.create({
+  return await ctx.orderLineItem.create({
     data: {
       ...data,
       ...overrides,
@@ -84,9 +91,13 @@ export const generateOrderLineItem = async (
   });
 };
 
-export const generateFulfillment = async (orderId: string, overrides = {}) => {
+export const generateFulfillment = async (
+  orderId: string,
+  overrides = {},
+  ctx: DbClient = db
+) => {
   const data = generateFulfillmentData(orderId);
-  return db.fulfillment.create({
+  return await ctx.fulfillment.create({
     data: {
       ...data,
       ...overrides,
@@ -97,10 +108,11 @@ export const generateFulfillment = async (orderId: string, overrides = {}) => {
 export const generatePayment = async (
   orderId: string,
   fulfillmentId: string,
-  overrides = {}
+  overrides = {},
+  ctx: DbClient = db
 ) => {
   const data = generatePaymentData(orderId, fulfillmentId);
-  return db.payment.create({
+  return await ctx.payment.create({
     data: {
       ...data,
       ...overrides,
@@ -111,10 +123,11 @@ export const generatePayment = async (
 export const generateBillingTransaction = async (
   paymentId: string,
   sessionId?: string,
-  overrides = {}
+  overrides = {},
+  ctx: DbClient = db
 ) => {
   const data = generateBillingTransactionData(paymentId, sessionId);
-  return db.billingTransaction.create({
+  return await ctx.billingTransaction.create({
     data: {
       ...data,
       ...overrides,
@@ -124,62 +137,89 @@ export const generateBillingTransaction = async (
 
 // creates everything from price list to ordered item
 export async function createTestOrderWithEntireFlow(): Promise<TestOrderEntireFlow> {
-  const supplier = await createTestSession();
-  const retailer = await createTestSession();
-  await generateRole(supplier.id, ROLES.SUPPLIER);
-  await generateRole(retailer.id, ROLES.RETAILER);
-  const supplierBilling = await generateBilling(supplier.id);
-  const retailerBilling = await generateBilling(retailer.id);
-  const priceList = await generatePriceList(
-    supplier.id,
-    true,
-    PRICE_LIST_PRICING_STRATEGY.MARGIN
-  );
-  const product = await generateProduct(priceList.id);
-  const variant = await generateVariant(product.id);
-  const inventoryItem = await generateInventoryItem(variant.id);
-  const importedProduct = await generateImportedProduct(
-    product.id,
-    retailer.id
-  );
-  const importedVariant = await generateImportedVariant(
-    variant.id,
-    importedProduct.id
-  );
-  const importedInventoryItem = await generateImportedInventoryItem(
-    inventoryItem.id,
-    importedVariant.id
-  );
-  const order = await generateOrder(retailer.id, supplier.id);
-  const orderLineItem = await generateOrderLineItem(order.id, priceList.id);
-  const fulfillment = await generateFulfillment(order.id);
-  const payment = await generatePayment(order.id, fulfillment.id);
-  const billingTransactionRetailer = await generateBillingTransaction(
-    payment.id,
-    retailer.id
-  );
-  const billingTransactionSupplier = await generateBillingTransaction(
-    payment.id,
-    supplier.id
-  );
+  const res = await db.$transaction(async (tx) => {
+    const [supplier, retailer] = await Promise.all([
+      createTestSession({}, tx),
+      createTestSession({}, tx),
+    ]);
 
-  return {
-    supplier,
-    retailer,
-    priceList,
-    product,
-    variant,
-    inventoryItem,
-    importedProduct,
-    importedVariant,
-    importedInventoryItem,
-    order,
-    orderLineItem,
-    fulfillment,
-    payment,
-    billingTransactionRetailer,
-    billingTransactionSupplier,
-    supplierBilling,
-    retailerBilling,
-  };
+    const [supplierRole, retailerRole, supplierBilling, retailerBilling] =
+      await Promise.all([
+        generateRole(supplier.id, ROLES.SUPPLIER, true, {}, tx),
+        generateRole(retailer.id, ROLES.RETAILER, true, {}, tx),
+        generateBilling(supplier.id, {}, tx),
+        generateBilling(retailer.id, {}, tx),
+      ]);
+
+    const priceList = await generatePriceList(
+      supplier.id,
+      true,
+      PRICE_LIST_PRICING_STRATEGY.MARGIN,
+      {},
+      tx
+    );
+
+    const product = await generateProduct(priceList.id, {}, tx);
+    const variant = await generateVariant(product.id, {}, tx);
+    const inventoryItem = await generateInventoryItem(variant.id, {}, tx);
+
+    const importedProduct = await generateImportedProduct(
+      product.id,
+      retailer.id,
+      {},
+      tx
+    );
+    const importedVariant = await generateImportedVariant(
+      variant.id,
+      importedProduct.id,
+      {},
+      tx
+    );
+    const importedInventoryItem = await generateImportedInventoryItem(
+      inventoryItem.id,
+      importedVariant.id,
+      {},
+      tx
+    );
+
+    const order = await generateOrder(retailer.id, supplier.id, {}, tx);
+    const orderLineItem = await generateOrderLineItem(
+      order.id,
+      priceList.id,
+      {},
+      tx
+    );
+    const fulfillment = await generateFulfillment(order.id, {}, tx);
+    const payment = await generatePayment(order.id, fulfillment.id, {}, tx);
+
+    const [billingTransactionRetailer, billingTransactionSupplier] =
+      await Promise.all([
+        generateBillingTransaction(payment.id, retailer.id, {}, tx),
+        generateBillingTransaction(payment.id, supplier.id, {}, tx),
+      ]);
+
+    return {
+      supplier,
+      retailer,
+      priceList,
+      product,
+      variant,
+      inventoryItem,
+      importedProduct,
+      importedVariant,
+      importedInventoryItem,
+      order,
+      orderLineItem,
+      fulfillment,
+      payment,
+      billingTransactionRetailer,
+      billingTransactionSupplier,
+      supplierBilling,
+      retailerBilling,
+      supplierRole,
+      retailerRole,
+    };
+  });
+
+  return res;
 }

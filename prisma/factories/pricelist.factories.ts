@@ -22,7 +22,10 @@ import type {
   Product,
   Session,
   Variant,
+  Prisma,
+  PrismaClient,
 } from "@prisma/client";
+type DbClient = PrismaClient | Prisma.TransactionClient;
 
 export type TestGeneralPriceList = {
   supplier: Session;
@@ -37,18 +40,19 @@ export type TestGeneralPriceList = {
 };
 
 // Contains price list and relevant fields (product, imported product, etc)
-export const generatePriceList = (
+export const generatePriceList = async (
   supplierId: string,
   isGeneral: boolean,
   pricingStrategy: PriceListPricingStrategyOptions,
-  overrides = {}
+  overrides = {},
+  ctx: DbClient = db
 ) => {
   const data = generatePriceListData({
     supplierId,
     isGeneral,
     pricingStrategy,
   });
-  return db.priceList.create({
+  return await ctx.priceList.create({
     data: {
       ...data,
       ...overrides,
@@ -56,9 +60,13 @@ export const generatePriceList = (
   });
 };
 
-export const generateProduct = (priceListId: string, overrides = {}) => {
+export const generateProduct = async (
+  priceListId: string,
+  overrides = {},
+  ctx: DbClient = db
+) => {
   const data = generateProductData(priceListId);
-  return db.product.create({
+  return await ctx.product.create({
     data: {
       ...data,
       ...overrides,
@@ -66,9 +74,13 @@ export const generateProduct = (priceListId: string, overrides = {}) => {
   });
 };
 
-export const generateVariant = (dbProductId: string, overrides = {}) => {
+export const generateVariant = async (
+  dbProductId: string,
+  overrides = {},
+  ctx: DbClient = db
+) => {
   const data = generateVariantData(dbProductId);
-  return db.variant.create({
+  return await ctx.variant.create({
     data: {
       ...data,
       ...overrides,
@@ -76,13 +88,14 @@ export const generateVariant = (dbProductId: string, overrides = {}) => {
   });
 };
 
-export const generateImportedVariant = (
+export const generateImportedVariant = async (
   dbVariantId: string,
   dbImportedProductId: string,
-  overrides = {}
+  overrides = {},
+  ctx: DbClient = db
 ) => {
   const data = generateImportedVariantData(dbVariantId, dbImportedProductId);
-  return db.importedVariant.create({
+  return await ctx.importedVariant.create({
     data: {
       ...data,
       ...overrides,
@@ -90,13 +103,14 @@ export const generateImportedVariant = (
   });
 };
 
-export const generateImportedProduct = (
+export const generateImportedProduct = async (
   dbProductId: string,
   retailerId: string,
-  overrides = {}
+  overrides = {},
+  ctx: DbClient = db
 ) => {
   const data = generateImportedProductData(dbProductId, retailerId);
-  return db.importedProduct.create({
+  return await ctx.importedProduct.create({
     data: {
       ...data,
       ...overrides,
@@ -104,9 +118,13 @@ export const generateImportedProduct = (
   });
 };
 
-export const generateInventoryItem = (dbVariantId: string, overrides = {}) => {
+export const generateInventoryItem = async (
+  dbVariantId: string,
+  overrides = {},
+  ctx: DbClient = db
+) => {
   const data = generateInventoryItemData(dbVariantId);
-  return db.inventoryItem.create({
+  return await ctx.inventoryItem.create({
     data: {
       ...data,
       ...overrides,
@@ -114,16 +132,17 @@ export const generateInventoryItem = (dbVariantId: string, overrides = {}) => {
   });
 };
 
-export const generateImportedInventoryItem = (
+export const generateImportedInventoryItem = async (
   dbInventoryItemId: string,
   dbImportedVariantId: string,
-  overrides = {}
+  overrides = {},
+  ctx: DbClient = db
 ) => {
   const data = generateImportedInventoryItemData(
     dbInventoryItemId,
     dbImportedVariantId
   );
-  return db.importedInventoryItem.create({
+  return await ctx.importedInventoryItem.create({
     data: {
       ...data,
       ...overrides,

@@ -27,6 +27,7 @@ function groupByRetailer(retailerImportedProductDetails: RetailerImportedProduct
 
 async function getAllRetailerImportedProductDetails(supplierId: string, client: PoolClient) {
     // retrieves all imported product ids from products listed by supplier
+
     const query = `
         SELECT 
         "ImportedProduct"."shopifyProductId" AS "retailerShopifyProductId",
