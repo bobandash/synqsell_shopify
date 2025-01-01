@@ -39,8 +39,6 @@ jest.mock('../../singletons/stripe', () => ({
 }));
 
 describe('Shop Redact Webhook', () => {
-    let stripeConnectAccount: StripeConnectAccount;
-    let stripeCustomerAccount: StripeCustomerAccount;
     let orderEntireFlowDetails: TestOrderEntireFlow;
     const nonExistentId = simpleFaker.string.uuid();
     const createEvent = (shop: string): ShopifyEvent =>
@@ -57,8 +55,8 @@ describe('Shop Redact Webhook', () => {
         jest.clearAllMocks();
         orderEntireFlowDetails = await createTestOrderWithEntireFlow();
         const { supplier, retailer } = orderEntireFlowDetails;
-        stripeConnectAccount = await generateStripeConnectAccount(supplier.id);
-        stripeCustomerAccount = await generateStripeCustomerAccount(retailer.id, true);
+        await generateStripeConnectAccount(supplier.id);
+        await generateStripeCustomerAccount(retailer.id, true);
     });
 
     afterAll(async () => {
