@@ -33,9 +33,6 @@ async function deleteStripeIntegrations(sessionId: string, client: PoolClient) {
         hasStripeCustomerAccount(sessionId, client),
         hasStripeConnectAccount(sessionId, client),
     ]);
-    console.log(stripeCustomerAccountExists);
-    console.log(stripeConnectAccountExists);
-
     if (stripeCustomerAccountExists) {
         await deleteStripeCustomerAccount(sessionId, client);
     }

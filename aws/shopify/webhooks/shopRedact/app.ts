@@ -10,9 +10,11 @@ import { logError, logInfo } from '/opt/nodejs/utils/logger';
 export const lambdaHandler = async (event: ShopifyEvent) => {
     let client: null | PoolClient = null;
     const shop = event.detail.metadata['X-Shopify-Shop-Domain'];
+    const webhookId = event.detail.metadata['X-Shopify-Webhook-Id'];
     try {
         logInfo('Start: delete all data from database', {
             shop,
+            webhookId,
         });
         const pool = await initializePool();
         client = await pool.connect();
@@ -21,11 +23,13 @@ export const lambdaHandler = async (event: ShopifyEvent) => {
         await deleteSession(session.id, client);
         logInfo('End: Successfully deleted all data from database', {
             shop,
+            webhookId,
         });
         return;
     } catch (error) {
         logError('Failed to delete all data from database', {
             shop,
+            webhookId,
         });
         throw error;
     } finally {
