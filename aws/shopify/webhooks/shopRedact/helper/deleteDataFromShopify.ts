@@ -1,5 +1,5 @@
 import { PoolClient } from 'pg';
-import { Session } from '../types';
+import type { Session } from '/opt/nodejs/models/types';
 import { DELETE_PRODUCT_MUTATION } from '../graphql';
 import { ProductDeleteMutation } from '../types/admin.generated';
 import { getSessionFromId } from '/opt/nodejs/models/session';

@@ -86,25 +86,6 @@ export type ShopifyEvent = {
     };
 };
 
-export type Session = {
-    id: string;
-    shop: string;
-    state: string;
-    isOnline: boolean;
-    scope?: string;
-    expires?: Date;
-    accessToken: string;
-    userId?: bigint;
-    firstName?: string;
-    lastName?: string;
-    email?: string;
-    accountOwner: boolean;
-    locale?: string;
-    collaborator?: boolean;
-    emailVerified?: boolean;
-    isAppUninstalled: boolean;
-};
-
 export type ProductStatus = (typeof PRODUCT_STATUS)[keyof typeof PRODUCT_STATUS];
 
 export type VariantDetail = {
