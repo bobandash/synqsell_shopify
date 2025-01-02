@@ -11,8 +11,10 @@ import { Session } from "@prisma/client";
 import {
   deleteSession,
   getRetailerSessionFromOrderId,
+  getRetailerSessionFromRetailerShopifyProductId,
   getSessionFromId,
   getSessionFromShop,
+  getSupplierSessionFromRetailerShopifyProductId,
   updateUninstalledStatus,
 } from "../../session";
 import {
@@ -142,6 +144,44 @@ describe("Session Functions", () => {
         await expect(
           getRetailerSessionFromOrderId(nonExistentId, client)
         ).rejects.toThrow("No retailer session exists.");
+      });
+    });
+
+    describe("getRetailerSessionFromRetailerShopifyProductId", () => {
+      it("should return retailer session from retailer shopify product id", async () => {
+        const { client } = database;
+        const { retailer, importedProduct } = orderEntireFlowDetails;
+        const res = await getRetailerSessionFromRetailerShopifyProductId(
+          importedProduct.shopifyProductId,
+          client
+        );
+        expect(res).toMatchObject({ ...retailer });
+      });
+
+      it("should throw error if retailer shopify product id is not valid", async () => {
+        const { client } = database;
+        await expect(
+          getRetailerSessionFromRetailerShopifyProductId(nonExistentId, client)
+        ).rejects.toThrow("No retailer session exists.");
+      });
+    });
+
+    describe("getSupplierSessionFromRetailerShopifyProductId", () => {
+      it("should return supplier session from retailer shopify product id", async () => {
+        const { client } = database;
+        const { supplier, importedProduct } = orderEntireFlowDetails;
+        const res = await getSupplierSessionFromRetailerShopifyProductId(
+          importedProduct.shopifyProductId,
+          client
+        );
+        expect(res).toMatchObject({ ...supplier });
+      });
+
+      it("should throw error if retailer shopify product id is not valid", async () => {
+        const { client } = database;
+        await expect(
+          getSupplierSessionFromRetailerShopifyProductId(nonExistentId, client)
+        ).rejects.toThrow("No supplier session exists.");
       });
     });
   });

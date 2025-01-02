@@ -68,6 +68,42 @@ export async function getRetailerSessionFromOrderId(
   return res.rows[0] as Session;
 }
 
+export async function getRetailerSessionFromRetailerShopifyProductId(
+  retailerShopifyProductId: string,
+  client: PoolClient
+) {
+  const query = `
+      SELECT session.* 
+      FROM "ImportedProduct"
+      JOIN "Session" session ON "ImportedProduct"."retailerId" = session.id 
+      WHERE "shopifyProductId" = $1 
+  `;
+  const res = await client.query(query, [retailerShopifyProductId]);
+  if (res.rows.length === 0) {
+    throw new Error(`No retailer session exists.`);
+  }
+  return res.rows[0];
+}
+
+export async function getSupplierSessionFromRetailerShopifyProductId(
+  retailerShopifyProductId: string,
+  client: PoolClient
+) {
+  const query = `
+      SELECT "Session".* 
+      FROM "ImportedProduct"
+      JOIN "Product" ON "ImportedProduct"."prismaProductId" = "Product".id
+      JOIN "PriceList" ON "Product"."priceListId" = "PriceList".id
+      JOIN "Session" ON "PriceList"."supplierId" = "Session".id
+      WHERE "ImportedProduct"."shopifyProductId" = $1 
+  `;
+  const res = await client.query(query, [retailerShopifyProductId]);
+  if (res.rows.length === 0) {
+    throw new Error(`No supplier session exists.`);
+  }
+  return res.rows[0];
+}
+
 export async function deleteSession(sessionId: string, client: PoolClient) {
   const query = `
       DELETE FROM "Session"

@@ -6,7 +6,6 @@ import { generateImportedProduct, generateProduct } from '@db/factories/pricelis
 import { mutateAndValidateGraphQLData } from '/opt/nodejs/utils';
 import { UPDATE_PRODUCT_STATUS_MUTATION } from '../../../graphql';
 import { createTestSession } from '@db/factories/session.factories';
-import db from '@db/test-db';
 
 if (!exportsForTesting) {
     throw new Error('Environment is not tests.');
