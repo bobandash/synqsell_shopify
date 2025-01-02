@@ -150,40 +150,37 @@ export const generateImportedInventoryItem = async (
   });
 };
 
-export const createTestGeneralPriceListWithProducts =
-  async (): Promise<TestGeneralPriceList> => {
-    const supplier = await createTestSession();
-    const retailer = await createTestSession();
-    const priceList = await generatePriceList(
-      supplier.id,
-      true,
-      PRICE_LIST_PRICING_STRATEGY.MARGIN
-    );
-    const product = await generateProduct(priceList.id);
-    const variant = await generateVariant(product.id);
-    const inventoryItem = await generateInventoryItem(variant.id);
-    const importedProduct = await generateImportedProduct(
-      product.id,
-      retailer.id
-    );
-    const importedVariant = await generateImportedVariant(
-      variant.id,
-      importedProduct.id
-    );
-    const importedInventoryItem = await generateImportedInventoryItem(
-      inventoryItem.id,
-      importedVariant.id
-    );
+export const createTestGeneralPriceListWithProducts = async (
+  strategy: PriceListPricingStrategyOptions = PRICE_LIST_PRICING_STRATEGY.MARGIN
+): Promise<TestGeneralPriceList> => {
+  const supplier = await createTestSession();
+  const retailer = await createTestSession();
+  const priceList = await generatePriceList(supplier.id, true, strategy);
+  const product = await generateProduct(priceList.id);
+  const variant = await generateVariant(product.id);
+  const inventoryItem = await generateInventoryItem(variant.id);
+  const importedProduct = await generateImportedProduct(
+    product.id,
+    retailer.id
+  );
+  const importedVariant = await generateImportedVariant(
+    variant.id,
+    importedProduct.id
+  );
+  const importedInventoryItem = await generateImportedInventoryItem(
+    inventoryItem.id,
+    importedVariant.id
+  );
 
-    return {
-      supplier,
-      priceList,
-      product,
-      variant,
-      inventoryItem,
-      importedProduct,
-      importedVariant,
-      importedInventoryItem,
-      retailer,
-    };
+  return {
+    supplier,
+    priceList,
+    product,
+    variant,
+    inventoryItem,
+    importedProduct,
+    importedVariant,
+    importedInventoryItem,
+    retailer,
   };
+};

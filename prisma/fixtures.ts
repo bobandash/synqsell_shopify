@@ -127,14 +127,31 @@ export const generateProductData = (priceListId: string) => ({
   createdAt: simpleFaker.date.recent(),
 });
 
-export const generateVariantData = (dbProductId: string) => ({
-  id: simpleFaker.string.uuid(),
-  productId: dbProductId,
-  shopifyVariantId: simpleFaker.string.alpha(10),
-  retailPrice: simpleFaker.string.numeric(2),
-  retailerPayment: simpleFaker.string.numeric(2),
-  supplierProfit: simpleFaker.string.numeric(2),
-});
+// for tests, should be greater retail price > retailer payment at all costs
+export const generateRandomRetailPrice = () => {
+  return simpleFaker.number.int({ min: 10, max: 99 }).toFixed(2).toString();
+};
+
+export const generateRandomRetailerPayment = () => {
+  return simpleFaker.number.int({ min: 0, max: 10 }).toFixed(2).toString();
+};
+
+export const generateVariantData = (dbProductId: string) => {
+  const retailPrice = generateRandomRetailPrice();
+  const retailerPayment = generateRandomRetailerPayment();
+  const supplierProfit = (Number(retailPrice) - Number(retailerPayment))
+    .toFixed(2)
+    .toString();
+
+  return {
+    id: simpleFaker.string.uuid(),
+    productId: dbProductId,
+    shopifyVariantId: `gid://shopify/ProductVariant/${simpleFaker.number.bigInt()}`,
+    retailPrice,
+    retailerPayment,
+    supplierProfit,
+  };
+};
 
 export const generateImportedProductData = (
   dbProductId: string,

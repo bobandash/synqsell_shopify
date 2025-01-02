@@ -1,4 +1,4 @@
-import { PRODUCT_STATUS } from './constants';
+import { PRODUCT_STATUS } from '/opt/nodejs/constants';
 
 export type EditedVariant = {
     shopifyVariantId: string;
@@ -9,13 +9,13 @@ export type EditedVariant = {
 
 export type PriceListDetails = {
     id: string;
+    name: string;
+    supplierId: string;
     createdAt: Date;
     pricingStrategy: string;
-    supplierId: string;
     isGeneral: boolean;
-    name: string;
-    requiresApprovalToImport?: boolean;
-    margin?: number;
+    requiresApprovalToImport: boolean | null;
+    margin: number | null;
 };
 
 export type ShopifyEvent = {
@@ -106,3 +106,8 @@ export type Session = {
 };
 
 export type ProductStatus = (typeof PRODUCT_STATUS)[keyof typeof PRODUCT_STATUS];
+
+export type VariantDetail = {
+    shopifyVariantId: string;
+    retailPrice: string;
+};

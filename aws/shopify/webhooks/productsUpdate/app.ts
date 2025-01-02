@@ -19,13 +19,10 @@ export const lambdaHandler = async (event: ShopifyEvent) => {
         price: variant.price,
     }));
     const shop = event.detail.metadata['X-Shopify-Shop-Domain'];
-    const eventDetails = {
-        shopifyProductId,
-    };
+    const webhookId = event.detail.metadata['X-Shopify-Webhook-Id'];
     try {
         logInfo('Start: Update product details', {
-            shop,
-            eventDetails,
+            webhookId,
         });
         const pool = await initializePool();
         client = await pool.connect();
@@ -36,8 +33,7 @@ export const lambdaHandler = async (event: ShopifyEvent) => {
 
         if (!isSupplierProduct && !isRetailerProduct) {
             logInfo('End: Not a product on SynqSell', {
-                shop,
-                eventDetails,
+                webhookId,
             });
             return;
         }
@@ -49,15 +45,13 @@ export const lambdaHandler = async (event: ShopifyEvent) => {
             await revertRetailerProductModifications(shopifyProductId, editedVariants, newProductStatus, client);
         }
         logInfo('End: Successfully updated product details.', {
-            shop,
-            eventDetails,
+            webhookId,
         });
         return;
     } catch (error) {
         logError(error, {
-            shop,
             context: 'Failed to update product for either retailer or supplier.',
-            eventDetails,
+            webhookId,
         });
         throw error;
     } finally {

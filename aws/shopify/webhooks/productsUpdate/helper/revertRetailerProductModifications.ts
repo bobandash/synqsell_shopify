@@ -34,7 +34,7 @@ async function getRetailerSession(retailerShopifyProductId: string, client: Pool
     `;
     const res = await client.query(query, [retailerShopifyProductId]);
     if (res.rows.length === 0) {
-        throw new Error(`No retailer session exists for retailerShopifyId ${retailerShopifyProductId}.`);
+        throw new Error(`No retailer session exists.`);
     }
     return res.rows[0];
 }
@@ -50,7 +50,7 @@ async function getSupplierSession(retailerShopifyProductId: string, client: Pool
     `;
     const res = await client.query(query, [retailerShopifyProductId]);
     if (res.rows.length === 0) {
-        throw new Error(`No supplier session exists for retailerShopifyId ${retailerShopifyProductId}.`);
+        throw new Error(`No supplier session exists.`);
     }
     return res.rows[0];
 }
