@@ -61,3 +61,10 @@ export type FulfillmentService = {
   shopifyFulfillmentServiceId: string;
   shopifyLocationId: string;
 };
+
+export type Product = {
+  id: string;
+  priceListId: string;
+  shopifyProductId: string;
+  createdAt: Date;
+};

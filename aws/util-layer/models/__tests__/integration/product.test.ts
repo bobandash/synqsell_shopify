@@ -14,7 +14,11 @@ import {
   teardownPool,
 } from "~/test-db-setup";
 import { getAllImportedVariants } from "../../importedVariant";
-import { deleteProduct, isProduct } from "../../product";
+import {
+  deleteProduct,
+  getProductFromRetailerShopifyProductId,
+  isProduct,
+} from "../../product";
 import db from "@db/test-db";
 
 describe("importedVariants", () => {
@@ -71,6 +75,28 @@ describe("importedVariants", () => {
     it("should not throw error if not a product", async () => {
       const { client } = database;
       await deleteProduct(nonExistentId, client);
+    });
+  });
+
+  describe("getProductFromRetailerShopifyProductId", () => {
+    it("should successfully retrieve product from retailer shopify product id", async () => {
+      const { product, importedProduct } = priceListDetails;
+      const { client } = database;
+      const res = await getProductFromRetailerShopifyProductId(
+        importedProduct.shopifyProductId,
+        client
+      );
+      expect(res).toMatchObject({
+        ...product,
+        createdAt: expect.any(Date),
+      });
+    });
+
+    it("should throw error if product does not exist", async () => {
+      const { client } = database;
+      await expect(
+        getProductFromRetailerShopifyProductId(nonExistentId, client)
+      ).rejects.toThrow();
     });
   });
 });
