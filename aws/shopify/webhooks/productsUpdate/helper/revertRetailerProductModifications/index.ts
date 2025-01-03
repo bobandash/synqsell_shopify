@@ -13,7 +13,7 @@ import {
     getProductStatusShopify,
     getShopifyVariantData,
     updateInventoryShopify,
-    updatePriceShopify,
+    updateVariantShopify,
     updateProductStatusShopify,
 } from '../util/graphql';
 import { getProductFromRetailerShopifyProductId } from '/opt/nodejs/models/product';
@@ -91,11 +91,11 @@ async function revertRetailerVariantPrices(
             throw new Error('Retailer variant does not exist.');
         }
         return {
-            shopifyVariantId: retailerVariantId,
+            id: retailerVariantId,
             price: supplierPrice,
         };
     });
-    await updatePriceShopify(retailerSession, importedShopifyProductId, input);
+    await updateVariantShopify(retailerSession, importedShopifyProductId, input);
 }
 
 async function getSupplierVariantIdToRetailerInventoryItemId(supplierVariantIds: string[], client: PoolClient) {
@@ -161,7 +161,7 @@ async function revertProductVariants(
     const supplierShopifyVariantIds = retailerAndSupplierVariantIds.map(
         ({ supplierShopifyVariantId }) => supplierShopifyVariantId,
     );
-    const supplierShopifyVariantData = await getShopifyVariantData(supplierShopifyVariantIds, supplierSession);
+    const supplierShopifyVariantData = await getShopifyVariantData(supplierSession, supplierShopifyVariantIds);
     // We must prevent the products/update webhook from triggering indefinitely
     // in order to do so, we have to check if we need to make a mutation in the first place
     // otherwise, it would constantly call update variant over and over again, and trigger the products/update webhook

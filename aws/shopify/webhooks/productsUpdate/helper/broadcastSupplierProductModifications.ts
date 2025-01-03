@@ -1,9 +1,9 @@
 import { PoolClient } from 'pg';
 import { EditedVariant, PriceListDetails, ProductStatus } from '../types';
-import { ADJUST_INVENTORY_MUTATION, PRODUCT_VARIANT_BULK_UPDATE_PRICE, UPDATE_PRODUCT_MUTATION } from '../graphql';
-import { InventorySetQuantitiesMutation, UpdateProductMutation } from '../types/admin.generated';
+
 import { getPricingDetails } from './util';
-import { createMapIdToRestObj, mutateAndValidateGraphQLData } from '/opt/nodejs/utils';
+import { createMapIdToRestObj } from '/opt/nodejs/utils';
+import { updateInventoryShopify, updateProductStatusShopify, updateVariantShopify } from './util/graphql';
 type ImportedRetailerData = {
     retailerShopifyProductId: string;
     retailerAccessToken: string;
@@ -131,29 +131,24 @@ async function updateRetailerPriceOnShopify(
             shopifyVariantId: variant.retailerShopifyVariantId,
         }));
 
-        const variantPricingDetails = await getPricingDetails(
+        const newPricingDetails = await getPricingDetails(
             variantsFormatted,
             priceList,
             supplierShopifyProductId,
             client,
         );
 
-        const updateRetailerVariantsInput = variantPricingDetails.map((variant) => ({
+        const input = newPricingDetails.map((variant) => ({
             id: variant.shopifyVariantId,
             price: variant.retailPrice,
             inventoryItem: {
                 cost: variant.supplierProfit,
             },
         }));
-        return mutateAndValidateGraphQLData(
-            updateData.retailerShop,
-            updateData.retailerAccessToken,
-            PRODUCT_VARIANT_BULK_UPDATE_PRICE,
-            {
-                productId: retailerShopifyProductId,
-                variants: updateRetailerVariantsInput,
-            },
-            'Could not update variant details.',
+        await updateVariantShopify(
+            { shop: updateData.retailerShop, accessToken: updateData.retailerAccessToken },
+            retailerShopifyProductId,
+            input,
         );
     });
     await Promise.all(updateRetailerProductPricesPromise);
@@ -164,39 +159,26 @@ async function updateRetailerPriceOnShopify(
 // ==============================================================================================================
 async function updateRetailerInventoryOnShopify(data: GroupedQueryDataWithUpdateFields) {
     const retailerShopifyProductsIds = Array.from(data.keys());
-    const updateInventoryPromises: Promise<InventorySetQuantitiesMutation>[] = [];
-    retailerShopifyProductsIds.forEach((retailerShopifyProductId) => {
-        const updateData = data.get(retailerShopifyProductId);
-        if (!updateData) {
-            return;
-        }
-
-        updateData.variants.map((variant) => {
-            const input = {
-                reason: 'other',
-                ignoreCompareQuantity: true,
-                name: 'available',
-                quantities: {
-                    inventoryItemId: variant.retailerShopifyInventoryItemId,
-                    locationId: updateData.retailerShopifyLocationId,
-                    quantity: variant.inventory,
-                },
-            };
-            updateInventoryPromises.push(
-                mutateAndValidateGraphQLData<InventorySetQuantitiesMutation>(
-                    updateData.retailerShop,
-                    updateData.retailerAccessToken,
-                    ADJUST_INVENTORY_MUTATION,
+    await Promise.all(
+        retailerShopifyProductsIds.map(async (retailerShopifyProductId) => {
+            const updateData = data.get(retailerShopifyProductId);
+            if (!updateData) {
+                return;
+            }
+            const updateInventoryPromises = updateData.variants.map((variant) =>
+                updateInventoryShopify(
                     {
-                        input,
+                        shop: updateData.retailerShop,
+                        accessToken: updateData.retailerAccessToken,
                     },
-                    'Could not adjust retailer quantity.',
+                    variant.retailerShopifyInventoryItemId,
+                    updateData.retailerShopifyLocationId,
+                    variant.inventory,
                 ),
             );
-        });
-    });
-
-    await Promise.all(updateInventoryPromises);
+            await Promise.all(updateInventoryPromises);
+        }),
+    );
 }
 
 // ==============================================================================================================
@@ -211,20 +193,12 @@ async function updateRetailerProductStatusOnShopify(
         retailerShopifyProductIds.map((retailerShopifyProductId) => {
             const retailerData = data.get(retailerShopifyProductId);
             if (!retailerData) {
-                return Promise.resolve();
+                return;
             }
-            const { retailerAccessToken, retailerShop } = retailerData;
-            return mutateAndValidateGraphQLData<UpdateProductMutation>(
-                retailerShop,
-                retailerAccessToken,
-                UPDATE_PRODUCT_MUTATION,
-                {
-                    input: {
-                        id: retailerShopifyProductId,
-                        status: supplierProductStatus,
-                    },
-                },
-                `Failed to update the product status.`,
+            return updateProductStatusShopify(
+                { shop: retailerData.retailerShop, accessToken: retailerData.retailerAccessToken },
+                retailerShopifyProductId,
+                supplierProductStatus,
             );
         }),
     );

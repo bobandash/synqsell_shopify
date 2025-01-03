@@ -10,12 +10,24 @@ import { ProductStatusQuery, ProductVariantInfoQuery, UpdateProductMutation } fr
 import { Session } from '/opt/nodejs/models/types';
 import { fetchAndValidateGraphQLData, mutateAndValidateGraphQLData } from '/opt/nodejs/utils';
 
-type VariantPriceMutationInput = {
-    shopifyVariantId: string;
+type VariantUpdateMutation = {
+    id: string; // shopifyVariantId
     price: any;
+    inventoryItem?: {
+        cost?: string;
+    };
 }[];
 
-async function updateProductStatusShopify(session: Session, shopifyProductId: string, status: ProductStatus) {
+type SessionGraphQLDetail = {
+    shop: string;
+    accessToken: string;
+};
+
+async function updateProductStatusShopify(
+    session: Session | SessionGraphQLDetail,
+    shopifyProductId: string,
+    status: ProductStatus,
+) {
     await mutateAndValidateGraphQLData<UpdateProductMutation>(
         session.shop,
         session.accessToken,
@@ -30,7 +42,7 @@ async function updateProductStatusShopify(session: Session, shopifyProductId: st
     );
 }
 
-async function getProductStatusShopify(session: Session, shopifyProductId: string) {
+async function getProductStatusShopify(session: Session | SessionGraphQLDetail, shopifyProductId: string) {
     const res = await fetchAndValidateGraphQLData<ProductStatusQuery>(
         session.shop,
         session.accessToken,
@@ -47,7 +59,7 @@ async function getProductStatusShopify(session: Session, shopifyProductId: strin
 }
 
 async function updateInventoryShopify(
-    session: Session,
+    session: Session | SessionGraphQLDetail,
     shopifyInventoryItemId: string,
     shopifyLocationId: string,
     quantity: number,
@@ -73,34 +85,29 @@ async function updateInventoryShopify(
     );
 }
 
-export async function updatePriceShopify(
-    session: Session,
+export async function updateVariantShopify(
+    session: Session | SessionGraphQLDetail,
     shopifyProductId: string,
-    variantsAndPrice: VariantPriceMutationInput,
+    variantUpdateInput: VariantUpdateMutation,
 ) {
-    const variantsInput = variantsAndPrice.map(({ shopifyVariantId, price }) => ({
-        id: shopifyVariantId,
-        price,
-    }));
-
     await mutateAndValidateGraphQLData(
         session.shop,
         session.accessToken,
         PRODUCT_VARIANT_BULK_UPDATE_PRICE,
         {
             productId: shopifyProductId,
-            variants: variantsInput,
+            variants: variantUpdateInput,
         },
-        'Failed to update price for retailer product.',
+        'Failed to update variants.',
     );
 }
 
-export async function getShopifyVariantData(shopifyVariantIds: string[], supplierSession: Session) {
+export async function getShopifyVariantData(session: Session | SessionGraphQLDetail, shopifyVariantIds: string[]) {
     const supplierVariantData = await Promise.all(
         shopifyVariantIds.map((shopifyVariantId) =>
             fetchAndValidateGraphQLData<ProductVariantInfoQuery>(
-                supplierSession.shop,
-                supplierSession.accessToken,
+                session.shop,
+                session.accessToken,
                 PRODUCT_VARIANT_INFO,
                 {
                     id: shopifyVariantId,
