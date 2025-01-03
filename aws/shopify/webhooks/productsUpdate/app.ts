@@ -18,7 +18,6 @@ export const lambdaHandler = async (event: ShopifyEvent) => {
         newInventory: variant.inventory_quantity,
         price: variant.price,
     }));
-    const shop = event.detail.metadata['X-Shopify-Shop-Domain'];
     const webhookId = event.detail.metadata['X-Shopify-Webhook-Id'];
     try {
         logInfo('Start: Update product details', {
@@ -37,10 +36,9 @@ export const lambdaHandler = async (event: ShopifyEvent) => {
             });
             return;
         }
-        // there is no old price, so we cannot check if the variant price has been updated
-        // even though it consumes GraphQL resources, we are going to broadcast the price changes
+
         if (isSupplierProduct) {
-            await broadcastSupplierProductModifications(editedVariants, shopifyProductId, newProductStatus, client);
+            await broadcastSupplierProductModifications(shopifyProductId, editedVariants, newProductStatus, client);
         } else if (isRetailerProduct) {
             await revertRetailerProductModifications(shopifyProductId, editedVariants, newProductStatus, client);
         }
@@ -50,7 +48,7 @@ export const lambdaHandler = async (event: ShopifyEvent) => {
         return;
     } catch (error) {
         logError(error, {
-            context: 'Failed to update product for either retailer or supplier.',
+            context: 'Failed to update product details.',
             webhookId,
         });
         throw error;
