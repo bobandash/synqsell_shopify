@@ -33,10 +33,12 @@ import {
   BillingTransaction,
   Billing,
   Role,
+  FulfillmentService,
 } from "@prisma/client";
 import { generateRole } from "./role.factories";
 import { generateBilling } from "./billing.factories";
 import { Prisma, PrismaClient } from "@prisma/client";
+import { generateFulfillmentService } from "./fulfillmentService.factories";
 type DbClient = PrismaClient | Prisma.TransactionClient;
 
 export type TestOrderEntireFlow = {
@@ -59,6 +61,7 @@ export type TestOrderEntireFlow = {
   billingTransactionSupplier: BillingTransaction;
   supplierRole: Role;
   retailerRole: Role;
+  retailerFulfillmentService: FulfillmentService;
 };
 
 export const generateOrder = async (
@@ -142,6 +145,11 @@ export async function createTestOrderWithEntireFlow(): Promise<TestOrderEntireFl
       createTestSession({}, tx),
       createTestSession({}, tx),
     ]);
+    const retailerFulfillmentService = await generateFulfillmentService(
+      retailer.id,
+      {},
+      tx
+    );
 
     const [supplierRole, retailerRole, supplierBilling, retailerBilling] =
       await Promise.all([
@@ -218,8 +226,32 @@ export async function createTestOrderWithEntireFlow(): Promise<TestOrderEntireFl
       retailerBilling,
       supplierRole,
       retailerRole,
+      retailerFulfillmentService,
     };
   });
 
   return res;
+}
+
+export async function createNewVariantAndImportedVariant(
+  dbProductId: string,
+  dbImportedProductId: string
+) {
+  const newVariant = await generateVariant(dbProductId);
+  const newInventoryItem = await generateInventoryItem(newVariant.id);
+  const newImportedVariant = await generateImportedVariant(
+    newVariant.id,
+    dbImportedProductId
+  );
+  const newImportedInventoryItem = await generateImportedInventoryItem(
+    newInventoryItem.id,
+    newImportedVariant.id
+  );
+
+  return {
+    newVariant,
+    newInventoryItem,
+    newImportedVariant,
+    newImportedInventoryItem,
+  };
 }

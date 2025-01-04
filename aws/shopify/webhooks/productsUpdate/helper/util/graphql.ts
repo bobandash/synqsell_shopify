@@ -102,7 +102,7 @@ export async function updateVariantShopify(
     );
 }
 
-export async function getShopifyVariantData(session: Session | SessionGraphQLDetail, shopifyVariantIds: string[]) {
+export async function getVariantDataShopify(session: Session | SessionGraphQLDetail, shopifyVariantIds: string[]) {
     const supplierVariantData = await Promise.all(
         shopifyVariantIds.map((shopifyVariantId) =>
             fetchAndValidateGraphQLData<ProductVariantInfoQuery>(

@@ -1,6 +1,5 @@
 import { PoolClient } from 'pg';
 import { EditedVariant, PriceListDetails, ProductStatus } from '../types';
-
 import { getPricingDetails } from './util';
 import { createMapIdToRestObj } from '/opt/nodejs/utils';
 import { updateInventoryShopify, updateProductStatusShopify, updateVariantShopify } from './util/graphql';
@@ -221,7 +220,9 @@ async function getImportedRetailerData(supplierShopifyProductId: string, client:
         INNER JOIN "ImportedInventoryItem" ON "ImportedVariant"."id" = "ImportedInventoryItem"."importedVariantId"
         INNER JOIN "Session" ON "ImportedProduct"."retailerId" = "Session"."id"
         INNER JOIN "FulfillmentService" ON "FulfillmentService"."sessionId" = "Session"."id"
-        WHERE "Product"."shopifyProductId" = $1   
+        WHERE 
+            "Product"."shopifyProductId" = $1 AND 
+            "Session"."isAppUninstalled" = FALSE
     `;
     const res = await client.query(query, [supplierShopifyProductId]);
     const data: ImportedRetailerData[] = res.rows;
