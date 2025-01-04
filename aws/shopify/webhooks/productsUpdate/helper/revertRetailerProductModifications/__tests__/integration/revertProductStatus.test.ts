@@ -42,7 +42,7 @@ describe('revertProductStatus', () => {
         );
     });
 
-    it(`should not update product status on Shopify if retailer's imported product does not match supplier's`, async () => {
+    it(`should not update product status on Shopify if retailer's imported product matches supplier's`, async () => {
         const { client } = database;
         const { importedProduct, retailer, supplier } = orderEntireFlowDetails;
         (getProductStatusShopify as jest.Mock).mockResolvedValueOnce(PRODUCT_STATUS.ACTIVE);
