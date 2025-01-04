@@ -1,4 +1,4 @@
-import { Session } from '@prisma/client';
+import type { Session } from '/opt/nodejs/models/types';
 import { EditedVariant } from '../../types';
 import { PoolClient } from 'pg';
 import {
@@ -7,7 +7,7 @@ import {
     revertRetailerVariantInventory,
     revertRetailerVariantPrices,
 } from './helper';
-import { getVariantDataShopify } from '../util/graphql';
+import { getVariantDataShopify } from '../util';
 
 async function revertProductVariants(
     retailerShopifyProductId: string,

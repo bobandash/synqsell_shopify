@@ -4,7 +4,6 @@ import type { Session } from '/opt/nodejs/models/types';
 import { ProductVariantInfoQuery } from '../../types/admin.generated';
 import { createMapIdToRestObj } from '/opt/nodejs/utils';
 import { getFulfillmentService } from '/opt/nodejs/models/fulfillmentService';
-
 import { updateInventoryShopify, updateVariantShopify } from '../util/graphql';
 
 type RetailerAndSupplierVariantId = {
@@ -45,7 +44,6 @@ function hasImportantRetailerVariantChanges(
         'supplierShopifyVariantId',
     );
     const retailerEditedVariantsMap = createMapIdToRestObj(retailerEditedVariants, 'shopifyVariantId');
-
     return supplierShopifyVariantData.some(({ productVariant }) => {
         if (!productVariant?.id) {
             throw new Error('Supplier variant is missing ID');
