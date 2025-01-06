@@ -1,14 +1,15 @@
-import type { RolesOptions } from "@db/constants";
+import { type RolesOptions } from "@db/constants";
 import db from "@db/test-db";
 import { generateRoleData } from "@db/fixtures";
 import { createTestSession } from "@db/factories/session.factories";
-import { Prisma, Role, Session } from "@prisma/client";
+import { FulfillmentService, Prisma, Role, Session } from "@prisma/client";
 import { PrismaClient } from "@prisma/client/extension";
 type DbClient = PrismaClient | Prisma.TransactionClient;
 
 export type TestRole = {
   session: Session;
   role: Role;
+  fulfillmentService?: FulfillmentService;
 };
 
 export const generateRole = async (
@@ -40,5 +41,6 @@ export const createTestRole = async (
     isVisibleInNetwork,
     overrides
   );
+
   return { session, role };
 };

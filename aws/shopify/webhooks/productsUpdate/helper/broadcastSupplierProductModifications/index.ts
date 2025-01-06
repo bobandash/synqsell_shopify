@@ -98,3 +98,12 @@ async function broadcastSupplierProductModifications(
 }
 
 export default broadcastSupplierProductModifications;
+
+export const exportsForTesting =
+    process.env.NODE_ENV === 'test'
+        ? {
+              getImportedRetailerData,
+              getFormattedRetailerImportedData,
+              broadcastSupplierProductModifications,
+          }
+        : undefined;
