@@ -1,32 +1,8 @@
 import { PoolClient } from 'pg';
-import { EditedVariant, PriceListDetails, ProductStatus } from '../types';
-import { getPricingDetails } from './util';
-import { createMapIdToRestObj } from '/opt/nodejs/utils';
-import { updateInventoryShopify, updateProductStatusShopify, updateVariantShopify } from './util/graphql';
-type ImportedRetailerData = {
-    retailerShopifyProductId: string;
-    retailerAccessToken: string;
-    retailerShop: string;
-    retailerShopifyVariantId: string;
-    supplierShopifyVariantId: string;
-    retailerShopifyLocationId: string;
-    retailerShopifyInventoryItemId: string;
-};
+import { EditedVariant, GroupedQueryDataWithUpdateFields, PriceListDetails, ProductStatus } from '../../types';
+import { getPricingDetails } from '../util';
 
-type GroupedQueryDataWithUpdateFields = Map<
-    string, // Key is Retailer Shopify Product ID (Imported Product)
-    {
-        retailerAccessToken: string;
-        retailerShop: string;
-        retailerShopifyLocationId: string;
-        variants: {
-            retailerShopifyVariantId: string;
-            retailPrice: string;
-            inventory: number;
-            retailerShopifyInventoryItemId: string;
-        }[];
-    }
->;
+import { updateInventoryShopify, updateProductStatusShopify, updateVariantShopify } from '../util/graphql';
 
 type UpdatePriceInfoData = {
     retailPrice: string;
@@ -49,13 +25,13 @@ async function getAllPriceLists(supplierShopifyProductId: string, client: PoolCl
     `;
     const res = await client.query(query, [supplierShopifyProductId]);
     if (res.rows.length === 0) {
-        throw new Error('No price list found.');
+        throw new Error(`No price list exists for ${supplierShopifyProductId}.`);
     }
     const priceLists: PriceListDetails[] = res.rows;
     return priceLists;
 }
 
-async function updateVariantPriceInformation(variantPriceInfo: UpdatePriceInfoData, client: PoolClient) {
+async function updateVariantPriceDb(variantPriceInfo: UpdatePriceInfoData, client: PoolClient) {
     const { retailPrice, retailerPayment, supplierProfit, shopifyVariantId, priceListId } = variantPriceInfo;
     const query = `
         UPDATE "Variant"
@@ -72,7 +48,7 @@ async function updateVariantPriceInformation(variantPriceInfo: UpdatePriceInfoDa
     await client.query(query, [retailPrice, retailerPayment, supplierProfit, shopifyVariantId, priceListId]);
 }
 
-async function updateVariantPricesDatabase(
+async function updateAllVariantsPricingDb(
     editedVariants: EditedVariant[],
     supplierShopifyProductId: string,
     client: PoolClient,
@@ -82,13 +58,20 @@ async function updateVariantPricesDatabase(
         retailPrice: variant.price,
     }));
     const priceLists = await getAllPriceLists(supplierShopifyProductId, client);
-    priceLists.forEach(async (priceList) => {
-        const newPricingInfo = await getPricingDetails(variantsFormatted, priceList, supplierShopifyProductId, client);
-        const updateVariantPricePromises = newPricingInfo.map((priceInfo) => {
-            return updateVariantPriceInformation({ ...priceInfo, priceListId: priceList.id }, client);
-        });
-        await Promise.all(updateVariantPricePromises);
-    });
+    await Promise.all(
+        priceLists.map(async (priceList) => {
+            const newPricingInfo = await getPricingDetails(
+                variantsFormatted,
+                priceList,
+                supplierShopifyProductId,
+                client,
+            );
+            const updateVariantPricePromises = newPricingInfo.map((priceInfo) => {
+                return updateVariantPriceDb({ ...priceInfo, priceListId: priceList.id }, client);
+            });
+            await Promise.all(updateVariantPricePromises);
+        }),
+    );
 }
 
 // ==============================================================================================================
@@ -106,14 +89,14 @@ async function getPriceListForImportedProduct(importedShopifyProductId: string, 
         LIMIT 1
     `;
     const res = await client.query(query, [importedShopifyProductId]);
-    if (res.rows.length <= 0) {
-        throw new Error('Imported product is not in price list.');
+    if (res.rows.length === 0) {
+        throw new Error(`Imported product ${importedShopifyProductId} is not in price list.`);
     }
     const priceList: PriceListDetails = res.rows[0];
     return priceList;
 }
 
-async function updateRetailerPriceOnShopify(
+async function updateRetailerPriceShopify(
     data: GroupedQueryDataWithUpdateFields,
     supplierShopifyProductId: string,
     client: PoolClient,
@@ -136,7 +119,6 @@ async function updateRetailerPriceOnShopify(
             supplierShopifyProductId,
             client,
         );
-
         const input = newPricingDetails.map((variant) => ({
             id: variant.shopifyVariantId,
             price: variant.retailPrice,
@@ -156,7 +138,7 @@ async function updateRetailerPriceOnShopify(
 // ==============================================================================================================
 // START: FUNCTIONS TO UPDATE INVENTORY CHANGES TO RETAILER'S STORE ON SHOPIFY
 // ==============================================================================================================
-async function updateRetailerInventoryOnShopify(data: GroupedQueryDataWithUpdateFields) {
+async function updateRetailerInventoryShopify(data: GroupedQueryDataWithUpdateFields) {
     const retailerShopifyProductsIds = Array.from(data.keys());
     await Promise.all(
         retailerShopifyProductsIds.map(async (retailerShopifyProductId) => {
@@ -183,7 +165,7 @@ async function updateRetailerInventoryOnShopify(data: GroupedQueryDataWithUpdate
 // ==============================================================================================================
 // START: FUNCTIONS TO UPDATE PRODUCT STATUS ON SHOPIFY
 // ==============================================================================================================
-async function updateRetailerProductStatusOnShopify(
+async function updateRetailerProductStatusShopify(
     data: GroupedQueryDataWithUpdateFields,
     supplierProductStatus: ProductStatus,
 ) {
@@ -203,87 +185,22 @@ async function updateRetailerProductStatusOnShopify(
     );
 }
 
-async function getImportedRetailerData(supplierShopifyProductId: string, client: PoolClient) {
-    const query = `
-        SELECT 
-            "ImportedProduct"."shopifyProductId" as "retailerShopifyProductId",
-            "Session"."accessToken" as "retailerAccessToken",
-            "Session"."shop" as "retailerShop",
-            "ImportedVariant"."shopifyVariantId" as "retailerShopifyVariantId",
-            "Variant"."shopifyVariantId" as "supplierShopifyVariantId",
-            "FulfillmentService"."shopifyLocationId" as "retailerShopifyLocationId",
-            "ImportedInventoryItem"."shopifyInventoryItemId" as "retailerShopifyInventoryItemId"
-        FROM "Product"
-        INNER JOIN "Variant" ON "Variant"."productId" = "Product"."id"
-        INNER JOIN "ImportedVariant" ON "ImportedVariant"."prismaVariantId" = "Variant"."id"
-        INNER JOIN "ImportedProduct" ON "ImportedProduct"."id" = "ImportedVariant"."importedProductId"
-        INNER JOIN "ImportedInventoryItem" ON "ImportedVariant"."id" = "ImportedInventoryItem"."importedVariantId"
-        INNER JOIN "Session" ON "ImportedProduct"."retailerId" = "Session"."id"
-        INNER JOIN "FulfillmentService" ON "FulfillmentService"."sessionId" = "Session"."id"
-        WHERE 
-            "Product"."shopifyProductId" = $1 AND 
-            "Session"."isAppUninstalled" = FALSE
-    `;
-    const res = await client.query(query, [supplierShopifyProductId]);
-    const data: ImportedRetailerData[] = res.rows;
-    return data;
-}
+export {
+    updateRetailerPriceShopify,
+    updateRetailerInventoryShopify,
+    updateRetailerProductStatusShopify,
+    updateAllVariantsPricingDb,
+};
 
-function getFormattedRetailerImportedData(
-    importedRetailerData: ImportedRetailerData[],
-    supplierEditedVariants: EditedVariant[],
-) {
-    const supplierEditedVariantsMap = createMapIdToRestObj(supplierEditedVariants, 'shopifyVariantId');
-    const retailerProductData: GroupedQueryDataWithUpdateFields = new Map();
-    importedRetailerData.forEach((row) => {
-        const prevValue = retailerProductData.get(row.retailerShopifyProductId);
-        const supplierVariantDetails = supplierEditedVariantsMap.get(row.supplierShopifyVariantId);
-        const newRetailPrice = supplierVariantDetails?.price;
-        const newInventory = supplierVariantDetails?.newInventory;
-        if (newRetailPrice === undefined || newInventory === undefined) {
-            throw new Error('Retail price or inventory is not defined.');
-        }
-        const prevVariants = prevValue?.variants ?? [];
-        const newVariants = [
-            ...prevVariants,
-            {
-                retailerShopifyVariantId: row.retailerShopifyVariantId,
-                retailerShopifyInventoryItemId: row.retailerShopifyInventoryItemId,
-                retailPrice: newRetailPrice,
-                inventory: supplierEditedVariantsMap.get(row.supplierShopifyVariantId)?.newInventory ?? 0,
-            },
-        ];
-        retailerProductData.set(row.retailerShopifyProductId, {
-            retailerAccessToken: row.retailerAccessToken,
-            retailerShop: row.retailerShop,
-            retailerShopifyLocationId: row.retailerShopifyLocationId,
-            variants: newVariants,
-        });
-    });
-
-    return retailerProductData;
-}
-
-// ==============================================================================================================
-// END: HELPER FUNCTIONS TO BROADCAST CHANGES TO PRODUCT STATUS, PRODUCT VARIANT PRICE + INVENTORY TO RETAILERS
-// ==============================================================================================================
-
-async function broadcastSupplierProductModifications(
-    supplierShopifyProductId: string,
-    supplierEditedVariants: EditedVariant[],
-    supplierProductStatus: ProductStatus,
-    client: PoolClient,
-) {
-    // when supplier updates the product, any changes in price, inventory, and product status have to be broadcasted to all retailer's stores
-    const importedRetailerData = await getImportedRetailerData(supplierShopifyProductId, client);
-    const data = getFormattedRetailerImportedData(importedRetailerData, supplierEditedVariants);
-
-    await Promise.all([
-        updateRetailerPriceOnShopify(data, supplierShopifyProductId, client),
-        updateRetailerInventoryOnShopify(data),
-        updateRetailerProductStatusOnShopify(data, supplierProductStatus),
-        updateVariantPricesDatabase(supplierEditedVariants, supplierShopifyProductId, client),
-    ]);
-}
-
-export default broadcastSupplierProductModifications;
+export const exportsForTesting =
+    process.env.NODE_ENV === 'test'
+        ? {
+              getAllPriceLists,
+              updateVariantPriceDb,
+              updateAllVariantsPricingDb,
+              getPriceListForImportedProduct,
+              updateRetailerPriceShopify,
+              updateRetailerInventoryShopify,
+              updateRetailerProductStatusShopify,
+          }
+        : undefined;

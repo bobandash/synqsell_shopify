@@ -258,7 +258,6 @@ async function handleReinstateImportedProductsForRetailer(
 }
 
 async function updateSessionDb(session: ShopifySession) {
-  console.log(session);
   await db.session.update({
     where: {
       id: session.id,
@@ -279,7 +278,6 @@ async function updateSessionDb(session: ShopifySession) {
 async function reinstallApp(shopifySession: ShopifySession) {
   try {
     await updateSessionDb(shopifySession);
-
     const session = await getSession(shopifySession.id);
     const [isRetailer, isSupplier] = await Promise.all([
       hasRole(session.id, ROLES.RETAILER),
@@ -293,7 +291,7 @@ async function reinstallApp(shopifySession: ShopifySession) {
       await handleReinstateAllRetailerProductsForSupplier(session);
     }
   } catch (error) {
-    logError(error, 'Action: Reinstall application');
+    logError(error, { sessionId: shopifySession.id });
     throw error;
   }
 }

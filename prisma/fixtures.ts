@@ -136,13 +136,19 @@ export const generateRandomRetailerPayment = () => {
   return simpleFaker.number.int({ min: 0, max: 10 }).toFixed(2).toString();
 };
 
-export const generateVariantData = (dbProductId: string) => {
+export const generateRandomPricesForVariant = () => {
   const retailPrice = generateRandomRetailPrice();
   const retailerPayment = generateRandomRetailerPayment();
   const supplierProfit = (Number(retailPrice) - Number(retailerPayment))
     .toFixed(2)
     .toString();
 
+  return { retailPrice, retailerPayment, supplierProfit };
+};
+
+export const generateVariantData = (dbProductId: string) => {
+  const { retailPrice, retailerPayment, supplierProfit } =
+    generateRandomPricesForVariant();
   return {
     id: simpleFaker.string.uuid(),
     productId: dbProductId,

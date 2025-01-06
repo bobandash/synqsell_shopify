@@ -92,3 +92,18 @@ export type VariantDetail = {
     shopifyVariantId: string;
     retailPrice: string;
 };
+
+export type GroupedQueryDataWithUpdateFields = Map<
+    string, // Key is Retailer Shopify Product ID (Imported Product)
+    {
+        retailerAccessToken: string;
+        retailerShop: string;
+        retailerShopifyLocationId: string;
+        variants: {
+            retailerShopifyVariantId: string;
+            retailPrice: string;
+            inventory: number;
+            retailerShopifyInventoryItemId: string;
+        }[];
+    }
+>;
