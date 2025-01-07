@@ -1,6 +1,5 @@
 import { PoolClient } from 'pg';
 import { initializePool } from './db';
-import { composeGid } from '@shopify/admin-graphql-api-utilities';
 import { broadcastSupplierProductModifications, revertRetailerProductModifications } from './helper';
 import { ProductStatus, ShopifyEvent } from './types';
 import { isImportedProduct } from '/opt/nodejs/models/importedProduct';
@@ -13,7 +12,7 @@ export const lambdaHandler = async (event: ShopifyEvent) => {
     const shopifyProductId = payload.admin_graphql_api_id;
     const newProductStatus = payload.status.toUpperCase() as ProductStatus;
     const editedVariants = payload.variants.map((variant) => ({
-        shopifyVariantId: composeGid('ProductVariant', variant.id),
+        shopifyVariantId: variant.admin_graphql_api_id,
         hasUpdatedInventory: variant.inventory_quantity !== variant.old_inventory_quantity,
         newInventory: variant.inventory_quantity,
         price: variant.price,
