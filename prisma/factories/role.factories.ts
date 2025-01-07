@@ -32,14 +32,16 @@ export const generateRole = async (
 export const createTestRole = async (
   name: RolesOptions,
   isVisibleInNetwork: boolean = true,
-  overrides = {}
+  overrides = {},
+  ctx: DbClient = db
 ): Promise<TestRole> => {
-  const session = await createTestSession();
+  const session = await createTestSession({}, ctx);
   const role = await generateRole(
     session.id,
     name,
     isVisibleInNetwork,
-    overrides
+    overrides,
+    ctx
   );
 
   return { session, role };

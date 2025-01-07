@@ -2,13 +2,20 @@ import { DatabaseSetup, disconnectClient, setupDatabase, teardownPool } from '~/
 import { createTestOrderWithEntireFlow, TestOrderEntireFlow } from '@db/factories/order.factories';
 import { simpleFaker } from '@faker-js/faker/.';
 import { exportsForTesting } from '../../helper';
-import { generatePriceList, generateProduct, generateVariant } from '@db/factories/pricelist.factories';
+import {
+    createEntireVariantWithImportedEntities,
+    createNewRetailerWithImportedProduct,
+    generatePriceList,
+    generateProduct,
+    generateVariant,
+} from '@db/factories/pricelist.factories';
 import { PRICE_LIST_PRICING_STRATEGY } from '@db/constants';
 import { generateRandomPricesForVariant, generateRandomRetailPrice } from '@db/fixtures';
 import db from '@db/test-db';
 import { createEditedVariant } from '../utils';
 import { GroupedQueryDataWithUpdateFields } from '~/shopify/webhooks/productsUpdate/types';
-import { updateVariantShopify } from '../../../util';
+import { updateInventoryShopify, updateProductStatusShopify, updateVariantShopify } from '../../../util';
+import { PRODUCT_STATUS } from '~/util-layer/constants';
 
 if (!exportsForTesting) {
     throw new Error('Environment is not tests.');
@@ -191,6 +198,307 @@ describe('broadcastSupplierProductModifications', () => {
                     },
                 ],
             );
+        });
+
+        it('should update multiple variants in product with new price and cost with correct parameters', async () => {
+            const { client } = database;
+            const {
+                product,
+                importedProduct,
+                importedVariant,
+                importedInventoryItem,
+                retailer,
+                retailerFulfillmentService,
+            } = orderEntireFlowDetails;
+            const newVariantAndImportedVariant = await createEntireVariantWithImportedEntities(
+                product.id,
+                importedProduct.id,
+            );
+            const data = new Map() as GroupedQueryDataWithUpdateFields;
+            data.set(importedProduct.shopifyProductId, {
+                retailerAccessToken: retailer.accessToken,
+                retailerShop: retailer.shop,
+                retailerShopifyLocationId: retailerFulfillmentService.shopifyLocationId,
+                variants: [
+                    {
+                        retailerShopifyVariantId: importedVariant.shopifyVariantId,
+                        retailPrice: '24.99',
+                        inventory: 10,
+                        retailerShopifyInventoryItemId: importedInventoryItem.shopifyInventoryItemId,
+                    },
+                    {
+                        retailerShopifyVariantId: newVariantAndImportedVariant.importedVariant.shopifyVariantId,
+                        retailPrice: '24.99',
+                        inventory: 10,
+                        retailerShopifyInventoryItemId:
+                            newVariantAndImportedVariant.importedInventoryItem.shopifyInventoryItemId,
+                    },
+                ],
+            });
+            await updateRetailerVariantPricesShopify(data, product.shopifyProductId, client);
+            expect(updateVariantShopify).toHaveBeenCalledTimes(1);
+            expect(updateVariantShopify).toHaveBeenCalledWith(
+                { shop: retailer.shop, accessToken: retailer.accessToken },
+                importedProduct.shopifyProductId,
+                expect.arrayContaining([
+                    {
+                        id: importedVariant.shopifyVariantId,
+                        price: '24.99',
+                        inventoryItem: {
+                            cost: expect.any(String),
+                        },
+                    },
+                    {
+                        id: newVariantAndImportedVariant.importedVariant.shopifyVariantId,
+                        price: '24.99',
+                        inventoryItem: {
+                            cost: expect.any(String),
+                        },
+                    },
+                ]),
+            );
+        });
+
+        it(`should update new price and cost for multiple retailers`, async () => {
+            const { client } = database;
+            const {
+                product,
+                variant,
+                inventoryItem,
+                importedVariant,
+                importedInventoryItem,
+                importedProduct,
+                retailer,
+                retailerFulfillmentService,
+            } = orderEntireFlowDetails;
+            const res = await createNewRetailerWithImportedProduct(
+                product.id,
+                variant.id,
+                inventoryItem.id,
+                retailer.id,
+            );
+            const data = new Map() as GroupedQueryDataWithUpdateFields;
+            data.set(importedProduct.shopifyProductId, {
+                retailerAccessToken: retailer.accessToken,
+                retailerShop: retailer.shop,
+                retailerShopifyLocationId: retailerFulfillmentService.shopifyLocationId,
+                variants: [
+                    {
+                        retailerShopifyVariantId: importedVariant.shopifyVariantId,
+                        retailPrice: '24.99',
+                        inventory: 10,
+                        retailerShopifyInventoryItemId: importedInventoryItem.shopifyInventoryItemId,
+                    },
+                ],
+            });
+            data.set(res.importedProduct.shopifyProductId, {
+                retailerAccessToken: res.retailer.accessToken,
+                retailerShop: res.retailer.shop,
+                retailerShopifyLocationId: res.fulfillmentService.shopifyLocationId,
+                variants: [
+                    {
+                        retailerShopifyVariantId: res.importedVariant.shopifyVariantId,
+                        retailPrice: '24.99',
+                        inventory: 10,
+                        retailerShopifyInventoryItemId: res.importedInventoryItem.shopifyInventoryItemId,
+                    },
+                ],
+            });
+            await updateRetailerVariantPricesShopify(data, product.shopifyProductId, client);
+            expect(updateVariantShopify).toHaveBeenCalledTimes(2);
+        });
+    });
+
+    describe('updateRetailerVariantInventoriesShopify', () => {
+        it('should update variant in product with new inventory with correct parameters', async () => {
+            const { importedProduct, importedVariant, importedInventoryItem, retailer, retailerFulfillmentService } =
+                orderEntireFlowDetails;
+            const data = new Map() as GroupedQueryDataWithUpdateFields;
+            data.set(importedProduct.shopifyProductId, {
+                retailerAccessToken: retailer.accessToken,
+                retailerShop: retailer.shop,
+                retailerShopifyLocationId: retailerFulfillmentService.shopifyLocationId,
+                variants: [
+                    {
+                        retailerShopifyVariantId: importedVariant.shopifyVariantId,
+                        retailPrice: '24.99',
+                        inventory: 10,
+                        retailerShopifyInventoryItemId: importedInventoryItem.shopifyInventoryItemId,
+                    },
+                ],
+            });
+            await updateRetailerVariantInventoriesShopify(data);
+            expect(updateInventoryShopify).toHaveBeenCalledTimes(1);
+            expect(updateInventoryShopify).toHaveBeenCalledWith(
+                { shop: retailer.shop, accessToken: retailer.accessToken },
+                importedInventoryItem.shopifyInventoryItemId,
+                retailerFulfillmentService.shopifyLocationId,
+                10,
+            );
+        });
+
+        it('should update multiple variants in product with new inventory', async () => {
+            const {
+                product,
+                importedProduct,
+                importedVariant,
+                importedInventoryItem,
+                retailer,
+                retailerFulfillmentService,
+            } = orderEntireFlowDetails;
+            const newVariantAndImportedVariant = await createEntireVariantWithImportedEntities(
+                product.id,
+                importedProduct.id,
+            );
+            const data = new Map() as GroupedQueryDataWithUpdateFields;
+            data.set(importedProduct.shopifyProductId, {
+                retailerAccessToken: retailer.accessToken,
+                retailerShop: retailer.shop,
+                retailerShopifyLocationId: retailerFulfillmentService.shopifyLocationId,
+                variants: [
+                    {
+                        retailerShopifyVariantId: importedVariant.shopifyVariantId,
+                        retailPrice: '24.99',
+                        inventory: 10,
+                        retailerShopifyInventoryItemId: importedInventoryItem.shopifyInventoryItemId,
+                    },
+                    {
+                        retailerShopifyVariantId: newVariantAndImportedVariant.importedVariant.shopifyVariantId,
+                        retailPrice: '24.99',
+                        inventory: 10,
+                        retailerShopifyInventoryItemId:
+                            newVariantAndImportedVariant.importedInventoryItem.shopifyInventoryItemId,
+                    },
+                ],
+            });
+            await updateRetailerVariantInventoriesShopify(data);
+            expect(updateInventoryShopify).toHaveBeenCalledTimes(2);
+        });
+
+        it(`should update new price and cost for multiple retailers`, async () => {
+            const {
+                product,
+                variant,
+                inventoryItem,
+                importedVariant,
+                importedInventoryItem,
+                importedProduct,
+                retailer,
+                retailerFulfillmentService,
+            } = orderEntireFlowDetails;
+            const res = await createNewRetailerWithImportedProduct(
+                product.id,
+                variant.id,
+                inventoryItem.id,
+                retailer.id,
+            );
+            const data = new Map() as GroupedQueryDataWithUpdateFields;
+            data.set(importedProduct.shopifyProductId, {
+                retailerAccessToken: retailer.accessToken,
+                retailerShop: retailer.shop,
+                retailerShopifyLocationId: retailerFulfillmentService.shopifyLocationId,
+                variants: [
+                    {
+                        retailerShopifyVariantId: importedVariant.shopifyVariantId,
+                        retailPrice: '24.99',
+                        inventory: 10,
+                        retailerShopifyInventoryItemId: importedInventoryItem.shopifyInventoryItemId,
+                    },
+                ],
+            });
+            data.set(res.importedProduct.shopifyProductId, {
+                retailerAccessToken: res.retailer.accessToken,
+                retailerShop: res.retailer.shop,
+                retailerShopifyLocationId: res.fulfillmentService.shopifyLocationId,
+                variants: [
+                    {
+                        retailerShopifyVariantId: res.importedVariant.shopifyVariantId,
+                        retailPrice: '24.99',
+                        inventory: 10,
+                        retailerShopifyInventoryItemId: res.importedInventoryItem.shopifyInventoryItemId,
+                    },
+                ],
+            });
+            await updateRetailerVariantInventoriesShopify(data);
+            expect(updateInventoryShopify).toHaveBeenCalledTimes(2);
+        });
+    });
+
+    describe('updateRetailerProductStatusShopify', () => {
+        it(`should update retailer's product with new product status`, async () => {
+            const { importedProduct, importedVariant, importedInventoryItem, retailer, retailerFulfillmentService } =
+                orderEntireFlowDetails;
+            const data = new Map() as GroupedQueryDataWithUpdateFields;
+            const newProductStatus = PRODUCT_STATUS.ARCHIVED;
+            data.set(importedProduct.shopifyProductId, {
+                retailerAccessToken: retailer.accessToken,
+                retailerShop: retailer.shop,
+                retailerShopifyLocationId: retailerFulfillmentService.shopifyLocationId,
+                variants: [
+                    {
+                        retailerShopifyVariantId: importedVariant.shopifyVariantId,
+                        retailPrice: '24.99',
+                        inventory: 10,
+                        retailerShopifyInventoryItemId: importedInventoryItem.shopifyInventoryItemId,
+                    },
+                ],
+            });
+            await updateRetailerProductStatusShopify(data, newProductStatus);
+            expect(updateProductStatusShopify).toHaveBeenCalledTimes(1);
+            expect(updateProductStatusShopify).toHaveBeenCalledWith(
+                { shop: retailer.shop, accessToken: retailer.accessToken },
+                importedProduct.shopifyProductId,
+                newProductStatus,
+            );
+        });
+
+        it(`should update multiple retailer's product with new product status`, async () => {
+            const {
+                product,
+                variant,
+                inventoryItem,
+                importedVariant,
+                importedInventoryItem,
+                importedProduct,
+                retailer,
+                retailerFulfillmentService,
+            } = orderEntireFlowDetails;
+            const res = await createNewRetailerWithImportedProduct(
+                product.id,
+                variant.id,
+                inventoryItem.id,
+                retailer.id,
+            );
+            const newProductStatus = PRODUCT_STATUS.ARCHIVED;
+            const data = new Map() as GroupedQueryDataWithUpdateFields;
+            data.set(importedProduct.shopifyProductId, {
+                retailerAccessToken: retailer.accessToken,
+                retailerShop: retailer.shop,
+                retailerShopifyLocationId: retailerFulfillmentService.shopifyLocationId,
+                variants: [
+                    {
+                        retailerShopifyVariantId: importedVariant.shopifyVariantId,
+                        retailPrice: '24.99',
+                        inventory: 10,
+                        retailerShopifyInventoryItemId: importedInventoryItem.shopifyInventoryItemId,
+                    },
+                ],
+            });
+            data.set(res.importedProduct.shopifyProductId, {
+                retailerAccessToken: res.retailer.accessToken,
+                retailerShop: res.retailer.shop,
+                retailerShopifyLocationId: res.fulfillmentService.shopifyLocationId,
+                variants: [
+                    {
+                        retailerShopifyVariantId: res.importedVariant.shopifyVariantId,
+                        retailPrice: '24.99',
+                        inventory: 10,
+                        retailerShopifyInventoryItemId: res.importedInventoryItem.shopifyInventoryItemId,
+                    },
+                ],
+            });
+            await updateRetailerProductStatusShopify(data, newProductStatus);
+            expect(updateProductStatusShopify).toHaveBeenCalledTimes(2);
         });
     });
 });

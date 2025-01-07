@@ -10,6 +10,7 @@ import {
 } from "@db/fixtures";
 import {
   PRICE_LIST_PRICING_STRATEGY,
+  ROLES,
   type PriceListPricingStrategyOptions,
 } from "@db/constants";
 import { createTestSession } from "./session.factories";
@@ -25,6 +26,8 @@ import type {
   Prisma,
   PrismaClient,
 } from "@prisma/client";
+import { createTestRole } from "./role.factories";
+import { generateFulfillmentService } from "./fulfillmentService.factories";
 type DbClient = PrismaClient | Prisma.TransactionClient;
 
 export type TestGeneralPriceList = {
@@ -148,6 +151,79 @@ export const generateImportedInventoryItem = async (
       ...overrides,
     },
   });
+};
+
+export const createEntireVariantWithImportedEntities = async (
+  dbProductId: string,
+  dbImportedProductId: string
+) => {
+  const res = await db.$transaction(async (tx) => {
+    const variant = await generateVariant(dbProductId, {}, tx);
+    const inventoryItem = await generateInventoryItem(variant.id, {}, tx);
+    const importedVariant = await generateImportedVariant(
+      variant.id,
+      dbImportedProductId,
+      {},
+      tx
+    );
+    const importedInventoryItem = await generateImportedInventoryItem(
+      inventoryItem.id,
+      importedVariant.id,
+      {},
+      tx
+    );
+    return {
+      variant,
+      inventoryItem,
+      importedVariant,
+      importedInventoryItem,
+    };
+  });
+
+  return res;
+};
+
+export const createNewRetailerWithImportedProduct = async (
+  dbProductId: string,
+  dbVariantId: string,
+  dbInventoryItemId: string,
+  retailerId: string
+) => {
+  const res = await db.$transaction(async (tx) => {
+    const { session } = await createTestRole(ROLES.RETAILER, false, {}, tx);
+    const fulfillmentService = await generateFulfillmentService(
+      session.id,
+      {},
+      tx
+    );
+
+    const importedProduct = await generateImportedProduct(
+      dbProductId,
+      retailerId,
+      {},
+      tx
+    );
+    const importedVariant = await generateImportedVariant(
+      dbVariantId,
+      importedProduct.id,
+      {},
+      tx
+    );
+    const importedInventoryItem = await generateImportedInventoryItem(
+      dbInventoryItemId,
+      importedVariant.id,
+      {},
+      tx
+    );
+    return {
+      retailer: session,
+      fulfillmentService,
+      importedProduct,
+      importedVariant,
+      importedInventoryItem,
+    };
+  });
+  return res;
 };
 
 export const createTestGeneralPriceListWithProducts = async (
