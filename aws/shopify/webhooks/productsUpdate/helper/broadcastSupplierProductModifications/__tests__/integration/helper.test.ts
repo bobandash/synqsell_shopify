@@ -7,13 +7,26 @@ import { PRICE_LIST_PRICING_STRATEGY } from '@db/constants';
 import { generateRandomPricesForVariant, generateRandomRetailPrice } from '@db/fixtures';
 import db from '@db/test-db';
 import { createEditedVariant } from '../utils';
+import { GroupedQueryDataWithUpdateFields } from '~/shopify/webhooks/productsUpdate/types';
+import { updateVariantShopify } from '../../../util';
 
 if (!exportsForTesting) {
     throw new Error('Environment is not tests.');
 }
 
 jest.mock('/opt/nodejs/utils', () => ({
+    ...jest.requireActual('/opt/nodejs/utils'),
     mutateAndValidateGraphQLData: jest.fn(),
+    fetchAndValidateGraphQLData: jest.fn(),
+}));
+
+jest.mock('../../../util', () => ({
+    ...jest.requireActual('../../../util'),
+    updateVariantShopify: jest.fn(),
+    updateProductStatusShopify: jest.fn(),
+    getProductStatusShopify: jest.fn(),
+    updateInventoryShopify: jest.fn(),
+    getVariantDataShopify: jest.fn(),
 }));
 
 const {
@@ -21,8 +34,8 @@ const {
     updateVariantPriceDb,
     updateAllVariantsPricingDb,
     getPriceListForImportedProduct,
-    updateRetailerPriceShopify,
-    updateRetailerInventoryShopify,
+    updateRetailerVariantPricesShopify,
+    updateRetailerVariantInventoriesShopify,
     updateRetailerProductStatusShopify,
 } = exportsForTesting;
 
@@ -135,6 +148,49 @@ describe('broadcastSupplierProductModifications', () => {
         it('should throw error if imported product does not exist', async () => {
             const { client } = database;
             await expect(getPriceListForImportedProduct(nonExistentId, client)).rejects.toThrow();
+        });
+    });
+
+    describe('updateRetailerVariantPricesShopify', () => {
+        it('should update variant in product with new price and cost with correct parameters', async () => {
+            const { client } = database;
+            const {
+                product,
+                importedProduct,
+                importedVariant,
+                importedInventoryItem,
+                retailer,
+                retailerFulfillmentService,
+            } = orderEntireFlowDetails;
+            const data = new Map() as GroupedQueryDataWithUpdateFields;
+            data.set(importedProduct.shopifyProductId, {
+                retailerAccessToken: retailer.accessToken,
+                retailerShop: retailer.shop,
+                retailerShopifyLocationId: retailerFulfillmentService.shopifyLocationId,
+                variants: [
+                    {
+                        retailerShopifyVariantId: importedVariant.shopifyVariantId,
+                        retailPrice: '24.99',
+                        inventory: 10,
+                        retailerShopifyInventoryItemId: importedInventoryItem.shopifyInventoryItemId,
+                    },
+                ],
+            });
+            await updateRetailerVariantPricesShopify(data, product.shopifyProductId, client);
+            expect(updateVariantShopify).toHaveBeenCalledTimes(1);
+            expect(updateVariantShopify).toHaveBeenCalledWith(
+                { shop: retailer.shop, accessToken: retailer.accessToken },
+                importedProduct.shopifyProductId,
+                [
+                    {
+                        id: importedVariant.shopifyVariantId,
+                        price: '24.99',
+                        inventoryItem: {
+                            cost: expect.any(String),
+                        },
+                    },
+                ],
+            );
         });
     });
 });

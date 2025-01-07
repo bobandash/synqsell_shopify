@@ -3,8 +3,8 @@ import { EditedVariant, GroupedQueryDataWithUpdateFields, ProductStatus } from '
 import { createMapIdToRestObj } from '/opt/nodejs/utils';
 import {
     updateAllVariantsPricingDb,
-    updateRetailerInventoryShopify,
-    updateRetailerPriceShopify,
+    updateRetailerVariantInventoriesShopify,
+    updateRetailerVariantPricesShopify,
     updateRetailerProductStatusShopify,
 } from './helper';
 
@@ -90,8 +90,8 @@ async function broadcastSupplierProductModifications(
     const data = getFormattedRetailerImportedData(importedRetailerData, supplierEditedVariants);
 
     await Promise.all([
-        updateRetailerPriceShopify(data, supplierShopifyProductId, client),
-        updateRetailerInventoryShopify(data),
+        updateRetailerVariantPricesShopify(data, supplierShopifyProductId, client),
+        updateRetailerVariantInventoriesShopify(data),
         updateRetailerProductStatusShopify(data, supplierProductStatus),
         updateAllVariantsPricingDb(supplierEditedVariants, supplierShopifyProductId, client),
     ]);

@@ -2,7 +2,7 @@ import { PoolClient } from 'pg';
 import { EditedVariant, GroupedQueryDataWithUpdateFields, PriceListDetails, ProductStatus } from '../../types';
 import { getPricingDetails } from '../util';
 
-import { updateInventoryShopify, updateProductStatusShopify, updateVariantShopify } from '../util/graphql';
+import { updateInventoryShopify, updateProductStatusShopify, updateVariantShopify } from '../util';
 
 type UpdatePriceInfoData = {
     retailPrice: string;
@@ -96,16 +96,16 @@ async function getPriceListForImportedProduct(importedShopifyProductId: string, 
     return priceList;
 }
 
-async function updateRetailerPriceShopify(
+async function updateRetailerVariantPricesShopify(
     data: GroupedQueryDataWithUpdateFields,
     supplierShopifyProductId: string,
     client: PoolClient,
 ) {
     const retailerShopifyProductsIds = Array.from(data.keys());
-    const updateRetailerProductPricesPromise = retailerShopifyProductsIds.map(async (retailerShopifyProductId) => {
+    const promises = retailerShopifyProductsIds.map(async (retailerShopifyProductId) => {
         const updateData = data.get(retailerShopifyProductId);
         if (!updateData) {
-            return null;
+            return;
         }
         const priceList = await getPriceListForImportedProduct(retailerShopifyProductId, client);
         const variantsFormatted = updateData.variants.map((variant) => ({
@@ -126,40 +126,40 @@ async function updateRetailerPriceShopify(
                 cost: variant.supplierProfit,
             },
         }));
-        await updateVariantShopify(
+        console.log('reached here');
+        return updateVariantShopify(
             { shop: updateData.retailerShop, accessToken: updateData.retailerAccessToken },
             retailerShopifyProductId,
             input,
         );
     });
-    await Promise.all(updateRetailerProductPricesPromise);
+    await Promise.all(promises);
 }
 
 // ==============================================================================================================
 // START: FUNCTIONS TO UPDATE INVENTORY CHANGES TO RETAILER'S STORE ON SHOPIFY
 // ==============================================================================================================
-async function updateRetailerInventoryShopify(data: GroupedQueryDataWithUpdateFields) {
+async function updateRetailerVariantInventoriesShopify(data: GroupedQueryDataWithUpdateFields) {
     const retailerShopifyProductsIds = Array.from(data.keys());
-    await Promise.all(
-        retailerShopifyProductsIds.map(async (retailerShopifyProductId) => {
-            const updateData = data.get(retailerShopifyProductId);
-            if (!updateData) {
-                return;
-            }
-            const updateInventoryPromises = updateData.variants.map((variant) =>
-                updateInventoryShopify(
-                    {
-                        shop: updateData.retailerShop,
-                        accessToken: updateData.retailerAccessToken,
-                    },
-                    variant.retailerShopifyInventoryItemId,
-                    updateData.retailerShopifyLocationId,
-                    variant.inventory,
-                ),
-            );
-            await Promise.all(updateInventoryPromises);
-        }),
-    );
+    const promises = retailerShopifyProductsIds.map(async (retailerShopifyProductId) => {
+        const updateData = data.get(retailerShopifyProductId);
+        if (!updateData) {
+            return;
+        }
+        const updateInventoryPromises = updateData.variants.map((variant) =>
+            updateInventoryShopify(
+                {
+                    shop: updateData.retailerShop,
+                    accessToken: updateData.retailerAccessToken,
+                },
+                variant.retailerShopifyInventoryItemId,
+                updateData.retailerShopifyLocationId,
+                variant.inventory,
+            ),
+        );
+        await Promise.all(updateInventoryPromises);
+    });
+    await Promise.all(promises);
 }
 
 // ==============================================================================================================
@@ -186,8 +186,8 @@ async function updateRetailerProductStatusShopify(
 }
 
 export {
-    updateRetailerPriceShopify,
-    updateRetailerInventoryShopify,
+    updateRetailerVariantPricesShopify,
+    updateRetailerVariantInventoriesShopify,
     updateRetailerProductStatusShopify,
     updateAllVariantsPricingDb,
 };
@@ -199,8 +199,8 @@ export const exportsForTesting =
               updateVariantPriceDb,
               updateAllVariantsPricingDb,
               getPriceListForImportedProduct,
-              updateRetailerPriceShopify,
-              updateRetailerInventoryShopify,
+              updateRetailerVariantPricesShopify,
+              updateRetailerVariantInventoriesShopify,
               updateRetailerProductStatusShopify,
           }
         : undefined;

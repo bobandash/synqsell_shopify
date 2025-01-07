@@ -1,6 +1,5 @@
 import { DatabaseSetup, disconnectClient, setupDatabase, teardownPool } from '~/test-db-setup';
 import { createTestOrderWithEntireFlow, TestOrderEntireFlow } from '@db/factories/order.factories';
-import { simpleFaker } from '@faker-js/faker/.';
 import { exportsForTesting } from '../..';
 import { createTestRole } from '@db/factories/role.factories';
 import { ROLES } from '@db/constants';
@@ -12,9 +11,9 @@ import {
 import { generateFulfillmentService } from '@db/factories/fulfillmentService.factories';
 import {
     updateAllVariantsPricingDb,
-    updateRetailerPriceShopify,
+    updateRetailerVariantPricesShopify,
     updateRetailerProductStatusShopify,
-    updateRetailerInventoryShopify,
+    updateRetailerVariantInventoriesShopify,
 } from '../../helper';
 import { createEditedVariant } from '../utils';
 import { generateRandomRetailPrice } from '@db/fixtures';
@@ -26,8 +25,8 @@ if (!exportsForTesting) {
 const { getImportedRetailerData, broadcastSupplierProductModifications } = exportsForTesting;
 
 jest.mock('../../helper', () => ({
-    updateRetailerPriceShopify: jest.fn(),
-    updateRetailerInventoryShopify: jest.fn(),
+    updateRetailerVariantPricesShopify: jest.fn(),
+    updateRetailerVariantInventoriesShopify: jest.fn(),
     updateRetailerProductStatusShopify: jest.fn(),
     updateAllVariantsPricingDb: jest.fn(),
 }));
@@ -35,7 +34,6 @@ jest.mock('../../helper', () => ({
 describe('broadcastSupplierProductModifications', () => {
     let orderEntireFlowDetails: TestOrderEntireFlow;
     let database: DatabaseSetup;
-    const nonExistentId = simpleFaker.string.uuid();
     beforeEach(async () => {
         jest.clearAllMocks();
         database = await setupDatabase();
@@ -100,8 +98,8 @@ describe('broadcastSupplierProductModifications', () => {
                 PRODUCT_STATUS.ACTIVE,
                 client,
             );
-            expect(updateRetailerPriceShopify).toHaveBeenCalledTimes(1);
-            expect(updateRetailerInventoryShopify).toHaveBeenCalledTimes(1);
+            expect(updateRetailerVariantPricesShopify).toHaveBeenCalledTimes(1);
+            expect(updateRetailerVariantInventoriesShopify).toHaveBeenCalledTimes(1);
             expect(updateRetailerProductStatusShopify).toHaveBeenCalledTimes(1);
             expect(updateAllVariantsPricingDb).toHaveBeenCalledTimes(1);
         });

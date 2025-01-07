@@ -23,7 +23,7 @@ type SessionGraphQLDetail = {
     accessToken: string;
 };
 
-async function updateProductStatusShopify(
+export async function updateProductStatusShopify(
     session: Session | SessionGraphQLDetail,
     shopifyProductId: string,
     status: ProductStatus,
@@ -42,7 +42,7 @@ async function updateProductStatusShopify(
     );
 }
 
-async function getProductStatusShopify(session: Session | SessionGraphQLDetail, shopifyProductId: string) {
+export async function getProductStatusShopify(session: Session | SessionGraphQLDetail, shopifyProductId: string) {
     const res = await fetchAndValidateGraphQLData<ProductStatusQuery>(
         session.shop,
         session.accessToken,
@@ -58,7 +58,7 @@ async function getProductStatusShopify(session: Session | SessionGraphQLDetail, 
     return productStatus;
 }
 
-async function updateInventoryShopify(
+export async function updateInventoryShopify(
     session: Session | SessionGraphQLDetail,
     shopifyInventoryItemId: string,
     shopifyLocationId: string,
@@ -117,5 +117,3 @@ export async function getVariantDataShopify(session: Session | SessionGraphQLDet
     );
     return supplierVariantData;
 }
-
-export { updateProductStatusShopify, getProductStatusShopify, updateInventoryShopify };
