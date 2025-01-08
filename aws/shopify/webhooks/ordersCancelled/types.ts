@@ -70,7 +70,7 @@ export type ShopifyEvent = {
             fulfillment_status: string;
             landing_site: null;
             landing_site_ref: null;
-            location_id: null;
+            location_id: null | number;
             merchant_business_entity_id: string;
             merchant_of_record_app_id: null;
             name: string;

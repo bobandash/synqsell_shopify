@@ -2,20 +2,18 @@ import { PoolClient } from 'pg';
 import { OrderDetailsData, Payload, SupplierOrderLineItem } from '../../types';
 import { getStripe, getStripePaymentMethod } from '../../stripe';
 import { v4 as uuidv4 } from 'uuid';
-import { USAGE_CHARGE_MUTATION } from '../../graphql';
-import { AppUsageRecordCreateMutation } from '../../types/admin.generated';
 import { getOrderLineItems } from '/opt/nodejs/models/orderLineItem';
 import { getStripeAccountId } from '/opt/nodejs/models/stripeConnectAccount';
 import { getStripeCustomerId } from '/opt/nodejs/models/stripeCustomerAccount';
-import { createMapIdToRestObj, mutateAndValidateGraphQLData } from '/opt/nodejs/utils';
+import { createMapIdToRestObj } from '/opt/nodejs/utils';
 import type { Session } from '/opt/nodejs/models/types';
 import { ORDER_PAYMENT_STATUS } from '/opt/nodejs/constants';
-import { logError } from '/opt/nodejs/utils/logger';
 import { getSessionFromShop } from '/opt/nodejs/models/session';
 import { getOrderFromSupplierShopifyOrderId, hasOrder } from '/opt/nodejs/models/order';
 import { getFulfillmentIdFromSupplierShopify } from '/opt/nodejs/models/fulfillment';
 import { getCurrencyShopifyFmt, getCurrencyStripeFmt } from '/opt/nodejs/utils';
 import { createUsageChargeShopify } from './graphql';
+import { SYNQSELL_COMMISSION } from '../../constants';
 
 // ==============================================================================================================
 // GET INITIAL DATA NEEDED FOR HANDLING PAYMENTS FOR STRIPE + SHOPIFY
@@ -340,8 +338,7 @@ async function handleShopifyUsageCharge(
     client: PoolClient,
 ) {
     const shopifySubscriptionLineItemId = await getShopifySubscriptionLineItemId(session.id, client);
-    const amtToCharge = Number((profit * 0.05).toFixed(2));
-
+    const amtToCharge = Number((profit * SYNQSELL_COMMISSION).toFixed(2));
     const shopifyUsageRecordId = await createUsageChargeShopify(
         shopifySubscriptionLineItemId,
         amtToCharge,

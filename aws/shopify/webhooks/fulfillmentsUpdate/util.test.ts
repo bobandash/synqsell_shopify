@@ -1,20 +1,29 @@
 import { simpleFaker } from '@faker-js/faker/.';
+import { parseGid } from '@shopify/admin-graphql-api-utilities';
+import { Payload } from './types';
 
-function generateLineItem() {
+type LineItemPayload = Payload['line_items'][0];
+
+function generateLineItemPayload(
+    shopifyProductId: string,
+    shopifyVariantId: string,
+    shopifyLineItemId: string,
+    fulfillableQty: number,
+): LineItemPayload {
     const price = simpleFaker.number.float({ min: 10, max: 500 });
     const discount = simpleFaker.number.float({ min: 0, max: 10 });
     const id = simpleFaker.string.numeric(18);
 
     return {
-        id: id,
-        variant_id: simpleFaker.string.numeric(9),
+        id: Number(id),
+        variant_id: Number(parseGid(shopifyVariantId)),
         title: `${simpleFaker.string.sample(8)} Product`,
-        quantity: simpleFaker.number.int({ min: 1, max: 5 }),
+        quantity: fulfillableQty,
         sku: simpleFaker.string.alphanumeric(10).toUpperCase(),
         variant_title: null,
         vendor: null,
         fulfillment_service: 'manual',
-        product_id: simpleFaker.string.numeric(9),
+        product_id: Number(parseGid(shopifyProductId)),
         requires_shipping: true,
         taxable: true,
         gift_card: false,
@@ -22,7 +31,7 @@ function generateLineItem() {
         variant_inventory_management: 'shopify',
         properties: [],
         product_exists: true,
-        fulfillable_quantity: 1,
+        fulfillable_quantity: fulfillableQty,
         grams: simpleFaker.number.int({ min: 100, max: 1000 }),
         price: price.toFixed(2),
         total_discount: discount.toFixed(2),
@@ -81,12 +90,17 @@ function generateLineItem() {
                   ]
                 : [],
         duties: [],
-        admin_graphql_api_id: `gid://shopify/LineItem/${id}`,
+        admin_graphql_api_id: shopifyLineItemId,
         tax_lines: [],
     };
 }
 
-function generateFulfillmentPayload() {
+function generateFulfillmentPayload(
+    shopifyOrderId: string,
+    shopifyFulfillmentId: string,
+    lineItems: LineItemPayload[],
+    shipmentStatus = 'delivered',
+): Payload {
     const tracking = {
         number: simpleFaker.string.alphanumeric(12).toLowerCase(),
         company: `${simpleFaker.string.sample(8)} Shipping`,
@@ -110,36 +124,33 @@ function generateFulfillmentPayload() {
         longitude: null,
         country_code: 'US',
         province_code: simpleFaker.string.alpha(2).toUpperCase(),
+        name: simpleFaker.string.sample(6),
     };
 
     const currentDate = new Date().toISOString();
-    const orderId = simpleFaker.string.numeric(18);
-    const fulfillmentId = simpleFaker.string.numeric(6);
 
     return {
-        id: fulfillmentId,
-        order_id: orderId,
+        id: Number(parseGid(shopifyFulfillmentId)),
+        order_id: Number(parseGid(shopifyOrderId)),
         status: 'pending',
         created_at: currentDate,
-        service: null,
+        service: 'usps',
         updated_at: currentDate,
         tracking_company: tracking.company,
-        shipment_status: null,
+        shipment_status: shipmentStatus,
         location_id: null,
         origin_address: null,
         email: `${simpleFaker.string.sample(8).toLowerCase()}@${simpleFaker.string.sample(6).toLowerCase()}.com`,
         destination: destination,
-        line_items: [generateLineItem(), generateLineItem()],
+        line_items: lineItems,
         tracking_number: tracking.number,
         tracking_numbers: [tracking.number],
         tracking_url: `https://www.ups.com/WebTracking?loc=en_US&requester=ST&trackNums=${tracking.number}`,
         tracking_urls: [`https://www.ups.com/WebTracking?loc=en_US&requester=ST&trackNums=${tracking.number}`],
         receipt: {},
         name: `#${simpleFaker.number.int({ min: 1000, max: 9999 })}.1`,
-        admin_graphql_api_id: `gid://shopify/Fulfillment/${fulfillmentId}`,
+        admin_graphql_api_id: shopifyFulfillmentId,
     };
 }
 
-// Example usage:
-const payload = generateFulfillmentPayload();
-console.log(JSON.stringify(payload, null, 2));
+export { generateFulfillmentPayload, generateLineItemPayload };

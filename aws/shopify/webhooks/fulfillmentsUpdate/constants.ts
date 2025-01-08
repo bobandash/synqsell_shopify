@@ -1,0 +1,1 @@
+export const SYNQSELL_COMMISSION = 0.05;

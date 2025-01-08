@@ -28,7 +28,7 @@ export type ShopifyEvent = {
             updated_at: string;
             tracking_company: string | null;
             shipment_status: string | null;
-            location_id: number;
+            location_id: number | null;
             origin_address: null;
             email: string;
             destination: {
@@ -42,8 +42,8 @@ export type ShopifyEvent = {
                 last_name: string;
                 address2: string | null;
                 company: string | null;
-                latitude: number;
-                longitude: number;
+                latitude: number | null;
+                longitude: number | null;
                 name: string;
                 country_code: string;
                 province_code: string | null;
@@ -55,7 +55,7 @@ export type ShopifyEvent = {
                 quantity: number;
                 sku: string;
                 variant_title: string | null;
-                vendor: string;
+                vendor: string | null;
                 fulfillment_service: string;
                 product_id: number;
                 requires_shipping: boolean;
