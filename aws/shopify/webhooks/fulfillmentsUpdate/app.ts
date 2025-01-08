@@ -20,6 +20,21 @@ async function isProcessableFulfillment(shopifyFulfillmentId: string, role: Role
     return res.rows.length > 0;
 }
 
+async function hasPayment(supplierShopifyFulfillmentId: string, client: PoolClient) {
+    const query = `
+        SELECT "Payment".id
+        FROM "Fulfillment"
+        INNER JOIN "Payment" ON "Fulfillment".id = "Payment"."fulfillmentId"
+        WHERE "Fulfillment"."supplierShopifyFulfillmentId" = $1
+        LIMIT 1
+    `;
+    const res = await client.query(query, [supplierShopifyFulfillmentId]);
+    if (res.rows.length === 0) {
+        return false;
+    }
+    return true;
+}
+
 export const lambdaHandler = async (event: ShopifyEvent) => {
     let client: null | PoolClient = null;
     const payload = event.detail.payload;
@@ -38,9 +53,10 @@ export const lambdaHandler = async (event: ShopifyEvent) => {
         });
         const pool = await initializePool();
         client = await pool.connect();
-        const [isRetailerFulfillment, isSupplierFulfillment] = await Promise.all([
+        const [isRetailerFulfillment, isSupplierFulfillment, hasPaymentForFulfillment] = await Promise.all([
             isProcessableFulfillment(shopifyFulfillmentId, ROLES.RETAILER, client),
             isProcessableFulfillment(shopifyFulfillmentId, ROLES.SUPPLIER, client),
+            hasPayment(shopifyFulfillmentId, client),
         ]);
 
         if (!isRetailerFulfillment && !isSupplierFulfillment) {
@@ -57,7 +73,8 @@ export const lambdaHandler = async (event: ShopifyEvent) => {
             } else if (isSupplierFulfillment) {
                 await cancelRetailerFulfillment(shopifyFulfillmentId, client);
             }
-        } else if (shipmentStatus === 'delivered' && isSupplierFulfillment) {
+        } else if (shipmentStatus === 'delivered' && isSupplierFulfillment && !hasPaymentForFulfillment) {
+            // for supplier payment
             await handlePaymentForDeliveredOrder(shop, shopifyOrderId, shopifyFulfillmentId, payload, client);
         }
 
@@ -77,3 +94,6 @@ export const lambdaHandler = async (event: ShopifyEvent) => {
         }
     }
 };
+
+export const exportsForTesting =
+    process.env.NODE_ENV === 'test' ? { isProcessableFulfillment, hasPayment, lambdaHandler } : undefined;
