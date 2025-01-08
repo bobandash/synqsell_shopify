@@ -1,6 +1,8 @@
 import { Payload } from '../../types';
 import { PoolClient } from 'pg';
-import { getOrderDetails, processPaymentToSupplier, processPaymentToSynqSell } from './helper';
+import processPaymentToSupplier from './processPaymentToSynqSell';
+import processPaymentToSynqSell from './processPaymentToSupplier';
+import getOrderDetails from './getOrderDetails';
 
 // ==============================================================================================================
 // START: END SHOPIFY BILLING API TO PAY SYNQSELL APP
