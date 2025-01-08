@@ -34,11 +34,15 @@ import {
   Billing,
   Role,
   FulfillmentService,
+  StripeConnectAccount,
+  StripeCustomerAccount,
 } from "@prisma/client";
 import { generateRole } from "./role.factories";
 import { generateBilling } from "./billing.factories";
 import { Prisma, PrismaClient } from "@prisma/client";
 import { generateFulfillmentService } from "./fulfillmentService.factories";
+import { generateStripeConnectAccount } from "./stripeConnectAccount.factories";
+import { generateStripeCustomerAccount } from "./stripeCustomerAccount.factories";
 type DbClient = PrismaClient | Prisma.TransactionClient;
 
 export type TestOrderEntireFlow = {
@@ -62,6 +66,8 @@ export type TestOrderEntireFlow = {
   supplierRole: Role;
   retailerRole: Role;
   retailerFulfillmentService: FulfillmentService;
+  supplierStripeConnectAccount: StripeConnectAccount;
+  retailerStripeCustomerAccount: StripeCustomerAccount;
 };
 
 export const generateOrder = async (
@@ -150,6 +156,17 @@ export async function createTestOrderWithEntireFlow(): Promise<TestOrderEntireFl
       {},
       tx
     );
+    const supplierStripeConnectAccount = await generateStripeConnectAccount(
+      supplier.id,
+      {},
+      tx
+    );
+    const retailerStripeCustomerAccount = await generateStripeCustomerAccount(
+      retailer.id,
+      true,
+      {},
+      tx
+    );
 
     const [supplierRole, retailerRole, supplierBilling, retailerBilling] =
       await Promise.all([
@@ -227,6 +244,32 @@ export async function createTestOrderWithEntireFlow(): Promise<TestOrderEntireFl
       supplierRole,
       retailerRole,
       retailerFulfillmentService,
+      supplierStripeConnectAccount,
+      retailerStripeCustomerAccount,
+    };
+  });
+
+  return res;
+}
+
+export async function createTestOrderWithNoPayment(
+  retailerId: string,
+  supplierId: string,
+  priceListId: string
+) {
+  const res = await db.$transaction(async (tx) => {
+    const order = await generateOrder(retailerId, supplierId, {}, tx);
+    const orderLineItem = await generateOrderLineItem(
+      order.id,
+      priceListId,
+      {},
+      tx
+    );
+    const fulfillment = await generateFulfillment(order.id, {}, tx);
+    return {
+      order,
+      orderLineItem,
+      fulfillment,
     };
   });
 

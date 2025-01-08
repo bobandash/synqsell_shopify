@@ -1,3 +1,5 @@
+import { Order, Session } from '/opt/nodejs/models/types';
+
 export type ShopifyEvent = {
     version: string;
     id: string;
@@ -116,3 +118,26 @@ export type PayloadTrackingInfo = {
 };
 
 export type Payload = ShopifyEvent['detail']['payload'];
+
+export type SupplierOrderLineItem = {
+    supplierShopifyOrderLineItemId: string;
+    quantityFulfilled: number;
+};
+
+export type OrderDetailsData = {
+    orderLineItems: SupplierOrderLineItem[];
+    dbFulfillmentId: string;
+    supplierSession: Session;
+    retailerSession: Session;
+    orderDetails: Order;
+    payments: {
+        shippingPayable: number;
+        orderPayable: number;
+        totalPayable: number;
+    };
+    currency: {
+        original: string;
+        stripeCurrency: string;
+        shopifyCurrency: string;
+    };
+};

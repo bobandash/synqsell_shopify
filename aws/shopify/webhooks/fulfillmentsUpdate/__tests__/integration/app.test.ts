@@ -1,10 +1,6 @@
 import { exportsForTesting } from '../../app';
 import { DatabaseSetup, disconnectClient, setupDatabase, teardownPool } from '~/test-db-setup';
-import {
-    createTestOrderWithEntireFlow,
-    generatePayment,
-    type TestOrderEntireFlow,
-} from '@db/factories/order.factories';
+import { createTestOrderWithEntireFlow, type TestOrderEntireFlow } from '@db/factories/order.factories';
 import { simpleFaker } from '@faker-js/faker/.';
 import { ROLES } from '@db/constants';
 

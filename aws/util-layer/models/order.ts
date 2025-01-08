@@ -32,3 +32,13 @@ export async function getOrderFromSupplierShopifyOrderId(
   }
   return res.rows[0] as Order;
 }
+
+export async function hasOrder(dbOrderId: string, client: PoolClient) {
+  const query = `
+    SELECT * FROM "Order"
+    WHERE "Order".id = $1
+    LIMIT 1 
+  `;
+  const res = await client.query(query, [dbOrderId]);
+  return res.rows.length > 0;
+}
