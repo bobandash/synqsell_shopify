@@ -127,7 +127,7 @@ describe("Session Functions", () => {
         const { client } = database;
         await expect(
           getRetailerSessionFromOrderId(nonExistentId, client)
-        ).rejects.toThrow("No retailer session exists.");
+        ).rejects.toThrow();
       });
     });
 
@@ -143,7 +143,7 @@ describe("Session Functions", () => {
         const { client } = database;
         await expect(
           getRetailerSessionFromOrderId(nonExistentId, client)
-        ).rejects.toThrow("No retailer session exists.");
+        ).rejects.toThrow();
       });
     });
 
@@ -162,7 +162,7 @@ describe("Session Functions", () => {
         const { client } = database;
         await expect(
           getRetailerSessionFromRetailerShopifyProductId(nonExistentId, client)
-        ).rejects.toThrow("No retailer session exists.");
+        ).rejects.toThrow();
       });
     });
 
@@ -181,7 +181,7 @@ describe("Session Functions", () => {
         const { client } = database;
         await expect(
           getSupplierSessionFromRetailerShopifyProductId(nonExistentId, client)
-        ).rejects.toThrow("No supplier session exists.");
+        ).rejects.toThrow();
       });
     });
   });

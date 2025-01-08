@@ -15,7 +15,7 @@ export async function getSessionFromId(sessionId: string, client: PoolClient) {
   const query = `SELECT * FROM "Session" WHERE id = $1 LIMIT 1`;
   const sessionData = await client.query(query, [sessionId]);
   if (sessionData.rows.length === 0) {
-    throw new Error("Session id is invalid.");
+    throw new Error(`Session id ${sessionId} is invalid.`);
   }
   const session = sessionData.rows[0];
   return session as Session;
@@ -47,7 +47,9 @@ export async function getRetailerSessionFromSupplierOrder(
   `;
   const res = await client.query(query, [supplierShopifyOrderId]);
   if (res.rows.length === 0) {
-    throw new Error("No retailer session exists.");
+    throw new Error(
+      `No retailer session exists for supplierShopifyOrderId ${supplierShopifyOrderId}.`
+    );
   }
   return res.rows[0] as Session;
 }
@@ -63,7 +65,7 @@ export async function getRetailerSessionFromOrderId(
   `;
   const res = await client.query(query, [orderId]);
   if (res.rows.length === 0) {
-    throw new Error(`No retailer session exists.`);
+    throw new Error(`No retailer session exists for dbOrderId ${orderId}.`);
   }
   return res.rows[0] as Session;
 }
@@ -80,7 +82,9 @@ export async function getRetailerSessionFromRetailerShopifyProductId(
   `;
   const res = await client.query(query, [retailerShopifyProductId]);
   if (res.rows.length === 0) {
-    throw new Error(`No retailer session exists.`);
+    throw new Error(
+      `No retailer session exists for retailerShopifyProductId ${retailerShopifyProductId}.`
+    );
   }
   return res.rows[0];
 }
@@ -99,7 +103,9 @@ export async function getSupplierSessionFromRetailerShopifyProductId(
   `;
   const res = await client.query(query, [retailerShopifyProductId]);
   if (res.rows.length === 0) {
-    throw new Error(`No supplier session exists.`);
+    throw new Error(
+      `No supplier session exists for retailer shopify product id ${retailerShopifyProductId}.`
+    );
   }
   return res.rows[0];
 }
