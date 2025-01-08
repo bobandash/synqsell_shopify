@@ -24,6 +24,7 @@ export const lambdaHandler = async (event: ShopifyEvent) => {
     let client: null | PoolClient = null;
     const payload = event.detail.payload;
     const shop = event.detail.metadata['X-Shopify-Shop-Domain'];
+    const webhookId = event.detail.metadata['X-Shopify-Webhook-Id'];
     const {
         status: fulfillmentStatus,
         shipment_status: shipmentStatus,
@@ -31,17 +32,9 @@ export const lambdaHandler = async (event: ShopifyEvent) => {
         admin_graphql_api_id: shopifyFulfillmentId,
     } = payload;
     const shopifyOrderId = composeGid('Order', rawOrderId);
-    const eventDetails = {
-        shipmentStatus,
-        fulfillmentStatus,
-        shopifyFulfillmentId,
-        shopifyOrderId,
-    };
-
     try {
         logInfo('Start: Handle fulfillment update for supplier/retailer', {
-            shop,
-            eventDetails,
+            webhookId,
         });
         const pool = await initializePool();
         client = await pool.connect();
@@ -52,8 +45,7 @@ export const lambdaHandler = async (event: ShopifyEvent) => {
 
         if (!isRetailerFulfillment && !isSupplierFulfillment) {
             logInfo('End: Order is not related to SynqSell.', {
-                shop,
-                eventDetails,
+                webhookId,
             });
             return;
         }
@@ -70,15 +62,13 @@ export const lambdaHandler = async (event: ShopifyEvent) => {
         }
 
         logInfo('End: Handle fulfillment update for supplier/retailer.', {
-            shop,
-            eventDetails,
+            webhookId,
         });
         return;
     } catch (error) {
         logError(error, {
             context: `Failed to handle fulfillment update status.`,
-            shop,
-            eventDetails,
+            webhookId,
         });
         throw error;
     } finally {

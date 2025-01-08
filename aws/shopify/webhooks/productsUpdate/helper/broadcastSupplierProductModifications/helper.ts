@@ -126,7 +126,6 @@ async function updateRetailerVariantPricesShopify(
                 cost: variant.supplierProfit,
             },
         }));
-        console.log('reached here');
         return updateVariantShopify(
             { shop: updateData.retailerShop, accessToken: updateData.retailerAccessToken },
             retailerShopifyProductId,

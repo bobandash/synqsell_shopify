@@ -156,7 +156,6 @@ async function getSupplierPayableAmounts(
 // START: PAY SUPPLIER USING STRIPE PAYMENTS/CONNECT LOGIC AND STORE IN DB
 // ==============================================================================================================
 
-// not sure if customerId is considered PII, but it's also irrelevant w/out api key
 async function getStripePaymentMethod(customerId: string) {
     const stripe = await getStripe();
     const paymentMethods = await stripe.paymentMethods.list({
@@ -252,49 +251,33 @@ async function handleStripePayment(
     dbOrderId: string,
     client: PoolClient,
 ) {
-    try {
-        const { shippingPayableAmount, orderPayableAmount } = payableAmounts;
-        const totalPayableAmount = shippingPayableAmount + orderPayableAmount;
-        const stripeEventId = await paySupplierStripe(
-            supplierId,
-            retailerId,
-            totalPayableAmount,
-            stripeCurrency,
-            client,
-        );
-        const dbPaymentId = await recordStripePaymentInDb(
-            stripeEventId,
-            orderPayableAmount,
-            shippingPayableAmount,
-            dbFulfillmentId,
-            dbOrderId,
-            client,
-        );
-        return dbPaymentId;
-    } catch (error) {
-        console.error(error);
-        throw new Error(`Failed to handle stripe payment for fulfillment id ${dbFulfillmentId}.`);
-    }
+    const { shippingPayableAmount, orderPayableAmount } = payableAmounts;
+    const totalPayableAmount = shippingPayableAmount + orderPayableAmount;
+    const stripeEventId = await paySupplierStripe(supplierId, retailerId, totalPayableAmount, stripeCurrency, client);
+    const dbPaymentId = await recordStripePaymentInDb(
+        stripeEventId,
+        orderPayableAmount,
+        shippingPayableAmount,
+        dbFulfillmentId,
+        dbOrderId,
+        client,
+    );
+    return dbPaymentId;
 }
 
 // ==============================================================================================================
 // START: USE SHOPIFY BILLING API TO PAY SYNQSELL APP
 // ==============================================================================================================
 async function getShopifySubscriptionLineItemId(sessionId: string, client: PoolClient) {
-    try {
-        const query = `
-            SELECT "shopifySubscriptionLineItemId" FROM "Billing"
-            WHERE "sessionId" = $1
-        `;
-        const res = await client.query(query);
-        if (res.rows.length === 0) {
-            throw new Error('The user is not subscribed to the Shopify Basic Usage plan.');
-        }
-        return res.rows[0].shopifySubscriptionLineItemId as string;
-    } catch (error) {
-        console.error(error);
-        throw new Error(`Failed to get subscription line id for session ${sessionId}.`);
+    const query = `
+        SELECT "shopifySubscriptionLineItemId" FROM "Billing"
+        WHERE "sessionId" = $1
+    `;
+    const res = await client.query(query, [sessionId]);
+    if (res.rows.length === 0) {
+        throw new Error(`The user ${sessionId} is does not have a usage plan.`);
     }
+    return res.rows[0].shopifySubscriptionLineItemId as string;
 }
 
 async function createUsageChargeShopify(
