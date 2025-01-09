@@ -3,6 +3,7 @@ import { Unauthorized } from 'http-errors';
 import { StatusCodes } from 'http-status-codes';
 import { ValidationError } from 'yup';
 import getRouteError from '../../getRouteError.server';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 jest.mock('../../createJSONError.server', () => ({
   ...jest.requireActual('../../createJSONError.server'),
@@ -17,7 +18,7 @@ describe('getRouteError', () => {
 
   describe('PrismaClientKnownRequestError handling', () => {
     test('should handle P2002 (unique constraint violation)', () => {
-      const error = new Prisma.PrismaClientKnownRequestError(
+      const error = new PrismaClientKnownRequestError(
         'Unique constraint failed',
         {
           code: 'P2002',
@@ -33,13 +34,10 @@ describe('getRouteError', () => {
     });
 
     test('should handle P2025 (record not found)', () => {
-      const error = new Prisma.PrismaClientKnownRequestError(
-        'Record not found',
-        {
-          code: 'P2025',
-          clientVersion: '4.x.x',
-        },
-      );
+      const error = new PrismaClientKnownRequestError('Record not found', {
+        code: 'P2025',
+        clientVersion: '4.x.x',
+      });
 
       const result = getRouteError(error, defaultMessage);
 
@@ -50,7 +48,7 @@ describe('getRouteError', () => {
     });
 
     test('should handle unknown Prisma error codes', () => {
-      const error = new Prisma.PrismaClientKnownRequestError('Unknown error', {
+      const error = new PrismaClientKnownRequestError('Unknown error', {
         code: 'P2999',
         clientVersion: '4.x.x',
       });
