@@ -19,7 +19,7 @@ jest.mock('../../helper', () => ({
     handlePaymentForDeliveredOrder: jest.fn(),
 }));
 
-describe('Fulfillments Update Webhook', () => {
+describe('Fulfillments Update Webhook Utility Functions', () => {
     let orderEntireFlowDetails: TestOrderEntireFlow;
     let database: DatabaseSetup;
     const nonExistentId = simpleFaker.string.uuid();
