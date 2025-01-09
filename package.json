@@ -24,7 +24,7 @@
     "test:aws-integration:cmd:watch": "dotenv -e .env.test -- jest --selectProjects aws-integration --runInBand --watch",
     "test:aws-integration": "npm run test:db:up && npm run test:db:push && npm run test:aws-integration:cmd && npm run test:db:down",
     "test:aws-integration:watch": "npm run test:db:up && npm run test:db:push && npm run test:aws-integration:cmd:watch",
-    "test": "npm run test:unit && npm run test:integration",
+    "test": "npm run test:unit && npm run test:aws-unit && npm run test:integration && npm run test:aws-integration",
     "test:seed": "cross-env NODE_ENV=test dotenv -e .env.test tsx prisma/test-seed.ts"
   },
   "dependencies": {
