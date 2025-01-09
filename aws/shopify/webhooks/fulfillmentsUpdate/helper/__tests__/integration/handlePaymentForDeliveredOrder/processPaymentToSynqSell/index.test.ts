@@ -5,7 +5,7 @@ import {
     type TestOrderEntireFlow,
 } from '@db/factories/order.factories';
 import { paySupplierStripe } from '../../../../handlePaymentForDeliveredOrder/processPaymentToSynqSell/helper';
-import { generateFulfillmentPayload, generateLineItemPayload } from '~/shopify/webhooks/fulfillmentsUpdate/util.test';
+import { generateFulfillmentPayload, generateLineItemPayload } from '~/shopify/webhooks/fulfillmentsUpdate/common.test';
 import getOrderDetails from '../../../../handlePaymentForDeliveredOrder/getOrderDetails';
 import processPaymentToSupplier from '../../../../handlePaymentForDeliveredOrder/processPaymentToSynqSell';
 import db from '@db/test-db';

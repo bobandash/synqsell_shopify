@@ -2,7 +2,7 @@ import { exportsForTesting } from '../../../../handlePaymentForDeliveredOrder/pr
 import { createTestOrderWithEntireFlow, TestOrderEntireFlow } from '@db/factories/order.factories';
 import { DatabaseSetup, disconnectClient, setupDatabase, teardownPool } from '~/test-db-setup';
 import getOrderDetails from '../../../../handlePaymentForDeliveredOrder/getOrderDetails';
-import { generateFulfillmentPayload, generateLineItemPayload } from '~/shopify/webhooks/fulfillmentsUpdate/util.test';
+import { generateFulfillmentPayload, generateLineItemPayload } from '~/shopify/webhooks/fulfillmentsUpdate/common.test';
 import handleShopifyUsageCharge from '../../../../handlePaymentForDeliveredOrder/processPaymentToSupplier/helper';
 
 if (!exportsForTesting) {

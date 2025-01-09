@@ -9,7 +9,7 @@ import {
 } from '@db/factories/order.factories';
 import { exportsForTesting } from '../../../handlePaymentForDeliveredOrder/getOrderDetails';
 import db from '@db/test-db';
-import { generateFulfillmentPayload, generateLineItemPayload } from '~/shopify/webhooks/fulfillmentsUpdate/util.test';
+import { generateFulfillmentPayload, generateLineItemPayload } from '~/shopify/webhooks/fulfillmentsUpdate/common.test';
 
 if (!exportsForTesting) {
     throw new Error('Environment is not tests.');
