@@ -3,37 +3,13 @@ import { initializePool } from './db';
 import { ShopifyEvent } from './types';
 import { cancelRetailerFulfillment, handlePaymentForDeliveredOrder, resyncRetailerFulfillment } from './helper';
 import { composeGid } from '@shopify/admin-graphql-api-utilities';
-import { ROLES, RolesOptions } from '/opt/nodejs/constants';
+import { ROLES } from '/opt/nodejs/constants';
 import { logError, logInfo } from '/opt/nodejs/utils/logger';
+import { hasPayment, isProcessableFulfillment } from './util';
 
 // This function listens to when the fulfillment ever updates
 // fulfillment includes: fulfillment / tracking number being cancelled and shipment status changing
 // https://shopify.dev/docs/api/admin-rest/2024-07/resources/fulfillment#put-orders-order-id-fulfillments-fulfillment-id
-async function isProcessableFulfillment(shopifyFulfillmentId: string, role: RolesOptions, client: PoolClient) {
-    let query = '';
-    if (role === ROLES.RETAILER) {
-        query = `SELECT "id" FROM "Fulfillment" WHERE "retailerShopifyFulfillmentId" = $1`;
-    } else if (role === ROLES.SUPPLIER) {
-        query = `SELECT "id" FROM "Fulfillment" WHERE "supplierShopifyFulfillmentId" = $1`;
-    }
-    const res = await client.query(query, [shopifyFulfillmentId]);
-    return res.rows.length > 0;
-}
-
-async function hasPayment(supplierShopifyFulfillmentId: string, client: PoolClient) {
-    const query = `
-        SELECT "Payment".id
-        FROM "Fulfillment"
-        INNER JOIN "Payment" ON "Fulfillment".id = "Payment"."fulfillmentId"
-        WHERE "Fulfillment"."supplierShopifyFulfillmentId" = $1
-        LIMIT 1
-    `;
-    const res = await client.query(query, [supplierShopifyFulfillmentId]);
-    if (res.rows.length === 0) {
-        return false;
-    }
-    return true;
-}
 
 export const lambdaHandler = async (event: ShopifyEvent) => {
     let client: null | PoolClient = null;
@@ -94,6 +70,3 @@ export const lambdaHandler = async (event: ShopifyEvent) => {
         }
     }
 };
-
-export const exportsForTesting =
-    process.env.NODE_ENV === 'test' ? { isProcessableFulfillment, hasPayment, lambdaHandler } : undefined;

@@ -272,7 +272,6 @@ export async function createTestOrderWithNoPayment(
       fulfillment,
     };
   });
-
   return res;
 }
 
