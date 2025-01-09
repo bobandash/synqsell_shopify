@@ -1,15 +1,14 @@
-import { Prisma } from '@prisma/client';
 import * as createHttpError from 'http-errors';
 import { StatusCodes } from 'http-status-codes';
 import { ValidationError } from 'yup';
 import createJSONError from './createJSONError.server';
-
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 function getRouteError(error: any, humanReadableMessage?: string) {
   const defaultMessage =
     'An internal server error occurred. Please contact support.';
 
   // We do not want to show anything related to database for prisma errors
-  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+  if (error instanceof PrismaClientKnownRequestError) {
     switch (error.code) {
       case 'P2002':
         return createJSONError(defaultMessage, StatusCodes.CONFLICT);

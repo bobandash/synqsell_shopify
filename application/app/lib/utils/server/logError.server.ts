@@ -2,6 +2,8 @@ import logger from '~/logger';
 import { Prisma } from '@prisma/client';
 import { HttpError } from 'http-errors';
 import { v4 as uuidv4 } from 'uuid';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+
 // https://medium.com/@psdevraye/best-practices-for-exception-logging-in-spring-boot-real-time-examples-5139607103aa#:~:text=Exception%20Message%3A%20Log%20the%20exception%20message%20itself%2C%20which,the%20exact%20location%20and%20cause%20of%20the%20error.
 // ^ always log stack trace
 // http://www.blueskyline.com/ErrorPatterns/ErrorPatternsPaper.pdf
@@ -30,7 +32,7 @@ function logError(error: unknown, context: Record<string, any> = {}) {
   }
 
   // For prisma errors, we have to handle differently to not log sensitive info like host name
-  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+  if (error instanceof PrismaClientKnownRequestError) {
     logger.error({
       referenceId,
       name: 'PrismaError',
