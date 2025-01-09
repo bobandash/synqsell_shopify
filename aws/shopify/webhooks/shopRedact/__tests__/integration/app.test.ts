@@ -4,16 +4,9 @@ import { lambdaHandler } from '../../app';
 import { ShopifyEvent } from '../../types';
 import db from '@db/test-db';
 import { simpleFaker } from '@faker-js/faker/.';
-import { parseGid } from '@shopify/admin-graphql-api-utilities';
-import { createTestRole, generateRole } from '@db/factories/role.factories';
+import { generateRole } from '@db/factories/role.factories';
 import { ROLES } from '@db/constants';
-import { generateImportedProduct } from '@db/factories/pricelist.factories';
-import * as helperFunctions from '../../helper';
-import * as importedProductModelFunctions from '/opt/nodejs/models/importedProduct';
-import { Session, StripeConnectAccount, StripeCustomerAccount } from '@prisma/client';
-import { createTestSession } from '@db/factories/session.factories';
 import { generateStripeConnectAccount } from '@db/factories/stripeConnectAccount.factories';
-import { generateStripeCustomerAccount } from '@db/factories/stripeCustomerAccount.factories';
 import { mutateAndValidateGraphQLData } from '/opt/nodejs/utils';
 import { DELETE_PRODUCT_MUTATION } from '../../graphql';
 
@@ -54,9 +47,6 @@ describe('Shop Redact Webhook', () => {
     beforeEach(async () => {
         jest.clearAllMocks();
         orderEntireFlowDetails = await createTestOrderWithEntireFlow();
-        const { supplier, retailer } = orderEntireFlowDetails;
-        await generateStripeConnectAccount(supplier.id);
-        await generateStripeCustomerAccount(retailer.id, true);
     });
 
     afterAll(async () => {
