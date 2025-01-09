@@ -2,7 +2,11 @@ import { NotFound } from 'http-errors';
 import logError, { exportsForTesting } from '../../logError.server';
 import { v4 as uuidv4 } from 'uuid';
 import logger from '~/logger';
-import { Prisma } from '@prisma/client';
+import {
+  PrismaClientKnownRequestError,
+  PrismaClientInitializationError,
+  PrismaClientValidationError,
+} from '@prisma/client/runtime/library';
 
 jest.mock('uuid', () => ({
   v4: jest.fn(() => '123'),
@@ -55,7 +59,7 @@ describe('logError', () => {
 
   describe('PrismaError', () => {
     test('should log PrismaClientKnownRequestError correctly', () => {
-      const error = new Prisma.PrismaClientKnownRequestError(
+      const error = new PrismaClientKnownRequestError(
         'Failed to handle query constraint.',
         {
           code: 'P2002',
@@ -79,7 +83,7 @@ describe('logError', () => {
     });
 
     test('should log PrismaClientInitializationError correctly', () => {
-      const error = new Prisma.PrismaClientInitializationError(
+      const error = new PrismaClientInitializationError(
         'Failed to reach database.',
         clientVersion,
       );
@@ -94,7 +98,7 @@ describe('logError', () => {
     });
 
     test('should log PrismaClientValidationError correctly', () => {
-      const error = new Prisma.PrismaClientValidationError(
+      const error = new PrismaClientValidationError(
         'Invalid query parameters.',
         { clientVersion },
       );
@@ -121,7 +125,7 @@ describe('logError', () => {
       expect(loggedData).toHaveProperty('referenceId', referenceId);
       expect(loggedData).toHaveProperty('name', error.name);
       expect(loggedData).toHaveProperty('message', 'Something went wrong');
-      expect(loggedData).toHaveProperty('stack'); // Ensure stack trace is logged
+      expect(loggedData).toHaveProperty('stack');
     });
   });
 
