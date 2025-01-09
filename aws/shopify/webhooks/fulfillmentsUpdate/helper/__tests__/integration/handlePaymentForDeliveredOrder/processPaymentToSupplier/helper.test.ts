@@ -12,12 +12,6 @@ if (!exportsForTesting) {
     throw new Error('Environment is not tests.');
 }
 
-jest.mock('/opt/nodejs/utils', () => ({
-    ...jest.requireActual('/opt/nodejs/utils'),
-    mutateAndValidateGraphQLData: jest.fn(),
-    fetchAndValidateGraphQLData: jest.fn(),
-}));
-
 jest.mock('../../../../handlePaymentForDeliveredOrder/graphql', () => ({
     createUsageChargeShopify: jest.fn(),
 }));
