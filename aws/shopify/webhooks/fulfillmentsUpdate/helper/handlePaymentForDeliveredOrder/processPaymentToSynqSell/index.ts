@@ -1,6 +1,7 @@
 import { PoolClient } from 'pg';
 import { OrderDetailsData } from '../../../types';
 import { paySupplierStripe, recordStripePaymentDb } from './helper';
+import { getOrderFromSupplierShopifyOrderId } from '/opt/nodejs/models/order';
 
 async function processPaymentToSupplier(data: OrderDetailsData, client: PoolClient) {
     const {
@@ -8,9 +9,11 @@ async function processPaymentToSupplier(data: OrderDetailsData, client: PoolClie
         retailerSession,
         payments: { totalPayable, orderPayable, shippingPayable },
         currency: { stripeCurrency },
-        dbFulfillmentId,
         orderDetails: { supplierShopifyOrderId },
+        dbFulfillmentId,
     } = data;
+    const dbOrderId = (await getOrderFromSupplierShopifyOrderId(supplierShopifyOrderId, client)).id;
+
     const stripeEventId = await paySupplierStripe(
         supplierSession.id,
         retailerSession.id,
@@ -24,7 +27,7 @@ async function processPaymentToSupplier(data: OrderDetailsData, client: PoolClie
         shippingPayable,
         totalPayable,
         dbFulfillmentId,
-        supplierShopifyOrderId,
+        dbOrderId,
         client,
     );
     return paymentId;
