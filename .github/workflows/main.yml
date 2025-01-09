@@ -33,9 +33,10 @@ jobs:
       - name: Install dependencies at root
         run: npm ci
       - name: Install dependencies at application
-        run: cd application && npm ci
+        working-directory: application
+        run: npm ci
       - name: Run tests
-        run: cd .. && npm run test
+        run: npm run test
 
   ci_application:
     name: CI - Application
