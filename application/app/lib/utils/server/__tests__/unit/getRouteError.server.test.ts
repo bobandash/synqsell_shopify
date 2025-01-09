@@ -1,4 +1,3 @@
-import { Prisma } from '@prisma/client';
 import { Unauthorized } from 'http-errors';
 import { StatusCodes } from 'http-status-codes';
 import { ValidationError } from 'yup';

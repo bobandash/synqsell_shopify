@@ -1,4 +1,3 @@
-import winston from "winston";
 import { simpleFaker } from "@faker-js/faker";
 import { logError, logInfo, exportsForTesting } from "../../logger";
 if (!exportsForTesting) {
