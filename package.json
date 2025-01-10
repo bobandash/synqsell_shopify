@@ -12,7 +12,7 @@
   "scripts": {
     "test:db:up": "docker compose -f docker-compose.test.yml up -d && sleep 5",
     "test:db:down": "docker compose -f docker-compose.test.yml down",
-    "test:db:push": " dotenv -e .env.test -- npx prisma db push",
+    "test:db:push": " dotenv -e .env.test -- npx prisma db push && npx prisma generate",
     "test:unit": "jest --selectProjects unit",
     "test:unit:watch": "jest --selectProjects unit --watch",
     "test:integration:cmd": "dotenv -e .env.test -- jest --selectProjects integration --runInBand",
