@@ -87,7 +87,7 @@ jobs:
 
   cd_application_config:
     name: CD - App Config
-    needs: [ci_application, ci_aws]
+    needs: [ci_application, ci_aws, ci_test]
     if: github.event_name == 'push'
     environment: ${{ github.ref_name }}
     runs-on: ubuntu-latest
