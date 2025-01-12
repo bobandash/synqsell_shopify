@@ -24,26 +24,6 @@ export type ShopifyEvent = {
     };
 };
 
-export type Session = {
-    id: string;
-    shop: string;
-    state: string;
-    isOnline: boolean;
-    scope?: string;
-    expires?: Date;
-    accessToken: string;
-    userId?: bigint;
-    firstName?: string;
-    lastName?: string;
-    email?: string;
-    accountOwner: boolean;
-    locale?: string;
-    collaborator?: boolean;
-    emailVerified?: boolean;
-    storefrontAccessToken?: string;
-    isAppUninstalled: boolean;
-};
-
 export type StripeSecrets = {
     STRIPE_SECRET_API_KEY: string;
     REACT_APP_STRIPE_PUBLISHABLE_KEY: string;

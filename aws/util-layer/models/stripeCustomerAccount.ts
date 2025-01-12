@@ -23,22 +23,36 @@ export async function getStripeCustomerId(
   `;
   const res = await client.query(query, [retailerId]);
   if (res.rows.length === 0) {
-    throw new Error(
-      `No stripe customer id id exists for retailerId ${retailerId}.`
-    );
+    throw new Error(`No stripe customer id exists.`);
   }
   return res.rows[0].stripeCustomerId as string;
 }
 
+async function hasStripeCustomerId(
+  stripeCustomerId: string,
+  client: PoolClient
+) {
+  const query = `
+      SELECT id FROM "StripeCustomerAccount"
+      WHERE "stripeCustomerId" = $1
+  `;
+  const res = await client.query(query, [stripeCustomerId]);
+  return res.rows.length > 0;
+}
+
 export async function updatePaymentMethodStatus(
-  customerId: string,
+  stripeCustomerId: string,
   hasPaymentMethod: boolean,
   client: PoolClient
 ) {
+  if (!(await hasStripeCustomerId(stripeCustomerId, client))) {
+    throw new Error("Stripe customer id does not exist.");
+  }
+
   const query = `
       UPDATE "StripeCustomerAccount"
       SET "hasPaymentMethod" = $1
       WHERE "stripeCustomerId" = $2
   `;
-  await client.query(query, [hasPaymentMethod, customerId]);
+  await client.query(query, [hasPaymentMethod, stripeCustomerId]);
 }

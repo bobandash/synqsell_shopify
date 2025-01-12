@@ -1,5 +1,5 @@
 {
-    "name": "hello_world",
+    "name": "fulfillments_update",
     "version": "1.0.0",
     "description": "hello world sample for NodeJS",
     "main": "app.js",
@@ -20,6 +20,7 @@
         "esbuild": "^0.14.14",
         "pg": "^8.12.0",
         "stripe": "^16.12.0",
+        "uuid": "^11.0.5",
         "uuidv4": "^6.2.13"
     },
     "devDependencies": {

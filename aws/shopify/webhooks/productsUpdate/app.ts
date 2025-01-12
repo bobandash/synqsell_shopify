@@ -1,6 +1,5 @@
 import { PoolClient } from 'pg';
 import { initializePool } from './db';
-import { composeGid } from '@shopify/admin-graphql-api-utilities';
 import { broadcastSupplierProductModifications, revertRetailerProductModifications } from './helper';
 import { ProductStatus, ShopifyEvent } from './types';
 import { isImportedProduct } from '/opt/nodejs/models/importedProduct';
@@ -13,19 +12,15 @@ export const lambdaHandler = async (event: ShopifyEvent) => {
     const shopifyProductId = payload.admin_graphql_api_id;
     const newProductStatus = payload.status.toUpperCase() as ProductStatus;
     const editedVariants = payload.variants.map((variant) => ({
-        shopifyVariantId: composeGid('ProductVariant', variant.id),
+        shopifyVariantId: variant.admin_graphql_api_id,
         hasUpdatedInventory: variant.inventory_quantity !== variant.old_inventory_quantity,
         newInventory: variant.inventory_quantity,
         price: variant.price,
     }));
-    const shop = event.detail.metadata['X-Shopify-Shop-Domain'];
-    const eventDetails = {
-        shopifyProductId,
-    };
+    const webhookId = event.detail.metadata['X-Shopify-Webhook-Id'];
     try {
         logInfo('Start: Update product details', {
-            shop,
-            eventDetails,
+            webhookId,
         });
         const pool = await initializePool();
         client = await pool.connect();
@@ -36,32 +31,26 @@ export const lambdaHandler = async (event: ShopifyEvent) => {
 
         if (!isSupplierProduct && !isRetailerProduct) {
             logInfo('End: Not a product on SynqSell', {
-                shop,
-                eventDetails,
+                webhookId,
             });
             return;
         }
 
-        // there is no old price, so we cannot check if the variant price has been updated
-        // even though it consumes GraphQL resources, we are going to broadcast the price changes
-
         if (isSupplierProduct) {
-            await broadcastSupplierProductModifications(editedVariants, shopifyProductId, newProductStatus, client);
+            await broadcastSupplierProductModifications(shopifyProductId, editedVariants, newProductStatus, client);
         } else if (isRetailerProduct) {
             await revertRetailerProductModifications(shopifyProductId, editedVariants, newProductStatus, client);
         }
         logInfo('End: Successfully updated product details.', {
-            shop,
-            eventDetails,
+            webhookId,
         });
         return;
     } catch (error) {
         logError(error, {
-            shop,
-            context: 'Failed to update product for either retailer or supplier.',
-            eventDetails,
+            context: 'Failed to update product details.',
+            webhookId,
         });
-        return;
+        throw error;
     } finally {
         if (client) {
             client.release();

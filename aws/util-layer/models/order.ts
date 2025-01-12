@@ -2,7 +2,7 @@ import { PoolClient } from "pg";
 import { Order } from "./types";
 
 export async function isOrder(
-  shopifyOrderId: string,
+  supplierShopifyOrderId: string,
   supplierId: string,
   client: PoolClient
 ) {
@@ -10,7 +10,10 @@ export async function isOrder(
       SELECT "id" FROM "Order"
       WHERE "supplierId" = $1 AND "supplierShopifyOrderId" = $2
   `;
-  const orderData = await client.query(query, [supplierId, shopifyOrderId]);
+  const orderData = await client.query(query, [
+    supplierId,
+    supplierShopifyOrderId,
+  ]);
   return orderData.rows.length > 0;
 }
 
@@ -25,9 +28,17 @@ export async function getOrderFromSupplierShopifyOrderId(
   `;
   const res = await client.query(query, [supplierShopifyOrderId]);
   if (res.rows.length === 0) {
-    throw new Error(
-      `There is no order for shopify supplier order id ${supplierShopifyOrderId}.`
-    );
+    throw new Error(`No order exists.`);
   }
   return res.rows[0] as Order;
+}
+
+export async function hasOrder(dbOrderId: string, client: PoolClient) {
+  const query = `
+    SELECT * FROM "Order"
+    WHERE "Order".id = $1
+    LIMIT 1 
+  `;
+  const res = await client.query(query, [dbOrderId]);
+  return res.rows.length > 0;
 }

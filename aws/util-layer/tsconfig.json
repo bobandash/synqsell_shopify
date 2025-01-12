@@ -11,7 +11,12 @@
     "moduleResolution": "node",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "outDir": "./opt/nodejs"
+    "outDir": "./opt/nodejs",
+    "baseUrl": ".",
+    "paths": {
+      "~/*": ["../*"],
+      "@db/*": ["../../prisma/*"]
+    }
   },
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "**/__tests__/**", "**/*.test.ts", "node_modules"]
 }

@@ -9,7 +9,8 @@ import {
     OrderLineItemsQuery,
     SubsequentOrderLineItemsQuery,
 } from '../types/admin.generated';
-import { LineItemDetail, RetailerLineItemDetail, Session } from '../types';
+import { LineItemDetail, RetailerLineItemDetail } from '../types';
+import type { Session } from '/opt/nodejs/models/types';
 import {
     CREATE_REFUND_MUTATION,
     GET_ORDER_ID,

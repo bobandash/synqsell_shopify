@@ -1,7 +1,6 @@
 import { simpleFaker } from '@faker-js/faker';
 import type { Session } from '../../session.server';
-import { createSampleSession } from '@factories/session.factories';
-import { createSampleRole } from '@factories/role.factories';
+
 import { ROLES } from '~/constants';
 import {
   addRole,
@@ -13,22 +12,20 @@ import {
   updateRoleVisibilityTx,
 } from '../../roles.server';
 import db from '~/db.server';
+import { createTestSession } from '@db/factories/session.factories';
+import { generateRole } from '@db/factories/role.factories';
 
 describe('Roles', () => {
   const nonExistentId = simpleFaker.string.uuid();
   let adminSession: Session;
   let supplierAndRetailer: Session;
   beforeEach(async () => {
-    adminSession = await createSampleSession({
-      id: simpleFaker.string.uuid(),
-    });
-    supplierAndRetailer = await createSampleSession({
-      id: simpleFaker.string.uuid(),
-    });
+    adminSession = await createTestSession();
+    supplierAndRetailer = await createTestSession();
     await Promise.all([
-      createSampleRole(supplierAndRetailer.id, ROLES.RETAILER),
-      createSampleRole(supplierAndRetailer.id, ROLES.SUPPLIER),
-      createSampleRole(adminSession.id, ROLES.ADMIN),
+      generateRole(supplierAndRetailer.id, ROLES.RETAILER, true),
+      generateRole(supplierAndRetailer.id, ROLES.SUPPLIER, true),
+      generateRole(adminSession.id, ROLES.ADMIN, true),
     ]);
   });
 

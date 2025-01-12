@@ -96,16 +96,3 @@ export async function getRetailerIds(priceListId: string) {
   const retailerIds = partnerships.map(({ retailerId }) => retailerId);
   return retailerIds;
 }
-
-export async function getSupplierId(priceListId: string) {
-  const res = await db.priceList.findFirstOrThrow({
-    where: {
-      id: priceListId,
-    },
-    select: {
-      supplierId: true,
-    },
-  });
-  const { supplierId } = res;
-  return supplierId;
-}

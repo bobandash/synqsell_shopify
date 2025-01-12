@@ -1,32 +1,16 @@
 import { PoolClient } from 'pg';
-import { PayloadLineItem, PayloadTrackingInfo, ShopifyEvent } from '../types';
-import { FulfillmentCreateV2Mutation } from '../types/admin.generated';
-import { CREATE_FULFILLMENT_FULFILLMENT_ORDER_MUTATION } from '../graphql';
+import { Payload, ShopifyEvent } from '../types';
 import { getSessionFromShop } from '/opt/nodejs/models/session';
-import { Session } from '/opt/nodejs/models/types';
-import { mutateAndValidateGraphQLData } from '/opt/nodejs/utils';
 import { getFulfillmentIdFromRetailerShopify } from '/opt/nodejs/models/fulfillment';
+import { createFulfillmentShopify } from './util';
 
 // ==============================================================================================================
 // START: RESYNC FULFILLMENT FOR RETAILER STORE LOGIC
 // ==============================================================================================================
-function getRelevantDetailsForResyncingRetailerFulfillment(payload: ShopifyEvent['detail']['payload']) {
-    const lineItems = payload.line_items.map((lineItem) => ({
-        id: lineItem.admin_graphql_api_id,
-        quantity: lineItem.quantity,
-    }));
-    const trackingInfo = {
-        company: payload.tracking_company,
-        numbers: payload.tracking_numbers,
-        urls: payload.tracking_urls,
-    };
-
-    return { lineItems, trackingInfo };
-}
 
 async function getRetailerShopifyFulfillmentOrderId(dbFulfillmentId: string, client: PoolClient) {
     const query = `
-        SELECT "retailerShopifyFulfillmentOrderId" 
+        SELECT "retailerShopifyFulfillmentOrderId"
         FROM "Order" 
         WHERE "id" = (SELECT "orderId" FROM "Fulfillment" WHERE "id" = $1)
     `;
@@ -34,16 +18,22 @@ async function getRetailerShopifyFulfillmentOrderId(dbFulfillmentId: string, cli
     if (res.rows.length === 0) {
         throw new Error(`No retailerShopifyFulfillmentOrderId exists for dbFulfillmentId ${dbFulfillmentId}.`);
     }
-    return res.rows[0].id as string;
+    return res.rows[0].retailerShopifyFulfillmentOrderId as string;
 }
 
-async function updateRetailerFulfillmentOnShopify(
-    retailerShopifyFulfillmentOrderId: string,
-    lineItems: PayloadLineItem[],
-    trackingInfo: PayloadTrackingInfo,
-    retailerSession: Session,
-) {
-    const fulfillmentInput = {
+const createFulfillmentInput = (payload: Payload, retailerShopifyFulfillmentOrderId: string) => {
+    const lineItems = payload.line_items.map((lineItem) => ({
+        id: lineItem.admin_graphql_api_id,
+        quantity: lineItem.quantity,
+    }));
+
+    const trackingInfo = {
+        company: payload.tracking_company,
+        numbers: payload.tracking_numbers,
+        urls: payload.tracking_urls,
+    };
+
+    const input = {
         trackingInfo,
         lineItemsByFulfillmentOrder: {
             fulfillmentOrderId: retailerShopifyFulfillmentOrderId,
@@ -51,22 +41,10 @@ async function updateRetailerFulfillmentOnShopify(
         },
     };
 
-    const res = await mutateAndValidateGraphQLData<FulfillmentCreateV2Mutation>(
-        retailerSession.shop,
-        retailerSession.accessToken,
-        CREATE_FULFILLMENT_FULFILLMENT_ORDER_MUTATION,
-        { fulfillment: fulfillmentInput },
-        "Failed to re-create fulfillment for retailer from supplier's data",
-    );
+    return input;
+};
 
-    const newRetailerShopifyFulfillmentId = res.fulfillmentCreateV2?.fulfillment?.id;
-    if (!newRetailerShopifyFulfillmentId) {
-        throw new Error('No shopify fulfillment id was created from mutation.');
-    }
-    return newRetailerShopifyFulfillmentId;
-}
-
-async function updateFulfillmentInDatabase(
+async function updateRetailerShopifyFulfillmentIdDb(
     dbFulfillmentId: string,
     newRetailerShopifyFulfillmentId: string,
     client: PoolClient,
@@ -93,19 +71,25 @@ async function resyncRetailerFulfillment(
     payload: ShopifyEvent['detail']['payload'],
     client: PoolClient,
 ) {
-    const { lineItems, trackingInfo } = getRelevantDetailsForResyncingRetailerFulfillment(payload);
     const [retailerSession, dbFulfillmentId] = await Promise.all([
         getSessionFromShop(shop, client),
         getFulfillmentIdFromRetailerShopify(retailerShopifyFulfillmentId, client),
     ]);
+
     const retailerShopifyFulfillmentOrderId = await getRetailerShopifyFulfillmentOrderId(dbFulfillmentId, client);
-    const newRetailerShopifyFulfillmentId = await updateRetailerFulfillmentOnShopify(
-        retailerShopifyFulfillmentOrderId,
-        lineItems,
-        trackingInfo,
-        retailerSession,
-    );
-    await updateFulfillmentInDatabase(dbFulfillmentId, newRetailerShopifyFulfillmentId, client);
+    const fulfillmentInput = createFulfillmentInput(payload, retailerShopifyFulfillmentOrderId);
+    const newRetailerShopifyFulfillmentId = await createFulfillmentShopify(retailerSession, fulfillmentInput);
+    await updateRetailerShopifyFulfillmentIdDb(dbFulfillmentId, newRetailerShopifyFulfillmentId, client);
 }
 
 export default resyncRetailerFulfillment;
+
+export const exportsForTesting =
+    process.env.NODE_ENV === 'test'
+        ? {
+              getRetailerShopifyFulfillmentOrderId,
+              createFulfillmentInput,
+              updateRetailerShopifyFulfillmentIdDb,
+              resyncRetailerFulfillment,
+          }
+        : undefined;

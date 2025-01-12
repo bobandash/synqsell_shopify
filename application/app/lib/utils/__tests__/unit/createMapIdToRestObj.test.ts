@@ -42,9 +42,9 @@ describe('createMapIdToRestObj', () => {
     expect(result.size).toBe(0);
   });
 
-  test('should skip entries with undefined', () => {
+  test('should skip entries that have no value for key', () => {
     const obj = [
-      { id: undefined, name: 'Skip' },
+      { id: '', name: 'Skip' },
       { id: '1', name: 'Keep' },
     ];
     const result = createMapIdToRestObj(obj, 'id');

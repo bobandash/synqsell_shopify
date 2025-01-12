@@ -4,8 +4,8 @@ export async function isImportedProduct(
   shopifyProductId: string,
   client: PoolClient
 ) {
-  const productQuery = `SELECT FROM "ImportedProduct" WHERE "shopifyProductId" = $1 LIMIT 1`;
-  const res = await client.query(productQuery, [shopifyProductId]);
+  const query = `SELECT FROM "ImportedProduct" WHERE "shopifyProductId" = $1 LIMIT 1`;
+  const res = await client.query(query, [shopifyProductId]);
   if (res.rows.length > 0) {
     return true;
   }

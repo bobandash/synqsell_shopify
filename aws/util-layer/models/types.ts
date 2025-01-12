@@ -3,18 +3,18 @@ export type Session = {
   shop: string;
   state: string;
   isOnline: boolean;
-  scope?: string;
-  expires?: Date;
+  scope: string | null;
+  expires: Date | null;
   accessToken: string;
-  userId?: bigint;
-  firstName?: string;
-  lastName?: string;
-  email?: string;
+  userId: bigint | null;
+  firstName: string | null;
+  lastName: string | null;
+  email: string | null;
   accountOwner: boolean;
-  locale?: string;
-  collaborator?: boolean;
-  emailVerified?: boolean;
-  storefrontAccessToken?: string;
+  locale: string | null;
+  collaborator: boolean | null;
+  emailVerified: boolean | null;
+  storefrontAccessToken: string | null;
   isAppUninstalled: boolean;
 };
 
@@ -60,4 +60,11 @@ export type FulfillmentService = {
   sessionId: string;
   shopifyFulfillmentServiceId: string;
   shopifyLocationId: string;
+};
+
+export type Product = {
+  id: string;
+  priceListId: string;
+  shopifyProductId: string;
+  createdAt: Date;
 };

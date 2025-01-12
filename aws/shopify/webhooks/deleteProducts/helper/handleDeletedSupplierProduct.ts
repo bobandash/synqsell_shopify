@@ -9,8 +9,8 @@ type RetailerProductDetailRow = {
     retailerAccessToken: string;
 };
 
-async function deleteImportedProductsShopify(shopifyProductId: string, client: PoolClient) {
-    const allRetailerProductsQuery = `
+async function getAllRetailerProducts(supplierShopifyProductId: string, client: PoolClient) {
+    const query = `
         SELECT 
             "ImportedProduct"."shopifyProductId" AS "retailerShopifyProductId", 
             "Session"."shop" AS "retailerShop", 
@@ -20,22 +20,24 @@ async function deleteImportedProductsShopify(shopifyProductId: string, client: P
         INNER JOIN "Session" ON "ImportedProduct"."retailerId" = "Session"."id"
         WHERE "Product"."shopifyProductId" = $1
     `;
-    const res = await client.query(allRetailerProductsQuery, [shopifyProductId]);
-    const rows = res.rows as RetailerProductDetailRow[];
-    const deleteRetailerProductsOnShopifyPromises = rows.map(
-        ({ retailerShopifyProductId, retailerShop, retailerAccessToken }) => {
-            return mutateAndValidateGraphQLData(
-                retailerShop,
-                retailerAccessToken,
-                DELETE_PRODUCT_MUTATION,
-                {
-                    id: retailerShopifyProductId,
-                },
-                'Could not delete product for retailer.',
-            );
-        },
-    );
-    await Promise.all(deleteRetailerProductsOnShopifyPromises);
+    const res = await client.query(query, [supplierShopifyProductId]);
+    return res.rows as RetailerProductDetailRow[];
+}
+
+async function deleteImportedProductsShopify(supplierShopifyProductId: string, client: PoolClient) {
+    const retailerProducts = await getAllRetailerProducts(supplierShopifyProductId, client);
+    const promises = retailerProducts.map(({ retailerShopifyProductId, retailerShop, retailerAccessToken }) => {
+        return mutateAndValidateGraphQLData(
+            retailerShop,
+            retailerAccessToken,
+            DELETE_PRODUCT_MUTATION,
+            {
+                id: retailerShopifyProductId,
+            },
+            'Could not delete product for retailer.',
+        );
+    });
+    await Promise.all(promises);
 }
 
 async function handleDeletedSupplierProduct(shopifyProductId: string, client: PoolClient) {
@@ -44,3 +46,5 @@ async function handleDeletedSupplierProduct(shopifyProductId: string, client: Po
 }
 
 export default handleDeletedSupplierProduct;
+export const exportsForTesting =
+    process.env.NODE_ENV === 'test' ? { getAllRetailerProducts, deleteImportedProductsShopify } : undefined;

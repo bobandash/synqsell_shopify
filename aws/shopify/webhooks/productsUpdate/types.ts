@@ -1,4 +1,4 @@
-import { PRODUCT_STATUS } from './constants';
+import { PRODUCT_STATUS } from '/opt/nodejs/constants';
 
 export type EditedVariant = {
     shopifyVariantId: string;
@@ -9,13 +9,13 @@ export type EditedVariant = {
 
 export type PriceListDetails = {
     id: string;
+    name: string;
+    supplierId: string;
     createdAt: Date;
     pricingStrategy: string;
-    supplierId: string;
     isGeneral: boolean;
-    name: string;
-    requiresApprovalToImport?: boolean;
-    margin?: number;
+    requiresApprovalToImport: boolean | null;
+    margin: number | null;
 };
 
 export type ShopifyEvent = {
@@ -86,23 +86,24 @@ export type ShopifyEvent = {
     };
 };
 
-export type Session = {
-    id: string;
-    shop: string;
-    state: string;
-    isOnline: boolean;
-    scope?: string;
-    expires?: Date;
-    accessToken: string;
-    userId?: bigint;
-    firstName?: string;
-    lastName?: string;
-    email?: string;
-    accountOwner: boolean;
-    locale?: string;
-    collaborator?: boolean;
-    emailVerified?: boolean;
-    isAppUninstalled: boolean;
+export type ProductStatus = (typeof PRODUCT_STATUS)[keyof typeof PRODUCT_STATUS];
+
+export type VariantDetail = {
+    shopifyVariantId: string;
+    retailPrice: string;
 };
 
-export type ProductStatus = (typeof PRODUCT_STATUS)[keyof typeof PRODUCT_STATUS];
+export type GroupedQueryDataWithUpdateFields = Map<
+    string, // Key is Retailer Shopify Product ID (Imported Product)
+    {
+        retailerAccessToken: string;
+        retailerShop: string;
+        retailerShopifyLocationId: string;
+        variants: {
+            retailerShopifyVariantId: string;
+            retailPrice: string;
+            inventory: number;
+            retailerShopifyInventoryItemId: string;
+        }[];
+    }
+>;

@@ -11,9 +11,8 @@ export async function hasProcessed(webhookId: string, client: PoolClient) {
 
 export async function processWebhook(webhookId: string, client: PoolClient) {
   const query = `
-        INSERT INTO "StripeWebhook" (id) 
-        VALUES ($1)
-    `;
-  const res = await client.query(query, [webhookId]);
-  return res.rows.length > 0;
+      INSERT INTO "StripeWebhook" (id) 
+      VALUES ($1)
+  `;
+  await client.query(query, [webhookId]);
 }

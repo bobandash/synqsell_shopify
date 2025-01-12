@@ -9,25 +9,20 @@ type StripeSecrets = {
 let stripe: Stripe | null = null;
 
 const getStripeSecrets = async () => {
-    try {
-        const response = await client.send(
-            new GetSecretValueCommand({
-                SecretId: process.env.API_KEYS_SECRET_ID ?? '',
-            }),
-        );
-        const secretString = response.SecretString;
-        if (!secretString) {
-            throw new Error('There are no secrets for API keys.');
-        }
-        const stripeSecrets: StripeSecrets = JSON.parse(secretString);
-        if (!stripeSecrets.stripeSecretApiKey) {
-            throw new Error('No stripe secret api key exists.');
-        }
-        return stripeSecrets as StripeSecrets;
-    } catch (error) {
-        console.error(error);
-        throw new Error('Failed to get stripe secrets');
+    const response = await client.send(
+        new GetSecretValueCommand({
+            SecretId: process.env.API_KEYS_SECRET_ID ?? '',
+        }),
+    );
+    const secretString = response.SecretString;
+    if (!secretString) {
+        throw new Error('There are no secrets for API keys.');
     }
+    const stripeSecrets: StripeSecrets = JSON.parse(secretString);
+    if (!stripeSecrets.stripeSecretApiKey) {
+        throw new Error('No stripe secret api key exists.');
+    }
+    return stripeSecrets as StripeSecrets;
 };
 
 export async function getStripe() {
@@ -41,4 +36,16 @@ export async function getStripe() {
     });
 
     return stripe;
+}
+
+export async function getStripePaymentMethod(customerId: string) {
+    const stripe = await getStripe();
+    const paymentMethods = await stripe.paymentMethods.list({
+        customer: customerId,
+        type: 'card',
+    });
+    if (paymentMethods.data.length === 0) {
+        throw new Error(`No payment methods exist for customer ${customerId}`);
+    }
+    return paymentMethods.data[0].id;
 }

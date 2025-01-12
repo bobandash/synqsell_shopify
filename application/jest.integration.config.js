@@ -7,11 +7,13 @@ export default {
     '^.+.tsx?$': ['ts-jest', {}],
   },
   maxWorkers: 1,
-  setupFilesAfterEnv: ['<rootDir>/tests/setup.server.ts'],
+  setupFilesAfterEnv: [
+    '<rootDir>/setup.integration.server.ts',
+    '<rootDir>/../prisma/setup.server.ts',
+  ],
   rootDir: '.',
   moduleNameMapper: {
     '^~/(.*)$': '<rootDir>/app/$1',
-    '^@fixtures/(.*)$': '<rootDir>/prisma/fixtures/$1',
-    '^@factories/(.*)$': '<rootDir>/prisma/factories/$1',
+    '^@db/(.*)$': '<rootDir>/../prisma/$1',
   },
 };

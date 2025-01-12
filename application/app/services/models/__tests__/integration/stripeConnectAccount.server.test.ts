@@ -4,18 +4,23 @@ import {
   addStripeConnectAccountDb,
   userHasStripeConnectAccount,
 } from '../../stripeConnectAccount.server';
-import { createSampleSession } from '@factories/session.factories';
-import { sampleStripeConnectAccount } from '@fixtures/stripeConnectAccount.fixture';
+import { createTestSession } from '@db/factories/session.factories';
 
 describe('stripeConnectAccount', () => {
   const nonExistentId = simpleFaker.string.uuid();
   let sessionId: string;
 
   beforeEach(async () => {
-    const session = await createSampleSession();
+    const session = await createTestSession();
     sessionId = session.id;
     await db.stripeConnectAccount.create({
-      data: sampleStripeConnectAccount(sessionId),
+      data: {
+        id: simpleFaker.string.uuid(),
+        stripeAccountId: simpleFaker.string.uuid(),
+        supplierId: sessionId,
+        createdAt: simpleFaker.date.recent(),
+        updatedAt: simpleFaker.date.recent(),
+      },
     });
   });
 

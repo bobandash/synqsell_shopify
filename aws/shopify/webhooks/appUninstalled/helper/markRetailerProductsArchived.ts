@@ -27,6 +27,7 @@ function groupByRetailer(retailerImportedProductDetails: RetailerImportedProduct
 
 async function getAllRetailerImportedProductDetails(supplierId: string, client: PoolClient) {
     // retrieves all imported product ids from products listed by supplier
+
     const query = `
         SELECT 
         "ImportedProduct"."shopifyProductId" AS "retailerShopifyProductId",
@@ -76,3 +77,7 @@ async function markRetailerProductsArchived(supplierId: string, client: PoolClie
 }
 
 export default markRetailerProductsArchived;
+export const exportsForTesting =
+    process.env.NODE_ENV === 'test'
+        ? { groupByRetailer, getAllRetailerImportedProductDetails, markRetailerProductsArchived }
+        : undefined;

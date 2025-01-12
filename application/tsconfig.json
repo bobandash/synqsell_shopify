@@ -18,8 +18,7 @@
     "baseUrl": ".",
     "paths": {
       "~/*": ["./app/*"],
-      "@fixtures/*": ["prisma/fixtures/*"],
-      "@factories/*": ["prisma/factories/*"]
+      "@db/*": ["../prisma/*"]
     },
     "types": ["node", "jest", "@quramy/jest-prisma"]
   }

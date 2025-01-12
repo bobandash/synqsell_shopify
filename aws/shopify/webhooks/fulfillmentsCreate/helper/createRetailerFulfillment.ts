@@ -1,5 +1,5 @@
 import { PoolClient } from 'pg';
-import { Session } from '../types';
+import type { Session } from '/opt/nodejs/models/types';
 import {
     FulfillmentCreateV2Mutation,
     FulfillmentDetailsQuery,
