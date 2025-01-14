@@ -174,8 +174,7 @@ jobs:
           image: ${{ secrets.ECR_REPO_NAME }}
           registry: ${{secrets.ACCOUNT_ID}}.dkr.ecr.us-east-2.amazonaws.com
           tags: ${{github.sha}}
-          directory: ./application
-          dockerfile: ./application/Dockerfile
+          dockerfile: Dockerfile
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
