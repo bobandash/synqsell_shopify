@@ -22,6 +22,9 @@ RUN npm ci --omit=dev && npm cache clean --force
 
 RUN npm remove @shopify/cli
 
+COPY application/. . 
+
+
 RUN chmod +x entrypoint.sh
 
 RUN npm run build
