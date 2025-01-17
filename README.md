@@ -293,7 +293,7 @@ For questions about this project, or if you just want to connect, please feel fr
 
 ## Acknowledgements
 
-Servers perfect for asking questions about Shopify App Development and frantically searching with Control-F to figure out poorly documented APIs and features 😂
+Servers perfect for asking questions about Shopify App Development
 
 - [Shopify Slack Channel](https://join.slack.com/t/shopifypartners/shared_invite/zt-sdr2quab-mGkzkttZ2hnVm0~8noSyvw)
 - [Remix Discord Server](https://rmx.as/discord)
