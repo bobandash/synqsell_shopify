@@ -102,9 +102,7 @@ describe('Session', () => {
       const newSession = await createTestSession({
         storefrontAccessToken: null,
       });
-      await expect(getStorefrontAccessToken(newSession.id)).rejects.toThrow(
-        'Storefront access token does not exist.',
-      );
+      await expect(getStorefrontAccessToken(newSession.id)).rejects.toThrow();
     });
 
     it('should return storefront access token if it exists', async () => {

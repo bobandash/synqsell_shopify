@@ -78,7 +78,7 @@ describe('Product', () => {
 
     it('should fail to add product already in price list', async () => {
       await expect(
-        await addProducts(priceList.id, [product.shopifyProductId]),
+        addProducts(priceList.id, [product.shopifyProductId]),
       ).rejects.toThrow();
     });
   });

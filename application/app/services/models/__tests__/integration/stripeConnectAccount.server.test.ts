@@ -1,7 +1,7 @@
 import { simpleFaker } from '@faker-js/faker';
 import db from '~/db.server';
 import {
-  addStripeConnectAccountDb,
+  addStripeConnectAccount,
   userHasStripeConnectAccount,
 } from '../../stripeConnectAccount.server';
 import { createTestSession } from '@db/factories/session.factories';
@@ -42,25 +42,25 @@ describe('stripeConnectAccount', () => {
     });
   });
 
-  describe('hasStripeConnectAccount', () => {
+  describe('addStripeConnectAccount', () => {
     it('should throw error if trying to add stripe connect account when already exists', async () => {
       const stripeAccountId = simpleFaker.string.uuid();
       await expect(
-        addStripeConnectAccountDb(sessionId, stripeAccountId),
+        addStripeConnectAccount(sessionId, stripeAccountId),
       ).rejects.toThrow();
     });
 
     it('should throw error if nonexistent session id', async () => {
       const stripeAccountId = simpleFaker.string.uuid();
       await expect(
-        addStripeConnectAccountDb(nonExistentId, stripeAccountId),
+        addStripeConnectAccount(nonExistentId, stripeAccountId),
       ).rejects.toThrow();
     });
 
     it('should successfully add stripe connect account', async () => {
       await db.stripeConnectAccount.deleteMany({});
       const stripeAccountId = simpleFaker.string.uuid();
-      await addStripeConnectAccountDb(sessionId, stripeAccountId);
+      await addStripeConnectAccount(sessionId, stripeAccountId);
       const hasStripeConnectAccount = await db.stripeConnectAccount.count({
         where: {
           stripeAccountId: stripeAccountId,

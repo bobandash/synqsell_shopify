@@ -1,6 +1,6 @@
 import db from '~/db.server';
 import { ACCESS_REQUEST_STATUS } from '~/constants';
-import { Prisma } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 
 export type GetSupplierAccessRequestProps = {
   name: string;

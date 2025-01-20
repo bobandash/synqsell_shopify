@@ -12,7 +12,7 @@ import {
   logError,
 } from '~/lib/utils/server';
 import { isAccountOnboarded } from '~/services/stripe/stripeConnect';
-import { addStripeConnectAccountDb } from '~/services/models/stripeConnectAccount.server';
+import { addStripeConnectAccount } from '~/services/models/stripeConnectAccount.server';
 
 type FinishStripeConnectOnboardingData =
   | {
@@ -44,7 +44,7 @@ async function finishStripeConnectOnboarding(
       checklistItemId,
     );
     await Promise.all([
-      addStripeConnectAccountDb(sessionId, accountId),
+      addStripeConnectAccount(sessionId, accountId),
       markCheckListStatus(checklistStatus.id, true),
     ]);
     return createJSONSuccess(

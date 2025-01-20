@@ -340,7 +340,7 @@ describe('Checklist Status', () => {
 
       it('should throw error for invalid checklist item key', async () => {
         await expect(
-          await updateChecklistStatusBatch(
+          updateChecklistStatusBatch(
             [userOne.session.id],
             simpleFaker.string.uuid() as ChecklistItemKeysOptions,
             true,
