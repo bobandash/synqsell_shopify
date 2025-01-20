@@ -499,12 +499,12 @@ const CreateEditPriceList = () => {
     );
   }, [fields, products]);
   return (
-    <Page
-      title={isCreatingNewPriceList ? `New Price List` : `Edit Price List`}
-      backAction={{ content: 'Price Lists', url: backActionUrl }}
-    >
+    <Form onSubmit={submit}>
       <Layout>
-        <Form onSubmit={submit}>
+        <Page
+          title={isCreatingNewPriceList ? `New Price List` : `Edit Price List`}
+          backAction={{ content: 'Price Lists', url: backActionUrl }}
+        >
           {error && (
             <>
               <Banner
@@ -705,9 +705,9 @@ const CreateEditPriceList = () => {
             </Button>
           </div>
           <PaddedBox />
-        </Form>
+        </Page>
       </Layout>
-    </Page>
+    </Form>
   );
 };
 

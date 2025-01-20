@@ -13,8 +13,8 @@ import {
 } from '~/services/models/partnershipRequest.server';
 import { getAllPriceLists } from '~/services/models/priceList.server';
 import { PARTNERSHIP_STATUS, type PartnershipStatusProps } from '../constants';
-import { isSupplierRetailerPartnered } from '~/services/models/partnership.server';
 import { sessionIdSchema } from '~/schemas/models';
+import { isPartnered } from '~/services/models/partnership.server';
 
 export type RetailerPaginatedInfoProps = {
   retailerPaginatedInfo: {
@@ -160,8 +160,8 @@ async function getPartnershipStatus(
   retailerId: string,
   priceListIds: string[],
 ): Promise<PartnershipStatusProps> {
-  const isPartnered = await isSupplierRetailerPartnered(retailerId, supplierId);
-  if (isPartnered) {
+  const hasPartnership = await isPartnered(retailerId, supplierId);
+  if (hasPartnership) {
     return PARTNERSHIP_STATUS.PARTNERED;
   }
   const partnershipRequestExists =

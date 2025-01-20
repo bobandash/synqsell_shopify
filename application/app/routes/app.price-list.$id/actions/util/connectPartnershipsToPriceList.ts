@@ -20,4 +20,4 @@ async function connectPartnershipsToPriceList(
   return newPriceListPartnerships;
 }
 
-export default updatePartnershipsInPriceList;
+export default connectPartnershipsToPriceList;
