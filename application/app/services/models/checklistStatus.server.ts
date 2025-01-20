@@ -9,97 +9,72 @@ export type ChecklistStatusProps = {
   isCompleted: boolean;
   checklistItemId: string;
 };
-
-export async function isValidChecklistStatusId(checklistStatusId: string) {
-  const checklistStatus = await db.checklistStatus.findFirst({
-    where: {
-      id: checklistStatusId,
-    },
+export async function isValidChecklistStatusId(
+  checklistStatusId: string,
+  tx: Prisma.TransactionClient = db,
+) {
+  const count = await tx.checklistStatus.count({
+    where: { id: checklistStatusId },
   });
-  if (checklistStatus) {
-    return true;
-  }
-  return false;
+  return count > 0;
 }
 
 export async function hasChecklistStatus(
   sessionId: string,
   checklistItemId: string,
+  tx: Prisma.TransactionClient = db,
 ) {
-  const checklistStatus = await db.checklistStatus.findFirst({
+  const count = await tx.checklistStatus.count({
     where: {
       checklistItemId,
       sessionId,
     },
   });
-  if (!checklistStatus) {
-    return false;
-  }
-  return true;
+  return count > 0;
 }
 
 export async function getChecklistStatus(
   sessionId: string,
   checklistItemId: string,
+  tx: Prisma.TransactionClient = db,
 ) {
-  const checklistStatus = await db.checklistStatus.findFirstOrThrow({
+  return tx.checklistStatus.findFirstOrThrow({
     where: {
       checklistItemId,
       sessionId,
     },
   });
-  return checklistStatus;
 }
 
 export async function isChecklistStatusCompleted(
   sessionId: string,
   checklistItemId: string,
+  tx: Prisma.TransactionClient = db,
 ) {
-  const checklistStatus = await getChecklistStatus(sessionId, checklistItemId);
-  if (checklistStatus.isCompleted) {
-    return true;
-  }
-  return false;
+  const checklistStatus = await getChecklistStatus(
+    sessionId,
+    checklistItemId,
+    tx,
+  );
+  return checklistStatus.isCompleted;
 }
 
 export async function markCheckListStatus(
   id: string,
   isCompleted: boolean,
+  tx: Prisma.TransactionClient = db,
 ): Promise<ChecklistStatusProps> {
-  const data = await db.checklistStatus.update({
-    where: {
-      id,
-    },
-    data: {
-      isCompleted: isCompleted,
-    },
+  return tx.checklistStatus.update({
+    where: { id },
+    data: { isCompleted },
   });
-  return data;
 }
 
 export async function updateChecklistStatus(
   sessionId: string,
   checklistItemKey: ChecklistItemKeysOptions,
   isCompleted: boolean,
-) {
-  const checklistItem = await getChecklistItem(checklistItemKey);
-  const checklistStatus = await getChecklistStatus(sessionId, checklistItem.id);
-  const updatedChecklistStatus = await db.checklistStatus.update({
-    where: {
-      id: checklistStatus.id,
-    },
-    data: {
-      isCompleted,
-    },
-  });
-  return updatedChecklistStatus;
-}
-
-export async function updateChecklistStatusTx(
-  tx: Prisma.TransactionClient,
-  sessionId: string,
-  checklistItemKey: ChecklistItemKeysOptions,
-  isCompleted: boolean,
+  tx: Prisma.TransactionClient = db,
 ) {
   const checklistItem = await getChecklistItem(checklistItemKey);
   const checklistStatus = await getChecklistStatus(sessionId, checklistItem.id);
@@ -130,11 +105,11 @@ export async function getChecklistStatusBatch(
 }
 
 // updates checklist status for numerous users
-export async function updateChecklistStatusBatchTx(
-  tx: Prisma.TransactionClient,
+export async function updateChecklistStatusBatch(
   sessionIds: string[],
   checklistItemKey: ChecklistItemKeysOptions,
   isCompleted: boolean,
+  tx: Prisma.TransactionClient = db,
 ) {
   const checklistItem = await getChecklistItem(checklistItemKey);
   const checklistStatuses = await getChecklistStatusBatch(

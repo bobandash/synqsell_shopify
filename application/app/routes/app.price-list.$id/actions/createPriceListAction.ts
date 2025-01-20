@@ -1,22 +1,22 @@
 import db from '~/db.server';
-import { updateChecklistStatusTx } from '~/services/models/checklistStatus.server';
+import { updateChecklistStatus } from '~/services/models/checklistStatus.server';
 import { CHECKLIST_ITEM_KEYS } from '~/constants';
 import { getRouteError, logError } from '~/lib/utils/server';
-import { addProductsTx } from '~/services/models/product.server';
+import { addProducts } from '~/services/models/product.server';
 import type { PriceListActionData } from '../types';
 import type { Prisma } from '@prisma/client';
 import {
   noMoreThanOneGeneralPriceListSchema,
   priceListDataSchema,
 } from './util/schemas';
-import { updatePartnershipsInPriceListTx } from './util';
-import { addVariantsTx } from '~/services/models/variants.server';
+import { addVariants } from '~/services/models/variants.server';
 import type { RedirectFunction } from 'node_modules/@shopify/shopify-app-remix/dist/ts/server/authenticate/admin/helpers/redirect';
+import { connectPartnershipsToPriceList } from './util';
 
-export async function createPriceListTx(
-  tx: Prisma.TransactionClient,
+export async function createPriceList(
   data: PriceListActionData,
   sessionId: string,
+  tx: Prisma.TransactionClient = db,
 ) {
   await noMoreThanOneGeneralPriceListSchema.validate({
     sessionId,
@@ -53,23 +53,23 @@ async function createPriceListAndCompleteChecklistItemAction(
     await priceListDataSchema.validate(data);
     const { products, partnerships } = data;
     const shopifyProductIdsToAdd = products.map(
-      (product) => product.shopifyProductId,
+      ({ shopifyProductId }) => shopifyProductId,
     );
 
     const newPriceList = await db.$transaction(async (tx) => {
-      await updateChecklistStatusTx(
-        tx,
+      await updateChecklistStatus(
         sessionId,
         CHECKLIST_ITEM_KEYS.SUPPLIER_CREATE_PRICE_LIST,
         true,
-      );
-      const newPriceList = await createPriceListTx(tx, data, sessionId);
-      const priceListId = newPriceList.id;
-      await updatePartnershipsInPriceListTx(tx, priceListId, partnerships);
-      const newProducts = await addProductsTx(
         tx,
+      );
+      const newPriceList = await createPriceList(data, sessionId, tx);
+      const priceListId = newPriceList.id;
+      await connectPartnershipsToPriceList(priceListId, partnerships, tx);
+      const newProducts = await addProducts(
         priceListId,
         shopifyProductIdsToAdd,
+        tx,
       );
       const variantsToAdd = products.flatMap(({ variants }, index) =>
         variants.map((variant) => ({
@@ -77,7 +77,7 @@ async function createPriceListAndCompleteChecklistItemAction(
           productId: newProducts[index].id,
         })),
       );
-      await addVariantsTx(tx, variantsToAdd);
+      await addVariants(variantsToAdd, tx);
       return newPriceList;
     });
     return redirect(`/app/price-list/${newPriceList.id}?referrer=new`);

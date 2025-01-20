@@ -37,87 +37,74 @@ export async function getProductVariantsWithInventoryItem(
   });
   return variants;
 }
-
-export async function getShopifyVariantIdsInPriceListTx(
-  tx: Prisma.TransactionClient,
+export async function getShopifyVariantIdsInPriceList(
   priceListId: string,
+  tx: Prisma.TransactionClient = db,
 ) {
-  const variantIds = (
-    await tx.product.findMany({
-      where: {
-        priceListId,
-      },
-      include: {
-        variants: {
-          select: {
-            id: true,
-            shopifyVariantId: true,
-          },
+  const products = await tx.product.findMany({
+    where: {
+      priceListId,
+    },
+    include: {
+      variants: {
+        select: {
+          id: true,
+          shopifyVariantId: true,
         },
       },
-    })
-  ).flatMap(({ variants }) =>
-    variants.map(({ id, shopifyVariantId }) => {
-      return { id, shopifyVariantId };
-    }),
+    },
+  });
+
+  return products.flatMap(({ variants }) =>
+    variants.map(({ id, shopifyVariantId }) => ({ id, shopifyVariantId })),
   );
-  return variantIds;
 }
 
-export async function addVariantsTx(
-  tx: Prisma.TransactionClient,
+export async function addVariants(
   variants: AddVariantProps[],
+  tx: Prisma.TransactionClient = db,
 ) {
   // prisma does not support nested writes with createMany
-  const variantsData = variants.map(({ inventoryItem, ...rest }) => {
-    return {
-      ...rest,
-    };
-  });
+  const variantsData = variants.map(({ inventoryItem, ...rest }) => ({
+    ...rest,
+  }));
+
   const createdVariants = await tx.variant.createManyAndReturn({
     data: variantsData,
   });
-  const inventoryItemData = variants.map(({ inventoryItem }, index) => {
-    return {
-      shopifyInventoryItemId: inventoryItem.shopifyInventoryItemId,
-      variantId: createdVariants[index].id,
-    };
-  });
+
+  const inventoryItemData = variants.map(({ inventoryItem }, index) => ({
+    shopifyInventoryItemId: inventoryItem.shopifyInventoryItemId,
+    variantId: createdVariants[index].id,
+  }));
   await tx.inventoryItem.createMany({
     data: inventoryItemData,
   });
 }
 
-export async function deleteVariantsTx(
-  tx: Prisma.TransactionClient,
+export async function deleteVariants(
   variantIds: string[],
+  tx: Prisma.TransactionClient = db,
 ) {
-  const deletedVariants = await tx.variant.deleteMany({
+  return tx.variant.deleteMany({
     where: {
       id: {
         in: variantIds,
       },
     },
   });
-  return deletedVariants;
 }
 
-export async function updateVariantsTx(
-  tx: Prisma.TransactionClient,
+export async function updateVariants(
   variants: BasicVariantInfoWithPrismaId[],
+  tx: Prisma.TransactionClient = db,
 ) {
-  const updatedRecords = await Promise.all([
-    variants.map((variant) => {
-      const { id, ...rest } = variant;
-      return tx.variant.update({
-        where: {
-          id,
-        },
-        data: {
-          ...rest,
-        },
-      });
-    }),
-  ]);
-  return updatedRecords;
+  return Promise.all(
+    variants.map(({ id, ...rest }) =>
+      tx.variant.update({
+        where: { id },
+        data: rest,
+      }),
+    ),
+  );
 }

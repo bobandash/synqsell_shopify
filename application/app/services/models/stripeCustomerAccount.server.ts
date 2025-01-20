@@ -1,57 +1,59 @@
+import { Prisma } from '@prisma/client';
 import db from '~/db.server';
 
-export async function userHasStripeCustomerAccount(retailerId: string) {
-  const stripeAccount = await db.stripeCustomerAccount.findFirst({
-    where: {
-      retailerId,
-    },
+export async function userHasStripeCustomerAccount(
+  retailerId: string,
+  tx: Prisma.TransactionClient = db,
+) {
+  const count = await tx.stripeCustomerAccount.count({
+    where: { retailerId },
   });
-  return stripeAccount !== null;
+  return count > 0;
 }
 
 export async function addInitialStripeCustomerAccount(
   retailerId: string,
   stripeCustomerId: string,
+  tx: Prisma.TransactionClient = db,
 ) {
-  const newStripeCustomerAccount = db.stripeCustomerAccount.create({
+  return tx.stripeCustomerAccount.create({
     data: {
       retailerId,
       stripeCustomerId,
     },
   });
-  return newStripeCustomerAccount;
 }
 
-export async function getStripeCustomerAccount(retailerId: string) {
-  const stripeCustomerAccount = db.stripeCustomerAccount.findFirstOrThrow({
-    where: {
-      retailerId,
-    },
+export async function getStripeCustomerAccount(
+  retailerId: string,
+  tx: Prisma.TransactionClient = db,
+) {
+  return tx.stripeCustomerAccount.findFirstOrThrow({
+    where: { retailerId },
   });
-  return stripeCustomerAccount;
 }
 
-export async function userHasStripePaymentMethod(retailerId: string) {
-  const hasStripeCustomerAccount =
-    await userHasStripeCustomerAccount(retailerId);
+export async function userHasStripePaymentMethod(
+  retailerId: string,
+  tx: Prisma.TransactionClient = db,
+) {
+  const hasAccount = await userHasStripeCustomerAccount(retailerId, tx);
 
-  if (!hasStripeCustomerAccount) {
+  if (!hasAccount) {
     return false;
   }
-  const stripeCustomerAccount = await getStripeCustomerAccount(retailerId);
-  return stripeCustomerAccount.hasPaymentMethod;
+
+  const { hasPaymentMethod } = await getStripeCustomerAccount(retailerId, tx);
+  return hasPaymentMethod;
 }
 
 export async function changePaymentMethodStatus(
   retailerId: string,
   hasPaymentMethod: boolean,
+  tx: Prisma.TransactionClient = db,
 ) {
-  await db.stripeCustomerAccount.update({
-    where: {
-      retailerId,
-    },
-    data: {
-      hasPaymentMethod,
-    },
+  return tx.stripeCustomerAccount.update({
+    where: { retailerId },
+    data: { hasPaymentMethod },
   });
 }

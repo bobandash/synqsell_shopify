@@ -9,7 +9,7 @@ import {
   getRoleBatch,
   getRoles,
   hasRole,
-  updateRoleVisibilityTx,
+  updateRoleVisibility,
 } from '../../roles.server';
 import db from '~/db.server';
 import { createTestSession } from '@db/factories/session.factories';
@@ -148,7 +148,7 @@ describe('Roles', () => {
     });
   });
 
-  describe('updateRoleVisibilityTx', () => {
+  describe('updateRoleVisibility', () => {
     it(`should update role visibility.`, async () => {
       const role = await db.role.findFirstOrThrow({
         where: {
@@ -158,11 +158,11 @@ describe('Roles', () => {
       });
       const initialVisibility = role.isVisibleInNetwork;
       await db.$transaction(async (tx) => {
-        await updateRoleVisibilityTx(
-          tx,
+        await updateRoleVisibility(
           adminSession.id,
           ROLES.ADMIN,
           !role.isVisibleInNetwork,
+          tx,
         );
       });
       const updatedRole = await db.role.findFirstOrThrow({
@@ -176,7 +176,7 @@ describe('Roles', () => {
     it('should throw error if passing in nonexistent sessionId.', async () => {
       await expect(
         db.$transaction(async (tx) => {
-          await updateRoleVisibilityTx(tx, nonExistentId, ROLES.ADMIN, false);
+          await updateRoleVisibility(nonExistentId, ROLES.ADMIN, false, tx);
         }),
       ).rejects.toThrow();
     });
@@ -184,11 +184,11 @@ describe('Roles', () => {
     it('should throw error if passing in nonexistent role.', async () => {
       await expect(
         db.$transaction(async (tx) => {
-          await updateRoleVisibilityTx(
-            tx,
+          await updateRoleVisibility(
             adminSession.id,
             ROLES.RETAILER,
             false,
+            tx,
           );
         }),
       ).rejects.toThrow();

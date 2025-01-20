@@ -24,10 +24,10 @@ const changePermissionRetailersActionSchema = object({
   selectedPriceListIds: priceListIdListSchema,
 });
 
-async function updatePartnershipsPriceListPermissionsTx(
-  tx: Prisma.TransactionClient,
+async function updatePartnershipsPriceListPermissions(
   partnershipIds: string[],
   priceListIds: string[],
+  tx: Prisma.TransactionClient = db,
 ) {
   const priceListIdData = priceListIds.map((id) => ({ id }));
   const newPartnerships = await Promise.all(
@@ -45,10 +45,10 @@ async function updatePartnershipsPriceListPermissionsTx(
   return newPartnerships;
 }
 
-async function updatePartnershipRequestsPriceListPermissionsTx(
-  tx: Prisma.TransactionClient,
+async function updatePartnershipRequestsPriceListPermissions(
   partnershipRequestIds: string[],
   priceListIds: string[],
+  tx: Prisma.TransactionClient = db,
 ) {
   const priceListIdData = priceListIds.map((id) => ({ id }));
   const newPartnershipRequests = await Promise.all(
@@ -75,15 +75,15 @@ export async function changePermissionRetailersAction(
       data;
     await db.$transaction(async (tx) => {
       await Promise.all([
-        updatePartnershipsPriceListPermissionsTx(
-          tx,
+        updatePartnershipsPriceListPermissions(
           partnershipIds,
           selectedPriceListIds,
-        ),
-        updatePartnershipRequestsPriceListPermissionsTx(
           tx,
+        ),
+        updatePartnershipRequestsPriceListPermissions(
           partnershipRequestIds,
           selectedPriceListIds,
+          tx,
         ),
       ]);
     });

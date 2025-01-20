@@ -1,5 +1,6 @@
 import db from '~/db.server';
 import createHttpError from 'http-errors';
+import { Prisma } from '@prisma/client';
 
 export type UserPreferenceData = {
   id: string;
@@ -8,70 +9,68 @@ export type UserPreferenceData = {
 };
 
 // function to add or remove table ID from user preferences depending on if it's hidden over visible
-export async function hasUserPreferences(sessionId: string): Promise<Boolean> {
-  const userPreferences = await db.userPreference.findFirst({
-    where: {
-      sessionId: sessionId,
-    },
+export async function hasUserPreferences(
+  sessionId: string,
+  tx: Prisma.TransactionClient = db,
+): Promise<boolean> {
+  const count = await tx.userPreference.count({
+    where: { sessionId },
   });
-  if (!userPreferences) {
-    return false;
-  }
-  return true;
+  return count > 0;
 }
 
 export async function getUserPreferences(
   sessionId: string,
+  tx: Prisma.TransactionClient = db,
 ): Promise<UserPreferenceData> {
-  const userPreferences = await db.userPreference.findFirstOrThrow({
-    where: {
-      sessionId: sessionId,
-    },
+  return tx.userPreference.findFirstOrThrow({
+    where: { sessionId },
   });
-  return userPreferences;
 }
 
 export async function createUserPreferences(
   sessionId: string,
+  tx: Prisma.TransactionClient = db,
 ): Promise<UserPreferenceData> {
-  const userPreferencesExist = await hasUserPreferences(sessionId);
-  if (userPreferencesExist) {
+  const exists = await hasUserPreferences(sessionId, tx);
+
+  if (exists) {
     throw new createHttpError.BadRequest('User already has user preferences.');
   }
-  const newUserPreference = await db.userPreference.create({
+
+  return tx.userPreference.create({
     data: {
-      sessionId: sessionId,
+      sessionId,
       tableIdsHidden: [],
     },
   });
-  return newUserPreference;
 }
 
-export async function getOrCreateUserPreferences(sessionId: string) {
-  const userPreferencesExist = await hasUserPreferences(sessionId);
-  if (userPreferencesExist) {
-    return getUserPreferences(sessionId);
+export async function getOrCreateUserPreferences(
+  sessionId: string,
+  tx: Prisma.TransactionClient = db,
+) {
+  const exists = await hasUserPreferences(sessionId, tx);
+
+  if (exists) {
+    return getUserPreferences(sessionId, tx);
   }
-  return createUserPreferences(sessionId);
+
+  return createUserPreferences(sessionId, tx);
 }
 
 export async function toggleChecklistVisibility(
   sessionId: string,
   tableId: string,
+  tx: Prisma.TransactionClient = db,
 ): Promise<UserPreferenceData> {
-  const currentUserPreference = await getUserPreferences(sessionId);
-  const { tableIdsHidden, id: userPreferenceId } = currentUserPreference;
-  const newTableIdsHidden = tableIdsHidden.filter((id) => id !== tableId);
-  if (!tableIdsHidden.includes(tableId)) {
-    newTableIdsHidden.push(tableId);
-  }
-  const newUserPreferences = await db.userPreference.update({
-    where: {
-      id: userPreferenceId,
-    },
-    data: {
-      tableIdsHidden: newTableIdsHidden,
-    },
+  const { tableIdsHidden, id } = await getUserPreferences(sessionId, tx);
+  const newTableIdsHidden = tableIdsHidden.includes(tableId)
+    ? tableIdsHidden.filter((id) => id !== tableId)
+    : [...tableIdsHidden, tableId];
+
+  return tx.userPreference.update({
+    where: { id },
+    data: { tableIdsHidden: newTableIdsHidden },
   });
-  return newUserPreferences;
 }

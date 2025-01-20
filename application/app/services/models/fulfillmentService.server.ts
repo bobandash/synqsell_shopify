@@ -1,5 +1,6 @@
 import type { AllFulfillmentServicesQuery } from '~/types/admin.generated';
 import db from '~/db.server';
+import type { Prisma } from '@prisma/client';
 
 export type FulfillmentServiceShopifyProps = {
   id: string;
@@ -12,73 +13,72 @@ export type FulfillmentServiceDBProps = {
   sessionId: string;
 };
 
-export async function hasFulfillmentService(id: string) {
-  const fulfillmentService = await db.fulfillmentService.findFirst({
-    where: {
-      id,
-    },
+export async function hasFulfillmentService(
+  id: string,
+  tx: Prisma.TransactionClient = db,
+) {
+  const count = await tx.fulfillmentService.count({
+    where: { id },
   });
-  if (!fulfillmentService) {
-    return false;
-  }
-  return true;
+  return count > 0;
 }
 
-export async function getFulfillmentService(id: string) {
-  const fulfillmentService = await db.fulfillmentService.findFirstOrThrow({
-    where: {
-      id,
-    },
+export async function getFulfillmentService(
+  id: string,
+  tx: Prisma.TransactionClient = db,
+) {
+  return tx.fulfillmentService.findFirstOrThrow({
+    where: { id },
   });
-  return fulfillmentService;
 }
 
-export async function userHasFulfillmentService(sessionId: string) {
-  const fulfillmentService = await db.fulfillmentService.findFirst({
-    where: {
-      sessionId,
-    },
+export async function userHasFulfillmentService(
+  sessionId: string,
+  tx: Prisma.TransactionClient = db,
+) {
+  const count = await tx.fulfillmentService.count({
+    where: { sessionId },
   });
-  if (!fulfillmentService) {
-    return false;
-  }
-  return true;
+  return count > 0;
 }
 
-export async function userGetFulfillmentService(sessionId: string) {
-  const fulfillmentService = await db.fulfillmentService.findFirstOrThrow({
-    where: {
-      sessionId,
-    },
+export async function userGetFulfillmentService(
+  sessionId: string,
+  tx: Prisma.TransactionClient = db,
+) {
+  return tx.fulfillmentService.findFirstOrThrow({
+    where: { sessionId },
   });
-  return fulfillmentService;
 }
-// methods for deleting a fulfillment service in prisma
-export async function deleteFulfillmentService(id: string) {
-  const deletedFulfillmentService = await db.fulfillmentService.delete({
-    where: {
-      id,
-    },
+
+export async function deleteFulfillmentService(
+  id: string,
+  tx: Prisma.TransactionClient = db,
+) {
+  return tx.fulfillmentService.delete({
+    where: { id },
   });
-  return deletedFulfillmentService;
 }
 
 export async function getOrCreateFulfillmentService(
   sessionId: string,
   shopifyFulfillmentService: AllFulfillmentServicesQuery['shop']['fulfillmentServices'][0],
+  tx: Prisma.TransactionClient = db,
 ) {
-  const fulfillmentServiceExists = await userHasFulfillmentService(sessionId);
+  const fulfillmentServiceExists = await userHasFulfillmentService(
+    sessionId,
+    tx,
+  );
+
   if (fulfillmentServiceExists) {
-    const fulfillmentService = await userGetFulfillmentService(sessionId);
-    return fulfillmentService;
+    return userGetFulfillmentService(sessionId, tx);
   }
 
-  const fulfillmentService = await db.fulfillmentService.create({
+  return tx.fulfillmentService.create({
     data: {
       sessionId,
       shopifyFulfillmentServiceId: shopifyFulfillmentService.id,
       shopifyLocationId: shopifyFulfillmentService.location?.id ?? '',
     },
   });
-  return fulfillmentService;
 }

@@ -1,11 +1,11 @@
 import db from '~/db.server';
-import { deletePartnershipRequestsTx } from '../models/partnershipRequest.server';
 import {
   PARTNERSHIP_REQUEST_TYPE,
   type PartnershipRequestTypeOptions,
 } from '~/constants';
-import { createPartnershipsTx } from '../models/partnership.server';
 import type { Prisma } from '@prisma/client';
+import { deletePartnershipRequests } from '../models/partnershipRequest.server';
+import { createPartnerships } from '../models/partnership.server';
 
 type PartnershipRequest = Prisma.PartnershipRequestGetPayload<{
   include: {
@@ -67,6 +67,9 @@ async function approvePartnershipRequestBulk(
   });
   const oppositeSidePartnershipRequestIds =
     await getOppositeSidePartnershipRequestIds(partnershipRequests, type);
+  const partnershipRequestIdsToDelete = partnershipRequestIds.concat(
+    oppositeSidePartnershipRequestIds,
+  );
 
   const data = partnershipRequests.map((request) => {
     // partnership request type === retailer means that the retailer (sender) sent a request to partner with a supplier (recipient)
@@ -88,9 +91,8 @@ async function approvePartnershipRequestBulk(
   });
 
   const newPartnerships = await db.$transaction(async (tx) => {
-    await deletePartnershipRequestsTx(tx, partnershipRequestIds);
-    await deletePartnershipRequestsTx(tx, oppositeSidePartnershipRequestIds);
-    const newPartnerships = await createPartnershipsTx(tx, data);
+    await deletePartnershipRequests(partnershipRequestIdsToDelete, tx);
+    const newPartnerships = await createPartnerships(data, tx);
     return newPartnerships;
   });
   return newPartnerships;

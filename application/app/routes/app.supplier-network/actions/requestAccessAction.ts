@@ -1,7 +1,7 @@
 import { object, string } from 'yup';
 import { INTENTS, type IntentsProps } from '../constants';
 import { hasSession } from '~/services/models/session.server';
-import { createOrUpdatePartnershipRequestTx } from '~/services/models/partnershipRequest.server';
+import { createOrUpdatePartnershipRequest } from '~/services/models/partnershipRequest.server';
 import {
   getGeneralPriceList,
   hasGeneralPriceList,
@@ -13,7 +13,7 @@ import {
 } from '~/constants';
 import { StatusCodes } from 'http-status-codes';
 import db from '~/db.server';
-import { updateChecklistStatusTx } from '~/services/models/checklistStatus.server';
+import { updateChecklistStatus } from '~/services/models/checklistStatus.server';
 import { sessionIdSchema } from '~/schemas/models';
 import { createJSONSuccess, getRouteError, logError } from '~/lib/utils/server';
 
@@ -59,21 +59,23 @@ export async function requestAccessAction(
     const generalPriceListId = (await getGeneralPriceList(sessionId)).id;
     await db.$transaction(async (tx) => {
       await Promise.all([
-        updateChecklistStatusTx(
-          tx,
+        updateChecklistStatus(
           sessionId,
           CHECKLIST_ITEM_KEYS.RETAILER_REQUEST_PARTNERSHIP,
           true,
-        ),
-        createOrUpdatePartnershipRequestTx({
           tx,
-          priceListIds: [generalPriceListId],
-          recipientId: priceListSupplierId,
-          senderId: sessionId,
-          message: message,
-          type: PARTNERSHIP_REQUEST_TYPE.RETAILER,
-          status: PARTNERSHIP_REQUEST_STATUS.PENDING,
-        }),
+        ),
+        createOrUpdatePartnershipRequest(
+          {
+            priceListIds: [generalPriceListId],
+            recipientId: priceListSupplierId,
+            senderId: sessionId,
+            message: message,
+            type: PARTNERSHIP_REQUEST_TYPE.RETAILER,
+            status: PARTNERSHIP_REQUEST_STATUS.PENDING,
+          },
+          tx,
+        ),
       ]);
     });
 

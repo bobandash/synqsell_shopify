@@ -6,8 +6,8 @@ import { simpleFaker } from '@faker-js/faker';
 import type { PriceList, Product } from '@prisma/client';
 import db from '~/db.server';
 import {
-  addProductsTx,
-  deleteProductsTx,
+  addProducts,
+  deleteProducts,
   getAllProductDetails,
   getProductWithVariantsFromPriceList,
   hasProduct,
@@ -38,9 +38,7 @@ describe('Product', () => {
 
   describe('deleteProductsTx', () => {
     it('should delete one product successfully', async () => {
-      await db.$transaction(async (tx) => {
-        await deleteProductsTx(tx, priceList.id, [product.id]);
-      });
+      await deleteProducts(priceList.id, [product.id]);
       const numProducts = await db.product.count({});
       expect(numProducts).toBe(0);
     });
@@ -48,9 +46,7 @@ describe('Product', () => {
     it('should delete multiple products successfully', async () => {
       const newProduct = await generateProduct(priceList.id);
       const numProductsBefore = await db.product.count({});
-      await db.$transaction(async (tx) => {
-        await deleteProductsTx(tx, priceList.id, [product.id, newProduct.id]);
-      });
+      await deleteProducts(priceList.id, [product.id, newProduct.id]);
       const numProducts = await db.product.count({});
       expect(numProductsBefore).toBe(2);
       expect(numProducts).toBe(0);
@@ -58,9 +54,7 @@ describe('Product', () => {
 
     it('should not delete product if nonexistent id was passed', async () => {
       const numProductsBefore = await db.product.count({});
-      await db.$transaction(async (tx) => {
-        await deleteProductsTx(tx, priceList.id, [nonexistentId]);
-      });
+      await deleteProducts(priceList.id, [nonexistentId]);
       const numProducts = await db.product.count({});
       expect(numProductsBefore).toBe(numProducts);
     });
@@ -70,9 +64,7 @@ describe('Product', () => {
     it('should add shopify products to price list', async () => {
       const idOne = simpleFaker.string.uuid();
       const idTwo = simpleFaker.string.uuid();
-      await db.$transaction(async (tx) => {
-        await addProductsTx(tx, priceList.id, [idOne, idTwo]);
-      });
+      await addProducts(priceList.id, [idOne, idTwo]);
       const areProductsAdded =
         (await db.product.count({
           where: {
@@ -86,9 +78,7 @@ describe('Product', () => {
 
     it('should fail to add product already in price list', async () => {
       await expect(
-        db.$transaction(async (tx) => {
-          await addProductsTx(tx, priceList.id, [product.shopifyProductId]);
-        }),
+        await addProducts(priceList.id, [product.shopifyProductId]),
       ).rejects.toThrow();
     });
   });

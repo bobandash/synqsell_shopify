@@ -1,23 +1,24 @@
+import { Prisma } from '@prisma/client';
 import db from '~/db.server';
 
 // currently there's only one billing plan, so this code should work
-// but it must be refactored when more billing plans are added
-export async function userHasBilling(sessionId: string) {
-  const billing = await db.billing.findFirst({
-    where: {
-      sessionId,
-    },
+export async function userHasBilling(
+  sessionId: string,
+  tx: Prisma.TransactionClient = db,
+) {
+  const count = await tx.billing.count({
+    where: { sessionId },
   });
-
-  return billing !== null;
+  return count > 0;
 }
 
 export async function addBilling(
   sessionId: string,
   shopifySubscriptionLineItemId: string,
   plan: string,
+  tx: Prisma.TransactionClient = db,
 ) {
-  await db.billing.create({
+  return tx.billing.create({
     data: {
       shopifySubscriptionLineItemId,
       sessionId,

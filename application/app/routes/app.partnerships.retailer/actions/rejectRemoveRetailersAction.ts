@@ -1,7 +1,7 @@
 import { object, string } from 'yup';
 import { INTENTS, type IntentsProps } from '../constants';
-import { deletePartnershipRequestsTx } from '~/services/models/partnershipRequest.server';
-import { deletePartnershipsTx } from '~/services/models/partnership.server';
+import { deletePartnershipRequests } from '~/services/models/partnershipRequest.server';
+import { deletePartnerships } from '~/services/models/partnership.server';
 import db from '~/db.server';
 import { StatusCodes } from 'http-status-codes';
 import { createJSONSuccess, getRouteError, logError } from '~/lib/utils/server';
@@ -30,8 +30,8 @@ export async function rejectRemoveRetailersAction(
     const { partnershipRequestIds, partnershipIds } = data;
     await db.$transaction(async (tx) => {
       await Promise.all([
-        deletePartnershipsTx(tx, partnershipIds),
-        deletePartnershipRequestsTx(tx, partnershipRequestIds),
+        deletePartnerships(partnershipIds, tx),
+        deletePartnershipRequests(partnershipRequestIds, tx),
       ]);
     });
     return createJSONSuccess(

@@ -9,9 +9,9 @@ import {
 } from '~/constants';
 import { StatusCodes } from 'http-status-codes';
 import db from '~/db.server';
-import { updateChecklistStatusTx } from '~/services/models/checklistStatus.server';
-import { createOrUpdatePartnershipRequestTx } from '~/services/models/partnershipRequest.server';
 import { sessionIdSchema } from '~/schemas/models';
+import { updateChecklistStatus } from '~/services/models/checklistStatus.server';
+import { createOrUpdatePartnershipRequest } from '~/services/models/partnershipRequest.server';
 
 type InitiatePartnershipActionProps = {
   intent: string;
@@ -58,21 +58,23 @@ async function initiatePartnershipAction(
     const { retailerId, message, supplierId, priceListIds } = props;
     await db.$transaction(async (tx) => {
       await Promise.all([
-        updateChecklistStatusTx(
-          tx,
+        updateChecklistStatus(
           supplierId,
           CHECKLIST_ITEM_KEYS.SUPPLIER_EXPLORE_NETWORK,
           true,
-        ),
-        createOrUpdatePartnershipRequestTx({
           tx,
-          priceListIds,
-          recipientId: retailerId,
-          senderId: supplierId,
-          message: message,
-          type: PARTNERSHIP_REQUEST_TYPE.SUPPLIER,
-          status: PARTNERSHIP_REQUEST_STATUS.PENDING,
-        }),
+        ),
+        createOrUpdatePartnershipRequest(
+          {
+            priceListIds,
+            recipientId: retailerId,
+            senderId: supplierId,
+            message: message,
+            type: PARTNERSHIP_REQUEST_TYPE.SUPPLIER,
+            status: PARTNERSHIP_REQUEST_STATUS.PENDING,
+          },
+          tx,
+        ),
       ]);
     });
 

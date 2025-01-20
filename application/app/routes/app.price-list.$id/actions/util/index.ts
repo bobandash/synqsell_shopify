@@ -1,1 +1,1 @@
-export { default as updatePartnershipsInPriceListTx } from './updatePartnershipsInPriceListTx';
+export { default as connectPartnershipsToPriceList } from './connectPartnershipsToPriceList';

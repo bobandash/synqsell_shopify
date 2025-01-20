@@ -16,81 +16,80 @@ export interface RoleProps extends SharedRoleProps {
 export interface RolePropsJSON extends SharedRoleProps {
   createdAt: string;
 }
-
-export async function getRoles(sessionId: string) {
-  const roles = await db.role.findMany({
-    where: {
-      sessionId,
-    },
+export async function getRoles(
+  sessionId: string,
+  tx: Prisma.TransactionClient = db,
+) {
+  return tx.role.findMany({
+    where: { sessionId },
   });
-  return roles;
 }
 
-export async function hasRole(sessionId: string, role: string) {
-  const res = await db.role.findFirst({
-    where: {
-      sessionId: sessionId,
-      name: role,
-    },
+export async function hasRole(
+  sessionId: string,
+  role: string,
+  tx: Prisma.TransactionClient = db,
+) {
+  const count = await tx.role.count({
+    where: { sessionId, name: role },
   });
-
-  return res !== null;
+  return count > 0;
 }
 
-export async function getRole(sessionId: string, role: string) {
-  const currentRole = await db.role.findFirstOrThrow({
-    where: {
-      sessionId: sessionId,
-      name: role,
-    },
+export async function getRole(
+  sessionId: string,
+  role: string,
+  tx: Prisma.TransactionClient = db,
+) {
+  return tx.role.findFirstOrThrow({
+    where: { sessionId, name: role },
   });
-  return currentRole;
 }
 
-export async function getRoleBatch(sessionIds: string[], role: RolesOptions) {
-  const roles = await db.role.findMany({
+export async function getRoleBatch(
+  sessionIds: string[],
+  role: RolesOptions,
+  tx: Prisma.TransactionClient = db,
+) {
+  return tx.role.findMany({
     where: {
       sessionId: { in: sessionIds },
       name: role,
     },
   });
-  return roles;
 }
 
-export async function addRole(sessionId: string, role: RolesOptions) {
-  const newRole = await db.role.create({
+export async function addRole(
+  sessionId: string,
+  role: RolesOptions,
+  tx: Prisma.TransactionClient = db,
+) {
+  return tx.role.create({
     data: {
       sessionId,
       name: role,
     },
   });
-  return newRole;
 }
 
-export async function deleteRole(id: string) {
-  const deletedRole = await db.role.delete({
-    where: {
-      id,
-    },
+export async function deleteRole(
+  id: string,
+  tx: Prisma.TransactionClient = db,
+) {
+  return tx.role.delete({
+    where: { id },
   });
-  return deletedRole;
 }
 
-// should not update if role doesn't exist
-export async function updateRoleVisibilityTx(
-  tx: Prisma.TransactionClient,
+export async function updateRoleVisibility(
   sessionId: string,
   role: RolesOptions,
   isVisibleInNetwork: boolean,
+  tx: Prisma.TransactionClient = db,
 ) {
-  const currentRole = await getRole(sessionId, role);
-  const { id } = currentRole;
-  await tx.role.update({
-    where: {
-      id,
-    },
-    data: {
-      isVisibleInNetwork,
-    },
+  const currentRole = await getRole(sessionId, role, tx);
+  return tx.role.update({
+    where: { id: currentRole.id },
+    data: { isVisibleInNetwork },
   });
 }

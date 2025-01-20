@@ -1,10 +1,10 @@
 import db from '~/db.server';
-import { hasRole, updateRoleVisibilityTx } from '../models/roles.server';
+import { hasRole, updateRoleVisibility } from '../models/roles.server';
 import { CHECKLIST_ITEM_KEYS, ROLES } from '~/constants';
-import type { ChecklistItemKeysOptions } from '~/constants';
-import { updateUserProfileTx } from '../models/userProfile.server';
-import { updateChecklistStatusTx } from '../models/checklistStatus.server';
+import type { ChecklistItemKeysOptions, RolesOptions } from '~/constants';
+import { updateChecklistStatus } from '../models/checklistStatus.server';
 import type { Prisma } from '@prisma/client';
+import { updateUserProfile } from '../models/userProfile.server';
 type ProfileDataProps = {
   name: string;
   email: string;
@@ -26,16 +26,16 @@ type VisibilityDataProps = {
   isVisibleSupplierNetwork: boolean;
 };
 
-async function updateRoleAndChecklistItemTx(
-  tx: Prisma.TransactionClient,
+async function updateRoleAndChecklistItem(
   sessionId: string,
-  role: string,
+  role: RolesOptions,
   isVisibleInNetwork: boolean,
   checklistItemKey: ChecklistItemKeysOptions,
+  tx: Prisma.TransactionClient,
 ) {
   await Promise.all([
-    updateRoleVisibilityTx(tx, sessionId, role, isVisibleInNetwork),
-    updateChecklistStatusTx(tx, sessionId, checklistItemKey, true),
+    updateRoleVisibility(sessionId, role, isVisibleInNetwork, tx),
+    updateChecklistStatus(sessionId, checklistItemKey, true, tx),
   ]);
 }
 
@@ -46,29 +46,30 @@ export default async function updateSettings(
   visibilityData: VisibilityDataProps,
 ) {
   const { isVisibleRetailerNetwork, isVisibleSupplierNetwork } = visibilityData;
-
-  const isRetailer = await hasRole(sessionId, ROLES.RETAILER);
-  const isSupplier = await hasRole(sessionId, ROLES.SUPPLIER);
+  const [isRetailer, isSupplier] = await Promise.all([
+    hasRole(sessionId, ROLES.RETAILER),
+    hasRole(sessionId, ROLES.SUPPLIER),
+  ]);
 
   await db.$transaction(async (tx) => {
     if (isRetailer) {
-      await updateRoleAndChecklistItemTx(
-        tx,
+      await updateRoleAndChecklistItem(
         sessionId,
         ROLES.RETAILER,
         isVisibleRetailerNetwork,
         CHECKLIST_ITEM_KEYS.RETAILER_CUSTOMIZE_PROFILE,
+        tx,
       );
     }
     if (isSupplier) {
-      await updateRoleAndChecklistItemTx(
-        tx,
+      await updateRoleAndChecklistItem(
         sessionId,
         ROLES.SUPPLIER,
         isVisibleSupplierNetwork,
         CHECKLIST_ITEM_KEYS.SUPPLIER_CUSTOMIZE_PROFILE,
+        tx,
       );
     }
-    await updateUserProfileTx(tx, sessionId, profileData, socialMediaData);
+    await updateUserProfile(sessionId, profileData, socialMediaData, tx);
   });
 }

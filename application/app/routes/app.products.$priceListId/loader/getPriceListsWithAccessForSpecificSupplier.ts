@@ -1,8 +1,8 @@
 import { object } from 'yup';
 import { priceListIdSchema, sessionIdSchema } from '~/schemas/models';
 import {
-  getSupplierRetailerPartnership,
-  isSupplierRetailerPartnered,
+  getPartnership,
+  isPartnered,
 } from '~/services/models/partnership.server';
 import {
   getGeneralPriceList,
@@ -40,14 +40,11 @@ async function getPrivatePriceListsWithAccessFormatted(
   supplierId: string,
 ): Promise<PriceListWithAccess[]> {
   let privatePriceListsWithAccess: PriceListWithAccess[] = [];
-  const isPartnered = await isSupplierRetailerPartnered(retailerId, supplierId);
-  if (!isPartnered) {
+  const isAlreadyPartnered = await isPartnered(retailerId, supplierId);
+  if (!isAlreadyPartnered) {
     return privatePriceListsWithAccess;
   }
-  const partnership = await getSupplierRetailerPartnership(
-    retailerId,
-    supplierId,
-  );
+  const partnership = await getPartnership(retailerId, supplierId);
   privatePriceListsWithAccess = await db.priceList.findMany({
     where: {
       partnerships: {

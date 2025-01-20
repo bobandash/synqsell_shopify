@@ -1,5 +1,6 @@
 import db from '~/db.server';
 import { ACCESS_REQUEST_STATUS } from '~/constants';
+import { Prisma } from '@prisma/client';
 
 export type GetSupplierAccessRequestProps = {
   name: string;
@@ -33,27 +34,23 @@ export type GetSupplierAccessRequestJSONProps = {
   isEligibleForNewRequest: boolean;
 };
 
-export async function hasSupplierAccessRequest(sessionId: string) {
-  const supplierAccessRequest = await db.supplierAccessRequest.findFirst({
-    where: {
-      sessionId,
-    },
+export async function hasSupplierAccessRequest(
+  sessionId: string,
+  tx: Prisma.TransactionClient = db,
+) {
+  const count = await tx.supplierAccessRequest.count({
+    where: { sessionId },
   });
-  if (!supplierAccessRequest) {
-    return false;
-  }
-  return true;
+  return count > 0;
 }
 
-export async function getSupplierAccessRequest(sessionId: string) {
-  const supplierAccessRequest = await db.supplierAccessRequest.findFirstOrThrow(
-    {
-      where: {
-        sessionId,
-      },
-    },
-  );
-  return supplierAccessRequest;
+export async function getSupplierAccessRequest(
+  sessionId: string,
+  tx: Prisma.TransactionClient = db,
+) {
+  return tx.supplierAccessRequest.findFirstOrThrow({
+    where: { sessionId },
+  });
 }
 
 // TODO: to get more than 60 days of orders, it requires asking Shopify for permission (> 14 days) and Shopify can reject request
@@ -61,8 +58,9 @@ export async function getSupplierAccessRequest(sessionId: string) {
 async function createSupplierAccessRequest(
   sessionId: string,
   checklistStatusId: string,
+  tx: Prisma.TransactionClient = db,
 ) {
-  const newSupplierAccessRequest = await db.supplierAccessRequest.create({
+  return tx.supplierAccessRequest.create({
     data: {
       status: ACCESS_REQUEST_STATUS.PENDING,
       sessionId,
@@ -70,28 +68,26 @@ async function createSupplierAccessRequest(
       hasMetSalesThreshold: true,
     },
   });
-
-  return newSupplierAccessRequest;
 }
 
 export async function getOrCreateSupplierAccessRequest(
   sessionId: string,
   checklistStatusId: string,
+  tx: Prisma.TransactionClient = db,
 ) {
-  const supplierAccessRequestExists = await hasSupplierAccessRequest(sessionId);
-  if (!supplierAccessRequestExists) {
-    const newSupplierAccessRequest = await createSupplierAccessRequest(
-      sessionId,
-      checklistStatusId,
-    );
-    return newSupplierAccessRequest;
+  const exists = await hasSupplierAccessRequest(sessionId, tx);
+
+  if (!exists) {
+    return createSupplierAccessRequest(sessionId, checklistStatusId, tx);
   }
-  const supplierAccessRequest = await getSupplierAccessRequest(sessionId);
-  return supplierAccessRequest;
+
+  return getSupplierAccessRequest(sessionId, tx);
 }
 
-export async function getAllSupplierAccessRequests() {
-  const allSupplierAccessRequests = await db.supplierAccessRequest.findMany({
+export async function getAllSupplierAccessRequests(
+  tx: Prisma.TransactionClient = db,
+) {
+  const requests = await tx.supplierAccessRequest.findMany({
     include: {
       session: {
         select: {
@@ -101,36 +97,27 @@ export async function getAllSupplierAccessRequests() {
     },
   });
 
-  const allSupplierAccessRequestsFormatted = allSupplierAccessRequests.map(
-    ({ session: { userProfile }, ...rest }) => {
-      return {
-        ...rest,
-        name: userProfile?.name || '',
-        website: userProfile?.website || '',
-        email: userProfile?.email || '',
-      };
-    },
-  );
-  return allSupplierAccessRequestsFormatted;
+  return requests.map(({ session: { userProfile }, ...rest }) => ({
+    ...rest,
+    name: userProfile?.name || '',
+    website: userProfile?.website || '',
+    email: userProfile?.email || '',
+  }));
 }
 
-// We can honestly just handle this by mutating the database for now
 export async function updateSupplierAccessRequest(
   sessionId: string,
   status: string,
   notes: string,
   isEligibleForNewRequest: boolean,
+  tx: Prisma.TransactionClient = db,
 ) {
-  const updatedSupplierAccessRequest = await db.supplierAccessRequest.update({
-    where: {
-      sessionId,
-    },
+  return tx.supplierAccessRequest.update({
+    where: { sessionId },
     data: {
       status,
       notes,
       isEligibleForNewRequest,
-      updatedAt: new Date(),
     },
   });
-  return updatedSupplierAccessRequest;
 }

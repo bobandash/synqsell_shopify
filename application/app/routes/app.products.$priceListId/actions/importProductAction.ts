@@ -25,13 +25,13 @@ import type {
 import db from '~/db.server';
 import type { Prisma } from '@prisma/client';
 import {
-  addPriceListToPartnershipTx,
-  createPartnershipsTx,
-  getSupplierRetailerPartnership,
-  isSupplierRetailerPartnered,
+  addPriceListToPartnership,
+  createPartnerships,
+  getPartnership,
+  isPartnered,
 } from '~/services/models/partnership.server';
 import {
-  deletePartnershipRequestTx,
+  deletePartnershipRequest,
   getPartnershipRequest,
   hasPartnershipRequest,
 } from '~/services/models/partnershipRequest.server';
@@ -56,85 +56,83 @@ const importProductActionSchema = object({
   sessionId: sessionIdSchema,
 });
 
-export async function addImportedProductToDatabaseTx(
-  tx: Prisma.TransactionClient,
+export async function addImportedProductToDatabase(
   importedProduct: ProductVariantsBulkCreateMutation,
   parentProduct: ProductWithVariants,
   retailerId: string,
+  tx: Prisma.TransactionClient,
 ) {
   const productVariantsBulkCreate = importedProduct.productVariantsBulkCreate;
   const shopifyImportedProduct = productVariantsBulkCreate?.product;
   const shopifyImportedVariants = productVariantsBulkCreate?.productVariants;
-
-  const prismaData = {
-    prismaProductId: parentProduct.id,
-    shopifyProductId: shopifyImportedProduct!.id,
-    retailerId,
-    importedVariants: {
-      create: shopifyImportedVariants?.map((shopifyImportedVariant, index) => {
-        const prismaVariantId = parentProduct.variants[index].id;
-        const prismaInventoryItemId =
-          parentProduct.variants[index].inventoryItem!.id;
-        return {
-          prismaVariantId,
-          shopifyVariantId: shopifyImportedVariant.id,
-          importedInventoryItem: {
-            create: {
-              prismaInventoryItemId,
-              shopifyInventoryItemId: shopifyImportedVariant.inventoryItem.id,
-            },
-          },
-        };
-      }),
-    },
-  };
-
   const newImportedProduct = await tx.importedProduct.create({
-    data: prismaData,
+    data: {
+      prismaProductId: parentProduct.id,
+      shopifyProductId: shopifyImportedProduct!.id,
+      retailerId,
+      importedVariants: {
+        create: shopifyImportedVariants?.map(
+          (shopifyImportedVariant, index) => {
+            const prismaVariantId = parentProduct.variants[index].id;
+            const prismaInventoryItemId =
+              parentProduct.variants[index].inventoryItem!.id;
+            return {
+              prismaVariantId,
+              shopifyVariantId: shopifyImportedVariant.id,
+              importedInventoryItem: {
+                create: {
+                  prismaInventoryItemId,
+                  shopifyInventoryItemId:
+                    shopifyImportedVariant.inventoryItem.id,
+                },
+              },
+            };
+          },
+        ),
+      },
+    },
   });
   return newImportedProduct;
 }
 
 async function handlePartnership(
-  tx: Prisma.TransactionClient,
   retailerId: string,
   supplierId: string,
   priceListId: string,
+  tx: Prisma.TransactionClient,
 ) {
-  const partnershipExists = await isSupplierRetailerPartnered(
-    retailerId,
-    supplierId,
-  );
-
+  const partnershipExists = await isPartnered(retailerId, supplierId, tx);
   if (partnershipExists) {
-    const partnership = await getSupplierRetailerPartnership(
+    const partnership = await getPartnership(retailerId, supplierId, tx);
+    await addPriceListToPartnership(partnership.id, priceListId, tx);
+    return;
+  }
+
+  const partnershipRequestExists = await hasPartnershipRequest(
+    priceListId,
+    supplierId,
+    PARTNERSHIP_REQUEST_TYPE.RETAILER,
+    tx,
+  );
+  if (partnershipRequestExists) {
+    const partnershipRequest = await getPartnershipRequest(
+      priceListId,
+      retailerId,
+      PARTNERSHIP_REQUEST_TYPE.RETAILER,
+      tx,
+    );
+    await deletePartnershipRequest(partnershipRequest.id, tx);
+  }
+
+  const data = [
+    {
       retailerId,
       supplierId,
-    );
-    await addPriceListToPartnershipTx(tx, partnership.id, priceListId);
-  } else {
-    const partnershipRequestExists = await hasPartnershipRequest(
-      priceListId,
-      supplierId,
-      PARTNERSHIP_REQUEST_TYPE.RETAILER,
-    );
-    if (partnershipRequestExists) {
-      const partnershipRequest = await getPartnershipRequest(
-        priceListId,
-        retailerId,
-        PARTNERSHIP_REQUEST_TYPE.RETAILER,
-      );
-      await deletePartnershipRequestTx(tx, partnershipRequest.id);
-    }
-    await createPartnershipsTx(tx, [
-      {
-        retailerId,
-        supplierId,
-        message: 'Retailer partnered by importing a product',
-        priceListIds: [priceListId],
-      },
-    ]);
-  }
+      message: 'Retailer partnered by importing a product',
+      priceListIds: [priceListId],
+    },
+  ];
+  await createPartnerships(data, tx);
 }
 
 async function createShopifyProduct(
@@ -180,7 +178,7 @@ async function getSupplierShopifyVariantDetails(
 }
 
 // TODO: handle variants that have multiple images
-async function getRetailerVariantCreationINput(
+async function getRetailerVariantCreationInput(
   supplierVariants: AllProductDetails['variants'],
   supplierSession: Session,
   supplierName: string,
@@ -254,7 +252,7 @@ async function createShopifyVariants(
   retailerNewShopifyProductId: string,
   graphql: GraphQL,
 ) {
-  const retailerVariantCreationInput = await getRetailerVariantCreationINput(
+  const retailerVariantCreationInput = await getRetailerVariantCreationInput(
     variants,
     supplierSession,
     supplierName,
@@ -308,8 +306,8 @@ export async function importProductAction(
       await Promise.all([
         // if the user imports the product and isn't a partner of the price list, add the user as a partner
         // this allows the supplier to know that the retailer is interested in their products
-        handlePartnership(tx, sessionId, supplierSession.id, priceList.id),
-        addImportedProductToDatabaseTx(tx, variantsPayload, product, sessionId),
+        handlePartnership(sessionId, supplierSession.id, priceList.id, tx),
+        addImportedProductToDatabase(variantsPayload, product, sessionId, tx),
       ]);
     });
 

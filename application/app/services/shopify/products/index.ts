@@ -1,9 +1,7 @@
-import { nodesFromEdges } from '@shopify/admin-graphql-api-utilities';
 import { type GraphQL } from '~/types';
 import getQueryStr from '../utils/getQueryStr';
 import {
   CREATE_PRODUCT_MUTATION,
-  GET_PRODUCT_URL,
   PRODUCT_BASIC_INFO_QUERY,
   PRODUCT_CREATION_DETAILS_WITHOUT_MEDIA_QUERY,
   PRODUCT_GET_MEDIA,
@@ -20,7 +18,6 @@ import type {
   ProductCreateMutation,
   ProductCreationInformationQuery,
   ProductMediaQuery,
-  ProductUrlQuery,
 } from './types';
 
 export type ProductWithVariantImagePriceList = Prisma.ProductGetPayload<{
@@ -60,37 +57,8 @@ export type BasicProductDetails = {
   onlineStoreUrl: any;
 };
 
-export async function getIdMappedToStoreUrl(
-  graphql: GraphQL,
-  productIds: string[],
-) {
-  if (productIds.length === 0) {
-    return {};
-  }
-  const numProducts = productIds.length;
-  const queryStr = getQueryStr(productIds);
-  const data = await queryInternalStoreAdminAPI<ProductUrlQuery>(
-    graphql,
-    GET_PRODUCT_URL,
-    {
-      first: numProducts,
-      query: queryStr,
-    },
-  );
-  const edges = data.products.edges;
-  const nodes = nodesFromEdges(edges);
-  const idToStoreUrl = nodes.reduce((acc, node) => {
-    const { id, onlineStoreUrl } = node;
-    return {
-      ...acc,
-      [id]: onlineStoreUrl,
-    };
-  }, {});
+// NOTE: with access token functions are to fetch externally (not w/in store)
 
-  return idToStoreUrl;
-}
-
-// helper function for getBasicProductDetails
 function flattenBasicProductInfo(data: ProductBasicInfoQuery) {
   const flattenedProducts = data.products.edges.map((edge) => {
     const product = edge.node;
@@ -144,6 +112,34 @@ export async function getBasicProductDetailsWithAccessToken(
   return flattenedData;
 }
 
+function getProductMediaCreationInputFields(mediaData: ProductMediaQuery) {
+  const media = mediaData.product?.media.edges;
+  if (!media) {
+    return null;
+  }
+  return media.map(({ node }) => {
+    const { alt, mediaContentType } = node;
+    const mediaObj = {
+      alt,
+      mediaContentType,
+      originalSource: '',
+    };
+    if (
+      'image' in node &&
+      typeof node.image === 'object' &&
+      node.image !== null &&
+      'url' in node.image
+    ) {
+      mediaObj.originalSource = node.image.url as string;
+    } else if ('sources' in node) {
+      mediaObj.originalSource = node.sources[0].url;
+    } else if ('originUrl' in node) {
+      mediaObj.originalSource = node.originUrl;
+    }
+    return mediaObj;
+  });
+}
+
 export async function getProductAndMediaCreationInputWithAccessToken(
   shopifyProductId: string,
   shop: string,
@@ -167,12 +163,12 @@ export async function getProductAndMediaCreationInputWithAccessToken(
   let mediaInputFields = null;
   const mediaCount =
     productCreationInfoMinusMediaData.product?.mediaCount?.count ?? 0;
-  if (mediaCount > 0) {
+  if (mediaCount) {
     const mediaData = await queryExternalStoreAdminAPI<ProductMediaQuery>(
       shop,
       accessToken,
       PRODUCT_GET_MEDIA,
-      { id: shopifyProductId, first: 1 },
+      { id: shopifyProductId, first: mediaCount },
     );
     mediaInputFields = getProductMediaCreationInputFields(mediaData);
   }
@@ -180,7 +176,26 @@ export async function getProductAndMediaCreationInputWithAccessToken(
   return { productInputFields, mediaInputFields };
 }
 
-// helper functions for getProductCreationInputWithAccessToken
+// end helper functions for getProductCreationInputWithAccessToken
+export async function createProduct(
+  productInput: ProductInput,
+  mediaInput: CreateMediaInput[] | null,
+  graphql: GraphQL,
+) {
+  const data = await mutateInternalStoreAdminAPI<ProductCreateMutation>(
+    graphql,
+    CREATE_PRODUCT_MUTATION,
+    {
+      input: productInput,
+      ...(mediaInput && { media: mediaInput }),
+    },
+    'Failed to create product on Shopify',
+  );
+
+  const newShopifyProductId = data.productCreate?.product?.id ?? '';
+  return newShopifyProductId;
+}
+
 function getProductCreationInputFields(
   productCreationInfoMinusMediaData: ProductCreationInformationQuery,
   supplierName: string,
@@ -225,52 +240,4 @@ function getProductCreationInputFields(
   };
 
   return productionCreationInput;
-}
-
-function getProductMediaCreationInputFields(mediaData: ProductMediaQuery) {
-  const media = mediaData.product?.media.edges;
-  if (!media) {
-    return null;
-  }
-  return media.map(({ node }) => {
-    const { alt, mediaContentType } = node;
-    const mediaObj = {
-      alt,
-      mediaContentType,
-      originalSource: '',
-    };
-    if (
-      'image' in node &&
-      typeof node.image === 'object' &&
-      node.image !== null &&
-      'url' in node.image
-    ) {
-      mediaObj.originalSource = node.image.url as string;
-    } else if ('sources' in node) {
-      mediaObj.originalSource = node.sources[0].url;
-    } else if ('originUrl' in node) {
-      mediaObj.originalSource = node.originUrl;
-    }
-    return mediaObj;
-  });
-}
-
-// end helper functions for getProductCreationInputWithAccessToken
-export async function createProduct(
-  productInput: ProductInput,
-  mediaInput: CreateMediaInput[] | null,
-  graphql: GraphQL,
-) {
-  const data = await mutateInternalStoreAdminAPI<ProductCreateMutation>(
-    graphql,
-    CREATE_PRODUCT_MUTATION,
-    {
-      input: productInput,
-      ...(mediaInput && { media: mediaInput }),
-    },
-    'Failed to create product on Shopify',
-  );
-
-  const newShopifyProductId = data.productCreate?.product?.id ?? '';
-  return newShopifyProductId;
 }

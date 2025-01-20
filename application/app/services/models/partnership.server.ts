@@ -3,6 +3,20 @@ import db from '~/db.server';
 import { ROLES } from '~/constants';
 import type { RolesOptions } from '~/constants';
 
+const PARTNERSHIP_INCLUDE = {
+  priceLists: true,
+  retailer: {
+    select: {
+      userProfile: true,
+    },
+  },
+  supplier: {
+    select: {
+      userProfile: true,
+    },
+  },
+} as const;
+
 type NewPartnershipData = {
   retailerId: string;
   supplierId: string;
@@ -10,41 +24,38 @@ type NewPartnershipData = {
   priceListIds: string[];
 };
 
-export async function hasPartnership(id: string) {
-  const partnershipRequest = await db.partnership.findFirst({
-    where: {
-      id,
-    },
-  });
-
-  if (partnershipRequest) {
-    return true;
-  }
-  return false;
-}
-
-export async function isSupplierRetailerPartnered(
+export async function isPartnered(
   retailerId: string,
   supplierId: string,
+  tx: Prisma.TransactionClient = db,
 ) {
-  const partnership = await db.partnership.findFirst({
+  const count = await tx.partnership.count({
     where: {
       retailerId,
       supplierId,
     },
   });
-
-  if (partnership) {
-    return true;
-  }
-  return false;
+  return count > 0;
 }
 
-export async function getSupplierRetailerPartnership(
+export async function hasPartnership(
+  id: string,
+  tx: Prisma.TransactionClient = db,
+) {
+  const count = await tx.partnership.count({
+    where: {
+      id,
+    },
+  });
+  return count > 0;
+}
+
+export async function getPartnership(
   retailerId: string,
   supplierId: string,
+  tx: Prisma.TransactionClient = db,
 ) {
-  const partnership = await db.partnership.findFirstOrThrow({
+  const partnership = await tx.partnership.findFirstOrThrow({
     where: {
       retailerId,
       supplierId,
@@ -53,85 +64,51 @@ export async function getSupplierRetailerPartnership(
   return partnership;
 }
 
-export async function getAllSupplierPartnerships(retailerId: string) {
-  const supplierPartnerships = await db.partnership.findMany({
+export async function getAllSupplierPartnerships(
+  retailerId: string,
+  tx: Prisma.TransactionClient = db,
+) {
+  return tx.partnership.findMany({
     where: {
       retailerId,
     },
-    include: {
-      priceLists: true,
-      retailer: {
-        select: {
-          userProfile: true,
-        },
-      },
-      supplier: {
-        select: {
-          userProfile: true,
-        },
-      },
-    },
+    include: PARTNERSHIP_INCLUDE,
   });
-  return supplierPartnerships;
 }
 
 export async function getAllPartnerships(
   sessionId: string,
   role: RolesOptions,
+  tx: Prisma.TransactionClient = db,
 ) {
-  const supplierPartnerships = await db.partnership.findMany({
+  return tx.partnership.findMany({
     where: {
       ...(role === ROLES.RETAILER ? { retailerId: sessionId } : {}),
       ...(role === ROLES.SUPPLIER ? { supplierId: sessionId } : {}),
     },
-    include: {
-      priceLists: true,
-      retailer: {
-        select: {
-          userProfile: true,
-        },
-      },
-      supplier: {
-        select: {
-          userProfile: true,
-        },
-      },
-    },
+    include: PARTNERSHIP_INCLUDE,
   });
-  return supplierPartnerships;
 }
 
 export async function getPartnershipsByRetailersAndSupplier(
   supplierId: string,
   retailerIds: string[],
+  tx: Prisma.TransactionClient = db,
 ) {
-  const supplierPartnerships = await db.partnership.findMany({
+  return tx.partnership.findMany({
     where: {
       retailerId: {
         in: retailerIds,
       },
       supplierId,
     },
-    include: {
-      priceLists: true,
-      retailer: {
-        select: {
-          userProfile: true,
-        },
-      },
-      supplier: {
-        select: {
-          userProfile: true,
-        },
-      },
-    },
+    include: PARTNERSHIP_INCLUDE,
   });
-  return supplierPartnerships;
 }
 
-export async function createPartnershipsTx(
-  tx: Prisma.TransactionClient,
+export async function createPartnerships(
   data: NewPartnershipData[],
+  tx: Prisma.TransactionClient,
 ) {
   const dataInPrismaFmt = data.map(({ priceListIds, ...rest }) => {
     return {
@@ -196,24 +173,23 @@ export async function isRetailerInPartnershipMultiplePriceLists(
   return true;
 }
 
-export async function deletePartnershipsTx(
-  tx: Prisma.TransactionClient,
+export async function deletePartnerships(
   partnershipIds: string[],
+  tx: Prisma.TransactionClient = db,
 ) {
-  const deletedPartnerships = await tx.partnership.deleteMany({
+  await tx.partnership.deleteMany({
     where: {
       id: {
         in: partnershipIds,
       },
     },
   });
-  return deletedPartnerships;
 }
 
-export async function addPriceListToPartnershipTx(
-  tx: Prisma.TransactionClient,
+export async function addPriceListToPartnership(
   partnershipId: string,
   priceListId: string,
+  tx: Prisma.TransactionClient,
 ) {
   const partnership = await tx.partnership.update({
     where: {

@@ -14,48 +14,40 @@ type CreatePartnershipRequestProps = {
   status: PartnershipRequestStatusOptions;
 };
 
-type CreatePartnershipRequestTxProps = CreatePartnershipRequestProps & {
-  tx: Prisma.TransactionClient;
-};
-
 export async function hasPartnershipRequestMultiplePriceLists(
   priceListIds: string[],
   senderId: string,
   type: PartnershipRequestTypeOptions,
+  tx: Prisma.TransactionClient = db,
 ) {
-  const partnershipRequest = await db.partnershipRequest.findFirst({
+  const count = await tx.partnershipRequest.count({
     where: {
       senderId,
       type,
       priceLists: {
         some: {
-          id: {
-            in: priceListIds,
-          },
+          id: { in: priceListIds },
         },
       },
     },
   });
-
-  if (partnershipRequest) {
-    return true;
-  }
-  return false;
+  return count > 0;
 }
 
 export async function createOrUpdatePartnershipRequest(
-  props: CreatePartnershipRequestProps,
+  data: CreatePartnershipRequestProps,
+  tx: Prisma.TransactionClient = db,
 ) {
-  const { priceListIds, recipientId, senderId, message, type, status } = props;
+  const { priceListIds, recipientId, senderId, message, type, status } = data;
   const priceListExists = await hasPartnershipRequestMultiplePriceLists(
     priceListIds,
     senderId,
     type,
+    tx,
   );
 
-  let partnershipRequest;
   if (!priceListExists) {
-    partnershipRequest = await db.partnershipRequest.create({
+    return tx.partnershipRequest.create({
       data: {
         senderId,
         recipientId,
@@ -67,199 +59,121 @@ export async function createOrUpdatePartnershipRequest(
         },
       },
     });
-  } else {
-    const existingPartnershipRequest =
-      await getPartnershipRequestMultiplePriceLists(
-        priceListIds,
-        senderId,
-        type,
-      );
-    partnershipRequest = await db.partnershipRequest.update({
-      where: {
-        id: existingPartnershipRequest.id,
-      },
-      data: {
-        message,
-        status,
-      },
-    });
   }
 
-  return partnershipRequest;
-}
+  const existingPartnershipRequest =
+    await getPartnershipRequestMultiplePriceLists(
+      priceListIds,
+      senderId,
+      type,
+      tx,
+    );
 
-export async function createOrUpdatePartnershipRequestTx(
-  props: CreatePartnershipRequestTxProps,
-) {
-  const { priceListIds, recipientId, senderId, message, type, status, tx } =
-    props;
-  const priceListExists = await hasPartnershipRequestMultiplePriceLists(
-    priceListIds,
-    senderId,
-    type,
-  );
-
-  let partnershipRequest;
-  if (!priceListExists) {
-    partnershipRequest = await tx.partnershipRequest.create({
-      data: {
-        senderId,
-        recipientId,
-        message,
-        type,
-        status,
-        priceLists: {
-          connect: priceListIds.map((id) => ({ id })),
-        },
-      },
-    });
-  } else {
-    const existingPartnershipRequest =
-      await getPartnershipRequestMultiplePriceLists(
-        priceListIds,
-        senderId,
-        type,
-      );
-    partnershipRequest = await tx.partnershipRequest.update({
-      where: {
-        id: existingPartnershipRequest.id,
-      },
-      data: {
-        message,
-        status,
-      },
-    });
-  }
-
-  return partnershipRequest;
+  return tx.partnershipRequest.update({
+    where: { id: existingPartnershipRequest.id },
+    data: { message, status },
+  });
 }
 
 export async function getPartnershipRequestMultiplePriceLists(
   priceListIds: string[],
   senderId: string,
   type: PartnershipRequestTypeOptions,
+  tx: Prisma.TransactionClient = db,
 ) {
-  const partnershipRequest = await db.partnershipRequest.findFirstOrThrow({
+  return tx.partnershipRequest.findFirstOrThrow({
     where: {
       senderId,
       type,
       priceLists: {
         some: {
-          id: {
-            in: priceListIds,
-          },
+          id: { in: priceListIds },
         },
       },
     },
   });
-
-  return partnershipRequest;
 }
 
 export async function hasPartnershipRequest(
   priceListId: string,
   senderId: string,
   type: PartnershipRequestTypeOptions,
+  tx: Prisma.TransactionClient = db,
 ) {
-  const partnershipRequest = await db.partnershipRequest.findFirst({
+  const count = await tx.partnershipRequest.count({
     where: {
       senderId,
       type,
       priceLists: {
-        some: {
-          id: priceListId,
-        },
+        some: { id: priceListId },
       },
     },
   });
-
-  if (partnershipRequest) {
-    return true;
-  }
-  return false;
+  return count > 0;
 }
 
-export async function isValidPartnershipRequest(id: string) {
-  const partnershipRequest = await db.partnershipRequest.findFirst({
-    where: {
-      id,
-    },
+export async function isValidPartnershipRequest(
+  id: string,
+  tx: Prisma.TransactionClient = db,
+) {
+  const count = await tx.partnershipRequest.count({
+    where: { id },
   });
-
-  if (partnershipRequest) {
-    return true;
-  }
-  return false;
+  return count > 0;
 }
 
 export async function getPartnershipRequest(
   priceListId: string,
   senderId: string,
   type: PartnershipRequestTypeOptions,
+  tx: Prisma.TransactionClient = db,
 ) {
-  const partnershipRequest = await db.partnershipRequest.findFirstOrThrow({
+  return tx.partnershipRequest.findFirstOrThrow({
     where: {
       senderId,
       type,
       priceLists: {
-        some: {
-          id: priceListId,
-        },
+        some: { id: priceListId },
       },
     },
   });
-
-  return partnershipRequest;
 }
 
 export async function getAllPartnershipRequests(
   recipientId: string,
   type: PartnershipRequestTypeOptions,
+  tx: Prisma.TransactionClient = db,
 ) {
-  const partnershipRequests = await db.partnershipRequest.findMany({
-    where: {
-      recipientId: recipientId,
-      type,
-    },
+  return tx.partnershipRequest.findMany({
+    where: { recipientId, type },
     include: {
       priceLists: true,
       sender: {
-        select: {
-          userProfile: true,
-        },
+        select: { userProfile: true },
       },
       recipient: {
-        select: {
-          userProfile: true,
-        },
+        select: { userProfile: true },
       },
     },
   });
-  return partnershipRequests;
 }
 
-export async function deletePartnershipRequestTx(
-  tx: Prisma.TransactionClient,
+export async function deletePartnershipRequest(
   partnershipRequestId: string,
+  tx: Prisma.TransactionClient = db,
 ) {
-  const deletedPartnershipRequest = await tx.partnershipRequest.delete({
-    where: {
-      id: partnershipRequestId,
-    },
+  return tx.partnershipRequest.delete({
+    where: { id: partnershipRequestId },
   });
-  return deletedPartnershipRequest;
 }
 
-export async function deletePartnershipRequestsTx(
-  tx: Prisma.TransactionClient,
+export async function deletePartnershipRequests(
   partnershipRequestIds: string[],
+  tx: Prisma.TransactionClient = db,
 ) {
-  const deletedPartnershipRequests = await tx.partnershipRequest.deleteMany({
+  return tx.partnershipRequest.deleteMany({
     where: {
-      id: {
-        in: partnershipRequestIds,
-      },
+      id: { in: partnershipRequestIds },
     },
   });
-  return deletedPartnershipRequests;
 }

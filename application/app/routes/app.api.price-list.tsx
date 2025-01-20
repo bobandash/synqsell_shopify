@@ -1,9 +1,41 @@
 import { json, type LoaderFunctionArgs } from '@remix-run/node';
 import { StatusCodes } from 'http-status-codes';
-import { getIdMappedToStoreUrl } from '~/services/shopify/products';
 import { authenticate } from '~/shopify.server';
 import { getRouteError, logError } from '~/lib/utils/server';
 import createHttpError from 'http-errors';
+import getQueryStr from '~/services/shopify/utils/getQueryStr';
+import { queryInternalStoreAdminAPI } from '~/services/shopify/utils';
+import type { GraphQL } from '~/types';
+import type { ProductUrlQuery } from '~/services/shopify/products/types';
+import { GET_PRODUCT_URL } from '~/services/shopify/products/graphql';
+import { nodesFromEdges } from '@shopify/admin-graphql-api-utilities';
+
+async function getIdMappedToStoreUrl(graphql: GraphQL, productIds: string[]) {
+  if (productIds.length === 0) {
+    return {};
+  }
+  const numProducts = productIds.length;
+  const queryStr = getQueryStr(productIds);
+  const data = await queryInternalStoreAdminAPI<ProductUrlQuery>(
+    graphql,
+    GET_PRODUCT_URL,
+    {
+      first: numProducts,
+      query: queryStr,
+    },
+  );
+  const edges = data.products.edges;
+  const nodes = nodesFromEdges(edges);
+  const idToStoreUrl = nodes.reduce((acc, node) => {
+    const { id, onlineStoreUrl } = node;
+    return {
+      ...acc,
+      [id]: onlineStoreUrl,
+    };
+  }, {});
+
+  return idToStoreUrl;
+}
 
 // resource route for getting information for price list
 export const loader = async ({ request }: LoaderFunctionArgs) => {

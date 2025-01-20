@@ -8,7 +8,7 @@ import type { Session, UserProfile } from '@prisma/client';
 import {
   getProfile,
   hasProfile,
-  updateUserProfileTx,
+  updateUserProfile,
 } from '../../userProfile.server';
 import db from '~/db.server';
 
@@ -68,11 +68,11 @@ describe('userProfile', () => {
     it('should throw error if no social media fields exist', async () => {
       await expect(
         db.$transaction(async (tx) => {
-          await updateUserProfileTx(
-            tx,
+          await updateUserProfile(
             session.id,
             newProfileVals,
             socialMediaVals,
+            tx,
           );
         }),
       ).rejects.toThrow();
@@ -81,11 +81,11 @@ describe('userProfile', () => {
     it('should throw error if session does not exist', async () => {
       await expect(
         db.$transaction(async (tx) => {
-          await updateUserProfileTx(
-            tx,
+          await updateUserProfile(
             nonExistentId,
             newProfileVals,
             socialMediaVals,
+            tx,
           );
         }),
       ).rejects.toThrow();
@@ -94,11 +94,11 @@ describe('userProfile', () => {
     it('should update all user profile fields properly', async () => {
       const link = await generateSocialMediaLink(userProfile.id);
       const newProfile = await db.$transaction(async (tx) => {
-        const newProfile = await updateUserProfileTx(
-          tx,
+        const newProfile = await updateUserProfile(
           session.id,
           newProfileVals,
           socialMediaVals,
+          tx,
         );
         return newProfile;
       });

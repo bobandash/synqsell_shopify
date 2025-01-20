@@ -1,98 +1,98 @@
+import type { Prisma } from '@prisma/client';
 import db from '~/db.server';
 
-export async function isValidPriceList(priceListId: string) {
-  const priceList = await db.priceList.findFirst({
-    where: {
-      id: priceListId,
-    },
+export async function isValidPriceList(
+  priceListId: string,
+  tx: Prisma.TransactionClient = db,
+) {
+  const count = await tx.priceList.count({
+    where: { id: priceListId },
   });
-  return priceList !== null;
+  return count > 0;
 }
 
-export async function getPriceList(priceListId: string) {
-  const priceList = await db.priceList.findFirstOrThrow({
-    where: {
-      id: priceListId,
-    },
+export async function getPriceList(
+  priceListId: string,
+  tx: Prisma.TransactionClient = db,
+) {
+  return tx.priceList.findFirstOrThrow({
+    where: { id: priceListId },
   });
-  return priceList;
 }
 
-export async function hasGeneralPriceList(sessionId: string) {
-  const generalPriceList = await db.priceList.findFirst({
+export async function hasGeneralPriceList(
+  sessionId: string,
+  tx: Prisma.TransactionClient = db,
+) {
+  const count = await tx.priceList.count({
     where: {
       isGeneral: true,
       supplierId: sessionId,
     },
   });
-  if (!generalPriceList) {
-    return false;
-  }
-  return true;
+  return count > 0;
 }
 
-export async function getGeneralPriceList(sessionId: string) {
-  const generalPriceList = await db.priceList.findFirstOrThrow({
+export async function getGeneralPriceList(
+  sessionId: string,
+  tx: Prisma.TransactionClient = db,
+) {
+  return tx.priceList.findFirstOrThrow({
     where: {
       isGeneral: true,
       supplierId: sessionId,
     },
   });
-  return generalPriceList;
 }
 
-export async function userHasPriceList(sessionId: string, priceListId: string) {
-  const priceList = await db.priceList.findFirst({
+export async function userHasPriceList(
+  sessionId: string,
+  priceListId: string,
+  tx: Prisma.TransactionClient = db,
+) {
+  const count = await tx.priceList.count({
     where: {
       supplierId: sessionId,
       id: priceListId,
     },
   });
-  if (priceList) {
-    return true;
-  }
-  return false;
+  return count > 0;
 }
 
 export async function deletePriceListBatch(
   priceListsIds: string[],
   sessionId: string,
+  tx: Prisma.TransactionClient = db,
 ) {
-  const deletedPriceLists = await db.priceList.deleteMany({
+  return tx.priceList.deleteMany({
     where: {
-      id: {
-        in: priceListsIds,
-      },
+      id: { in: priceListsIds },
       supplierId: sessionId,
     },
   });
-  return deletedPriceLists;
 }
 
-export async function getAllPriceLists(supplierId: string) {
-  // retrieves all price list ids the supplier has
-  const priceLists = await db.priceList.findMany({
-    where: {
-      supplierId,
-    },
+export async function getAllPriceLists(
+  supplierId: string,
+  tx: Prisma.TransactionClient = db,
+) {
+  return tx.priceList.findMany({
+    where: { supplierId },
   });
-  return priceLists;
 }
 
-export async function getRetailerIds(priceListId: string) {
-  const priceListWithRetailers = await db.priceList.findFirstOrThrow({
-    where: {
-      id: priceListId,
-    },
+export async function getRetailerIds(
+  priceListId: string,
+  tx: Prisma.TransactionClient = db,
+) {
+  const { partnerships } = await tx.priceList.findFirstOrThrow({
+    where: { id: priceListId },
     include: {
       partnerships: {
-        select: {
-          retailerId: true,
-        },
+        select: { retailerId: true },
       },
     },
   });
-  const { partnerships } = priceListWithRetailers;
-  const retailerIds = partnerships.map(({ retailerId }) => retailerId);
-  return retailerIds;
+
+  return partnerships.map(({ retailerId }) => retailerId);
 }

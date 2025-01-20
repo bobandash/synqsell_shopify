@@ -7,8 +7,7 @@ import {
   isValidChecklistStatusId,
   markCheckListStatus,
   updateChecklistStatus,
-  updateChecklistStatusBatchTx,
-  updateChecklistStatusTx,
+  updateChecklistStatusBatch,
 } from '../../checklistStatus.server';
 import db from '~/db.server';
 import type { ChecklistItem, ChecklistStatus } from '@prisma/client';
@@ -214,66 +213,6 @@ describe('Checklist Status', () => {
         ).rejects.toThrow();
       });
     });
-
-    describe('updateChecklistStatusTx', () => {
-      it('should update the completed status to true within transaction', async () => {
-        await db.$transaction(async (tx) => {
-          const initialStatus = await tx.checklistStatus.findFirst({
-            where: { id: checklistStatusOne.id },
-          });
-
-          await updateChecklistStatusTx(
-            tx,
-            sessionId,
-            checklistItemOne.key as ChecklistItemKeysOptions,
-            true,
-          );
-          const newStatus = await tx.checklistStatus.findFirst({
-            where: {
-              id: checklistStatusOne.id,
-            },
-          });
-          expect(initialStatus?.isCompleted).toBe(false);
-          expect(newStatus?.isCompleted).toBe(true);
-        });
-      });
-
-      it('should update the completed status to false within transaction', async () => {
-        await db.$transaction(async (tx) => {
-          await updateChecklistStatusTx(
-            tx,
-            sessionId,
-            checklistItemOne.key as ChecklistItemKeysOptions,
-            true,
-          );
-          await updateChecklistStatusTx(
-            tx,
-            sessionId,
-            checklistItemOne.key as ChecklistItemKeysOptions,
-            false,
-          );
-          const status = await tx.checklistStatus.findFirst({
-            where: {
-              id: checklistStatusOne.id,
-            },
-          });
-          expect(status?.isCompleted).toBe(false);
-        });
-      });
-
-      it('should throw error if sessionid is invalid within transaction', async () => {
-        await expect(
-          db.$transaction(async (tx) => {
-            await updateChecklistStatusTx(
-              tx,
-              nonExistentId,
-              checklistItemOne.key as ChecklistItemKeysOptions,
-              true,
-            );
-          }),
-        ).rejects.toThrow();
-      });
-    });
   });
 
   describe('Multiple Users', () => {
@@ -361,16 +300,13 @@ describe('Checklist Status', () => {
       });
     });
 
-    describe('updateChecklistStatusBatchTx', () => {
+    describe('updateChecklistStatusBatch', () => {
       it('should update completed status for all sessionIds provided in checklist status', async () => {
-        await db.$transaction(async (tx) => {
-          await updateChecklistStatusBatchTx(
-            tx,
-            [userOne.session.id, userTwo.session.id],
-            checklistItemOne.key as ChecklistItemKeysOptions,
-            true,
-          );
-        });
+        await updateChecklistStatusBatch(
+          [userOne.session.id, userTwo.session.id],
+          checklistItemOne.key as ChecklistItemKeysOptions,
+          true,
+        );
         const statuses = await db.checklistStatus.findMany({
           where: {
             sessionId: { in: [userOne.session.id, userTwo.session.id] },
@@ -382,20 +318,16 @@ describe('Checklist Status', () => {
       });
 
       it('should update status from completed to not completed', async () => {
-        await db.$transaction(async (tx) => {
-          await updateChecklistStatusBatchTx(
-            tx,
-            [userOne.session.id, userTwo.session.id],
-            checklistItemOne.key as ChecklistItemKeysOptions,
-            true,
-          );
-          await updateChecklistStatusBatchTx(
-            tx,
-            [userOne.session.id, userTwo.session.id],
-            checklistItemOne.key as ChecklistItemKeysOptions,
-            false,
-          );
-        });
+        await updateChecklistStatusBatch(
+          [userOne.session.id, userTwo.session.id],
+          checklistItemOne.key as ChecklistItemKeysOptions,
+          true,
+        );
+        await updateChecklistStatusBatch(
+          [userOne.session.id, userTwo.session.id],
+          checklistItemOne.key as ChecklistItemKeysOptions,
+          false,
+        );
 
         const statuses = await db.checklistStatus.findMany({
           where: {
@@ -408,14 +340,11 @@ describe('Checklist Status', () => {
 
       it('should throw error for invalid checklist item key', async () => {
         await expect(
-          db.$transaction(async (tx) => {
-            await updateChecklistStatusBatchTx(
-              tx,
-              [userOne.session.id],
-              simpleFaker.string.uuid() as ChecklistItemKeysOptions,
-              true,
-            );
-          }),
+          await updateChecklistStatusBatch(
+            [userOne.session.id],
+            simpleFaker.string.uuid() as ChecklistItemKeysOptions,
+            true,
+          ),
         ).rejects.toThrow();
       });
     });

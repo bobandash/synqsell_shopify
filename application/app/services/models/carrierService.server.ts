@@ -1,44 +1,43 @@
+import type { Prisma } from '@prisma/client';
 import db from '~/db.server';
 
-export async function userHasCarrierService(retailerId: string) {
-  const carrierService = await db.carrierService.findFirst({
-    where: {
-      retailerId,
-    },
+export async function userHasCarrierService(
+  retailerId: string,
+  tx: Prisma.TransactionClient = db,
+) {
+  const count = await tx.carrierService.count({
+    where: { retailerId },
   });
-  if (!carrierService) {
-    return false;
-  }
-  return true;
+  return count > 0;
 }
 
 export async function createCarrierService(
   retailerId: string,
   shopifyCarrierServiceId: string,
+  tx: Prisma.TransactionClient = db,
 ) {
-  const newCarrierService = db.carrierService.create({
+  return tx.carrierService.create({
     data: {
       retailerId,
       shopifyCarrierServiceId,
     },
   });
-  return newCarrierService;
 }
 
-export async function userGetCarrierService(retailerId: string) {
-  const carrierService = await db.carrierService.findFirstOrThrow({
-    where: {
-      retailerId,
-    },
+export async function userGetCarrierService(
+  retailerId: string,
+  tx: Prisma.TransactionClient = db,
+) {
+  return tx.carrierService.findFirstOrThrow({
+    where: { retailerId },
   });
-  return carrierService;
 }
 
-export async function deleteCarrierService(retailerId: string) {
-  const deletedCarrierService = await db.carrierService.delete({
-    where: {
-      retailerId,
-    },
+export async function deleteCarrierService(
+  retailerId: string,
+  tx: Prisma.TransactionClient = db,
+) {
+  return tx.carrierService.delete({
+    where: { retailerId },
   });
-  return deletedCarrierService;
 }

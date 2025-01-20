@@ -61,6 +61,7 @@ async function hasAccessToImportPriceList(
   return false;
 }
 
+// TODO: Refactor this function
 export async function getProductCardInfoFromPriceList(
   props: GetPaginatedProductCardsInfoProps,
 ): Promise<ProductCardInfoFromPriceList> {

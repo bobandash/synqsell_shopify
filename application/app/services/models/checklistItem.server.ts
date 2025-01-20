@@ -1,39 +1,36 @@
 import db from '~/db.server';
 import { type ChecklistItemKeysOptions } from '~/constants';
+import type { Prisma } from '@prisma/client';
 
-export async function hasChecklistItem(key: ChecklistItemKeysOptions) {
-  const checklistItem = await db.checklistItem.findFirst({
-    where: {
-      key: key,
-    },
+export async function hasChecklistItem(
+  key: ChecklistItemKeysOptions,
+  tx: Prisma.TransactionClient = db,
+) {
+  const count = await tx.checklistItem.count({
+    where: { key },
   });
-  if (!checklistItem) {
-    return false;
-  }
-  return true;
+  return count > 0;
 }
 
 export async function checklistItemIdMatchesKey(
   checklistItemId: string,
   key: ChecklistItemKeysOptions,
+  tx: Prisma.TransactionClient = db,
 ) {
-  const matches = await db.checklistItem.findFirst({
+  const count = await tx.checklistItem.count({
     where: {
       key,
       id: checklistItemId,
     },
   });
-  if (matches) {
-    return true;
-  }
-  return false;
+  return count > 0;
 }
 
-export async function getChecklistItem(key: ChecklistItemKeysOptions) {
-  const checklistItem = await db.checklistItem.findFirstOrThrow({
-    where: {
-      key: key,
-    },
+export async function getChecklistItem(
+  key: ChecklistItemKeysOptions,
+  tx: Prisma.TransactionClient = db,
+) {
+  return tx.checklistItem.findFirstOrThrow({
+    where: { key },
   });
-  return checklistItem;
 }

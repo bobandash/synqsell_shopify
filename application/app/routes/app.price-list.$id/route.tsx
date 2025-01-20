@@ -189,8 +189,6 @@ const CreateEditPriceList = () => {
   const [error, setError] = useState('');
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // this is for pending message
-
   useEffect(() => {
     if (!actionData) {
       return;
@@ -501,12 +499,12 @@ const CreateEditPriceList = () => {
     );
   }, [fields, products]);
   return (
-    <Form onSubmit={submit}>
+    <Page
+      title={isCreatingNewPriceList ? `New Price List` : `Edit Price List`}
+      backAction={{ content: 'Price Lists', url: backActionUrl }}
+    >
       <Layout>
-        <Page
-          title={isCreatingNewPriceList ? `New Price List` : `Edit Price List`}
-          backAction={{ content: 'Price Lists', url: backActionUrl }}
-        >
+        <Form onSubmit={submit}>
           {error && (
             <>
               <Banner
@@ -707,9 +705,9 @@ const CreateEditPriceList = () => {
             </Button>
           </div>
           <PaddedBox />
-        </Page>
+        </Form>
       </Layout>
-    </Form>
+    </Page>
   );
 };
 

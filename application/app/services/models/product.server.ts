@@ -22,51 +22,47 @@ export type AllProductDetails = Prisma.ProductGetPayload<{
   };
 }>;
 
-export async function hasProduct(id: string) {
-  const product = await db.product.findFirst({
-    where: {
-      id,
-    },
+export async function hasProduct(
+  id: string,
+  tx: Prisma.TransactionClient = db,
+) {
+  const count = await tx.product.count({
+    where: { id },
   });
-
-  return product !== null;
+  return count > 0;
 }
 
-export async function deleteProductsTx(
-  tx: Prisma.TransactionClient,
+export async function deleteProducts(
   priceListId: string,
   prismaProductIds: string[],
+  tx: Prisma.TransactionClient = db,
 ) {
-  const deletedProducts = await tx.product.deleteMany({
+  return tx.product.deleteMany({
     where: {
       priceListId,
-      id: {
-        in: prismaProductIds,
-      },
+      id: { in: prismaProductIds },
     },
   });
-  return deletedProducts;
 }
 
-export async function addProductsTx(
-  tx: Prisma.TransactionClient,
+export async function addProducts(
   priceListId: string,
   shopifyProductIdsToAdd: string[],
+  tx: Prisma.TransactionClient = db,
 ) {
   const hasProducts =
     (await tx.product.count({
       where: {
-        shopifyProductId: {
-          in: shopifyProductIdsToAdd,
-        },
+        shopifyProductId: { in: shopifyProductIdsToAdd },
         priceListId,
       },
     })) > 0;
+
   if (hasProducts) {
     throw new Error('Cannot add duplicate products to price list.');
   }
 
-  const newProducts = await Promise.all(
+  return Promise.all(
     shopifyProductIdsToAdd.map((shopifyProductId) =>
       tx.product.create({
         data: {
@@ -76,16 +72,14 @@ export async function addProductsTx(
       }),
     ),
   );
-  return newProducts;
 }
 
 export async function getProductWithVariantsFromPriceList(
   priceListId: string,
+  tx: Prisma.TransactionClient = db,
 ): Promise<ProductWithVariants[]> {
-  const products = await db.product.findMany({
-    where: {
-      priceListId,
-    },
+  return tx.product.findMany({
+    where: { priceListId },
     include: {
       variants: {
         include: {
@@ -94,16 +88,14 @@ export async function getProductWithVariantsFromPriceList(
       },
     },
   });
-  return products;
 }
 
 export async function getAllProductDetails(
   productId: string,
+  tx: Prisma.TransactionClient = db,
 ): Promise<AllProductDetails> {
-  const productDetails = await db.product.findFirstOrThrow({
-    where: {
-      id: productId,
-    },
+  return tx.product.findFirstOrThrow({
+    where: { id: productId },
     include: {
       priceList: true,
       variants: {
@@ -113,19 +105,15 @@ export async function getAllProductDetails(
       },
     },
   });
-  return productDetails;
 }
 
 export async function updateStoreStatus(
   sessionId: string,
   isInstalled: boolean,
+  tx: Prisma.TransactionClient = db,
 ) {
-  await db.session.update({
-    where: {
-      id: sessionId,
-    },
-    data: {
-      isAppUninstalled: !isInstalled,
-    },
+  return tx.session.update({
+    where: { id: sessionId },
+    data: { isAppUninstalled: !isInstalled },
   });
 }

@@ -1,15 +1,4 @@
 import db from '~/db.server';
-import {
-  addProductsTx,
-  deleteProductsTx,
-} from '~/services/models/product.server';
-import type { Prisma } from '@prisma/client';
-import {
-  addVariantsTx,
-  deleteVariantsTx,
-  getShopifyVariantIdsInPriceListTx,
-  updateVariantsTx,
-} from '~/services/models/variants.server';
 import type {
   PriceListActionData,
   PriceListSettings,
@@ -19,43 +8,23 @@ import {
   noPriceListGeneralModificationIfExists,
   priceListDataSchema,
 } from './util/schemas';
-import { updatePartnershipsInPriceListTx } from './util';
 import { StatusCodes } from 'http-status-codes';
 import { createJSONSuccess, getRouteError, logError } from '~/lib/utils/server';
+import { connectPartnershipsToPriceList } from './util';
+import type { Prisma } from '@prisma/client';
+import {
+  addVariants,
+  deleteVariants,
+  getShopifyVariantIdsInPriceList,
+  updateVariants,
+} from '~/services/models/variants.server';
+import { addProducts, deleteProducts } from '~/services/models/product.server';
 
-// TODO: REFACTOR THIS ENTIRE FILE; THIS CODE IS TOO VERBOSE
-export async function updatePriceListSettings(
+async function updatePriceListSettings(
   sessionId: string,
   priceListId: string,
   settings: PriceListSettings,
-) {
-  const { margin, requiresApprovalToImport, name, isGeneral, pricingStrategy } =
-    settings;
-  const updatedPriceList = await db.priceList.update({
-    where: {
-      id: priceListId,
-    },
-    data: {
-      name,
-      isGeneral,
-      ...(requiresApprovalToImport !== undefined && {
-        requiresApprovalToImport,
-      }),
-      pricingStrategy,
-      ...(margin !== undefined && {
-        margin,
-      }),
-      supplierId: sessionId,
-    },
-  });
-  return updatedPriceList;
-}
-
-export async function updatePriceListSettingsTx(
-  tx: Prisma.TransactionClient,
-  sessionId: string,
-  priceListId: string,
-  settings: PriceListSettings,
+  tx: Prisma.TransactionClient = db,
 ) {
   const { margin, requiresApprovalToImport, name, isGeneral, pricingStrategy } =
     settings;
@@ -76,7 +45,6 @@ export async function updatePriceListSettingsTx(
       supplierId: sessionId,
     },
   });
-
   return updatedPriceList;
 }
 
@@ -84,8 +52,9 @@ export async function updatePriceListSettingsTx(
 async function getProductStatus(
   priceListId: string,
   shopifyProductIds: string[],
+  tx: Prisma.TransactionClient = db,
 ) {
-  const originalProducts = await db.product.findMany({
+  const originalProducts = await tx.product.findMany({
     where: {
       priceListId,
     },
@@ -99,7 +68,6 @@ async function getProductStatus(
   );
   const originalProductShopifyIdsSet = new Set(originalProductShopifyIds);
   const newProductsSet = new Set(shopifyProductIds);
-
   const shopifyProductIdsToAdd = shopifyProductIds.filter(
     (shopifyProductId) => !originalProductShopifyIdsSet.has(shopifyProductId),
   );
@@ -109,10 +77,10 @@ async function getProductStatus(
   return { shopifyProductIdsToAdd, prismaProductIdsToRemove };
 }
 
-export async function getMapShopifyProductIdToPrismaIdTx(
-  tx: Prisma.TransactionClient,
+export async function getMapShopifyProductIdToPrismaId(
   productIds: string[],
   priceListId: string,
+  tx: Prisma.TransactionClient,
 ) {
   const idAndProductIds = await tx.product.findMany({
     where: {
@@ -137,19 +105,19 @@ export async function getMapShopifyProductIdToPrismaIdTx(
 // returns the data of the variants to add, remove, and update
 // the problem with variants is that when a product is deleted, it should cascade delete the variants as well
 // so that's why you have to use the transaction instead and call this when products are already deleted
-
-async function getVariantStatusTx(
-  tx: Prisma.TransactionClient,
+// TODO: Refactor this function
+async function getVariantStatuses(
   priceListId: string,
   products: ProductCoreData[],
+  tx: Prisma.TransactionClient,
 ) {
   const shopifyProductIds = products.map(
     ({ shopifyProductId }) => shopifyProductId,
   );
-  const shopifyProductIdToPrismaId = await getMapShopifyProductIdToPrismaIdTx(
-    tx,
+  const shopifyProductIdToPrismaId = await getMapShopifyProductIdToPrismaId(
     shopifyProductIds,
     priceListId,
+    tx,
   );
 
   const variantsWithPrismaProductId = products.flatMap((product) =>
@@ -169,9 +137,9 @@ async function getVariantStatusTx(
     }),
   );
 
-  const idsInOldPriceList = await getShopifyVariantIdsInPriceListTx(
-    tx,
+  const idsInOldPriceList = await getShopifyVariantIdsInPriceList(
     priceListId,
+    tx,
   );
   const variantIdToPrismaIdInOldPriceListMap = new Map<string, string>();
   idsInOldPriceList.forEach((item) => {
@@ -236,30 +204,24 @@ async function updateAllPriceListInformationAction(
     const { shopifyProductIdsToAdd, prismaProductIdsToRemove } =
       await getProductStatus(priceListId, shopifyProductIds);
 
-    await db.$transaction(
-      async (tx) => {
-        await Promise.all([
-          addProductsTx(tx, priceListId, shopifyProductIdsToAdd),
-          deleteProductsTx(tx, priceListId, prismaProductIdsToRemove),
-        ]);
+    await db.$transaction(async (tx) => {
+      await Promise.all([
+        addProducts(priceListId, shopifyProductIdsToAdd, tx),
+        deleteProducts(priceListId, prismaProductIdsToRemove, tx),
+      ]);
 
-        // variant status has to be inside the transaction because products have to be created before any variants are created
-        const { variantsToAdd, prismaIdsToRemoveInVariant, variantsToUpdate } =
-          await getVariantStatusTx(tx, priceListId, products);
+      // variant status has to be inside the transaction because products have to be created before any variants are created
+      const { variantsToAdd, prismaIdsToRemoveInVariant, variantsToUpdate } =
+        await getVariantStatuses(priceListId, products, tx);
 
-        await Promise.all([
-          deleteVariantsTx(tx, prismaIdsToRemoveInVariant),
-          updateVariantsTx(tx, variantsToUpdate),
-          addVariantsTx(tx, variantsToAdd),
-          updatePriceListSettingsTx(tx, sessionId, priceListId, settings),
-          updatePartnershipsInPriceListTx(tx, priceListId, partnerships),
-        ]);
-      },
-      {
-        maxWait: 20000, // TODO: refactor this transaction
-        timeout: 100000,
-      },
-    );
+      await Promise.all([
+        deleteVariants(prismaIdsToRemoveInVariant, tx),
+        updateVariants(variantsToUpdate, tx),
+        addVariants(variantsToAdd, tx),
+        updatePriceListSettings(sessionId, priceListId, settings, tx),
+        connectPartnershipsToPriceList(priceListId, partnerships, tx),
+      ]);
+    });
 
     return createJSONSuccess(
       'Successfully updated price list.',
