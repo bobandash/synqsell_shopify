@@ -499,215 +499,223 @@ const CreateEditPriceList = () => {
     );
   }, [fields, products]);
   return (
-    <Form onSubmit={submit}>
+    <Page
+      title={isCreatingNewPriceList ? `New Price List` : `Edit Price List`}
+      backAction={{ content: 'Price Lists', url: backActionUrl }}
+    >
       <Layout>
-        <Page
-          title={isCreatingNewPriceList ? `New Price List` : `Edit Price List`}
-          backAction={{ content: 'Price Lists', url: backActionUrl }}
-        >
-          {error && (
-            <>
-              <Banner
-                title={error}
-                tone="warning"
-                onDismiss={dismissErrorBanner}
-              />
-              <PaddedBox />
-            </>
-          )}
-          {hasCreatePriceListBanner && (
-            <>
-              <Banner
-                title="Your price list was successfully created."
-                tone="success"
-                onDismiss={dismissPriceListBanner}
-              >
-                <p>
-                  Add products and retailers to your price list and begin
-                  selling, or{' '}
-                  <Link url="/app/price-list/new">add another price list</Link>!
-                </p>
-              </Banner>
-              <PaddedBox />
-            </>
-          )}
-          <Box paddingBlockEnd={'400'}>
-            <BlockStack gap="400">
-              <Card>
-                <TextField label="Name" autoComplete="off" {...fields.name} />
-              </Card>
-              <Card>
-                <FormLayout>
-                  <Box>
-                    <Text as="h2" variant="headingMd">
-                      Category
-                    </Text>
-                    <ChoiceList
-                      {...asChoiceList(fields.category)}
-                      title="Category"
-                      choices={categoryChoices}
-                      titleHidden
-                    />
-                  </Box>
-                  {fields.category.value === PRICE_LIST_CATEGORY.GENERAL && (
-                    <ChoiceList
-                      {...asChoiceList(fields.generalPriceListImportSettings)}
-                      title="Product Import Settings"
-                      choices={generalPriceListImportSettingChoices}
-                    />
-                  )}
-                </FormLayout>
-              </Card>
-              <Card>
-                <FormLayout>
-                  <Box>
-                    <Text as="h2" variant="headingMd">
-                      Pricing Strategy
-                    </Text>
-                    <ChoiceList
-                      {...asChoiceList(fields.pricingStrategy)}
-                      title="Pricing Strategy"
-                      titleHidden
-                      choices={pricingStrategyChoices}
-                    />
-                  </Box>
-                  {fields.pricingStrategy.value ===
-                    PRICE_LIST_PRICING_STRATEGY.MARGIN && (
-                    <TextField
-                      type="number"
-                      label="Margin (%) that Retailer Generates on Sale"
-                      autoComplete="off"
-                      {...fields.margin}
-                    />
-                  )}
-                </FormLayout>
-              </Card>
-              <Card>
-                <BlockStack gap="200">
-                  <Text as="h2" variant="headingMd">
-                    Retailers Connected
-                  </Text>
-                  <Combobox
-                    allowMultiple
-                    activator={
-                      <Combobox.TextField
-                        prefix={<Icon source={SearchIcon} />}
-                        onChange={filterRetailerOptions}
-                        label="Search retailers"
-                        labelHidden
-                        value={retailerSearchValue}
-                        placeholder="Search retailers"
-                        autoComplete="off"
+        <Layout.Section>
+          <Form method="post" onSubmit={submit}>
+            {error && (
+              <>
+                <Banner
+                  title={error}
+                  tone="warning"
+                  onDismiss={dismissErrorBanner}
+                />
+                <PaddedBox />
+              </>
+            )}
+            {hasCreatePriceListBanner && (
+              <>
+                <Banner
+                  title="Your price list was successfully created."
+                  tone="success"
+                  onDismiss={dismissPriceListBanner}
+                >
+                  <p>
+                    Add products and retailers to your price list and begin
+                    selling, or{' '}
+                    <Link url="/app/price-list/new">
+                      add another price list
+                    </Link>
+                    !
+                  </p>
+                </Banner>
+                <PaddedBox />
+              </>
+            )}
+            <Box paddingBlockEnd={'400'}>
+              <BlockStack gap="400">
+                <Card>
+                  <TextField label="Name" autoComplete="off" {...fields.name} />
+                </Card>
+                <Card>
+                  <FormLayout>
+                    <Box>
+                      <Text as="h2" variant="headingMd">
+                        Category
+                      </Text>
+                      <ChoiceList
+                        {...asChoiceList(fields.category)}
+                        title="Category"
+                        choices={categoryChoices}
+                        titleHidden
                       />
-                    }
-                  >
-                    {visibleRetailerOptions.length > 0 ? (
-                      <Listbox onSelect={updateRetailerSelection}>
-                        {visibleRetailerOptions.map(({ id, retailerName }) => {
-                          return (
-                            <Listbox.Option
-                              key={id}
-                              value={id}
-                              selected={selectedPartnershipIds.includes(id)}
-                              accessibilityLabel={retailerName}
-                            >
-                              {retailerName}
-                            </Listbox.Option>
-                          );
-                        })}
-                      </Listbox>
-                    ) : null}
-                  </Combobox>
-                  <ResourceList
-                    resourceName={{
-                      singular: 'customer',
-                      plural: 'customers',
-                    }}
-                    items={partneredRetailers.filter(({ id }) =>
-                      selectedPartnershipIds.includes(id),
+                    </Box>
+                    {fields.category.value === PRICE_LIST_CATEGORY.GENERAL && (
+                      <ChoiceList
+                        {...asChoiceList(fields.generalPriceListImportSettings)}
+                        title="Product Import Settings"
+                        choices={generalPriceListImportSettingChoices}
+                      />
                     )}
-                    renderItem={(item) => {
-                      const { id, retailerName } = item;
-                      return (
-                        <ResourceItem
-                          id={id}
-                          url={''}
-                          accessibilityLabel={`View details for ${retailerName}`}
-                        >
-                          <InlineStack
-                            blockAlign="center"
-                            align="space-between"
-                          >
-                            <Text variant="bodyMd" fontWeight="bold" as="h3">
-                              {retailerName}
-                            </Text>
-                            <div
-                              onClick={(e) => {
-                                e.stopPropagation();
-                              }}
-                            >
-                              <Button
-                                icon={XIcon}
-                                onClick={() => {
-                                  updateRetailerSelection(id);
-                                }}
-                              />
-                            </div>
-                          </InlineStack>
-                        </ResourceItem>
-                      );
-                    }}
-                  />
-                </BlockStack>
-              </Card>
-              <Card padding={'200'}>
-                <Box paddingInline={'200'} paddingBlockStart={'100'}>
-                  <Text as="h2" variant="headingMd">
-                    Products
-                  </Text>
-                </Box>
-                <ProductFilterControl onQueryFocus={handleSelectProducts} />
-                {products.length > 0 && (
-                  <IndexTable
-                    onSelectionChange={handleSelectionChange}
-                    selectedItemsCount={
-                      allResourcesSelected ? 'All' : selectedResources.length
-                    }
-                    resourceName={resourceName}
-                    itemCount={numRows}
-                    headings={headings}
-                    promotedBulkActions={productsBulkAction}
-                  >
-                    {products.map((product) => (
-                      <ProductTableRow
-                        key={product.id}
-                        product={product}
-                        margin={fields.margin.value}
-                        isWholesalePricing={
-                          fields.pricingStrategy.value === 'WHOLESALE'
-                        }
-                        selectedResources={selectedResources}
-                        tableRows={tableRows}
-                        updateProductWholesalePrice={
-                          updateProductWholesalePrice
-                        }
+                  </FormLayout>
+                </Card>
+                <Card>
+                  <FormLayout>
+                    <Box>
+                      <Text as="h2" variant="headingMd">
+                        Pricing Strategy
+                      </Text>
+                      <ChoiceList
+                        {...asChoiceList(fields.pricingStrategy)}
+                        title="Pricing Strategy"
+                        titleHidden
+                        choices={pricingStrategyChoices}
                       />
-                    ))}
-                  </IndexTable>
-                )}
-                <Box paddingBlockEnd={'100'} />
-              </Card>
-            </BlockStack>
-          </Box>
-          <div className={styles['center-right']}>
-            <Button submit variant="primary" disabled={isSubmitting}>
-              {isSubmitting ? 'Saving' : 'Save'}
-            </Button>
-          </div>
-          <PaddedBox />
-        </Page>
+                    </Box>
+                    {fields.pricingStrategy.value ===
+                      PRICE_LIST_PRICING_STRATEGY.MARGIN && (
+                      <TextField
+                        type="number"
+                        label="Margin (%) that Retailer Generates on Sale"
+                        autoComplete="off"
+                        {...fields.margin}
+                      />
+                    )}
+                  </FormLayout>
+                </Card>
+                <Card>
+                  <BlockStack gap="200">
+                    <Text as="h2" variant="headingMd">
+                      Retailers Connected
+                    </Text>
+                    <Combobox
+                      allowMultiple
+                      activator={
+                        <Combobox.TextField
+                          prefix={<Icon source={SearchIcon} />}
+                          onChange={filterRetailerOptions}
+                          label="Search retailers"
+                          labelHidden
+                          value={retailerSearchValue}
+                          placeholder="Search retailers"
+                          autoComplete="off"
+                        />
+                      }
+                    >
+                      {visibleRetailerOptions.length > 0 ? (
+                        <Listbox onSelect={updateRetailerSelection}>
+                          {visibleRetailerOptions.map(
+                            ({ id, retailerName }) => {
+                              return (
+                                <Listbox.Option
+                                  key={id}
+                                  value={id}
+                                  selected={selectedPartnershipIds.includes(id)}
+                                  accessibilityLabel={retailerName}
+                                >
+                                  {retailerName}
+                                </Listbox.Option>
+                              );
+                            },
+                          )}
+                        </Listbox>
+                      ) : null}
+                    </Combobox>
+                    <ResourceList
+                      resourceName={{
+                        singular: 'customer',
+                        plural: 'customers',
+                      }}
+                      items={partneredRetailers.filter(({ id }) =>
+                        selectedPartnershipIds.includes(id),
+                      )}
+                      renderItem={(item) => {
+                        const { id, retailerName } = item;
+                        return (
+                          <ResourceItem
+                            id={id}
+                            url={''}
+                            accessibilityLabel={`View details for ${retailerName}`}
+                          >
+                            <InlineStack
+                              blockAlign="center"
+                              align="space-between"
+                            >
+                              <Text variant="bodyMd" fontWeight="bold" as="h3">
+                                {retailerName}
+                              </Text>
+                              <div
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                }}
+                              >
+                                <Button
+                                  icon={XIcon}
+                                  onClick={() => {
+                                    updateRetailerSelection(id);
+                                  }}
+                                />
+                              </div>
+                            </InlineStack>
+                          </ResourceItem>
+                        );
+                      }}
+                    />
+                  </BlockStack>
+                </Card>
+                <Card padding={'200'}>
+                  <Box paddingInline={'200'} paddingBlockStart={'100'}>
+                    <Text as="h2" variant="headingMd">
+                      Products
+                    </Text>
+                  </Box>
+                  <ProductFilterControl onQueryFocus={handleSelectProducts} />
+                  {products.length > 0 && (
+                    <IndexTable
+                      onSelectionChange={handleSelectionChange}
+                      selectedItemsCount={
+                        allResourcesSelected ? 'All' : selectedResources.length
+                      }
+                      resourceName={resourceName}
+                      itemCount={numRows}
+                      headings={headings}
+                      promotedBulkActions={productsBulkAction}
+                    >
+                      {products.map((product) => (
+                        <ProductTableRow
+                          key={product.id}
+                          product={product}
+                          margin={fields.margin.value}
+                          isWholesalePricing={
+                            fields.pricingStrategy.value === 'WHOLESALE'
+                          }
+                          selectedResources={selectedResources}
+                          tableRows={tableRows}
+                          updateProductWholesalePrice={
+                            updateProductWholesalePrice
+                          }
+                        />
+                      ))}
+                    </IndexTable>
+                  )}
+                  <Box paddingBlockEnd={'100'} />
+                </Card>
+              </BlockStack>
+            </Box>
+            <PaddedBox />
+            <div className={styles['center-right']}>
+              <Button submit variant="primary" disabled={isSubmitting}>
+                {isSubmitting ? 'Saving' : 'Save'}
+              </Button>
+            </div>
+            <PaddedBox />
+          </Form>
+        </Layout.Section>
       </Layout>
-    </Form>
+    </Page>
   );
 };
 
