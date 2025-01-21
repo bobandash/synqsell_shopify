@@ -117,7 +117,7 @@ function getProductMediaCreationInputFields(mediaData: ProductMediaQuery) {
   if (!media) {
     return null;
   }
-  return media.map(({ node }) => {
+  const mediaInput = media.map(({ node }) => {
     const { alt, mediaContentType } = node;
     const mediaObj = {
       alt,
@@ -138,6 +138,8 @@ function getProductMediaCreationInputFields(mediaData: ProductMediaQuery) {
     }
     return mediaObj;
   });
+
+  return mediaInput;
 }
 
 export async function getProductAndMediaCreationInputWithAccessToken(
@@ -172,7 +174,6 @@ export async function getProductAndMediaCreationInputWithAccessToken(
     );
     mediaInputFields = getProductMediaCreationInputFields(mediaData);
   }
-
   return { productInputFields, mediaInputFields };
 }
 

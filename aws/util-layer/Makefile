@@ -11,7 +11,7 @@ ifeq ($(OS),Windows_NT)
     NPM = npm.cmd
     ROOT_TARGET_DIR = $(subst /,\,$(ARTIFACTS_DIR)\nodejs)
     TARGET_DIR = $(subst /,\,$(ARTIFACTS_DIR)\nodejs\node_modules)
-    SOURCE_DIR = $(subst /,\,opt\nodejs\)
+    SOURCE_DIR = $(subst /,\,opt\nodejs)
     SLASH = \
 
 else
@@ -23,7 +23,7 @@ else
     NPM = npm
     ROOT_TARGET_DIR = $(ARTIFACTS_DIR)/nodejs
     TARGET_DIR = $(ARTIFACTS_DIR)/nodejs/node_modules
-    SOURCE_DIR = opt/nodejs/
+    SOURCE_DIR = opt/nodejs
     SLASH = /
 
 endif

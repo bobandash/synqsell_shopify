@@ -65,32 +65,30 @@ export async function addImportedProductToDatabase(
   const productVariantsBulkCreate = importedProduct.productVariantsBulkCreate;
   const shopifyImportedProduct = productVariantsBulkCreate?.product;
   const shopifyImportedVariants = productVariantsBulkCreate?.productVariants;
-  const newImportedProduct = await tx.importedProduct.create({
-    data: {
-      prismaProductId: parentProduct.id,
-      shopifyProductId: shopifyImportedProduct!.id,
-      retailerId,
-      importedVariants: {
-        create: shopifyImportedVariants?.map(
-          (shopifyImportedVariant, index) => {
-            const prismaVariantId = parentProduct.variants[index].id;
-            const prismaInventoryItemId =
-              parentProduct.variants[index].inventoryItem!.id;
-            return {
-              prismaVariantId,
-              shopifyVariantId: shopifyImportedVariant.id,
-              importedInventoryItem: {
-                create: {
-                  prismaInventoryItemId,
-                  shopifyInventoryItemId:
-                    shopifyImportedVariant.inventoryItem.id,
-                },
-              },
-            };
+  const data = {
+    prismaProductId: parentProduct.id,
+    shopifyProductId: shopifyImportedProduct!.id,
+    retailerId,
+    importedVariants: {
+      create: shopifyImportedVariants?.map((shopifyImportedVariant, index) => {
+        const prismaVariantId = parentProduct.variants[index].id;
+        const prismaInventoryItemId =
+          parentProduct.variants[index].inventoryItem!.id;
+        return {
+          prismaVariantId,
+          shopifyVariantId: shopifyImportedVariant.id,
+          importedInventoryItem: {
+            create: {
+              prismaInventoryItemId,
+              shopifyInventoryItemId: shopifyImportedVariant.inventoryItem.id,
+            },
           },
-        ),
-      },
+        };
+      }),
     },
+  };
+  const newImportedProduct = await tx.importedProduct.create({
+    data,
   });
   return newImportedProduct;
 }
