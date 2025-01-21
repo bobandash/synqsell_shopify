@@ -30,6 +30,7 @@ async function revertProductVariants(
         supplierShopifyVariantData,
         retailerAndSupplierVariantIds,
     );
+
     if (!needsMutation) {
         return;
     }

@@ -129,7 +129,7 @@ async function revertRetailerVariantInventory(
         const supplierInventory = productVariant?.inventoryQuantity;
         const retailerShopifyInventoryItemId =
             supplierVariantIdToRetailerShopifyInventoryId.get(supplierVariantId)?.retailerShopifyInventoryItemId;
-        if (!retailerShopifyInventoryItemId || !supplierInventory) {
+        if (!retailerShopifyInventoryItemId || supplierInventory == null) {
             return;
         }
         return updateInventoryShopify(
