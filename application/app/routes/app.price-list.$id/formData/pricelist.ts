@@ -55,6 +55,7 @@ const generalPriceListImportSettingChoices: ChoiceListProps['choices'] = [
   },
 ];
 
+// TODO: Fix pricing gets out of sync when alternating between wholesale and retail price
 const pricingStrategyChoices: ChoiceListProps['choices'] = [
   {
     label: 'Margin',
@@ -62,12 +63,12 @@ const pricingStrategyChoices: ChoiceListProps['choices'] = [
     helpText:
       'Retailer who imports your products gets a percentage of the retail price when they make a sale.',
   },
-  {
-    label: 'Wholesale Price',
-    value: PRICE_LIST_PRICING_STRATEGY.WHOLESALE,
-    helpText:
-      'Retailer who imports your product gets the difference between the retail price and wholesale price when they make a sale.',
-  },
+  // {
+  //   label: 'Wholesale Price',
+  //   value: PRICE_LIST_PRICING_STRATEGY.WHOLESALE,
+  //   helpText:
+  //     'Retailer who imports your product gets the difference between the retail price and wholesale price when they make a sale.',
+  // },
 ];
 
 function formatPriceListFields(fieldValues: PriceListFormFieldValueProps) {

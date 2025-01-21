@@ -3,7 +3,7 @@
 client_id = "da71c0d94fe799dfdcfd69923c0e5741"
 name = "SynqSell-Dev"
 handle = "synqsell-dev"
-application_url = "https://commonwealth-css-joshua-blast.trycloudflare.com"
+application_url = "https://grain-trans-contribute-commodity.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read_assigned_fulfillment_orders,read_customers,read_inventory,read_lo
 
 [auth]
 redirect_urls = [
-  "https://commonwealth-css-joshua-blast.trycloudflare.com/auth/callback",
-  "https://commonwealth-css-joshua-blast.trycloudflare.com/auth/shopify/callback",
-  "https://commonwealth-css-joshua-blast.trycloudflare.com/api/auth/callback"
+  "https://grain-trans-contribute-commodity.trycloudflare.com/auth/callback",
+  "https://grain-trans-contribute-commodity.trycloudflare.com/auth/shopify/callback",
+  "https://grain-trans-contribute-commodity.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]

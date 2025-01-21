@@ -26,7 +26,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
 export const ErrorBoundary = () => {
   const error = useRouteError();
-  console.log(error);
   captureRemixErrorBoundaryError(error);
   return <div>Something went wrong</div>;
 };
