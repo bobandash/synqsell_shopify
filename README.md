@@ -65,9 +65,6 @@ Just a disclaimer: I may be completely wrong in understanding Shopify merchants'
 ### Deployment Status
 
 - Submitted to Shopify app store for review; this is taking longer than expected because, if there's any issue with the application, Shopify immediately rejects the app without giving any employee contact, so you must submit it again and wait 2-3 weeks.
-- Video Demo: https://www.youtube.com/watch?v=D-RJJmcRiks&feature=youtu.be
-- Main Features (Text): https://aback-thistle-ade.notion.site/Features-At-A-Glance-8be5cba5a5254a67bb59845c5b1c738a
-- Information Site (Currently missing project images): https://www.synqsell.com/
 
 ![image](https://github.com/user-attachments/assets/8330a875-a78a-45c3-acf0-2996c73df7ac)
 
@@ -87,7 +84,7 @@ Just a disclaimer: I may be completely wrong in understanding Shopify merchants'
 
 ## Getting Started
 
-<strong>Note: because this application uses AWS resources to handle real-time data synchronization between SynqSell's database and Shopify, we need to provision cloud resources, which will cost money. To make the current dev resources be mostly covered by the AWS Free Tier, we should change the NAT Gateway to a NAT Instance and remove the bastion host for dev and use a VPN instead.</strong>
+<strong>Note: because this application uses AWS resources to handle real-time data synchronization between SynqSell's database and Shopify, we need to provision cloud resources, which will cost money. To make the current dev resources mostly covered by the AWS Free Tier, I am currently studying the AWS SAA certificate. I know that Shopify supports iPv6 now, so I should be able to switch most of my resources to iPv6 to remove the NAT Gateway (IPv6 has so many addresses that I don't need a port address translation to link my private resource IPs to a public IP).</strong>
 <br /><br />
 To get a local copy up and running follow these steps:
 
