@@ -1,20 +1,24 @@
 # https://docs.aws.amazon.com/AmazonECR/latest/userguide/docker-push-ecr-image.html
-# This is the docker file to build application; I moved prisma to the root directory
-# I'm using prisma folder at root as a shared dir for factories and fixtures for tests
-# so it has to be in the root to be able to copy prisma folder's context to generate and migrate deploy
+# This is the docker file to build application
+# I had to move this to the root instead of application dir
+# Because I'm using prisma folder in order to create a monorepo with common fixtures and factories
 FROM node:20-alpine
 
 RUN apk --no-cache add curl
 
 EXPOSE 3000
 
+WORKDIR /prisma
+
+COPY prisma/schema.prisma prisma/migrations ./
+
+COPY application/prisma/seed ./
+
 WORKDIR /app
 
 COPY application/app ./
 
 COPY application/package.json application/package-lock.json* application/entrypoint.sh ./
-
-COPY prisma/schema.prisma prisma/migrations ../prisma/
 
 RUN npm ci --omit=dev && npm cache clean --force
 
