@@ -41,8 +41,9 @@
 </details>
 
 ## About The Project
+## [YouTube Demo For How SynqSell Works](https://youtu.be/o08CHK6Xfz0)
+[<img src="https://github.com/user-attachments/assets/2317aef8-2a5b-4fdd-95ad-fbe742d0d974" />](https://youtu.be/o08CHK6Xfz0)
 
-![image](https://github.com/user-attachments/assets/2317aef8-2a5b-4fdd-95ad-fbe742d0d974)
 
 When I worked in the eCommerce space selling anime merchandise, I had some key observations:
 
