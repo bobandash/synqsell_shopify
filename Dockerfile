@@ -24,6 +24,6 @@ RUN chmod +x entrypoint.sh
 
 RUN npm run build
 
-ENTRYPOINT ["./entrypoint.sh"]
+ENTRYPOINT ["sh", "/application/entrypoint.sh"]
 
 CMD ["npm", "run", "docker-start"]
