@@ -8,6 +8,11 @@ generator client_app {
   output   = "../application/node_modules/.prisma/client"
 }
 
+generator client_docker {
+  provider = "prisma-client-js"
+  output   = "../app/node_modules/.prisma/client"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")

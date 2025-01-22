@@ -10,7 +10,7 @@ EXPOSE 3000
 
 COPY prisma /prisma
 
-WORKDIR /application
+WORKDIR /app
 
 COPY application/package.json application/package-lock.json* ./
 
@@ -24,6 +24,6 @@ RUN chmod +x entrypoint.sh
 
 RUN npm run build
 
-ENTRYPOINT ["sh", "/application/entrypoint.sh"]
+ENTRYPOINT ["sh", "/app/entrypoint.sh"]
 
 CMD ["npm", "run", "docker-start"]
