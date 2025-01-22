@@ -16,7 +16,7 @@ COPY application/package.json application/package-lock.json* ./
 
 RUN npm ci --omit=dev && npm cache clean --force
 
-COPY application/app ./
+COPY application/ ./
 
 RUN npm remove @shopify/cli
 
