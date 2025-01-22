@@ -10,7 +10,7 @@ EXPOSE 3000
 
 COPY prisma /prisma
 
-WORKDIR /app
+WORKDIR /application
 
 COPY application/package.json application/package-lock.json* ./
 
