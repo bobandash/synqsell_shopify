@@ -8,19 +8,15 @@ RUN apk --no-cache add curl
 
 EXPOSE 3000
 
-WORKDIR /prisma
-
-COPY prisma/schema.prisma prisma/migrations ./
-
-COPY application/prisma/seed ./
+COPY prisma /prisma
 
 WORKDIR /app
 
-COPY application/app ./
-
-COPY application/package.json application/package-lock.json* application/entrypoint.sh ./
+COPY application/package.json application/package-lock.json* ./
 
 RUN npm ci --omit=dev && npm cache clean --force
+
+COPY application/app ./
 
 RUN npm remove @shopify/cli
 
