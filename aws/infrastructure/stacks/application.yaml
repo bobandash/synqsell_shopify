@@ -283,7 +283,6 @@ Resources:
               Value: !Ref ImageHostingS3
             - Name: CARRIER_SERVICE_CALLBACK_URL
               Value: !Sub https://${ApiId}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/deliveryCarrierService/callback
-              # https://chbccix0s6.execute-api.us-east-2.amazonaws.com/dev/deliveryCarrierService/callback
             - Name: AWS_REGION
               Value: !Ref AWS::Region
             - Name: SHOPIFY_APP_URL

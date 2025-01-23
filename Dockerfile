@@ -6,13 +6,21 @@ FROM node:20-alpine
 
 RUN apk --no-cache add curl
 
+RUN apk add --no-cache openssl
+
 EXPOSE 3000
 
-COPY prisma /prisma
+WORKDIR /prisma
+
+COPY prisma/package.json prisma/package-lock.json ./
+
+RUN npm ci --omit=dev && npm cache clean --force
+
+COPY prisma/ ./
 
 WORKDIR /app
 
-COPY application/package.json application/package-lock.json* ./
+COPY application/package.json application/package-lock.json ./
 
 RUN npm ci --omit=dev && npm cache clean --force
 
