@@ -30,7 +30,7 @@
     "test:seed": "cross-env NODE_ENV=test dotenv -e .env.test tsx prisma/test-seed.ts"
   },
   "dependencies": {
-    "@prisma/client": "^6.1.0",
+    "@prisma/client": "^5.18.0",
     "@types/node": "^22.10.2",
     "pg": "^8.13.1",
     "winston": "^3.17.0"
