@@ -12,7 +12,7 @@ EXPOSE 3000
 
 WORKDIR /prisma
 
-COPY prisma/package.json prisma/package-lock.json ./
+COPY package.json package-lock.json ./
 
 RUN npm ci --omit=dev && npm cache clean --force
 
