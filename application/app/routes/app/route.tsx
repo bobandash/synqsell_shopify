@@ -11,7 +11,7 @@ import { AppProvider } from '@shopify/shopify-app-remix/react';
 import { NavMenu } from '@shopify/app-bridge-react';
 import polarisStyles from '@shopify/polaris/build/esm/styles.css?url';
 import { authenticate } from '../../shopify.server';
-import { addRole, getRoles } from '~/services/models/roles.server';
+import { addRole, getRoles, hasRole } from '~/services/models/roles.server';
 import { ROLES } from '~/constants';
 import { useEffect, useState } from 'react';
 import { RoleProvider } from '~/context/RoleProvider';
@@ -43,7 +43,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   await requireBilling(shop, isTest, billing);
   await addBillingToDatabase(sessionId, isTest, billing);
   // TODO: DELETE AFTER PROD IS APPROVED, SHOPIFY WANTS TO TEST APPLICATION IN PROD NOT STAGING
-  await addRole(sessionId, ROLES.ADMIN);
+  const isAdmin = await hasRole(sessionId, ROLES.ADMIN);
+  if (!isAdmin) {
+    await addRole(sessionId, ROLES.ADMIN);
+  }
   const [roles, hasStripeConnectAccount, hasStripePaymentMethod] =
     await Promise.all([
       getRoles(sessionId),
