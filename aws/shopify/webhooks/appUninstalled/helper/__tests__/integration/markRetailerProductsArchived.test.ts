@@ -1,11 +1,12 @@
 import { simpleFaker } from '@faker-js/faker/.';
-import { exportsForTesting } from '../../markRetailerProductsArchived';
+
 import { DatabaseSetup, disconnectClient, setupDatabase, teardownPool } from '~/test-db-setup';
 import { createTestOrderWithEntireFlow, type TestOrderEntireFlow } from '@db/factories/order.factories';
 import { generateImportedProduct, generateProduct } from '@db/factories/pricelist.factories';
 import { mutateAndValidateGraphQLData } from '/opt/nodejs/utils';
 import { UPDATE_PRODUCT_STATUS_MUTATION } from '../../../graphql';
 import { createTestSession } from '@db/factories/session.factories';
+import { exportsForTesting } from '../../markRetailerProductsArchived';
 
 if (!exportsForTesting) {
     throw new Error('Environment is not tests.');
